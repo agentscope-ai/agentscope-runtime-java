@@ -1,0 +1,86 @@
+/.idea/
+
+# Java bytecode files
+*.class
+
+# Logs
+logs/
+*.log
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Spring Boot specific
+*.tmp
+*.bak
+*.swp
+replay_pid*
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# IDE - Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# IDE - VS Code
+.vscode/
+*.code-workspace
+.history/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Environment variables and configuration
+*.env
+.env.local
+*.properties
+!src/main/resources/application*.properties
+!src/main/resources/bootstrap*.properties
+*.yml
+!src/main/resources/application*.yml
+!src/main/resources/bootstrap*.yml
+
+# Test reports
+**/surefire-reports/
+**/failsafe-reports/
+
+# Temporary directories
+tmp/
+temp/
+
+# Dependency directories (if not using dependency management)
+lib/
+libs/
+
+# Build directories
+dist/
+deploy/
+
+# Coverage reports
+coverage/
+jacoco/
