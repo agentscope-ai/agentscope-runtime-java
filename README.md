@@ -71,8 +71,9 @@ mvn clean install -DskipTests
 ```
 
 ### Basic Agent Usage Example
+The source code of the following example can be found in the [examples](./examples) directory.
 
-This example demonstrates how to create a simple LLM agent using AgentScope Runtime and stream responses from the Qwen model.
+This example demonstrates how to delegate a simple Spring AI Alibaba ReactAgent using AgentScope Runtime Agent.
 
 ```java
 public static void main(String[] args) {
@@ -112,38 +113,10 @@ public static void main(String[] args) {
 }
 ```
 
+> [!NOTE]
+> Supporting for AgentScope and other agents coming soon ...
+
 ### Basic Sandbox Usage Example
-
-Tools in AgentScope Java are currently exposed as standard Spring AI Alibaba ToolCallbacks.
-
-For example, below is the definition of PythonCodeTool (a tool that can execute Python Code).
-
-```java
-private ToolCallback RunPythonCodeTools() {
-	return FunctionToolCallback
-			.builder(
-					"PythonExecuteService",
-					new RunPythonTool()
-			).description("Execute Python code snippets and return the output or errors.")
-			.inputSchema(
-					"""
-							{
-								"type": "object",
-								"properties": {
-									"code": {
-										"type": "string",
-										"description": "Python code to be executed"
-									}
-								},
-								"required": ["code"],
-								"description": "Request object to perform Python code execution"
-							}
-							"""
-			).inputType(RunPythonTool.RunPythonToolRequest.class)
-			.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-			.build();
-}
-```
 
 Developers can tell the agent to use a specific tool and the execution of the tool will be delegated to the sandbox managed by AgentScope Runtime.
 
@@ -162,11 +135,11 @@ Flux<Event> eventStream = runner.streamQuery(request);
 
 > [!NOTE]
 >
-> Current version requires Docker or Kubernetes to be installed and running on your system. Please refer to [this tutorial](https://runtime.agentscope.io/en/sandbox.html) for more details.
+> Current version requires Docker to be installed and running on your system. Please refer to [this tutorial](https://runtime.agentscope.io/en/sandbox.html) for more details.
 
 ## 🔌 Agent Framework Integration
 
-AgentScope Runtime Java implementation currently can automatically load Agents developed using Spring AI Alibaba. More agent framework interations are comming soon!
+AgentScope Runtime Java implementation currently can automatically load Agents developed using Spring AI Alibaba. More agent framework integrations coming soon!
 
 ---
 
