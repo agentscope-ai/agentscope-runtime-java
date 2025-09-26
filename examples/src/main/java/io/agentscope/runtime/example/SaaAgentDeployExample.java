@@ -9,19 +9,11 @@ import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHi
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
-import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-
-import java.util.List;
-import java.util.ArrayList;
-import java.util.UUID;
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
@@ -82,8 +74,6 @@ public class SaaAgentDeployExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public void basicExample() {
-        System.out.println("=== Basic SaaAgent Example ===");
-
         try {
             // Create ReactAgent Builder
             Builder builder = ReactAgent.builder()
@@ -108,48 +98,6 @@ public class SaaAgentDeployExample {
 
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    /**
-     * Helper method to create AgentRequest
-     */
-    private AgentRequest createAgentRequest(String text) {
-        AgentRequest request = new AgentRequest();
-
-        // Create text content
-        TextContent textContent = new TextContent();
-        textContent.setText(text);
-
-        // Create message
-        Message message = new Message();
-        message.setRole("user");
-        message.setContent(List.of(textContent));
-
-        // Set input messages
-        List<Message> inputMessages = new ArrayList<>();
-        inputMessages.add(message);
-        request.setInput(inputMessages);
-
-        return request;
-    }
-
-    /**
-     * Helper method to handle events from the agent
-     */
-    private void handleEvent(Event event) {
-        if (event instanceof Message) {
-            Message message = (Message) event;
-            System.out.println("Event - Type: " + message.getType() +
-                    ", Role: " + message.getRole() +
-                    ", Status: " + message.getStatus());
-
-            if (message.getContent() != null && !message.getContent().isEmpty()) {
-                TextContent content = (TextContent) message.getContent().get(0);
-                System.out.println("Content: " + content.getText());
-            }
-        } else {
-            System.out.println("Received event: " + event.getClass().getSimpleName());
         }
     }
 

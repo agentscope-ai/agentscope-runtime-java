@@ -101,13 +101,13 @@ public class SaaAgentExample {
             Runner runner = new Runner(saaAgent, contextManager);
 
             // Create AgentRequest
-            AgentRequest request = createAgentRequest("Hello, can you tell me a joke?");
+            AgentRequest request = createAgentRequest("Hello, can you tell me a joke?", null, null);
 
             // Execute the agent and handle the response stream
-            Flux<Event> eventStream = runner.streamQuery(request);
+            Flux<Event> eventStream = Runner.streamQuery(request);
 
             eventStream.subscribe(
-                event -> handleEvent(event),
+                    this::handleEvent,
                 error -> System.err.println("Error occurred: " + error.getMessage()),
                 () -> System.out.println("Conversation completed.")
             );
@@ -123,8 +123,17 @@ public class SaaAgentExample {
     /**
      * Helper method to create AgentRequest
      */
-    private AgentRequest createAgentRequest(String text) {
+    private AgentRequest createAgentRequest(String text, String userId, String sessionId) {
+        if (userId == null || userId.isEmpty()) {
+            userId = "default_user";
+        }
+        if (sessionId == null || sessionId.isEmpty()) {
+            sessionId = UUID.randomUUID().toString();
+        }
         AgentRequest request = new AgentRequest();
+
+        request.setSessionId(sessionId);
+        request.setUserId(userId);
 
         // Create text content
         TextContent textContent = new TextContent();
@@ -147,8 +156,7 @@ public class SaaAgentExample {
      * Helper method to handle events from the agent
      */
     private void handleEvent(Event event) {
-        if (event instanceof Message) {
-            Message message = (Message) event;
+        if (event instanceof Message message) {
             System.out.println("Event - Type: " + message.getType() +
                              ", Role: " + message.getRole() +
                              ", Status: " + message.getStatus());

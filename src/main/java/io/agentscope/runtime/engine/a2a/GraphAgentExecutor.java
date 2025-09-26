@@ -15,7 +15,6 @@
  */
 package io.agentscope.runtime.engine.a2a;
 
-import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
 import io.a2a.A2A;
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -52,27 +51,26 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
         return new Task(id, context_id_str, new TaskStatus(TaskState.SUBMITTED), null, List.of(request), null);
     }
 
+    private AgentRequest buildAgentRequest(RequestContext context) {
+        io.a2a.spec.Message message = context.getParams().message();
+        String inputText = getTextFromMessageParts(message);
+        AgentRequest agentRequest = new AgentRequest();
+        Message agentMessage = new Message();
+        agentMessage.setRole("user");
+        TextContent tc = new TextContent();
+        tc.setText(inputText);
+        agentMessage.setContent(List.of(tc));
+        agentRequest.setUserId(getUserId(message));
+        agentRequest.setSessionId(getSessionId(message));
+        agentRequest.setInput(List.of(agentMessage));
+        return agentRequest;
+    }
+
     @Override
     public void execute(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
-        LOGGER.info("Starting agent execution for context: {}", context.getTask() != null ? context.getTask().getId() : "new");
         try {
-            io.a2a.spec.Message message = context.getParams().message();
-            String inputText = getTextFromMessageParts(message);
-            String finalInput = inputText;
-            LOGGER.debug("Processing input text: {}", finalInput);
-
-            // Build AgentRequest from incoming message
-            AgentRequest agentRequest = new AgentRequest();
-            Message agentMessage = new Message();
-            agentMessage.setRole("user");
-            TextContent tc = new TextContent();
-            tc.setText(finalInput);
-            agentMessage.setContent(List.of(tc));
-            agentRequest.setInput(List.of(agentMessage));
-
-            LOGGER.info("Applying executeFunction to agent request");
+            AgentRequest agentRequest = buildAgentRequest(context);
             Flux<Event> resultFlux = executeFunction.apply(agentRequest);
-
             Task task = context.getTask();
             if (task == null) {
                 task = new_task(context.getMessage());
@@ -118,22 +116,6 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
             return String.valueOf(message.getMetadata().get("sessionId"));
         }
         return "default_session";
-    }
-
-    private void handleEvent(Event event) {
-        if (event instanceof Message) {
-            Message message = (Message) event;
-            System.out.println("Event - Type: " + message.getType() +
-                    ", Role: " + message.getRole() +
-                    ", Status: " + message.getStatus());
-
-            if (message.getContent() != null && !message.getContent().isEmpty()) {
-                TextContent content = (TextContent) message.getContent().get(0);
-                System.out.println("Content: " + content.getText());
-            }
-        } else {
-            System.out.println("Received event: " + event.getClass().getSimpleName());
-        }
     }
 
     /**
@@ -200,39 +182,6 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
             }
         }
         return sb.toString().trim();
-    }
-
-    private static io.agentscope.runtime.engine.memory.model.Message buildTextMessage(String text) {
-        MessageContent content = new MessageContent("text", text);
-        return new io.agentscope.runtime.engine.memory.model.Message(MessageType.MESSAGE, List.of(content));
-    }
-
-    private static String formatRetrievedText(List<io.agentscope.runtime.engine.memory.model.Message> messages) {
-        if (messages == null || messages.isEmpty()) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append("[Retrieved Memory]\n");
-        int idx = 1;
-        for (io.agentscope.runtime.engine.memory.model.Message m : messages) {
-            String text = extractTextFromMessage(m);
-            if (!text.isEmpty()) {
-                sb.append(idx++).append('.').append(' ').append(text).append('\n');
-            }
-        }
-        return sb.toString().trim();
-    }
-
-    private static String extractTextFromMessage(io.agentscope.runtime.engine.memory.model.Message message) {
-        if (message == null || message.getContent() == null) {
-            return "";
-        }
-        for (MessageContent content : message.getContent()) {
-            if ("text".equals(content.getType())) {
-                return content.getText();
-            }
-        }
-        return "";
     }
 
     @Override

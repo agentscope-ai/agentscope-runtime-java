@@ -7,6 +7,7 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
@@ -101,13 +102,13 @@ public class SaaAgentSadboxExample {
             Runner runner = new Runner(saaAgent, contextManager);
 
             // Create AgentRequest
-            AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?");
+            AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);
 
             // Execute the agent and handle the response stream
-            Flux<Event> eventStream = runner.streamQuery(request);
+            Flux<Event> eventStream = Runner.streamQuery(request);
 
             eventStream.subscribe(
-                event -> handleEvent(event),
+                    this::handleEvent,
                 error -> System.err.println("Error occurred: " + error.getMessage()),
                 () -> System.out.println("Conversation completed.")
             );
@@ -123,8 +124,17 @@ public class SaaAgentSadboxExample {
     /**
      * Helper method to create AgentRequest
      */
-    private AgentRequest createAgentRequest(String text) {
+    private AgentRequest createAgentRequest(String text, String userId, String sessionId) {
+        if (userId == null || userId.isEmpty()) {
+            userId = "default_user";
+        }
+        if (sessionId == null || sessionId.isEmpty()) {
+            sessionId = UUID.randomUUID().toString();
+        }
         AgentRequest request = new AgentRequest();
+
+        request.setSessionId(sessionId);
+        request.setUserId(userId);
 
         // Create text content
         TextContent textContent = new TextContent();
@@ -147,8 +157,7 @@ public class SaaAgentSadboxExample {
      * Helper method to handle events from the agent
      */
     private void handleEvent(Event event) {
-        if (event instanceof Message) {
-            Message message = (Message) event;
+        if (event instanceof Message message) {
             System.out.println("Event - Type: " + message.getType() +
                              ", Role: " + message.getRole() +
                              ", Status: " + message.getStatus());
