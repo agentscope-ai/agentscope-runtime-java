@@ -38,9 +38,9 @@ public class SandboxManager {
     }
 
     private Map<SandboxType, String> typeNameMap= new HashMap<SandboxType, String>() {{
-        put(SandboxType.BASE, "agentscope/runtime-manager-base");
-        put(SandboxType.FILESYSTEM, "agentscope/runtime-manager-filesystem");
-        put(SandboxType.BROWSER, "agentscope/runtime-manager-browser");
+        put(SandboxType.BASE, "agentscope/runtime-sandbox-base");
+        put(SandboxType.FILESYSTEM, "agentscope/runtime-sandbox-filesystem");
+        put(SandboxType.BROWSER, "agentscope/runtime-sandbox-browser");
     }};
 
     public ContainerModel getSandbox(SandboxType sandboxType){
