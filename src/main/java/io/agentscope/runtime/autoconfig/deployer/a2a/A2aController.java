@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.engine.deployer.a2a;
+package io.agentscope.runtime.autoconfig.deployer.a2a;
 
 import io.agentscope.runtime.engine.memory.context.ServerCallContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -106,7 +106,6 @@ public class A2aController {
         Flow.Publisher<? extends JSONRPCResponse<?>> publisher;
         if (request instanceof SendStreamingMessageRequest req) {
             publisher = jsonRpcHandler.onMessageSendStream(req);
-            LOGGER.info("get Stream publisher {}", publisher);
         }
         else if (request instanceof TaskResubscriptionRequest req) {
             publisher = jsonRpcHandler.onResubscribeToTask(req);

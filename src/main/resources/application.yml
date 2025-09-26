@@ -4,8 +4,8 @@ server:
 spring:
   config:
     import:
-      - classpath:application-runtime.yml
-      - classpath:application-memory.yml
+      - optional:classpath:application-runtime.yml
+      - optional:classpath:application-memory.yml
   application:
     name: spring-ai-alibaba-a2a-server
 
@@ -14,7 +14,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,mappings,beans
   endpoint:
     health:
       show-details: always
@@ -33,6 +33,14 @@ logging:
         cloud:
           ai:
             graph: DEBUG
+    org:
+      springframework:
+        web:
+          servlet:
+            mvc:
+              method:
+                annotation:
+                  RequestMappingHandlerMapping: DEBUG
 
 
 version: v1

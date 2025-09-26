@@ -1,6 +1,6 @@
 package io.agentscope.runtime.engine;
 
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
+import io.agentscope.runtime.autoconfig.deployer.DeployManager;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class Runner implements AutoCloseable {
 
@@ -48,7 +49,7 @@ public class Runner implements AutoCloseable {
                     for (io.agentscope.runtime.engine.memory.model.Message memoryMsg : memorySession.getMessages()) {
                         io.agentscope.runtime.engine.schemas.agent.Message agentMsg = new io.agentscope.runtime.engine.schemas.agent.Message();
                         agentMsg.setRole(memoryMsg.getType() == io.agentscope.runtime.engine.memory.model.MessageType.USER ? "user" : "assistant");
-                        
+
                         List<io.agentscope.runtime.engine.schemas.agent.Content> content = new ArrayList<>();
                         if (memoryMsg.getContent() != null) {
                             for (io.agentscope.runtime.engine.memory.model.MessageContent msgContent : memoryMsg.getContent()) {
@@ -208,6 +209,16 @@ public class Runner implements AutoCloseable {
         } catch (Exception e) {
             // Log the error but do not interrupt the process
             e.printStackTrace();
+        }
+    }
+
+
+    public void deploy(DeployManager deployManager, String endpointName, boolean stream){
+        if(stream){
+            Function<AgentRequest, Flux<Event>> queryFunction = this::streamQuery;
+            deployManager.deployStreaming(queryFunction, endpointName);
+        } else {
+            throw new UnsupportedOperationException("Non-stream deployment is not supported yet");
         }
     }
 

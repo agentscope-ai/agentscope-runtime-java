@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.engine.deployer.a2a;
+package io.agentscope.runtime.autoconfig.deployer.a2a;
 
 import io.a2a.spec.AgentCard;
 import org.springframework.http.MediaType;
