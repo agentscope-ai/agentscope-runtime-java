@@ -14,27 +14,48 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 public class Runner implements AutoCloseable {
 
-    private final Agent agent;
-    private final ContextManager contextManager;
-    private final String sessionId;
-    private final String userId;
+    private static Agent agent;
+    private static ContextManager contextManager;
+    private static String sessionId;
+    private static String userId;
 
     public Runner(Agent agent, ContextManager contextManager) {
         this(agent, contextManager, "default_user", UUID.randomUUID().toString());
     }
 
-    public Runner(Agent agent, ContextManager contextManager, String userId, String sessionId) {
-        this.agent = agent;
-        this.contextManager = contextManager;
-        this.userId = userId;
-        this.sessionId = sessionId;
+    public Runner() {
+        setUserId("default_user");
+        setSessionId(UUID.randomUUID().toString());
     }
 
-    public Flux<Event> streamQuery(AgentRequest request) {
+    public Runner(Agent agent, ContextManager contextManager, String userId, String sessionId) {
+        Runner.agent = agent;
+        Runner.contextManager = contextManager;
+        Runner.userId = userId;
+        Runner.sessionId = sessionId;
+    }
+
+    public void registerAgent(Agent agent) {
+        Runner.agent = agent;
+    }
+
+    public void registerContextManager(ContextManager contextManager) {
+        Runner.contextManager = contextManager;
+    }
+
+    public void setUserId(String userId) {
+        Runner.userId = userId;
+    }
+
+    public void setSessionId(String sessionId) {
+        Runner.sessionId = sessionId;
+    }
+
+    public static Flux<Event> streamQuery(AgentRequest request) {
+        System.out.println(agent.getName());
         return Flux.create(sink -> {
             try {
                 // Get or create Session
@@ -79,32 +100,32 @@ public class Runner implements AutoCloseable {
                 agentFuture.thenAccept(eventFlux -> {
                     StringBuilder aiResponse = new StringBuilder();
                     eventFlux.subscribe(
-                        event -> {
-                            sink.next(event);
-                            // Collect AI response content
-                            if (event instanceof io.agentscope.runtime.engine.schemas.agent.Message) {
-                                io.agentscope.runtime.engine.schemas.agent.Message message = (io.agentscope.runtime.engine.schemas.agent.Message) event;
-                                if (io.agentscope.runtime.engine.memory.model.MessageType.MESSAGE.name().equals(message.getType()) && 
-                                    "completed".equals(message.getStatus())) {
-                                    if (message.getContent() != null && !message.getContent().isEmpty()) {
-                                        io.agentscope.runtime.engine.schemas.agent.Content content = message.getContent().get(0);
-                                        if (content instanceof io.agentscope.runtime.engine.schemas.agent.TextContent) {
-                                            io.agentscope.runtime.engine.schemas.agent.TextContent textContent = (io.agentscope.runtime.engine.schemas.agent.TextContent) content;
-                                            String text = textContent.getText();
-                                            // Extract plain text content, removing ChatResponse wrapper
-                                            String cleanText = extractCleanText(text);
-                                            aiResponse.append(cleanText);
+                            event -> {
+                                sink.next(event);
+                                // Collect AI response content
+                                if (event instanceof io.agentscope.runtime.engine.schemas.agent.Message) {
+                                    io.agentscope.runtime.engine.schemas.agent.Message message = (io.agentscope.runtime.engine.schemas.agent.Message) event;
+                                    if (io.agentscope.runtime.engine.memory.model.MessageType.MESSAGE.name().equals(message.getType()) &&
+                                            "completed".equals(message.getStatus())) {
+                                        if (message.getContent() != null && !message.getContent().isEmpty()) {
+                                            io.agentscope.runtime.engine.schemas.agent.Content content = message.getContent().get(0);
+                                            if (content instanceof io.agentscope.runtime.engine.schemas.agent.TextContent) {
+                                                io.agentscope.runtime.engine.schemas.agent.TextContent textContent = (io.agentscope.runtime.engine.schemas.agent.TextContent) content;
+                                                String text = textContent.getText();
+                                                // Extract plain text content, removing ChatResponse wrapper
+                                                String cleanText = extractCleanText(text);
+                                                aiResponse.append(cleanText);
+                                            }
                                         }
                                     }
                                 }
+                            },
+                            sink::error,
+                            () -> {
+                                // After the conversation is complete, save the history message to ContextManager
+                                saveConversationHistory(context, aiResponse.toString());
+                                sink.complete();
                             }
-                        },
-                        sink::error,
-                        () -> {
-                            // After the conversation is complete, save the history message to ContextManager
-                            saveConversationHistory(context, aiResponse.toString());
-                            sink.complete();
-                        }
                     );
                 }).exceptionally(throwable -> {
                     sink.error(throwable);
@@ -120,18 +141,18 @@ public class Runner implements AutoCloseable {
     /**
      * Extract plain text content from ChatResponse object
      */
-    private String extractCleanText(String text) {
+    private static String extractCleanText(String text) {
         if (text == null || text.isEmpty()) {
             return "";
         }
-        
+
         // If the text contains the complete object information of ChatResponse, try to extract the textContent from it
         if (text.contains("textContent=")) {
             int start = text.indexOf("textContent=") + 12;
             int end = text.indexOf(",", start);
             if (end == -1) end = text.indexOf("}", start);
             if (end == -1) end = text.length();
-            
+
             String extracted = text.substring(start, end).trim();
             // Remove possible quotes
             if (extracted.startsWith("\"") && extracted.endsWith("\"")) {
@@ -139,7 +160,7 @@ public class Runner implements AutoCloseable {
             }
             return extracted;
         }
-        
+
         // If it is already plain text, return it directly
         return text;
     }
@@ -147,7 +168,7 @@ public class Runner implements AutoCloseable {
     /**
      * Get or create Session
      */
-    private io.agentscope.runtime.engine.memory.model.Session getOrCreateSession(String userId, String sessionId) {
+    private static io.agentscope.runtime.engine.memory.model.Session getOrCreateSession(String userId, String sessionId) {
         try {
             return contextManager.composeSession(userId, sessionId).join();
         } catch (Exception e) {
@@ -164,20 +185,20 @@ public class Runner implements AutoCloseable {
     /**
      * Save conversation history to ContextManager
      */
-    private void saveConversationHistory(Context context, String aiResponse) {
+    private static void saveConversationHistory(Context context, String aiResponse) {
         try {
             // Get current session
             io.agentscope.runtime.engine.memory.model.Session memorySession = getOrCreateSession(userId, sessionId);
-            
+
             // Create a list of messages to be saved
             List<io.agentscope.runtime.engine.memory.model.Message> messagesToSave = new ArrayList<>();
-            
+
             // Add user messages
             if (context.getCurrentMessages() != null) {
                 for (io.agentscope.runtime.engine.schemas.agent.Message userMessage : context.getCurrentMessages()) {
                     io.agentscope.runtime.engine.memory.model.Message memoryMessage = new io.agentscope.runtime.engine.memory.model.Message();
                     memoryMessage.setType(io.agentscope.runtime.engine.memory.model.MessageType.USER);
-                    
+
                     List<io.agentscope.runtime.engine.memory.model.MessageContent> content = new ArrayList<>();
                     if (userMessage.getContent() != null) {
                         for (io.agentscope.runtime.engine.schemas.agent.Content msgContent : userMessage.getContent()) {
@@ -191,21 +212,21 @@ public class Runner implements AutoCloseable {
                     messagesToSave.add(memoryMessage);
                 }
             }
-            
+
             // Add AI reply message
             if (aiResponse != null && !aiResponse.isEmpty()) {
                 io.agentscope.runtime.engine.memory.model.Message aiMessage = new io.agentscope.runtime.engine.memory.model.Message();
                 aiMessage.setType(io.agentscope.runtime.engine.memory.model.MessageType.ASSISTANT);
-                
+
                 List<io.agentscope.runtime.engine.memory.model.MessageContent> content = new ArrayList<>();
                 content.add(new io.agentscope.runtime.engine.memory.model.MessageContent("text", aiResponse));
                 aiMessage.setContent(content);
                 messagesToSave.add(aiMessage);
             }
-            
+
             // Save to ContextManager
             contextManager.append(memorySession, messagesToSave).join();
-            
+
         } catch (Exception e) {
             // Log the error but do not interrupt the process
             e.printStackTrace();
@@ -213,14 +234,13 @@ public class Runner implements AutoCloseable {
     }
 
 
-    public void deploy(DeployManager deployManager, String endpointName, boolean stream){
-        if(stream){
-            Function<AgentRequest, Flux<Event>> queryFunction = this::streamQuery;
-            deployManager.deployStreaming(queryFunction, endpointName);
-        } else {
-            throw new UnsupportedOperationException("Non-stream deployment is not supported yet");
-        }
-    }
+//    public void deploy(DeployManager deployManager, String endpointName, boolean stream){
+//        if(stream){
+//            deployManager.deployStreaming(endpointName);
+//        } else {
+//            throw new UnsupportedOperationException("Non-stream deployment is not supported yet");
+//        }
+//    }
 
     @Override
     public void close() {

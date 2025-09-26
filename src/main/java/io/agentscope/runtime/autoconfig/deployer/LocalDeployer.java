@@ -18,7 +18,10 @@ package io.agentscope.runtime.autoconfig.deployer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {
+    "io.agentscope.runtime.autoconfig.deployer",
+    "io.agentscope.runtime.engine.a2a"
+})
 public class LocalDeployer {
 
     public static void main(String[] args) {

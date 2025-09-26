@@ -8,7 +8,10 @@ import java.util.function.Function;
 
 public class DeployManager {
 
-    public void deployStreaming(Function<AgentRequest, Flux<Event>> queryFunction, String endpointName) {
+    public void deployStreaming(){
+        deployStreaming("process");
+    }
 
+    public void deployStreaming(String endpointName) {
     }
 }

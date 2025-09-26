@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.autoconfig.deployer.a2a;
+package io.agentscope.runtime.engine.a2a;
 
 import io.agentscope.runtime.engine.memory.context.ServerCallContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -63,8 +63,8 @@ public class A2aController {
 
     private final JSONRPCHandler jsonRpcHandler;
 
-    public A2aController(JSONRPCHandler jsonrpcHandler) {
-        this.jsonRpcHandler = jsonrpcHandler;
+    public A2aController() {
+        this.jsonRpcHandler = AgentHandlerConfiguration.jsonrpcHandler();
     }
 
     @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})

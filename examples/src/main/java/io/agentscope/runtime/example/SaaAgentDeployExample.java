@@ -98,10 +98,13 @@ public class SaaAgentDeployExample {
                     .build();
 
             // Create Runner with the SaaAgent
-            Runner runner = new Runner(saaAgent, contextManager);
+            Runner runner = new Runner();
+
+            runner.registerAgent(saaAgent);
+            runner.registerContextManager(contextManager);
 
             LocalDeployManager deployManager = new LocalDeployManager();
-            runner.deploy(deployManager, "saa_agent_endpoint", true);
+            deployManager.deployStreaming();
 
         } catch (Exception e) {
             e.printStackTrace();
