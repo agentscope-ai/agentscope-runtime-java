@@ -28,7 +28,7 @@ public class AgentCardController {
 	private final JSONRPCHandler jsonRpcHandler;
 
 	public AgentCardController() {
-		this.jsonRpcHandler = AgentHandlerConfiguration.jsonrpcHandler();
+		this.jsonRpcHandler = AgentHandlerConfiguration.getInstance().jsonrpcHandler();
 	}
 
 	@GetMapping(value = "/.well-known/agent.json", produces = MediaType.APPLICATION_JSON_VALUE)

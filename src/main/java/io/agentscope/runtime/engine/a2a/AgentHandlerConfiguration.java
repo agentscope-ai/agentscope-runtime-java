@@ -18,7 +18,6 @@ package io.agentscope.runtime.engine.a2a;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import io.a2a.spec.AgentCapabilities;
@@ -36,7 +35,40 @@ import io.a2a.spec.AgentCard;
 
 public class AgentHandlerConfiguration {
 
-    private static volatile JSONRPCHandler jsonrpcHandler = null;
+    private static volatile AgentHandlerConfiguration INSTANCE;
+
+    private final JSONRPCHandler jsonrpcHandler;
+
+    public AgentHandlerConfiguration() {
+        this(new GraphAgentExecutor(Runner::streamQuery));
+    }
+
+    public AgentHandlerConfiguration(AgentExecutor agentExecutor) {
+        this.jsonrpcHandler = new JSONRPCHandler(
+                createDefaultAgentCard(),
+                requestHandler(agentExecutor)
+        );
+    }
+
+    public static synchronized AgentHandlerConfiguration initialize(AgentExecutor agentExecutor) {
+        if (INSTANCE == null) {
+            INSTANCE = new AgentHandlerConfiguration(agentExecutor);
+        }
+        return INSTANCE;
+    }
+
+    public static AgentHandlerConfiguration getInstance() {
+        AgentHandlerConfiguration inst = INSTANCE;
+        if (inst == null) {
+            synchronized (AgentHandlerConfiguration.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new AgentHandlerConfiguration();
+                }
+                inst = INSTANCE;
+            }
+        }
+        return inst;
+    }
 
     public static AgentCard createDefaultAgentCard() {
         AgentCapabilities capabilities = createDefaultCapabilities();
@@ -97,18 +129,8 @@ public class AgentHandlerConfiguration {
         }
     }
 
-    public static JSONRPCHandler jsonrpcHandler() {
-        if (jsonrpcHandler == null) {
-            synchronized (AgentHandlerConfiguration.class) {
-                if (jsonrpcHandler == null) {
-                    jsonrpcHandler = new JSONRPCHandler(
-                            createDefaultAgentCard(),
-                            requestHandler(new GraphAgentExecutor(Runner::streamQuery))
-                    );
-                }
-            }
-        }
-        return jsonrpcHandler;
+    public JSONRPCHandler jsonrpcHandler() {
+        return this.jsonrpcHandler;
     }
 
     public static RequestHandler requestHandler(AgentExecutor agentExecutor) {

@@ -64,13 +64,14 @@ public class A2aController {
     private final JSONRPCHandler jsonRpcHandler;
 
     public A2aController() {
-        this.jsonRpcHandler = AgentHandlerConfiguration.jsonrpcHandler();
+        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance().jsonrpcHandler();
     }
 
     @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
     @ResponseBody
     public Object handleRequest(@RequestBody String body, HttpServletRequest httpRequest) {
-        ServerCallContext context = buildServerCallContext(httpRequest);
+        // Build context if needed in future handlers
+        buildServerCallContext(httpRequest);
         boolean streaming = isStreamingRequest(body);
         Object result = null;
         try {
@@ -122,11 +123,13 @@ public class A2aController {
     private ServerSentEvent<String> convertToSSE(JSONRPCResponse<?> response) {
         try {
             String data = Utils.OBJECT_MAPPER.writeValueAsString(response);
-            return ServerSentEvent.<String>builder()
+            ServerSentEvent.Builder<String> builder = ServerSentEvent.<String>builder()
                     .data(data)
-                    .id(response.getId() != null ? response.getId().toString() : null)
-                    .event("jsonrpc")
-                    .build();
+                    .event("jsonrpc");
+            if (response.getId() != null) {
+                builder.id(response.getId().toString());
+            }
+            return builder.build();
         } catch (Exception e) {
             LOGGER.error("Error converting response to SSE: {}", e.getMessage());
             return ServerSentEvent.<String>builder()
