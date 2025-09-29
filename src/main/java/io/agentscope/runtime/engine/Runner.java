@@ -1,10 +1,10 @@
 package io.agentscope.runtime.engine;
 
+import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.*;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.context.Session;
 
@@ -15,27 +15,46 @@ import java.util.concurrent.CompletableFuture;
 
 public class Runner implements AutoCloseable {
 
-    private static Agent agent;
-    private static ContextManager contextManager;
+    private static volatile Runner defaultRunner;
 
-    public Runner(Agent agent, ContextManager contextManager) {
-        Runner.agent = agent;
-        Runner.contextManager = contextManager;
+    private Agent agent;
+    private ContextManager contextManager;
+    private final boolean stream;
+
+    public Runner(Agent agent, ContextManager contextManager, boolean stream) {
+        this.agent = agent;
+        this.contextManager = contextManager;
+        this.stream = stream;
+        defaultRunner = this;
     }
 
     public Runner() {
+        this(null, null, false);
+    }
+
+    public Runner(boolean stream) {
+        this(null, null, stream);
     }
 
     public void registerAgent(Agent agent) {
-        Runner.agent = agent;
+        defaultRunner = this;
+        this.agent = agent;
     }
 
     public void registerContextManager(ContextManager contextManager) {
-        Runner.contextManager = contextManager;
+        defaultRunner = this;
+        this.contextManager = contextManager;
     }
 
     public static Flux<Event> streamQuery(AgentRequest request) {
-        System.out.println(agent.getName());
+        Runner runner = defaultRunner;
+        if (runner == null) {
+            throw new IllegalStateException("No default Runner instance initialized");
+        }
+        return runner.streamQueryInstance(request);
+    }
+
+    public Flux<Event> streamQueryInstance(AgentRequest request) {
         return Flux.create(sink -> {
             try {
                 // Get or create Session
@@ -69,13 +88,13 @@ public class Runner implements AutoCloseable {
                 context.setUserId(request.getUserId());
                 context.setSession(session);
                 context.setRequest(request);
-                context.setAgent(agent);
+                context.setAgent(this.agent);
 
                 if (request.getInput() != null && !request.getInput().isEmpty()) {
                     context.setCurrentMessages(request.getInput());
                 }
 
-                CompletableFuture<Flux<Event>> agentFuture = agent.runAsync(context);
+                CompletableFuture<Flux<Event>> agentFuture = this.agent.runAsync(context, this.stream);
 
                 agentFuture.thenAccept(eventFlux -> {
                     StringBuilder aiResponse = new StringBuilder();
@@ -83,12 +102,12 @@ public class Runner implements AutoCloseable {
                             event -> {
                                 sink.next(event);
                                 // Collect AI response content
-                                if (event instanceof io.agentscope.runtime.engine.schemas.agent.Message message) {
-                                    if (io.agentscope.runtime.engine.memory.model.MessageType.MESSAGE.name().equals(message.getType()) &&
+                                if (event instanceof Message message) {
+                                    if (MessageType.MESSAGE.name().equals(message.getType()) &&
                                             "completed".equals(message.getStatus())) {
                                         if (message.getContent() != null && !message.getContent().isEmpty()) {
-                                            io.agentscope.runtime.engine.schemas.agent.Content content = message.getContent().get(0);
-                                            if (content instanceof io.agentscope.runtime.engine.schemas.agent.TextContent textContent) {
+                                            Content content = message.getContent().get(0);
+                                            if (content instanceof TextContent textContent) {
                                                 String text = textContent.getText();
                                                 // Extract plain text content, removing ChatResponse wrapper
                                                 String cleanText = extractCleanText(text);
@@ -119,7 +138,7 @@ public class Runner implements AutoCloseable {
     /**
      * Extract plain text content from ChatResponse object
      */
-    private static String extractCleanText(String text) {
+    private String extractCleanText(String text) {
         if (text == null || text.isEmpty()) {
             return "";
         }
@@ -146,13 +165,13 @@ public class Runner implements AutoCloseable {
     /**
      * Get or create Session
      */
-    private static io.agentscope.runtime.engine.memory.model.Session getOrCreateSession(String userId, String sessionId) {
+    private io.agentscope.runtime.engine.memory.model.Session getOrCreateSession(String userId, String sessionId) {
         try {
-            return contextManager.composeSession(userId, sessionId).join();
+            return this.contextManager.composeSession(userId, sessionId).join();
         } catch (Exception e) {
             // If the Session does not exist, create it through ContextManager
             try {
-                return contextManager.getSessionHistoryService().createSession(userId, Optional.of(sessionId)).join();
+                return this.contextManager.getSessionHistoryService().createSession(userId, Optional.of(sessionId)).join();
             } catch (Exception ex) {
                 // If creation fails, return a temporary Session
                 return new io.agentscope.runtime.engine.memory.model.Session(sessionId, userId, new ArrayList<>());
@@ -163,7 +182,7 @@ public class Runner implements AutoCloseable {
     /**
      * Save conversation history to ContextManager
      */
-    private static void saveConversationHistory(Context context, String aiResponse) {
+    private void saveConversationHistory(Context context, String aiResponse) {
         try {
             // Get current session
             io.agentscope.runtime.engine.memory.model.Session memorySession = getOrCreateSession(context.getUserId(), context.getSession().getUserId());
@@ -202,7 +221,7 @@ public class Runner implements AutoCloseable {
             }
 
             // Save to ContextManager
-            contextManager.append(memorySession, messagesToSave).join();
+            this.contextManager.append(memorySession, messagesToSave).join();
 
         } catch (Exception e) {
             // Log the error but do not interrupt the process
@@ -212,8 +231,6 @@ public class Runner implements AutoCloseable {
 
     @Override
     public void close() {
-        try {
-        } catch (Exception e) {
-        }
+
     }
 }

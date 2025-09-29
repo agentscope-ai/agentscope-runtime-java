@@ -42,13 +42,13 @@ public class SaaAgentExample {
     private void initializeChatModel() {
         // Create DashScopeApi instance using the API key from environment variable
         DashScopeApi dashScopeApi = DashScopeApi.builder()
-            .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-            .build();
+                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                .build();
 
         // Create DashScope ChatModel instance
         this.chatModel = DashScopeChatModel.builder()
-            .dashScopeApi(dashScopeApi)
-            .build();
+                .dashScopeApi(dashScopeApi)
+                .build();
     }
 
     private void initializeContextManager() {
@@ -61,9 +61,9 @@ public class SaaAgentExample {
 
             // Create ContextManager with the required services
             this.contextManager = new ContextManager(
-                ContextComposer.class,
-                sessionHistoryService,
-                memoryService
+                    ContextComposer.class,
+                    sessionHistoryService,
+                    memoryService
             );
 
             // Start the context manager services
@@ -87,18 +87,18 @@ public class SaaAgentExample {
         try {
             // Create ReactAgent Builder
             Builder builder = ReactAgent.builder()
-                .name("saa_agent")
-                .model(chatModel);
+                    .name("saa_agent")
+                    .model(chatModel);
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                .name("saa_agent_proxy")
-                .description("An agent powered by Spring AI Alibaba ReactAgent")
-                .reactAgentBuilder(builder)
-                .build();
+                    .name("saa_agent_proxy")
+                    .description("An agent powered by Spring AI Alibaba ReactAgent")
+                    .reactAgentBuilder(builder)
+                    .build();
 
             // Create Runner with the SaaAgent
-            Runner runner = new Runner(saaAgent, contextManager);
+            Runner runner = new Runner(saaAgent, contextManager, true);
 
             // Create AgentRequest
             AgentRequest request = createAgentRequest("Hello, can you tell me a joke?", null, null);
@@ -108,8 +108,8 @@ public class SaaAgentExample {
 
             eventStream.subscribe(
                     this::handleEvent,
-                error -> System.err.println("Error occurred: " + error.getMessage()),
-                () -> System.out.println("Conversation completed.")
+                    error -> System.err.println("Error occurred: " + error.getMessage()),
+                    () -> System.out.println("Conversation completed.")
             );
 
             // Wait a bit for async execution (in real applications, you'd handle this properly)
@@ -158,8 +158,8 @@ public class SaaAgentExample {
     private void handleEvent(Event event) {
         if (event instanceof Message message) {
             System.out.println("Event - Type: " + message.getType() +
-                             ", Role: " + message.getRole() +
-                             ", Status: " + message.getStatus());
+                    ", Role: " + message.getRole() +
+                    ", Status: " + message.getStatus());
 
             if (message.getContent() != null && !message.getContent().isEmpty()) {
                 TextContent content = (TextContent) message.getContent().get(0);

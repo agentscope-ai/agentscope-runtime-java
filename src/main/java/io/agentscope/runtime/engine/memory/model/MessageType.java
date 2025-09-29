@@ -19,6 +19,7 @@ package io.agentscope.runtime.engine.memory.model;
  * Message type enumeration
  */
 public enum MessageType {
+    CHUNK,
     MESSAGE,
     SYSTEM,
     USER,

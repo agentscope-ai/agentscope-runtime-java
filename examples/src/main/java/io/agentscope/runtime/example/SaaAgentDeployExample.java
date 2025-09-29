@@ -88,7 +88,7 @@ public class SaaAgentDeployExample {
                     .build();
 
             // Create Runner with the SaaAgent
-            Runner runner = new Runner();
+            Runner runner = new Runner(true);
 
             runner.registerAgent(saaAgent);
             runner.registerContextManager(contextManager);

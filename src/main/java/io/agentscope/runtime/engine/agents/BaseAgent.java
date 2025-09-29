@@ -60,12 +60,12 @@ public abstract class BaseAgent implements Agent {
     }
     
     @Override
-    public CompletableFuture<Flux<Event>> runAsync(Context context) {
+    public CompletableFuture<Flux<Event>> runAsync(Context context, boolean stream) {
         return CompletableFuture.supplyAsync(() -> {
             executeBeforeCallbacks(context);
             
             try {
-                Flux<Event> eventFlux = execute(context);
+                Flux<Event> eventFlux = execute(context, stream);
                 
                 executeAfterCallbacks(context);
                 
@@ -76,7 +76,7 @@ public abstract class BaseAgent implements Agent {
         });
     }
     
-    protected abstract Flux<Event> execute(Context context);
+    protected abstract Flux<Event> execute(Context context, boolean stream);
     
     @Override
     public void setBeforeCallback(AgentCallback callback) {

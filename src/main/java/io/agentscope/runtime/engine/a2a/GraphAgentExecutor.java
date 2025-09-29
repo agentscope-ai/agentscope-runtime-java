@@ -15,7 +15,6 @@
  */
 package io.agentscope.runtime.engine.a2a;
 
-import io.agentscope.runtime.engine.memory.model.MessageContent;
 import io.a2a.A2A;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
@@ -128,8 +127,6 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
                     .doOnSubscribe(s -> LOGGER.info("Subscribed to executeFunction result stream"))
                     .doOnNext(output -> {
                         try {
-                            System.out.println("Processing output: " + output);
-
                             if (output instanceof Message m) {
                                 List<Content> contents = m.getContent();
                                 if (contents != null && !contents.isEmpty() && contents.get(0) instanceof TextContent text) {
@@ -174,7 +171,7 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
         }
     }
 
-    private static String getTextFromMessageParts(io.a2a.spec.Message message) {
+    private String getTextFromMessageParts(io.a2a.spec.Message message) {
         StringBuilder sb = new StringBuilder();
         for (Part<?> each : message.getParts()) {
             if (Part.Kind.TEXT.equals(each.getKind())) {

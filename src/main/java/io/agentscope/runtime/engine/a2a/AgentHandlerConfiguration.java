@@ -26,20 +26,17 @@ import io.agentscope.runtime.engine.Runner;
 
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.events.InMemoryQueueManager;
-import io.a2a.server.events.QueueManager;
 import io.a2a.server.requesthandlers.DefaultRequestHandler;
 import io.a2a.server.requesthandlers.RequestHandler;
 import io.a2a.server.tasks.BasePushNotificationSender;
 import io.a2a.server.tasks.InMemoryPushNotificationConfigStore;
 import io.a2a.server.tasks.InMemoryTaskStore;
 import io.a2a.server.tasks.PushNotificationConfigStore;
-import io.a2a.server.tasks.PushNotificationSender;
-import io.a2a.server.tasks.TaskStore;
 import io.a2a.spec.AgentCard;
 
 public class AgentHandlerConfiguration {
 
-    private static final ExecutorService executor = Executors.newCachedThreadPool();
+    private static volatile JSONRPCHandler jsonrpcHandler = null;
 
     public static AgentCard createDefaultAgentCard() {
         AgentCapabilities capabilities = createDefaultCapabilities();
@@ -101,27 +98,22 @@ public class AgentHandlerConfiguration {
     }
 
     public static JSONRPCHandler jsonrpcHandler() {
-        return new JSONRPCHandler(createDefaultAgentCard(), requestHandler(new GraphAgentExecutor(Runner::streamQuery)));
+        if (jsonrpcHandler == null) {
+            synchronized (AgentHandlerConfiguration.class) {
+                if (jsonrpcHandler == null) {
+                    jsonrpcHandler = new JSONRPCHandler(
+                            createDefaultAgentCard(),
+                            requestHandler(new GraphAgentExecutor(Runner::streamQuery))
+                    );
+                }
+            }
+        }
+        return jsonrpcHandler;
     }
 
     public static RequestHandler requestHandler(AgentExecutor agentExecutor) {
-        return new DefaultRequestHandler(agentExecutor, taskStore(), queueManager(), pushConfigStore(), pushSender(), executor);
+        PushNotificationConfigStore pushConfigStore = new InMemoryPushNotificationConfigStore();
+        return new DefaultRequestHandler(agentExecutor, new InMemoryTaskStore(), new InMemoryQueueManager(),
+                pushConfigStore, new BasePushNotificationSender(pushConfigStore), Executors.newCachedThreadPool());
     }
-
-    public static TaskStore taskStore() {
-        return new InMemoryTaskStore();
-    }
-
-    public static QueueManager queueManager() {
-        return new InMemoryQueueManager();
-    }
-
-    public static PushNotificationConfigStore pushConfigStore() {
-        return new InMemoryPushNotificationConfigStore();
-    }
-
-    public static PushNotificationSender pushSender() {
-        return new BasePushNotificationSender(pushConfigStore());
-    }
-
 }
