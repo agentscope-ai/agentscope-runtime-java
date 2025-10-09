@@ -65,7 +65,7 @@ public class SandboxTools {
 
             // Ensure sandbox is running
             if (!isSandboxRunning(sandboxType)) {
-                System.out.println("Sandbox is not running, starting...");
+                logger.info("Sandbox is not running, starting...");
                 sandboxManager.startSandbox(sandboxType);
             }
 
@@ -107,7 +107,7 @@ public class SandboxTools {
 
             // Ensure sandbox is running
             if (!isSandboxRunning(sandboxType)) {
-                System.out.println("Sandbox is not running, starting...");
+                logger.info("Sandbox is not running, starting...");
                 sandboxManager.startSandbox(sandboxType);
             }
 
@@ -154,7 +154,7 @@ public class SandboxTools {
             ContainerModel sandbox = sandboxManager.getSandbox(sandboxType);
 
             if (!isSandboxRunning(sandboxType)) {
-                System.out.println("Sandbox is not running, starting...");
+                logger.info("Sandbox is not running, starting...");
                 sandboxManager.startSandbox(sandboxType);
             }
 

@@ -15,6 +15,8 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 
+import java.util.List;
+
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
  */
@@ -85,6 +87,7 @@ public class SaaAgentDeployExample {
                     .name("saa_agent_proxy")
                     .description("An agent powered by Spring AI Alibaba ReactAgent")
                     .reactAgentBuilder(builder)
+                    .tools(List.of("runpython"))
                     .build();
 
             // Create Runner with the SaaAgent

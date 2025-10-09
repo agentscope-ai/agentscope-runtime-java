@@ -15,61 +15,60 @@
  */
 package io.agentscope.runtime.engine.shared;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 /**
  * Abstract base class for service managers
  * Provides common functionality for service registration and lifecycle management
  */
 public abstract class ServiceManager implements AutoCloseable {
-    
-    private static final Logger logger = LoggerFactory.getLogger(ServiceManager.class);
-    
+
+    Logger logger = Logger.getLogger(ServiceManager.class.getName());
+
     private final List<ServiceRegistration> services = new ArrayList<>();
     private final Map<String, Service> serviceInstances = new ConcurrentHashMap<>();
-    
+
     public ServiceManager() {
         // Initialize default services
         registerDefaultServices();
     }
-    
+
     /**
      * Register default services for this manager, override in subclasses
      */
     protected abstract void registerDefaultServices();
-    
+
     /**
      * Register a service
      *
      * @param serviceClass The service class to register
-     * @param name Optional service name, defaults to class name with "Service" suffix removed and converted to lowercase
-     * @param args Positional arguments for service initialization
+     * @param name         Optional service name, defaults to class name with "Service" suffix removed and converted to lowercase
+     * @param args         Positional arguments for service initialization
      * @return this For method chaining
      */
     public ServiceManager register(Class<? extends Service> serviceClass, String name, Object... args) {
         if (name == null) {
             name = serviceClass.getSimpleName().replace("Service", "").toLowerCase();
         }
-        
+
         // Check if service name already exists
         if (serviceInstances.containsKey(name)) {
             throw new IllegalArgumentException("Service with name '" + name + "' is already registered");
         }
-        
+
         services.add(new ServiceRegistration(serviceClass, name, args));
-        logger.debug("Registered service: {} ({})", name, serviceClass.getSimpleName());
+        logger.info("Registered service: " + name + "(" + serviceClass.getSimpleName() + ")");
         return this;
     }
-    
+
     /**
      * Register an instantiated service
      *
-     * @param name Service name
+     * @param name    Service name
      * @param service Service instance
      * @return this For method chaining
      */
@@ -77,12 +76,11 @@ public abstract class ServiceManager implements AutoCloseable {
         if (serviceInstances.containsKey(name)) {
             throw new IllegalArgumentException("Service with name '" + name + "' is already registered");
         }
-        
+
         serviceInstances.put(name, service);
-        logger.debug("Registered service instance: {}", name);
         return this;
     }
-    
+
     /**
      * Start all registered services
      *
@@ -93,44 +91,41 @@ public abstract class ServiceManager implements AutoCloseable {
             try {
                 // Start services registered via register()
                 for (ServiceRegistration registration : services) {
-                    logger.debug("Starting service: {}", registration.name);
                     try {
                         Service instance = registration.serviceClass.getDeclaredConstructor()
                                 .newInstance();
                         instance.start().get();
                         serviceInstances.put(registration.name, instance);
-                        logger.debug("Successfully started service: {}", registration.name);
+                        logger.info("Successfully started service: " + registration.name);
                     } catch (Exception e) {
-                        logger.error("Failed to start service: {}", registration.name, e);
+                        logger.severe("Failed to start service: " + registration.name + " - " + e.getMessage());
                         throw new RuntimeException("Failed to start service: " + registration.name, e);
                     }
                 }
-                
+
                 // Start services registered via registerService()
                 for (Map.Entry<String, Service> entry : serviceInstances.entrySet()) {
                     String name = entry.getKey();
                     Service service = entry.getValue();
                     if (!services.stream().anyMatch(reg -> reg.name.equals(name))) {
-                        logger.debug("Starting pre-instantiated service: {}", name);
                         try {
                             service.start().get();
-                            logger.debug("Successfully started pre-instantiated service: {}", name);
                         } catch (Exception e) {
-                            logger.error("Failed to start pre-instantiated service: {}", name, e);
+                            logger.severe("Failed to start pre-instantiated service: " + name + " - " + e.getMessage());
                             throw new RuntimeException("Failed to start pre-instantiated service: " + name, e);
                         }
                     }
                 }
-                
+
             } catch (Exception e) {
-                logger.error("Failed to start services", e);
+                logger.severe("Failed to start services" + e.getMessage());
                 // Ensure proper cleanup on initialization failure
                 stop().join();
                 throw new RuntimeException("Failed to start services", e);
             }
         });
     }
-    
+
     /**
      * Stop all services
      *
@@ -138,24 +133,24 @@ public abstract class ServiceManager implements AutoCloseable {
      */
     public CompletableFuture<Void> stop() {
         return CompletableFuture.runAsync(() -> {
-            logger.debug("Stopping all services");
+            logger.info("Stopping all services");
             for (Service service : serviceInstances.values()) {
                 try {
                     service.stop().get();
                 } catch (Exception e) {
-                    logger.error("Error stopping service", e);
+                    logger.severe("Error stopping service" + e.getMessage());
                 }
             }
             serviceInstances.clear();
-            logger.debug("All services stopped");
+            logger.info("All services stopped");
         });
     }
-    
+
     @Override
     public void close() throws Exception {
         stop().get();
     }
-    
+
     /**
      * Enable property access for services, e.g., manager.env, manager.session
      */
@@ -166,35 +161,35 @@ public abstract class ServiceManager implements AutoCloseable {
         }
         return service;
     }
-    
+
     /**
      * Explicitly retrieve service instance, supports default value
      */
     public Service getService(String name, Service defaultService) {
         return serviceInstances.getOrDefault(name, defaultService);
     }
-    
+
     /**
      * Check if service exists
      */
     public boolean hasService(String name) {
         return serviceInstances.containsKey(name);
     }
-    
+
     /**
      * List all registered service names
      */
     public List<String> listServices() {
         return new ArrayList<>(serviceInstances.keySet());
     }
-    
+
     /**
      * Retrieve all service instances
      */
     public Map<String, Service> getAllServices() {
         return new HashMap<>(serviceInstances);
     }
-    
+
     /**
      * Check health status of all services
      *
@@ -209,14 +204,14 @@ public abstract class ServiceManager implements AutoCloseable {
                 try {
                     healthStatus.put(name, service.health().get());
                 } catch (Exception e) {
-                    logger.error("Health check failed for service {}", name, e);
+                    logger.severe("Health check failed for service " + name + " - " + e.getMessage());
                     healthStatus.put(name, false);
                 }
             }
             return healthStatus;
         });
     }
-    
+
     /**
      * Internal class for service registration information
      */
@@ -224,7 +219,7 @@ public abstract class ServiceManager implements AutoCloseable {
         final Class<? extends Service> serviceClass;
         final String name;
         final Object[] args;
-        
+
         ServiceRegistration(Class<? extends Service> serviceClass, String name, Object[] args) {
             this.serviceClass = serviceClass;
             this.name = name;

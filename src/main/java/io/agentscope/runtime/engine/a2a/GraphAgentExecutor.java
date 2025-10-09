@@ -24,8 +24,6 @@ import io.a2a.spec.*;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 
@@ -33,10 +31,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.logging.Logger;
 
-public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunction) implements AgentExecutor {
+public class GraphAgentExecutor implements AgentExecutor {
+    private final Function<AgentRequest, Flux<Event>> executeFunction;
+    Logger logger = Logger.getLogger(GraphAgentExecutor.class.getName());
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GraphAgentExecutor.class);
+    public GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunction) {
+        this.executeFunction = executeFunction;
+    }
 
     private Task new_task(io.a2a.spec.Message request) {
         String context_id_str = request.getContextId();
@@ -74,19 +77,19 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
             if (task == null) {
                 task = new_task(context.getMessage());
                 eventQueue.enqueueEvent(task);
-                LOGGER.info("Created new task: {}", task.getId());
+                logger.info("Created new task: " + task.getId());
             } else {
-                LOGGER.info("Using existing task: {}", task.getId());
+                logger.info("Using existing task: " + task.getId());
             }
             TaskUpdater taskUpdater = new TaskUpdater(context, eventQueue);
 
             StringBuilder accumulatedOutput = new StringBuilder();
             try {
-                LOGGER.info("Starting streaming output processing");
+                logger.info("Starting streaming output processing");
                 processStreamingOutput(resultFlux, taskUpdater, accumulatedOutput);
-                LOGGER.info("Streaming output processing completed. Total output length: {}", accumulatedOutput.length());
+                logger.info("Streaming output processing completed. Total output length: " + accumulatedOutput.length());
             } catch (Exception e) {
-                LOGGER.error("Error processing streaming output", e);
+                logger.severe("Error processing streaming output" + e.getMessage());
                 taskUpdater.startWork(taskUpdater.newAgentMessage(
                         List.of(new TextPart("Error processing streaming output: " + e.getMessage())),
                         Map.of()
@@ -95,10 +98,10 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
             }
 
             // No memory persistence in function-only mode
-            LOGGER.info("Agent execution completed successfully");
+            logger.info("Agent execution completed successfully");
 
         } catch (Exception e) {
-            LOGGER.error("Agent execution failed", e);
+            logger.severe("Agent execution failed" + e.getMessage());
             eventQueue.enqueueEvent(A2A.toAgentMessage("Agent execution failed: " + e.getMessage()));
         }
     }
@@ -124,7 +127,7 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
         try {
             // 使用 blockLast() 来确保同步等待流式处理完成
             resultFlux
-                    .doOnSubscribe(s -> LOGGER.info("Subscribed to executeFunction result stream"))
+                    .doOnSubscribe(s -> logger.info("Subscribed to executeFunction result stream"))
                     .doOnNext(output -> {
                         try {
                             if (output instanceof Message m) {
@@ -137,32 +140,32 @@ public record GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunc
                                                 Map.of()
                                         ));
                                         accumulatedOutput.append(content);
-                                        LOGGER.debug("Appended content chunk ({} chars), total so far {}",
-                                                content.length(), accumulatedOutput.length());
+                                        logger.info("Appended content chunk (" + content.length() + "chars), total so far "
+                                                + accumulatedOutput.length());
                                     }
                                 }
                             }
                         } catch (Exception e) {
-                            LOGGER.error("Error occurred while processing single output", e);
+                            logger.severe("Error occurred while processing single output" + e.getMessage());
                         }
                     })
                     .doOnComplete(() -> {
-                        LOGGER.info("Stream processing completed successfully");
+                        logger.info("Stream processing completed successfully");
                         taskUpdater.complete();
                     })
                     .doOnError(e -> {
-                        LOGGER.error("Error occurred during streaming processing", e);
+                        logger.severe("Error occurred during streaming processing" + e.getMessage());
                         taskUpdater.startWork(taskUpdater.newAgentMessage(
                                 List.of(new TextPart("Streaming error occurred: " + e.getMessage())),
                                 Map.of()
                         ));
                         taskUpdater.complete();
                     })
-                    .doFinally(signal -> LOGGER.info("executeFunction result stream terminated: {}", signal))
+                    .doFinally(signal -> logger.info("executeFunction result stream terminated: " + signal))
                     .blockLast(); // 同步等待流式处理完成
 
         } catch (Exception e) {
-            LOGGER.error("Error in processStreamingOutput", e);
+            logger.severe("Error in processStreamingOutput" + e.getMessage());
             taskUpdater.startWork(taskUpdater.newAgentMessage(
                     List.of(new TextPart("Error processing streaming output: " + e.getMessage())),
                     Map.of()

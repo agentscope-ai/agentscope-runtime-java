@@ -38,8 +38,6 @@ import io.a2a.spec.UnsupportedOperationError;
 import io.a2a.util.Utils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.reactivestreams.FlowAdapters;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,12 +52,13 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Flow;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/a2a")
 public class A2aController {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(A2aController.class);
+    Logger logger = Logger.getLogger(A2aController.class.getName());
 
     private final JSONRPCHandler jsonRpcHandler;
 
@@ -77,14 +76,13 @@ public class A2aController {
         try {
             if (streaming) {
                 result = handleStreamRequest(body);
-                LOGGER.info("Handling streaming request, returning SSE Flux");
+                logger.info("Handling streaming request, returning SSE Flux");
             } else {
                 result = handleNonStreamRequest(body);
-                LOGGER.info("Handling non-streaming request, returning JSON response");
+                logger.info("Handling non-streaming request, returning JSON response");
             }
-        }
-        catch (JsonProcessingException e) {
-            LOGGER.error("JSON parsing error: {}", e.getMessage());
+        } catch (JsonProcessingException e) {
+            logger.severe("JSON parsing error: " + e.getMessage());
             result = new JSONRPCErrorResponse(null, new JSONParseError());
         }
         return result;
@@ -96,8 +94,7 @@ public class A2aController {
             JsonNode method = node != null ? node.get("method") : null;
             return method != null && (SendStreamingMessageRequest.METHOD.equals(method.asText())
                     || TaskResubscriptionRequest.METHOD.equals(method.asText()));
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return false;
         }
     }
@@ -107,11 +104,9 @@ public class A2aController {
         Flow.Publisher<? extends JSONRPCResponse<?>> publisher;
         if (request instanceof SendStreamingMessageRequest req) {
             publisher = jsonRpcHandler.onMessageSendStream(req);
-        }
-        else if (request instanceof TaskResubscriptionRequest req) {
+        } else if (request instanceof TaskResubscriptionRequest req) {
             publisher = jsonRpcHandler.onResubscribeToTask(req);
-        }
-        else {
+        } else {
             return Flux.just(createErrorSSE(generateErrorResponse(request, new UnsupportedOperationError())));
         }
 
@@ -131,7 +126,7 @@ public class A2aController {
             }
             return builder.build();
         } catch (Exception e) {
-            LOGGER.error("Error converting response to SSE: {}", e.getMessage());
+            logger.severe("Error converting response to SSE: " + e.getMessage());
             return ServerSentEvent.<String>builder()
                     .data("{\"error\":\"Internal conversion error\"}")
                     .event("error")
@@ -158,26 +153,19 @@ public class A2aController {
         NonStreamingJSONRPCRequest<?> request = Utils.OBJECT_MAPPER.readValue(body, NonStreamingJSONRPCRequest.class);
         if (request instanceof GetTaskRequest req) {
             return jsonRpcHandler.onGetTask(req);
-        }
-        else if (request instanceof SendMessageRequest req) {
+        } else if (request instanceof SendMessageRequest req) {
             return jsonRpcHandler.onMessageSend(req);
-        }
-        else if (request instanceof CancelTaskRequest req) {
+        } else if (request instanceof CancelTaskRequest req) {
             return jsonRpcHandler.onCancelTask(req);
-        }
-        else if (request instanceof GetTaskPushNotificationConfigRequest req) {
+        } else if (request instanceof GetTaskPushNotificationConfigRequest req) {
             return jsonRpcHandler.getPushNotificationConfig(req);
-        }
-        else if (request instanceof SetTaskPushNotificationConfigRequest req) {
+        } else if (request instanceof SetTaskPushNotificationConfigRequest req) {
             return jsonRpcHandler.setPushNotificationConfig(req);
-        }
-        else if (request instanceof ListTaskPushNotificationConfigRequest req) {
+        } else if (request instanceof ListTaskPushNotificationConfigRequest req) {
             return jsonRpcHandler.listPushNotificationConfig(req);
-        }
-        else if (request instanceof DeleteTaskPushNotificationConfigRequest req) {
+        } else if (request instanceof DeleteTaskPushNotificationConfigRequest req) {
             return jsonRpcHandler.deletePushNotificationConfig(req);
-        }
-        else {
+        } else {
             return generateErrorResponse(request, new UnsupportedOperationError());
         }
     }

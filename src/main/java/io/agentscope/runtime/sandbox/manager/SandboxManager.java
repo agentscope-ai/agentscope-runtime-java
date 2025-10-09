@@ -19,22 +19,23 @@ import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.SandboxType;
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
-import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class SandboxManager {
-    DockerManager dockerManager = new DockerManager();
+    Logger logger = Logger.getLogger(SandboxManager.class.getName());
+    DockerClient dockerClient = new DockerClient();
     private Map<SandboxType, ContainerModel> sandboxMap = new HashMap<>();
     String BROWSER_SESSION_ID="123e4567-e89b-12d3-a456-426614174000";
-    public DockerClient client;
+    public com.github.dockerjava.api.DockerClient client;
 
     public SandboxManager() {
-        System.out.println("Initializing SandboxManager and connecting to Docker...");
-        client = dockerManager.connectDocker();
+        logger.info("Initializing SandboxManager and connecting to Docker...");
+        client = dockerClient.connectDocker();
     }
 
     private Map<SandboxType, String> typeNameMap= new HashMap<SandboxType, String>() {{
@@ -47,7 +48,7 @@ public class SandboxManager {
         if(sandboxMap.containsKey(sandboxType)){
             return sandboxMap.get(sandboxType);
         } else {
-            DockerManager dockerManager = new DockerManager();
+            DockerClient dockerClient = new DockerClient();
             String workdir = "/workspace";
             String default_mount_dir = "sessions_mount_dir";
             String[] portsArray = {"80/tcp"};
@@ -55,7 +56,7 @@ public class SandboxManager {
             
             // Create port mapping
             Map<String, Integer> portMapping = createPortMapping(ports);
-            System.out.println("Port mapping: " + portMapping);
+            logger.info("Port mapping: " + portMapping);
 
             String imageName = "agentscope/runtime-manager-base";
             if(typeNameMap.containsKey(sandboxType)){
@@ -85,7 +86,7 @@ public class SandboxManager {
             String runtimeConfig = "runc"; // or "nvidia" etc.
             String containerName = "sandbox_" + sandboxType.name().toLowerCase() + "_" + sessionId;
 
-            CreateContainerResponse container = dockerManager.createContainers(
+            CreateContainerResponse container = dockerClient.createContainers(
                     this.client,
                     containerName,
                     imageName,
@@ -128,8 +129,8 @@ public class SandboxManager {
     public void startSandbox(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
-            dockerManager.startContainer(this.client, containerModel.getContainerId());
-            System.out.println("Container status updated to: running");
+            dockerClient.startContainer(this.client, containerModel.getContainerId());
+            logger.info("Container status updated to: running");
             sandboxMap.put(sandboxType, containerModel);
         }
     }
@@ -141,8 +142,8 @@ public class SandboxManager {
     public void stopSandbox(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
-            dockerManager.stopContainer(this.client, containerModel.getContainerId());
-            System.out.println("Container status updated to: stopped");
+            dockerClient.stopContainer(this.client, containerModel.getContainerId());
+            logger.info("Container status updated to: stopped");
             sandboxMap.put(sandboxType, containerModel);
         }
     }
@@ -154,8 +155,8 @@ public class SandboxManager {
     public void removeSandbox(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
-            DockerManager dockerManager = new DockerManager();
-            dockerManager.removeContainer(this.client, containerModel.getContainerId());
+            DockerClient dockerClient = new DockerClient();
+            dockerClient.removeContainer(this.client, containerModel.getContainerId());
             sandboxMap.remove(sandboxType);
         }
     }
@@ -165,25 +166,25 @@ public class SandboxManager {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
             try {
-                DockerManager dockerManager = new DockerManager();
+                DockerClient dockerClient = new DockerClient();
                 String containerId = containerModel.getContainerId();
                 String containerName = containerModel.getContainerName();
-                
-                System.out.println("Stopping and removing " + sandboxType + " sandbox (Container ID: " + containerId + ", Name: " + containerName + ")");
+
+                logger.info("Stopping and removing " + sandboxType + " sandbox (Container ID: " + containerId + ", Name: " + containerName + ")");
 
                 // First try to stop the container
-                dockerManager.stopContainer(this.client, containerId);
+                dockerClient.stopContainer(this.client, containerId);
                 
                 // Wait a short time to ensure the container is fully stopped
                 Thread.sleep(1000);
                 
                 // Force remove the container
-                dockerManager.removeContainer(this.client, containerId);
+                dockerClient.removeContainer(this.client, containerId);
                 
                 // Remove from mapping
                 sandboxMap.remove(sandboxType);
-                
-                System.out.println(sandboxType + " sandbox has been successfully removed");
+
+                logger.info(sandboxType + " sandbox has been successfully removed");
             } catch (Exception e) {
                 System.err.println("Error removing " + sandboxType + " sandbox: " + e.getMessage());
                 e.printStackTrace();
@@ -191,7 +192,7 @@ public class SandboxManager {
                 sandboxMap.remove(sandboxType);
             }
         } else {
-            System.out.println("Sandbox " + sandboxType + " not found, may have already been removed");
+            logger.warning("Sandbox " + sandboxType + " not found, may have already been removed");
         }
     }
 
@@ -203,8 +204,8 @@ public class SandboxManager {
     public String getSandboxStatus(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
-            DockerManager dockerManager = new DockerManager();
-            return dockerManager.getContainerStatus(this.client, containerModel.getContainerId());
+            DockerClient dockerClient = new DockerClient();
+            return dockerClient.getContainerStatus(this.client, containerModel.getContainerId());
         }
         return "not_found";
     }
@@ -222,27 +223,27 @@ public class SandboxManager {
      */
     public void cleanupAllSandboxes() {
         if (sandboxMap == null || sandboxMap.isEmpty()) {
-            System.out.println("No sandbox containers to clean up");
+            logger.info("No sandbox containers to clean up");
             return;
         }
 
-        System.out.println("Starting to clean up all sandbox containers...");
-        System.out.println("Current number of sandboxes: " + sandboxMap.size());
-        System.out.println("Sandbox types: " + sandboxMap.keySet());
+        logger.info("Starting to clean up all sandbox containers...");
+        logger.info("Current number of sandboxes: " + sandboxMap.size());
+        logger.info("Sandbox types: " + sandboxMap.keySet());
 
         for (SandboxType sandboxType : new HashSet<>(sandboxMap.keySet())) {
             try {
-                System.out.println("Cleaning up " + sandboxType + " sandbox...");
+                logger.info("Cleaning up " + sandboxType + " sandbox...");
                 stopAndRemoveSandbox(sandboxType);
-                System.out.println(sandboxType + " sandbox cleanup complete");
+                logger.info(sandboxType + " sandbox cleanup complete");
             } catch (Exception e) {
-                System.err.println("Error cleaning up " + sandboxType + " sandbox: " + e.getMessage());
+                logger.severe("Error cleaning up " + sandboxType + " sandbox: " + e.getMessage());
                 e.printStackTrace();
             }
         }
 
         sandboxMap.clear();
-        System.out.println("All sandbox containers have been cleaned up!");
+        logger.info("All sandbox containers have been cleaned up!");
     }
 
     /**

@@ -19,8 +19,12 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 
+import java.util.logging.Logger;
+
 public class LocalDeployManager extends DeployManager{
     private ConfigurableApplicationContext applicationContext;
+    Logger logger = Logger.getLogger(LocalDeployManager.class.getName());
+
 
     @Override
     public synchronized void deployStreaming(String endpointName) {
@@ -32,5 +36,17 @@ public class LocalDeployManager extends DeployManager{
             .initializers((GenericApplicationContext ctx) -> ctx.registerBean("endpointName", String.class, () -> endpointName))
             .properties("spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration")
             .run();
+    }
+
+    /**
+     * Shutdown the application and clean up resources
+     */
+    public synchronized void shutdown() {
+        if (this.applicationContext != null && this.applicationContext.isActive()) {
+            logger.info("Shutting down LocalDeployManager...");
+            this.applicationContext.close();
+            this.applicationContext = null;
+            logger.info("LocalDeployManager shutdown completed");
+        }
     }
 }

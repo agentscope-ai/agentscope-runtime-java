@@ -28,13 +28,15 @@ import org.springframework.data.redis.core.HashOperations;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
  * 基于Redis的内存服务实现
  */
 public class RedisMemoryService implements MemoryService {
-    
+    Logger logger = Logger.getLogger(RedisMemoryService.class.getName());
+
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
     private static final String DEFAULT_SESSION_ID = "default_session";
@@ -121,7 +123,7 @@ public class RedisMemoryService implements MemoryService {
                 Set<String> keywords = Arrays.stream(query.toLowerCase().split("\\s+"))
                         .collect(Collectors.toSet());
 
-                System.out.println("keywords: "+keywords);
+                logger.info("keywords: "+keywords);
                 
                 HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
                 Map<String, String> allFields = hashOps.entries(key);
