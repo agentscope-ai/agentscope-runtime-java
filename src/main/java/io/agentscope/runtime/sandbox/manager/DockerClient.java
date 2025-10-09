@@ -15,13 +15,16 @@
  */
 package io.agentscope.runtime.sandbox.manager;
 
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.okhttp.OkDockerHttpClient;
+import com.github.dockerjava.transport.DockerHttpClient;
 import io.agentscope.runtime.sandbox.manager.model.DockerProp;
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.model.*;
-import com.github.dockerjava.core.DockerClientBuilder;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -37,22 +40,46 @@ public class DockerClient {
     /**
      * Connect to Docker server (Mac default connection method)
      *
-     * @return
+     * @return: Docker client
      */
     public com.github.dockerjava.api.DockerClient connectDocker() {
-        com.github.dockerjava.api.DockerClient dockerClient = DockerClientBuilder.getInstance().build();
+        com.github.dockerjava.api.DockerClient dockerClient = openDockerClient();
         dockerClient.infoCmd().exec();
         return dockerClient;
+    }
+
+    private static com.github.dockerjava.api.DockerClient openDockerClient() {
+        var config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
+
+        DockerHttpClient httpClient = new OkDockerHttpClient.Builder()
+                .dockerHost(config.getDockerHost())
+                .sslConfig(config.getSSLConfig())
+                .connectTimeout(30000)
+                .readTimeout(45000)
+                .build();
+
+        return DockerClientImpl.getInstance(config, httpClient);
     }
 
     /**
      * Connect to Docker server (specify connection address)
      *
      * @param dockerInstance Docker connection address
-     * @return
+     * @return: Docker client
      */
     public com.github.dockerjava.api.DockerClient connectDocker(String dockerInstance) {
-        com.github.dockerjava.api.DockerClient dockerClient = DockerClientBuilder.getInstance(dockerInstance).build();
+        var config = DefaultDockerClientConfig.createDefaultConfigBuilder()
+                .withDockerHost(dockerInstance)
+                .build();
+
+        DockerHttpClient httpClient = new OkDockerHttpClient.Builder()
+                .dockerHost(config.getDockerHost())
+                .sslConfig(config.getSSLConfig())
+                .connectTimeout(30000)
+                .readTimeout(45000)
+                .build();
+
+        com.github.dockerjava.api.DockerClient dockerClient = DockerClientImpl.getInstance(config, httpClient);
         dockerClient.infoCmd().exec();
         return dockerClient;
     }
@@ -63,13 +90,12 @@ public class DockerClient {
      * @param client        Docker client
      * @param containerName container name
      * @param imageName     image name
-     * @return
+     * @return: CreateContainerResponse
      */
     public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, String containerName, String imageName) {
-        CreateContainerResponse container = client.createContainerCmd(imageName)
+        return client.createContainerCmd(imageName)
                 .withName(containerName)
                 .exec();
-        return container;
     }
 
     /**
@@ -77,10 +103,9 @@ public class DockerClient {
      *
      * @param client     Docker client
      * @param dockerProp Docker configuration properties
-     * @return
+     * @return: CreateContainerResponse
      */
     public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, DockerProp dockerProp) {
-        // Port binding
         Map<Integer, Integer> portMap = Optional.ofNullable(dockerProp).map(DockerProp::getPartMap).orElse(new HashMap<>());
         Iterator<Map.Entry<Integer, Integer>> iterator = portMap.entrySet().iterator();
         List<PortBinding> portBindingList = new ArrayList<>();
@@ -94,10 +119,13 @@ public class DockerClient {
             exposedPortList.add(tcp);
         }
 
-        CreateContainerResponse container = client.createContainerCmd(dockerProp.getImageName())
-                .withName(dockerProp.getContainerName())
-                .withHostConfig(HostConfig.newHostConfig().withPortBindings(portBindingList))
-                .withExposedPorts(exposedPortList).exec();
+        CreateContainerResponse container = null;
+        if (dockerProp != null) {
+            container = client.createContainerCmd(dockerProp.getImageName())
+                    .withName(dockerProp.getContainerName())
+                    .withHostConfig(HostConfig.newHostConfig().withPortBindings(portBindingList))
+                    .withExposedPorts(exposedPortList).exec();
+        }
 
         return container;
     }
@@ -112,7 +140,7 @@ public class DockerClient {
      * @param volumeBindings volume mount mapping
      * @param environment    environment variables
      * @param runtimeConfig  runtime configuration
-     * @return
+     * @return: CreateContainerResponse
      */
     public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, String containerName, String imageName,
                                                     List<String> ports, Map<String, String> volumeBindings,

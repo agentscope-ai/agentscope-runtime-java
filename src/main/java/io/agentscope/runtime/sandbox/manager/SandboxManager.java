@@ -29,7 +29,7 @@ import java.util.logging.Logger;
 public class SandboxManager {
     Logger logger = Logger.getLogger(SandboxManager.class.getName());
     DockerClient dockerClient = new DockerClient();
-    private Map<SandboxType, ContainerModel> sandboxMap = new HashMap<>();
+    private final Map<SandboxType, ContainerModel> sandboxMap = new HashMap<>();
     String BROWSER_SESSION_ID="123e4567-e89b-12d3-a456-426614174000";
     public com.github.dockerjava.api.DockerClient client;
 
@@ -38,7 +38,7 @@ public class SandboxManager {
         client = dockerClient.connectDocker();
     }
 
-    private Map<SandboxType, String> typeNameMap= new HashMap<SandboxType, String>() {{
+    private final Map<SandboxType, String> typeNameMap= new HashMap<>() {{
         put(SandboxType.BASE, "agentscope/runtime-sandbox-base");
         put(SandboxType.FILESYSTEM, "agentscope/runtime-sandbox-filesystem");
         put(SandboxType.BROWSER, "agentscope/runtime-sandbox-browser");
@@ -68,7 +68,6 @@ public class SandboxManager {
             environment.put("SECRET_TOKEN", secretToken);
 
             String sessionId = secretToken;
-            // Use absolute path
             String currentDir = System.getProperty("user.dir");
             String mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
             java.io.File file = new java.io.File(mountDir);
@@ -172,10 +171,8 @@ public class SandboxManager {
 
                 logger.info("Stopping and removing " + sandboxType + " sandbox (Container ID: " + containerId + ", Name: " + containerName + ")");
 
-                // First try to stop the container
                 dockerClient.stopContainer(this.client, containerId);
                 
-                // Wait a short time to ensure the container is fully stopped
                 Thread.sleep(1000);
                 
                 // Force remove the container
@@ -188,7 +185,6 @@ public class SandboxManager {
             } catch (Exception e) {
                 System.err.println("Error removing " + sandboxType + " sandbox: " + e.getMessage());
                 e.printStackTrace();
-                // Even if removal fails, remove from mapping to avoid memory leaks
                 sandboxMap.remove(sandboxType);
             }
         } else {
@@ -222,7 +218,7 @@ public class SandboxManager {
      * Clean up all sandbox containers
      */
     public void cleanupAllSandboxes() {
-        if (sandboxMap == null || sandboxMap.isEmpty()) {
+        if (sandboxMap.isEmpty()) {
             logger.info("No sandbox containers to clean up");
             return;
         }
@@ -274,11 +270,9 @@ public class SandboxManager {
      * @return whether the port is available
      */
     private boolean isPortAvailable(int port) {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            // Port is available
+        try (ServerSocket ignored = new ServerSocket(port)) {
             return true;
         } catch (IOException e) {
-            // Port is occupied
             return false;
         }
     }
