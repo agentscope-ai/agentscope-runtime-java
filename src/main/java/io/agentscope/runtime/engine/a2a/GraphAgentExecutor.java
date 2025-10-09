@@ -125,7 +125,6 @@ public class GraphAgentExecutor implements AgentExecutor {
      */
     private void processStreamingOutput(Flux<Event> resultFlux, TaskUpdater taskUpdater, StringBuilder accumulatedOutput) {
         try {
-            // 使用 blockLast() 来确保同步等待流式处理完成
             resultFlux
                     .doOnSubscribe(s -> logger.info("Subscribed to executeFunction result stream"))
                     .doOnNext(output -> {
@@ -162,7 +161,7 @@ public class GraphAgentExecutor implements AgentExecutor {
                         taskUpdater.complete();
                     })
                     .doFinally(signal -> logger.info("executeFunction result stream terminated: " + signal))
-                    .blockLast(); // 同步等待流式处理完成
+                    .blockLast();
 
         } catch (Exception e) {
             logger.severe("Error in processStreamingOutput" + e.getMessage());

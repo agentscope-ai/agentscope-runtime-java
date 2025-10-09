@@ -26,12 +26,12 @@ import reactor.core.publisher.Flux;
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
  */
-public class SaaAgentSadboxExample {
+public class SaaAgentSandboxExample {
 
     private DashScopeChatModel chatModel;
     private ContextManager contextManager;
 
-    public SaaAgentSadboxExample() {
+    public SaaAgentSandboxExample() {
         // Initialize DashScope ChatModel
         initializeChatModel();
 
@@ -114,7 +114,7 @@ public class SaaAgentSadboxExample {
             );
 
             // Wait a bit for async execution (in real applications, you'd handle this properly)
-            Thread.sleep(5000);
+            Thread.sleep(50000);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -181,7 +181,7 @@ public class SaaAgentSadboxExample {
             System.exit(1);
         }
 
-        SaaAgentSadboxExample example = new SaaAgentSadboxExample();
+        SaaAgentSandboxExample example = new SaaAgentSandboxExample();
 
         try {
             example.basicExample();

@@ -22,15 +22,19 @@ import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 
 import java.io.IOException;
-import java.net.ServerSocket;
+import java.net.*;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class SandboxManager {
     Logger logger = Logger.getLogger(SandboxManager.class.getName());
     DockerClient dockerClient = new DockerClient();
     private final Map<SandboxType, ContainerModel> sandboxMap = new HashMap<>();
-    String BROWSER_SESSION_ID="123e4567-e89b-12d3-a456-426614174000";
+    String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     public com.github.dockerjava.api.DockerClient client;
 
     public SandboxManager() {
@@ -38,14 +42,14 @@ public class SandboxManager {
         client = dockerClient.connectDocker();
     }
 
-    private final Map<SandboxType, String> typeNameMap= new HashMap<>() {{
+    private final Map<SandboxType, String> typeNameMap = new HashMap<>() {{
         put(SandboxType.BASE, "agentscope/runtime-sandbox-base");
         put(SandboxType.FILESYSTEM, "agentscope/runtime-sandbox-filesystem");
         put(SandboxType.BROWSER, "agentscope/runtime-sandbox-browser");
     }};
 
-    public ContainerModel getSandbox(SandboxType sandboxType){
-        if(sandboxMap.containsKey(sandboxType)){
+    public ContainerModel getSandbox(SandboxType sandboxType) {
+        if (sandboxMap.containsKey(sandboxType)) {
             return sandboxMap.get(sandboxType);
         } else {
             DockerClient dockerClient = new DockerClient();
@@ -53,13 +57,13 @@ public class SandboxManager {
             String default_mount_dir = "sessions_mount_dir";
             String[] portsArray = {"80/tcp"};
             List<String> ports = Arrays.asList(portsArray);
-            
+
             // Create port mapping
             Map<String, Integer> portMapping = createPortMapping(ports);
             logger.info("Port mapping: " + portMapping);
 
             String imageName = "agentscope/runtime-manager-base";
-            if(typeNameMap.containsKey(sandboxType)){
+            if (typeNameMap.containsKey(sandboxType)) {
                 imageName = typeNameMap.get(sandboxType);
             }
 
@@ -116,13 +120,14 @@ public class SandboxManager {
                     .build();
 
             sandboxMap.put(sandboxType, containerModel);
-            
+
             return containerModel;
         }
     }
 
     /**
      * Start sandbox container
+     *
      * @param sandboxType sandbox type
      */
     public void startSandbox(SandboxType sandboxType) {
@@ -136,6 +141,7 @@ public class SandboxManager {
 
     /**
      * Stop sandbox container
+     *
      * @param sandboxType sandbox type
      */
     public void stopSandbox(SandboxType sandboxType) {
@@ -149,6 +155,7 @@ public class SandboxManager {
 
     /**
      * Remove sandbox container
+     *
      * @param sandboxType sandbox type
      */
     public void removeSandbox(SandboxType sandboxType) {
@@ -161,7 +168,7 @@ public class SandboxManager {
     }
 
 
-    public void stopAndRemoveSandbox(SandboxType sandboxType){
+    public void stopAndRemoveSandbox(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
             try {
@@ -172,12 +179,12 @@ public class SandboxManager {
                 logger.info("Stopping and removing " + sandboxType + " sandbox (Container ID: " + containerId + ", Name: " + containerName + ")");
 
                 dockerClient.stopContainer(this.client, containerId);
-                
+
                 Thread.sleep(1000);
-                
+
                 // Force remove the container
                 dockerClient.removeContainer(this.client, containerId);
-                
+
                 // Remove from mapping
                 sandboxMap.remove(sandboxType);
 
@@ -194,6 +201,7 @@ public class SandboxManager {
 
     /**
      * Get sandbox status
+     *
      * @param sandboxType sandbox type
      * @return sandbox status
      */
@@ -208,6 +216,7 @@ public class SandboxManager {
 
     /**
      * Get all sandbox information
+     *
      * @return sandbox mapping
      */
     public Map<SandboxType, ContainerModel> getAllSandboxes() {
@@ -244,14 +253,14 @@ public class SandboxManager {
 
     /**
      * Find available ports
+     *
      * @param count number of ports to find
      * @return list of available ports
      */
     private List<Integer> findFreePorts(int count) {
         List<Integer> freePorts = new ArrayList<>();
-        int startPort = 8000; // Start from 8000
-        int maxAttempts = 1000; // Try at most 1000 ports
-
+        int startPort = 8000;
+        int maxAttempts = 1000;
         for (int i = 0; i < count && freePorts.size() < count; i++) {
             for (int port = startPort + i; port < startPort + maxAttempts; port++) {
                 if (isPortAvailable(port)) {
@@ -260,41 +269,99 @@ public class SandboxManager {
                 }
             }
         }
-        
         return freePorts;
     }
 
     /**
      * Check if a port is available
+     *
      * @param port port number
      * @return whether the port is available
      */
-    private boolean isPortAvailable(int port) {
-        try (ServerSocket ignored = new ServerSocket(port)) {
-            return true;
-        } catch (IOException e) {
+    public boolean isPortAvailable(int port) {
+        boolean canConnect = testConnectionWithRetries("localhost", port, 2);
+        if (canConnect) {
             return false;
         }
+        return canBindPort(port);
+    }
+
+    private boolean testConnectionWithRetries(String host, int port, int retries) {
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        try {
+            List<Future<Boolean>> futures = new ArrayList<>();
+
+            for (int i = 0; i < retries; i++) {
+                futures.add(executor.submit(() -> {
+                    try (Socket socket = new Socket()) {
+                        socket.connect(new InetSocketAddress(host, port), 2000);
+                        return true;
+                    } catch (IOException e) {
+                        return false;
+                    }
+                }));
+            }
+
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(2000L * retries, TimeUnit.MILLISECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+            }
+
+            for (Future<Boolean> future : futures) {
+                try {
+                    if (future.get()) {
+                        return true;
+                    }
+                } catch (Exception e) {
+                    // ignore exceptions from individual tasks
+                }
+            }
+            return false;
+        } finally {
+            if (executor != null && !executor.isShutdown()) {
+                executor.shutdownNow();
+            }
+        }
+    }
+
+    private static boolean canBindPort(int port) {
+        List<String> addressesToTest = Arrays.asList("0.0.0.0", "127.0.0.1", "localhost");
+
+        for (String addr : addressesToTest) {
+            try (ServerSocket socket = new ServerSocket()) {
+                socket.setReuseAddress(false);
+                socket.bind(new InetSocketAddress(addr, port), 1);
+                return true;
+            } catch (IOException e) {
+                // Port is in use or cannot bind to this address
+            }
+        }
+        return false;
     }
 
     /**
      * Create port mapping
+     *
      * @param containerPorts list of container ports
      * @return port mapping Map
      */
     private Map<String, Integer> createPortMapping(List<String> containerPorts) {
         Map<String, Integer> portMapping = new HashMap<>();
-        
+
         if (containerPorts != null && !containerPorts.isEmpty()) {
             List<Integer> freePorts = findFreePorts(containerPorts.size());
-            
+
             for (int i = 0; i < containerPorts.size() && i < freePorts.size(); i++) {
                 String containerPort = containerPorts.get(i);
                 Integer hostPort = freePorts.get(i);
                 portMapping.put(containerPort, hostPort);
             }
         }
-        
+
         return portMapping;
     }
 
