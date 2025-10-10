@@ -63,7 +63,7 @@ public class SandboxManager {
                 KubernetesClient kubernetesClient = new KubernetesClient("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
                 this.containerClient = kubernetesClient;
                 kubernetesClient.connect();
-                this.client = null; // Kubernetes不需要Docker客户端
+                this.client = null; // Kubernetes does not need Docker client
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported container manager type: " + containerManagerType);
@@ -71,9 +71,9 @@ public class SandboxManager {
     }
     
     /**
-     * 构造函数，支持Kubernetes配置
+     * Constructor supporting Kubernetes configuration
      *
-     * @param clientConfig 客户端配置
+     * @param clientConfig client configuration
      */
     public SandboxManager(BaseClientConfig clientConfig) {
         this.containerManagerType = clientConfig.getClientType();
@@ -99,7 +99,7 @@ public class SandboxManager {
                 }
                 this.containerClient = kubernetesClient;
                 kubernetesClient.connect();
-                this.client = null; // Kubernetes不需要Docker客户端
+                this.client = null; // Kubernetes does not need Docker client
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported container manager type: " + containerManagerType);
@@ -152,10 +152,10 @@ public class SandboxManager {
             ));
 
             String runtimeConfig = "runc"; // or "nvidia" etc.
-            // Kubernetes要求容器名称符合RFC 1123标准：只能包含小写字母、数字、连字符
+            // Kubernetes requires container names to comply with RFC 1123 standard: only lowercase letters, numbers, and hyphens
             String containerName = "sandbox-" + sandboxType.name().toLowerCase() + "-" + sessionId.toLowerCase();
 
-            // 使用统一的BaseClient接口创建容器
+            // Use unified BaseClient interface to create container
             String containerId = containerClient.createContainer(
                     containerName,
                     imageName,
@@ -171,31 +171,31 @@ public class SandboxManager {
                     .map(String::valueOf)
                     .toArray(String[]::new);
 
-            // 根据容器管理器类型确定正确的访问URL
+            // Determine correct access URL based on container manager type
             String baseHost;
             String accessPort;
             
             if (containerManagerType == ContainerManagerType.KUBERNETES) {
-                // 在Kubernetes环境中，使用LoadBalancer的External IP
+                // In Kubernetes environment, use LoadBalancer's External IP
                 try {
-                    // 等待LoadBalancer分配External IP（最多等待60秒）
+                    // Wait for LoadBalancer to assign External IP (max 60 seconds)
                     String externalIP = ((KubernetesClient) containerClient).waitForLoadBalancerExternalIP(containerName, 60);
                     if (externalIP != null && !externalIP.isEmpty()) {
                         baseHost = externalIP;
-                        accessPort = "80"; // LoadBalancer默认使用80端口
-                        logger.info("Kubernetes LoadBalancer环境: 使用External IP " + externalIP + " 端口 80");
+                        accessPort = "80"; // LoadBalancer uses port 80 by default
+                        logger.info("Kubernetes LoadBalancer environment: using External IP " + externalIP + " port 80");
                     } else {
-                        logger.warning("无法获取LoadBalancer External IP，使用localhost和映射端口");
+                        logger.warning("Unable to get LoadBalancer External IP, using localhost and mapped port");
                         baseHost = "localhost";
                         accessPort = mappedPorts[0];
                     }
                 } catch (Exception e) {
-                    logger.warning("获取LoadBalancer External IP失败，使用localhost和映射端口: " + e.getMessage());
+                    logger.warning("Failed to get LoadBalancer External IP, using localhost and mapped port: " + e.getMessage());
                     baseHost = "localhost";
                     accessPort = mappedPorts[0];
                 }
             } else {
-                // Docker环境使用映射端口
+                // Docker environment uses mapped ports
                 baseHost = "localhost";
                 accessPort = mappedPorts[0];
             }
@@ -464,12 +464,12 @@ public class SandboxManager {
 
         if (containerPorts != null && !containerPorts.isEmpty()) {
             if (containerManagerType == ContainerManagerType.KUBERNETES) {
-                // 对于Kubernetes LoadBalancer，使用80端口
+                // For Kubernetes LoadBalancer, use port 80
                 for (String containerPort : containerPorts) {
                     portMapping.put(containerPort, 80);
                 }
             } else {
-                // 对于Docker，使用动态分配的端口
+                // For Docker, use dynamically assigned ports
                 List<Integer> freePorts = findFreePorts(containerPorts.size());
                 for (int i = 0; i < containerPorts.size() && i < freePorts.size(); i++) {
                     String containerPort = containerPorts.get(i);

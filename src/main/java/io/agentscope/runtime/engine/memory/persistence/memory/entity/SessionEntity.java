@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 会话实体类
+ * Session entity class
  */
 @Entity
 @Table(name = "sessions", indexes = {

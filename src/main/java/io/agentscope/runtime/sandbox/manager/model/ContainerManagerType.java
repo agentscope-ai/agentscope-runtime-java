@@ -16,7 +16,7 @@
 package io.agentscope.runtime.sandbox.manager.model;
 
 /**
- * 容器管理类型枚举
+ * Container management type enumeration
  */
 public enum ContainerManagerType {
     DOCKER("docker"),

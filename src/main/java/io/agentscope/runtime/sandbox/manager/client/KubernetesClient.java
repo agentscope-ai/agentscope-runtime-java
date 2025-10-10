@@ -31,8 +31,8 @@ import java.util.*;
 import java.util.logging.Logger;
 
 /**
- * Kubernetes容器管理客户端实现
- * 基于Kubernetes Java客户端实现容器管理功能
+ * Kubernetes container management client implementation
+ * Implements container management functionality based on Kubernetes Java client
  */
 public class KubernetesClient extends BaseClient {
     
@@ -48,16 +48,16 @@ public class KubernetesClient extends BaseClient {
     private String namespace;
     
     /**
-     * 默认构造函数
+     * Default constructor
      */
     public KubernetesClient() {
-        // 使用默认配置
+        // Use default configuration
     }
     
     /**
-     * 构造函数，指定 kubeconfig 文件路径
+     * Constructor specifying kubeconfig file path
      * 
-     * @param kubeconfigPath kubeconfig 文件路径
+     * @param kubeconfigPath kubeconfig file path
      */
     public KubernetesClient(String kubeconfigPath) {
         this.kubeconfigPath = kubeconfigPath;
@@ -65,9 +65,9 @@ public class KubernetesClient extends BaseClient {
     }
     
     /**
-     * 构造函数，使用KubernetesClientConfig配置
+     * Constructor using KubernetesClientConfig configuration
      * 
-     * @param config Kubernetes客户端配置
+     * @param config Kubernetes client configuration
      */
     public KubernetesClient(KubernetesClientConfig config) {
         this.config = config;
@@ -78,12 +78,12 @@ public class KubernetesClient extends BaseClient {
     @Override
     public boolean connect() {
         try {
-            // 验证配置
+            // Validate configuration
             validateConfig();
             
-            // 根据是否指定了 kubeconfig 文件路径来选择连接方式
+            // Choose connection method based on whether kubeconfig file path is specified
             if (kubeconfigPath != null && !kubeconfigPath.trim().isEmpty()) {
-                // 从指定的 kubeconfig 文件加载配置
+                // Load configuration from specified kubeconfig file
                 File kubeconfigFile = new File(kubeconfigPath);
                 if (!kubeconfigFile.exists()) {
                     throw new RuntimeException("Kubeconfig file not found: " + kubeconfigPath);
@@ -91,13 +91,13 @@ public class KubernetesClient extends BaseClient {
                 logger.info("Loading Kubernetes configuration from file: " + kubeconfigPath);
                 this.apiClient = Config.fromConfig(kubeconfigPath);
             } else {
-                // 使用默认配置连接Kubernetes集群
+                // Use default configuration to connect to Kubernetes cluster
                 logger.info("Using default Kubernetes configuration");
                 this.apiClient = Config.defaultClient();
             }
             Configuration.setDefaultApiClient(this.apiClient);
             
-            // 初始化API客户端
+            // Initialize API clients
             this.coreApi = new CoreV1Api();
             this.appsApi = new AppsV1Api();
             
@@ -109,7 +109,7 @@ public class KubernetesClient extends BaseClient {
             } catch (Exception e) {
                 logger.warning("API resources check failed, trying alternative connection test: " + e.getMessage());
                 
-                // 使用kubectl命令进行连接测试
+                // Use kubectl command for connection test
                 ProcessBuilder processBuilder = new ProcessBuilder("kubectl", "cluster-info");
                 Process process = processBuilder.start();
                 int exitCode = process.waitFor();
@@ -130,10 +130,10 @@ public class KubernetesClient extends BaseClient {
     }
     
     /**
-     * 使用指定的 kubeconfig 文件路径连接
+     * Connect using specified kubeconfig file path
      * 
-     * @param kubeconfigPath kubeconfig 文件路径
-     * @return 连接是否成功
+     * @param kubeconfigPath kubeconfig file path
+     * @return whether connection is successful
      */
     public boolean connect(String kubeconfigPath) {
         this.kubeconfigPath = kubeconfigPath;
@@ -146,25 +146,25 @@ public class KubernetesClient extends BaseClient {
     }
     
     /**
-     * 获取当前使用的 kubeconfig 文件路径
+     * Get the currently used kubeconfig file path
      * 
-     * @return kubeconfig 文件路径，如果使用默认配置则返回 null
+     * @return kubeconfig file path, returns null if using default configuration
      */
     public String getKubeconfigPath() {
         return kubeconfigPath;
     }
     
     /**
-     * 验证配置
+     * Validate configuration
      */
     private void validateConfig() {
         if (config != null) {
-            // 验证namespace
+            // Validate namespace
             if (config.getNamespace() != null && config.getNamespace().trim().isEmpty()) {
                 throw new IllegalArgumentException("Namespace cannot be empty");
             }
             
-            // 验证kubeconfig路径
+            // Validate kubeconfig path
             if (config.getKubeConfigPath() != null && !config.getKubeConfigPath().trim().isEmpty()) {
                 File kubeconfigFile = new File(config.getKubeConfigPath());
                 if (!kubeconfigFile.exists()) {
@@ -195,16 +195,16 @@ public class KubernetesClient extends BaseClient {
         }
 
         String deploymentName = containerName;
-        String serviceName = containerName + "-svc"; // Service 名称
+        String serviceName = containerName + "-svc"; // Service name
 
         try {
-            // Step 1: 创建 Deployment
+            // Step 1: Create Deployment
             V1Deployment deployment = createDeploymentObject(deploymentName, imageName,
                     ports, portMapping, volumeBindings, environment, runtimeConfig);
             V1Deployment createdDeployment = appsApi.createNamespacedDeployment(namespace, deployment).execute();
             logger.info("Deployment created: " + createdDeployment.getMetadata().getName());
 
-            // Step 2: 如果有 portMapping，创建 LoadBalancer Service
+            // Step 2: If there is portMapping, create LoadBalancer Service
             if (portMapping != null && !portMapping.isEmpty()) {
                 V1Service service = createLoadBalancerServiceObject(serviceName, deploymentName, portMapping);
                 V1Service createdService = coreApi.createNamespacedService(namespace, service).execute();
@@ -214,7 +214,7 @@ public class KubernetesClient extends BaseClient {
                         .toList());
             }
 
-            return deploymentName; // 返回 Deployment 名称作为容器 ID
+            return deploymentName; // Return Deployment name as container ID
 
         } catch (ApiException e) {
             logger.severe("Failed to create container (Deployment/Service): " + e.getMessage());
@@ -231,7 +231,7 @@ public class KubernetesClient extends BaseClient {
     
     
     /**
-     * 创建Deployment（更高级的控制器）
+     * Create Deployment (more advanced controller)
      */
     public String createDeployment(String deploymentName, String imageName,
                                   List<String> ports, Map<String, Integer> portMapping,
@@ -257,7 +257,7 @@ public class KubernetesClient extends BaseClient {
     }
 
     /**
-     * 创建 LoadBalancer 类型的 Service 对象，用于暴露容器端口到外部
+     * Create LoadBalancer type Service object for exposing container ports to external
      */
     private V1Service createLoadBalancerServiceObject(String serviceName, String appName, Map<String, Integer> portMapping) {
         List<V1ServicePort> servicePorts = new ArrayList<>();
@@ -277,14 +277,14 @@ public class KubernetesClient extends BaseClient {
 
             V1ServicePort servicePortObj = new V1ServicePort()
                     .name("port-" + index++)
-                    .port(servicePort)                         // Service 端口（LoadBalancer使用80端口）
-                    .targetPort(new IntOrString(containerPort)) // 转发到 Pod 的容器端口
+                    .port(servicePort) 
+                    .targetPort(new IntOrString(containerPort))
                     .protocol(protocol);
 
             servicePorts.add(servicePortObj);
         }
 
-        // Service 选择器需匹配 Deployment 的 Pod 标签
+        // Service selector needs to match Deployment's Pod labels
         Map<String, String> selector = Collections.singletonMap("app", appName);
 
         return new V1Service()
@@ -298,27 +298,27 @@ public class KubernetesClient extends BaseClient {
     }
 
     /**
-     * 创建 Deployment 对象
+     * Create Deployment object
      */
     private V1Deployment createDeploymentObject(String deploymentName, String imageName,
                                                 List<String> ports, Map<String, Integer> portMapping,
                                                 List<VolumeBinding> volumeBindings,
                                                 Map<String, String> environment, String runtimeConfig) {
 
-        // 标签用于选择器和关联资源
+        // Labels for selector and associated resources
         Map<String, String> labels = Collections.singletonMap("app", deploymentName);
 
-        // 收集所有需要暴露的容器端口
+        // Collect all container ports that need to be exposed
         Set<Integer> containerPortNumbers = new HashSet<>();
         List<V1ContainerPort> containerPorts = new ArrayList<>();
 
-        // 1. 从 portMapping 中提取容器端口（值为主机端口，但我们只关心容器端口）
+        // 1. Extract container ports from portMapping (value is host port, but we only care about container port)
         if (portMapping != null && !portMapping.isEmpty()) {
             for (String containerPortStr : portMapping.keySet()) {
                 String[] parts = containerPortStr.split("/");
                 int portNum = Integer.parseInt(parts[0]);
                 String protocol = (parts.length > 1) ? parts[1].toUpperCase() : "TCP";
-                if (containerPortNumbers.add(portNum)) { // add 返回 true 表示未重复
+                if (containerPortNumbers.add(portNum)) { // add returns true if not duplicate
                     V1ContainerPort port = new V1ContainerPort()
                             .containerPort(portNum)
                             .protocol(protocol);
@@ -327,7 +327,7 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // 2. 从 ports 列表中补充其他端口
+        // 2. Supplement other ports from ports list
         if (ports != null) {
             for (String portStr : ports) {
                 String[] parts = portStr.split("/");
@@ -342,7 +342,7 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // 环境变量
+        // Environment variables
         List<V1EnvVar> envVars = new ArrayList<>();
         if (environment != null) {
             for (Map.Entry<String, String> entry : environment.entrySet()) {
@@ -350,7 +350,7 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // 卷挂载
+        // Volume mounts
         List<V1VolumeMount> volumeMounts = new ArrayList<>();
         List<V1Volume> volumes = new ArrayList<>();
         volumeBindings=null;
@@ -364,7 +364,7 @@ public class KubernetesClient extends BaseClient {
                         .mountPath(binding.getContainerPath())
                         .readOnly("ro".equals(binding.getMode())));
 
-                // 使用 hostPath（注意：生产环境建议改用 PVC）
+                // Use hostPath (note: production environment recommends using PVC)
                 V1HostPathVolumeSource hostPath = new V1HostPathVolumeSource()
                         .path(binding.getHostPath())
                         .type("DirectoryOrCreate");
@@ -375,7 +375,7 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // 容器定义
+        // Container definition
         V1Container container = new V1Container()
                 .name(deploymentName)
                 .image(imageName)
@@ -384,7 +384,7 @@ public class KubernetesClient extends BaseClient {
                 .volumeMounts(volumeMounts)
                 .imagePullPolicy("IfNotPresent");
 
-        // Pod 规格
+        // Pod specification
         V1PodSpec podSpec = new V1PodSpec()
                 .containers(Arrays.asList(container));
 
@@ -392,22 +392,21 @@ public class KubernetesClient extends BaseClient {
             podSpec.volumes(volumes);
         }
 
-        // 注意：不再自动启用 hostNetwork！
-        // 如果确实需要 hostNetwork（如性能敏感场景），应通过 runtimeConfig 显式开启
-        // if (Boolean.parseBoolean(runtimeConfig)) { podSpec.hostNetwork(true); }
+        // Note: No longer automatically enable hostNetwork!
+        // If hostNetwork is really needed (such as performance-sensitive scenarios), it should be explicitly enabled through runtimeConfig
 
-        // Pod 模板
+        // Pod template
         V1PodTemplateSpec podTemplate = new V1PodTemplateSpec()
                 .metadata(new V1ObjectMeta().labels(labels))
                 .spec(podSpec);
 
-        // Deployment 规格
+        // Deployment specification
         V1DeploymentSpec deploymentSpec = new V1DeploymentSpec()
                 .replicas(1)
                 .selector(new V1LabelSelector().matchLabels(labels))
                 .template(podTemplate);
 
-        // 最终 Deployment 对象
+        // Final Deployment object
         return new V1Deployment()
                 .apiVersion("apps/v1")
                 .kind("Deployment")
@@ -440,11 +439,11 @@ public class KubernetesClient extends BaseClient {
         }
         
         try {
-            // 删除Deployment
+            // Delete Deployment
             appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
             logger.info("Deployment " + containerId + " deleted successfully");
             
-            // 同时删除对应的Service
+            // Also delete corresponding Service
             deleteServiceIfExists(containerId);
             
         } catch (ApiException e) {
@@ -455,23 +454,21 @@ public class KubernetesClient extends BaseClient {
     
     @Override
     public void removeContainer(String containerId) {
-        // 在Kubernetes中，删除Deployment就是移除容器
-        // 直接调用stopContainer，因为stopAndRemoveContainer会先调用stopContainer
+
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
         
         try {
-            // 删除Deployment
+            // Delete Deployment
             appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
             logger.info("Deployment " + containerId + " deleted successfully");
             
-            // 同时删除对应的Service
+            // Also delete corresponding Service
             deleteServiceIfExists(containerId);
             
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                // Deployment已经不存在，这是正常的
                 logger.info("Deployment " + containerId + " already deleted");
             } else {
                 logger.severe("Failed to remove container: " + e.getMessage());
@@ -487,7 +484,7 @@ public class KubernetesClient extends BaseClient {
         }
         
         try {
-            // 获取Deployment状态
+            // Get Deployment status
             V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, namespace).execute();
             Integer replicas = deployment.getStatus().getReplicas();
             Integer readyReplicas = deployment.getStatus().getReadyReplicas();
@@ -505,7 +502,7 @@ public class KubernetesClient extends BaseClient {
     }
     
     /**
-     * 获取所有Pod列表
+     * Get all Pod list
      */
     public List<V1Pod> listPods() {
         if (!isConnected()) {
@@ -519,14 +516,12 @@ public class KubernetesClient extends BaseClient {
             logger.severe("Failed to list pods: " + e.getMessage());
             throw new RuntimeException("Failed to list pods", e);
         } catch (Exception e) {
-            // 处理JSON解析错误等兼容性问题
-            logger.warning("Error listing pods (possibly due to version compatibility): " + e.getMessage());
-            return new ArrayList<>(); // 返回空列表而不是抛出异常
+            return new ArrayList<>();
         }
     }
     
     /**
-     * 获取所有Deployment列表
+     * Get all Deployment list
      */
     public List<V1Deployment> listDeployments() {
         if (!isConnected()) {
@@ -543,10 +538,10 @@ public class KubernetesClient extends BaseClient {
     }
     
     /**
-     * 获取LoadBalancer Service的External IP
+     * Get LoadBalancer Service's External IP
      * 
-     * @param containerId 容器ID（Deployment名称）
-     * @return External IP地址，如果未分配则返回null
+     * @param containerId container ID (Deployment name)
+     * @return External IP address, returns null if not assigned
      */
     public String getLoadBalancerExternalIP(String containerId) {
         if (!isConnected()) {
@@ -587,11 +582,11 @@ public class KubernetesClient extends BaseClient {
     }
     
     /**
-     * 等待LoadBalancer Service的External IP分配
+     * Wait for LoadBalancer Service's External IP assignment
      * 
-     * @param containerId 容器ID（Deployment名称）
-     * @param timeoutSeconds 超时时间（秒）
-     * @return External IP地址，如果超时则返回null
+     * @param containerId container ID (Deployment name)
+     * @param timeoutSeconds timeout time (seconds)
+     * @return External IP address, returns null if timeout
      */
     public String waitForLoadBalancerExternalIP(String containerId, int timeoutSeconds) {
         long startTime = System.currentTimeMillis();
@@ -604,7 +599,7 @@ public class KubernetesClient extends BaseClient {
             }
             
             try {
-                Thread.sleep(2000); // 等待2秒后重试
+                Thread.sleep(2000); // Wait 2 seconds before retry
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -616,27 +611,24 @@ public class KubernetesClient extends BaseClient {
     }
 
     /**
-     * 删除与容器关联的Service（如果存在）
+     * Delete Service associated with container (if exists)
      * 
-     * @param containerId 容器ID（Deployment名称）
+     * @param containerId container ID (Deployment name)
      */
     private void deleteServiceIfExists(String containerId) {
         String serviceName = containerId + "-svc";
         
         try {
-            // 尝试删除Service
+            // Try to delete Service
             coreApi.deleteNamespacedService(serviceName, namespace).execute();
             logger.info("Service " + serviceName + " deleted successfully");
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                // Service不存在，这是正常的
                 logger.info("Service " + serviceName + " does not exist, skipping deletion");
             } else {
-                // 其他错误，记录警告但不抛出异常，避免影响主流程
                 logger.warning("Failed to delete service " + serviceName + ": " + e.getMessage());
             }
         } catch (Exception e) {
-            // 处理其他可能的异常
             logger.warning("Unexpected error while deleting service " + serviceName + ": " + e.getMessage());
         }
     }

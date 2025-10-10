@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * 基于Redis的内存服务实现
+ * Redis-based memory service implementation
  */
 public class RedisMemoryService implements MemoryService {
     Logger logger = Logger.getLogger(RedisMemoryService.class.getName());
@@ -219,7 +219,7 @@ public class RedisMemoryService implements MemoryService {
     }
     
     /**
-     * 清空所有内存数据
+     * Clear all memory data
      */
     public CompletableFuture<Void> clearAllMemory() {
         return CompletableFuture.runAsync(() -> {
@@ -235,7 +235,7 @@ public class RedisMemoryService implements MemoryService {
     }
     
     /**
-     * 删除指定用户的所有内存数据
+     * Delete all memory data for specified user
      */
     public CompletableFuture<Void> deleteUserMemory(String userId) {
         return CompletableFuture.runAsync(() -> {
@@ -267,7 +267,7 @@ public class RedisMemoryService implements MemoryService {
     }
     
     /**
-     * 从消息中获取查询文本
+     * Get query text from message
      */
     private String getQueryText(Message message) {
         if (message == null || message.getContent() == null) {
@@ -287,7 +287,7 @@ public class RedisMemoryService implements MemoryService {
     }
     
     /**
-     * 设置记忆配置属性
+     * Set memory configuration properties
      */
     public void setMemoryProperties(MemoryProperties memoryProperties) {
         this.memoryProperties = memoryProperties;

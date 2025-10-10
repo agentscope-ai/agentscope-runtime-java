@@ -21,27 +21,27 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 容器管理客户端基类
- * 定义了容器管理的基本接口，支持Docker和Kubernetes实现
+ * Container management client base class
+ * Defines basic interfaces for container management, supports Docker and Kubernetes implementations
  */
 public abstract class BaseClient {
     
     /**
-     * 连接容器管理服务
-     * @return 连接状态
+     * Connect to container management service
+     * @return connection status
      */
     public abstract boolean connect();
     
     /**
-     * 创建容器
-     * @param containerName 容器名称
-     * @param imageName 镜像名称
-     * @param ports 端口列表
-     * @param portMapping 端口映射
-     * @param volumeBindings 卷绑定
-     * @param environment 环境变量
-     * @param runtimeConfig 运行时配置
-     * @return 容器ID
+     * Create container
+     * @param containerName container name
+     * @param imageName image name
+     * @param ports port list
+     * @param portMapping port mapping
+     * @param volumeBindings volume bindings
+     * @param environment environment variables
+     * @param runtimeConfig runtime configuration
+     * @return container ID
      */
     public abstract String createContainer(String containerName, String imageName,
                                          List<String> ports, Map<String, Integer> portMapping,
@@ -49,33 +49,33 @@ public abstract class BaseClient {
                                          Map<String, String> environment, String runtimeConfig);
     
     /**
-     * 启动容器
-     * @param containerId 容器ID
+     * Start container
+     * @param containerId container ID
      */
     public abstract void startContainer(String containerId);
     
     /**
-     * 停止容器
-     * @param containerId 容器ID
+     * Stop container
+     * @param containerId container ID
      */
     public abstract void stopContainer(String containerId);
     
     /**
-     * 删除容器
-     * @param containerId 容器ID
+     * Remove container
+     * @param containerId container ID
      */
     public abstract void removeContainer(String containerId);
     
     /**
-     * 获取容器状态
-     * @param containerId 容器ID
-     * @return 容器状态
+     * Get container status
+     * @param containerId container ID
+     * @return container status
      */
     public abstract String getContainerStatus(String containerId);
     
     /**
-     * 停止并删除容器
-     * @param containerId 容器ID
+     * Stop and remove container
+     * @param containerId container ID
      */
     public void stopAndRemoveContainer(String containerId) {
         stopContainer(containerId);
@@ -83,8 +83,8 @@ public abstract class BaseClient {
     }
     
     /**
-     * 检查连接状态
-     * @return 是否已连接
+     * Check connection status
+     * @return whether connected
      */
     public abstract boolean isConnected();
 }
