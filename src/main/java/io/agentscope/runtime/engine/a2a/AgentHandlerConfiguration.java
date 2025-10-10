@@ -40,7 +40,7 @@ public class AgentHandlerConfiguration {
     private final JSONRPCHandler jsonrpcHandler;
 
     public AgentHandlerConfiguration() {
-        this(new GraphAgentExecutor(Runner::streamQuery));
+        this(new GraphAgentExecutor(Runner.getRunner()::streamQuery));
     }
 
     public AgentHandlerConfiguration(AgentExecutor agentExecutor) {

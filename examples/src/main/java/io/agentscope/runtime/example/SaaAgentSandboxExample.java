@@ -82,7 +82,7 @@ public class SaaAgentSandboxExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public void basicExample() {
-        System.out.println("=== Basic SaaAgent Example ===");
+        System.out.println("=== Tool Using SaaAgent Example ===");
 
         try {
             // Create ReactAgent Builder
@@ -105,7 +105,7 @@ public class SaaAgentSandboxExample {
             AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);
 
             // Execute the agent and handle the response stream
-            Flux<Event> eventStream = Runner.streamQuery(request);
+            Flux<Event> eventStream = runner.streamQuery(request);
 
             eventStream.subscribe(
                     this::handleEvent,

@@ -32,6 +32,10 @@ public class Runner implements AutoCloseable {
         this(null, null, false);
     }
 
+    public static Runner getRunner(){
+        return defaultRunner;
+    }
+
     public Runner(boolean stream) {
         this(null, null, stream);
     }
@@ -46,7 +50,7 @@ public class Runner implements AutoCloseable {
         this.contextManager = contextManager;
     }
 
-    public static Flux<Event> streamQuery(AgentRequest request) {
+    public Flux<Event> streamQuery(AgentRequest request) {
         Runner runner = defaultRunner;
         if (runner == null) {
             throw new IllegalStateException("No default Runner instance initialized");

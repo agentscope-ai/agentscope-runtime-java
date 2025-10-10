@@ -104,7 +104,7 @@ public class SaaAgentExample {
             AgentRequest request = createAgentRequest("Hello, can you tell me a joke?", null, null);
 
             // Execute the agent and handle the response stream
-            Flux<Event> eventStream = Runner.streamQuery(request);
+            Flux<Event> eventStream = runner.streamQuery(request);
 
             eventStream.subscribe(
                     this::handleEvent,

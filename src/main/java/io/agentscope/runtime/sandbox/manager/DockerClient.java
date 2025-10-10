@@ -34,8 +34,10 @@ import java.util.logging.Logger;
  * @Date: 2021/1/10 15:37
  * @Description: Java API implementation for creating Docker containers
  */
-public class DockerClient {
+public class DockerClient extends BaseClient {
     Logger logger = Logger.getLogger(DockerClient.class.getName());
+    private com.github.dockerjava.api.DockerClient client;
+    private boolean connected = false;
 
     /**
      * Connect to Docker server (Mac default connection method)
@@ -43,9 +45,75 @@ public class DockerClient {
      * @return: Docker client
      */
     public com.github.dockerjava.api.DockerClient connectDocker() {
-        com.github.dockerjava.api.DockerClient dockerClient = openDockerClient();
-        dockerClient.infoCmd().exec();
-        return dockerClient;
+        this.client = openDockerClient();
+        this.client.infoCmd().exec();
+        this.connected = true;
+        return this.client;
+    }
+    
+    @Override
+    public boolean connect() {
+        try {
+            this.client = openDockerClient();
+            this.client.infoCmd().exec();
+            this.connected = true;
+            return true;
+        } catch (Exception e) {
+            logger.severe("Failed to connect to Docker: " + e.getMessage());
+            this.connected = false;
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean isConnected() {
+        return connected && client != null;
+    }
+    
+    @Override
+    public String createContainer(String containerName, String imageName,
+                                 List<String> ports, Map<String, Integer> portMapping,
+                                 List<VolumeBinding> volumeBindings,
+                                 Map<String, String> environment, String runtimeConfig) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        
+        CreateContainerResponse response = createContainers(client, containerName, imageName,
+                ports, portMapping, volumeBindings, environment, runtimeConfig);
+        return response.getId();
+    }
+    
+    @Override
+    public void startContainer(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        startContainer(client, containerId);
+    }
+    
+    @Override
+    public void stopContainer(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        stopContainer(client, containerId);
+    }
+    
+    @Override
+    public void removeContainer(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        removeContainer(client, containerId);
+    }
+    
+    @Override
+    public String getContainerStatus(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        return getContainerStatus(client, containerId);
     }
 
     private static com.github.dockerjava.api.DockerClient openDockerClient() {

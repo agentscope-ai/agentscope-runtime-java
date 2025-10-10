@@ -18,8 +18,8 @@ package io.agentscope.runtime.sandbox.manager;
 import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.SandboxType;
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
+import io.agentscope.runtime.sandbox.manager.model.ContainerManagerType;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
-import com.github.dockerjava.api.command.CreateContainerResponse;
 
 import java.io.IOException;
 import java.net.*;
@@ -32,19 +32,41 @@ import java.util.logging.Logger;
 
 public class SandboxManager {
     Logger logger = Logger.getLogger(SandboxManager.class.getName());
-    DockerClient dockerClient = new DockerClient();
+    private final ContainerManagerType containerManagerType;
+    private BaseClient containerClient;
     private final Map<SandboxType, ContainerModel> sandboxMap = new HashMap<>();
     String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     public com.github.dockerjava.api.DockerClient client;
 
     public SandboxManager() {
-        logger.info("Initializing SandboxManager and connecting to Docker...");
-        client = dockerClient.connectDocker();
+        this(ContainerManagerType.KUBERNETES);
+    }
+    
+    public SandboxManager(ContainerManagerType containerManagerType) {
+        this.containerManagerType = containerManagerType;
+        logger.info("Initializing SandboxManager with container manager: " + containerManagerType.getValue());
+        
+        switch (containerManagerType) {
+            case DOCKER:
+                DockerClient dockerClient = new DockerClient();
+                this.containerClient = dockerClient;
+                this.client = dockerClient.connectDocker();
+                break;
+            case KUBERNETES:
+                KubernetesClient kubernetesClient = new KubernetesClient();
+                this.containerClient = kubernetesClient;
+                kubernetesClient.connect();
+                this.client = null; // Kubernetes不需要Docker客户端
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported container manager type: " + containerManagerType);
+        }
     }
 
     private final Map<SandboxType, String> typeNameMap = new HashMap<>() {{
         put(SandboxType.BASE, "agentscope/runtime-sandbox-base");
-        put(SandboxType.FILESYSTEM, "agentscope/runtime-sandbox-filesystem");
+//        put(SandboxType.FILESYSTEM, "agentscope/runtime-sandbox-filesystem");
+        put(SandboxType.FILESYSTEM, "filesystem");
         put(SandboxType.BROWSER, "agentscope/runtime-sandbox-browser");
     }};
 
@@ -52,7 +74,6 @@ public class SandboxManager {
         if (sandboxMap.containsKey(sandboxType)) {
             return sandboxMap.get(sandboxType);
         } else {
-            DockerClient dockerClient = new DockerClient();
             String workdir = "/workspace";
             String default_mount_dir = "sessions_mount_dir";
             String[] portsArray = {"80/tcp"};
@@ -71,6 +92,8 @@ public class SandboxManager {
             String secretToken = RandomStringGenerator.generateRandomString(16);
             environment.put("SECRET_TOKEN", secretToken);
 
+            System.out.println("Secret Token: " + secretToken);
+
             String sessionId = secretToken;
             String currentDir = System.getProperty("user.dir");
             String mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
@@ -87,10 +110,11 @@ public class SandboxManager {
             ));
 
             String runtimeConfig = "runc"; // or "nvidia" etc.
-            String containerName = "sandbox_" + sandboxType.name().toLowerCase() + "_" + sessionId;
+            // Kubernetes要求容器名称符合RFC 1123标准：只能包含小写字母、数字、连字符
+            String containerName = "sandbox-" + sandboxType.name().toLowerCase() + "-" + sessionId.toLowerCase();
 
-            CreateContainerResponse container = dockerClient.createContainers(
-                    this.client,
+            // 使用统一的BaseClient接口创建容器
+            String containerId = containerClient.createContainer(
                     containerName,
                     imageName,
                     ports,
@@ -105,15 +129,38 @@ public class SandboxManager {
                     .map(String::valueOf)
                     .toArray(String[]::new);
 
+            // 根据容器管理器类型确定正确的访问URL
+            String baseHost;
+            String accessPort;
+            
+            if (containerManagerType == ContainerManagerType.KUBERNETES) {
+                // 在Kubernetes环境中，需要获取Service的NodePort
+                try {
+                    // 获取Service的NodePort
+                    String nodePort = getKubernetesServiceNodePort(containerName);
+                    baseHost = "localhost";
+                    accessPort = nodePort;
+                    logger.info("Kubernetes环境: 使用Service NodePort " + nodePort);
+                } catch (Exception e) {
+                    logger.warning("无法获取Kubernetes Service NodePort，使用默认端口: " + e.getMessage());
+                    baseHost = "localhost";
+                    accessPort = mappedPorts[0];
+                }
+            } else {
+                // Docker环境使用映射端口
+                baseHost = "localhost";
+                accessPort = mappedPorts[0];
+            }
+
             ContainerModel containerModel = ContainerModel.builder()
                     .sessionId(sessionId)
-                    .containerId(container.getId())
+                    .containerId(containerId)
                     .containerName(containerName)
-                    .baseUrl(String.format("http://localhost:%s/fastapi", mappedPorts[0]))
-                    .browserUrl(String.format("http://localhost:%s/steel-api/%s", mappedPorts[0], secretToken))
-                    .frontBrowserWS(String.format("ws://localhost:%s/steel-api/%s/v1/sessions/cast", mappedPorts[0], secretToken))
-                    .clientBrowserWS(String.format("ws://localhost:%s/steel-api/%s/&sessionId=%s", mappedPorts[0], secretToken, BROWSER_SESSION_ID))
-                    .artifactsSIO(String.format("http://localhost:%s/v1", mappedPorts[0]))
+                    .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
+                    .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, secretToken))
+                    .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, secretToken))
+                    .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, secretToken, BROWSER_SESSION_ID))
+                    .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
                     .ports(mappedPorts)
                     .mountDir(workdir)
                     .authToken(secretToken)
@@ -133,7 +180,7 @@ public class SandboxManager {
     public void startSandbox(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
-            dockerClient.startContainer(this.client, containerModel.getContainerId());
+            containerClient.startContainer(containerModel.getContainerId());
             logger.info("Container status updated to: running");
             sandboxMap.put(sandboxType, containerModel);
         }
@@ -147,7 +194,7 @@ public class SandboxManager {
     public void stopSandbox(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
-            dockerClient.stopContainer(this.client, containerModel.getContainerId());
+            containerClient.stopContainer(containerModel.getContainerId());
             logger.info("Container status updated to: stopped");
             sandboxMap.put(sandboxType, containerModel);
         }
@@ -161,8 +208,7 @@ public class SandboxManager {
     public void removeSandbox(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
-            DockerClient dockerClient = new DockerClient();
-            dockerClient.removeContainer(this.client, containerModel.getContainerId());
+            containerClient.removeContainer(containerModel.getContainerId());
             sandboxMap.remove(sandboxType);
         }
     }
@@ -172,18 +218,17 @@ public class SandboxManager {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
             try {
-                DockerClient dockerClient = new DockerClient();
                 String containerId = containerModel.getContainerId();
                 String containerName = containerModel.getContainerName();
 
                 logger.info("Stopping and removing " + sandboxType + " sandbox (Container ID: " + containerId + ", Name: " + containerName + ")");
 
-                dockerClient.stopContainer(this.client, containerId);
+                containerClient.stopContainer(containerId);
 
                 Thread.sleep(1000);
 
                 // Force remove the container
-                dockerClient.removeContainer(this.client, containerId);
+                containerClient.removeContainer(containerId);
 
                 // Remove from mapping
                 sandboxMap.remove(sandboxType);
@@ -208,8 +253,7 @@ public class SandboxManager {
     public String getSandboxStatus(SandboxType sandboxType) {
         ContainerModel containerModel = sandboxMap.get(sandboxType);
         if (containerModel != null) {
-            DockerClient dockerClient = new DockerClient();
-            return dockerClient.getContainerStatus(this.client, containerModel.getContainerId());
+            return containerClient.getContainerStatus(containerModel.getContainerId());
         }
         return "not_found";
     }
@@ -221,6 +265,15 @@ public class SandboxManager {
      */
     public Map<SandboxType, ContainerModel> getAllSandboxes() {
         return new HashMap<>(sandboxMap);
+    }
+    
+    /**
+     * Get container manager type
+     *
+     * @return container manager type
+     */
+    public ContainerManagerType getContainerManagerType() {
+        return containerManagerType;
     }
 
     /**
@@ -259,8 +312,8 @@ public class SandboxManager {
      */
     private List<Integer> findFreePorts(int count) {
         List<Integer> freePorts = new ArrayList<>();
-        int startPort = 8000;
-        int maxAttempts = 1000;
+        int startPort = 30000;
+        int maxAttempts = 2000;
         for (int i = 0; i < count && freePorts.size() < count; i++) {
             for (int port = startPort + i; port < startPort + maxAttempts; port++) {
                 if (isPortAvailable(port)) {
@@ -363,6 +416,35 @@ public class SandboxManager {
         }
 
         return portMapping;
+    }
+
+    /**
+     * 获取Kubernetes Service的NodePort
+     *
+     * @param containerName 容器名称
+     * @return NodePort端口号
+     */
+    private String getKubernetesServiceNodePort(String containerName) {
+        try {
+            // 使用kubectl命令获取Service的NodePort
+            ProcessBuilder processBuilder = new ProcessBuilder("kubectl", "get", "service", containerName, "-o", "jsonpath={.spec.ports[0].nodePort}");
+            Process process = processBuilder.start();
+            
+            // 读取输出
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
+            String nodePort = reader.readLine();
+            
+            int exitCode = process.waitFor();
+            if (exitCode == 0 && nodePort != null && !nodePort.isEmpty()) {
+                logger.info("获取到Kubernetes Service NodePort: " + nodePort);
+                return nodePort;
+            } else {
+                throw new RuntimeException("无法获取Service NodePort，退出码: " + exitCode);
+            }
+        } catch (Exception e) {
+            logger.severe("获取Kubernetes Service NodePort失败: " + e.getMessage());
+            throw new RuntimeException("获取Kubernetes Service NodePort失败", e);
+        }
     }
 
 }
