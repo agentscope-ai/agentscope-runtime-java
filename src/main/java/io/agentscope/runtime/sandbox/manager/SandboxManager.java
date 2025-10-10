@@ -53,7 +53,7 @@ public class SandboxManager {
                 this.client = dockerClient.connectDocker();
                 break;
             case KUBERNETES:
-                KubernetesClient kubernetesClient = new KubernetesClient();
+                KubernetesClient kubernetesClient = new KubernetesClient("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
                 this.containerClient = kubernetesClient;
                 kubernetesClient.connect();
                 this.client = null; // Kubernetes不需要Docker客户端
@@ -64,10 +64,9 @@ public class SandboxManager {
     }
 
     private final Map<SandboxType, String> typeNameMap = new HashMap<>() {{
-        put(SandboxType.BASE, "agentscope/runtime-sandbox-base");
-//        put(SandboxType.FILESYSTEM, "agentscope/runtime-sandbox-filesystem");
-        put(SandboxType.FILESYSTEM, "filesystem");
-        put(SandboxType.BROWSER, "agentscope/runtime-sandbox-browser");
+        put(SandboxType.BASE, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
+        put(SandboxType.FILESYSTEM, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem:latest");
+        put(SandboxType.BROWSER, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest");
     }};
 
     public ContainerModel getSandbox(SandboxType sandboxType) {
@@ -134,15 +133,23 @@ public class SandboxManager {
             String accessPort;
             
             if (containerManagerType == ContainerManagerType.KUBERNETES) {
-                // 在Kubernetes环境中，需要获取Service的NodePort
+                // 在Kubernetes环境中，使用LoadBalancer的External IP
                 try {
-                    // 获取Service的NodePort
-                    String nodePort = getKubernetesServiceNodePort(containerName);
-                    baseHost = "localhost";
-                    accessPort = nodePort;
-                    logger.info("Kubernetes环境: 使用Service NodePort " + nodePort);
+                    // 等待LoadBalancer分配External IP（最多等待60秒）
+                    String externalIP = ((KubernetesClient) containerClient).waitForLoadBalancerExternalIP(containerName, 60);
+                    System.out.println("External IP: " + externalIP);
+                    if (externalIP != null && !externalIP.isEmpty()) {
+                        baseHost = externalIP;
+                        accessPort = "80"; // LoadBalancer默认使用80端口
+                        logger.info("Kubernetes LoadBalancer环境: 使用External IP " + externalIP + " 端口 80");
+                    } else {
+                        logger.warning("无法获取LoadBalancer External IP，使用localhost和映射端口");
+                        baseHost = "localhost";
+                        accessPort = mappedPorts[0];
+                    }
                 } catch (Exception e) {
-                    logger.warning("无法获取Kubernetes Service NodePort，使用默认端口: " + e.getMessage());
+                    logger.warning("获取LoadBalancer External IP失败，使用localhost和映射端口: " + e.getMessage());
+                    System.out.println("Error getting External IP: " + e.getMessage());
                     baseHost = "localhost";
                     accessPort = mappedPorts[0];
                 }
@@ -312,7 +319,7 @@ public class SandboxManager {
      */
     private List<Integer> findFreePorts(int count) {
         List<Integer> freePorts = new ArrayList<>();
-        int startPort = 30000;
+        int startPort = 30004;
         int maxAttempts = 2000;
         for (int i = 0; i < count && freePorts.size() < count; i++) {
             for (int port = startPort + i; port < startPort + maxAttempts; port++) {
@@ -406,45 +413,24 @@ public class SandboxManager {
         Map<String, Integer> portMapping = new HashMap<>();
 
         if (containerPorts != null && !containerPorts.isEmpty()) {
-            List<Integer> freePorts = findFreePorts(containerPorts.size());
-
-            for (int i = 0; i < containerPorts.size() && i < freePorts.size(); i++) {
-                String containerPort = containerPorts.get(i);
-                Integer hostPort = freePorts.get(i);
-                portMapping.put(containerPort, hostPort);
+            if (containerManagerType == ContainerManagerType.KUBERNETES) {
+                // 对于Kubernetes LoadBalancer，使用80端口
+                for (String containerPort : containerPorts) {
+                    portMapping.put(containerPort, 80);
+                }
+            } else {
+                // 对于Docker，使用动态分配的端口
+                List<Integer> freePorts = findFreePorts(containerPorts.size());
+                for (int i = 0; i < containerPorts.size() && i < freePorts.size(); i++) {
+                    String containerPort = containerPorts.get(i);
+                    Integer hostPort = freePorts.get(i);
+                    portMapping.put(containerPort, hostPort);
+                }
             }
         }
 
         return portMapping;
     }
 
-    /**
-     * 获取Kubernetes Service的NodePort
-     *
-     * @param containerName 容器名称
-     * @return NodePort端口号
-     */
-    private String getKubernetesServiceNodePort(String containerName) {
-        try {
-            // 使用kubectl命令获取Service的NodePort
-            ProcessBuilder processBuilder = new ProcessBuilder("kubectl", "get", "service", containerName, "-o", "jsonpath={.spec.ports[0].nodePort}");
-            Process process = processBuilder.start();
-            
-            // 读取输出
-            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
-            String nodePort = reader.readLine();
-            
-            int exitCode = process.waitFor();
-            if (exitCode == 0 && nodePort != null && !nodePort.isEmpty()) {
-                logger.info("获取到Kubernetes Service NodePort: " + nodePort);
-                return nodePort;
-            } else {
-                throw new RuntimeException("无法获取Service NodePort，退出码: " + exitCode);
-            }
-        } catch (Exception e) {
-            logger.severe("获取Kubernetes Service NodePort失败: " + e.getMessage());
-            throw new RuntimeException("获取Kubernetes Service NodePort失败", e);
-        }
-    }
 
 }

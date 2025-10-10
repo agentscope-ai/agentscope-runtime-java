@@ -86,6 +86,7 @@ public class HttpClient {
      */
     public String postJson(String url, Map<String, String> headers, Object requestData) throws IOException {
         String jsonBody = objectMapper.writeValueAsString(requestData);
+        System.out.println("POST " + url + " with body: " + jsonBody);
         return post(url, headers, jsonBody);
     }
 

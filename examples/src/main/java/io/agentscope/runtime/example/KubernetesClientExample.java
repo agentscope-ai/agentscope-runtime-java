@@ -27,7 +27,7 @@ import java.util.*;
 public class KubernetesClientExample {
     
     public static void main(String[] args) {
-        KubernetesClient k8sClient = new KubernetesClient();
+        KubernetesClient k8sClient = new KubernetesClient("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
         
         try {
             // 连接到Kubernetes集群

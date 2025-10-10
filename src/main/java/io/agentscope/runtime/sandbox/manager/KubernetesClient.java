@@ -25,6 +25,7 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.Config;
 
+import java.io.File;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -41,12 +42,41 @@ public class KubernetesClient extends BaseClient {
     private CoreV1Api coreApi;
     private AppsV1Api appsApi;
     private boolean connected = false;
+    private String kubeconfigPath = null;
+    
+    /**
+     * 默认构造函数
+     */
+    public KubernetesClient() {
+        // 使用默认配置
+    }
+    
+    /**
+     * 构造函数，指定 kubeconfig 文件路径
+     * 
+     * @param kubeconfigPath kubeconfig 文件路径
+     */
+    public KubernetesClient(String kubeconfigPath) {
+        this.kubeconfigPath = kubeconfigPath;
+    }
     
     @Override
     public boolean connect() {
         try {
-            // 使用默认配置连接Kubernetes集群
-            this.apiClient = Config.defaultClient();
+            // 根据是否指定了 kubeconfig 文件路径来选择连接方式
+            if (kubeconfigPath != null && !kubeconfigPath.trim().isEmpty()) {
+                // 从指定的 kubeconfig 文件加载配置
+                File kubeconfigFile = new File(kubeconfigPath);
+                if (!kubeconfigFile.exists()) {
+                    throw new RuntimeException("Kubeconfig file not found: " + kubeconfigPath);
+                }
+                logger.info("Loading Kubernetes configuration from file: " + kubeconfigPath);
+                this.apiClient = Config.fromConfig(kubeconfigPath);
+            } else {
+                // 使用默认配置连接Kubernetes集群
+                logger.info("Using default Kubernetes configuration");
+                this.apiClient = Config.defaultClient();
+            }
             Configuration.setDefaultApiClient(this.apiClient);
             
             // 初始化API客户端
@@ -81,9 +111,29 @@ public class KubernetesClient extends BaseClient {
         }
     }
     
+    /**
+     * 使用指定的 kubeconfig 文件路径连接
+     * 
+     * @param kubeconfigPath kubeconfig 文件路径
+     * @return 连接是否成功
+     */
+    public boolean connect(String kubeconfigPath) {
+        this.kubeconfigPath = kubeconfigPath;
+        return connect();
+    }
+    
     @Override
     public boolean isConnected() {
         return connected && apiClient != null;
+    }
+    
+    /**
+     * 获取当前使用的 kubeconfig 文件路径
+     * 
+     * @return kubeconfig 文件路径，如果使用默认配置则返回 null
+     */
+    public String getKubeconfigPath() {
+        return kubeconfigPath;
     }
 
     @Override
@@ -105,13 +155,13 @@ public class KubernetesClient extends BaseClient {
             V1Deployment createdDeployment = appsApi.createNamespacedDeployment(DEFAULT_NAMESPACE, deployment).execute();
             logger.info("Deployment created: " + createdDeployment.getMetadata().getName());
 
-            // Step 2: 如果有 portMapping，创建 NodePort Service
+            // Step 2: 如果有 portMapping，创建 LoadBalancer Service
             if (portMapping != null && !portMapping.isEmpty()) {
-                V1Service service = createNodePortServiceObject(serviceName, deploymentName, portMapping);
+                V1Service service = createLoadBalancerServiceObject(serviceName, deploymentName, portMapping);
                 V1Service createdService = coreApi.createNamespacedService(DEFAULT_NAMESPACE, service).execute();
-                logger.info("NodePort Service created: " + createdService.getMetadata().getName() +
+                logger.info("LoadBalancer Service created: " + createdService.getMetadata().getName() +
                         ", ports: " + createdService.getSpec().getPorts().stream()
-                        .map(p -> p.getNodePort() + "->" + p.getPort())
+                        .map(p -> p.getPort() + "->" + p.getTargetPort())
                         .toList());
             }
 
@@ -158,23 +208,15 @@ public class KubernetesClient extends BaseClient {
     }
 
     /**
-     * 创建 NodePort 类型的 Service 对象，用于暴露容器端口到节点
+     * 创建 LoadBalancer 类型的 Service 对象，用于暴露容器端口到外部
      */
-    private V1Service createNodePortServiceObject(String serviceName, String appName, Map<String, Integer> portMapping) {
+    private V1Service createLoadBalancerServiceObject(String serviceName, String appName, Map<String, Integer> portMapping) {
         List<V1ServicePort> servicePorts = new ArrayList<>();
         int index = 1;
 
         for (Map.Entry<String, Integer> entry : portMapping.entrySet()) {
-            String containerPortSpec = entry.getKey(); // e.g., "8080/tcp"
-            Integer nodePort = entry.getValue();       // e.g., 30080
-
-            // 校验 nodePort 范围（Kubernetes 默认 NodePort 范围：30000-32767）
-            if (nodePort < 30000 || nodePort > 32767) {
-                throw new IllegalArgumentException(
-                        "NodePort " + nodePort + " is out of valid range (30000-32767). " +
-                                "Please choose a port in this range or configure custom NodePort range in your cluster."
-                );
-            }
+            String containerPortSpec = entry.getKey(); // e.g., "80/tcp"
+            Integer servicePort = entry.getValue();    // e.g., 80
 
             String[] parts = containerPortSpec.split("/");
             int containerPort = Integer.parseInt(parts[0]);
@@ -184,14 +226,13 @@ public class KubernetesClient extends BaseClient {
                 protocol = "TCP";
             }
 
-            V1ServicePort servicePort = new V1ServicePort()
+            V1ServicePort servicePortObj = new V1ServicePort()
                     .name("port-" + index++)
-                    .port(containerPort)                     // Service 内部端口（通常等于容器端口）
+                    .port(servicePort)                         // Service 端口（LoadBalancer使用80端口）
                     .targetPort(new IntOrString(containerPort)) // 转发到 Pod 的容器端口
-                    .nodePort(nodePort)                      // 节点上暴露的端口
                     .protocol(protocol);
 
-            servicePorts.add(servicePort);
+            servicePorts.add(servicePortObj);
         }
 
         // Service 选择器需匹配 Deployment 的 Pod 标签
@@ -202,7 +243,7 @@ public class KubernetesClient extends BaseClient {
                 .kind("Service")
                 .metadata(new V1ObjectMeta().name(serviceName))
                 .spec(new V1ServiceSpec()
-                        .type("NodePort")
+                        .type("LoadBalancer")
                         .selector(selector)
                         .ports(servicePorts));
     }
@@ -263,6 +304,7 @@ public class KubernetesClient extends BaseClient {
         // 卷挂载
         List<V1VolumeMount> volumeMounts = new ArrayList<>();
         List<V1Volume> volumes = new ArrayList<>();
+        volumeBindings=null;
         if (volumeBindings != null) {
             for (int i = 0; i < volumeBindings.size(); i++) {
                 VolumeBinding binding = volumeBindings.get(i);
@@ -451,6 +493,79 @@ public class KubernetesClient extends BaseClient {
         }
     }
     
+    /**
+     * 获取LoadBalancer Service的External IP
+     * 
+     * @param containerId 容器ID（Deployment名称）
+     * @return External IP地址，如果未分配则返回null
+     */
+    public String getLoadBalancerExternalIP(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Kubernetes client is not connected");
+        }
+        
+        String serviceName = containerId + "-svc";
+        
+        try {
+            V1Service service = coreApi.readNamespacedService(serviceName, DEFAULT_NAMESPACE).execute();
+            V1ServiceStatus status = service.getStatus();
+
+            if (status != null && status.getLoadBalancer() != null) {
+                V1LoadBalancerStatus loadBalancer = status.getLoadBalancer();
+                List<V1LoadBalancerIngress> ingress = loadBalancer.getIngress();
+
+                if (ingress != null && !ingress.isEmpty()) {
+                    V1LoadBalancerIngress firstIngress = ingress.get(0);
+                    String externalIP = firstIngress.getIp();
+                    if (externalIP != null && !externalIP.isEmpty()) {
+                        logger.info("LoadBalancer External IP: " + externalIP);
+                        return externalIP;
+                    }
+                }
+            }
+            
+            logger.info("LoadBalancer External IP not yet assigned for service: " + serviceName);
+            return null;
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                logger.warning("Service " + serviceName + " not found");
+                return null;
+            } else {
+                logger.severe("Failed to get LoadBalancer External IP: " + e.getMessage());
+                throw new RuntimeException("Failed to get LoadBalancer External IP", e);
+            }
+        }
+    }
+    
+    /**
+     * 等待LoadBalancer Service的External IP分配
+     * 
+     * @param containerId 容器ID（Deployment名称）
+     * @param timeoutSeconds 超时时间（秒）
+     * @return External IP地址，如果超时则返回null
+     */
+    public String waitForLoadBalancerExternalIP(String containerId, int timeoutSeconds) {
+        long startTime = System.currentTimeMillis();
+        long timeoutMs = timeoutSeconds * 1000L;
+        
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            String externalIP = getLoadBalancerExternalIP(containerId);
+            if (externalIP != null && !externalIP.isEmpty()) {
+                return externalIP;
+            }
+            
+            try {
+                Thread.sleep(2000); // 等待2秒后重试
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        
+        logger.warning("Timeout waiting for LoadBalancer External IP for container: " + containerId);
+        return null;
+    }
+
     /**
      * 删除与容器关联的Service（如果存在）
      * 
