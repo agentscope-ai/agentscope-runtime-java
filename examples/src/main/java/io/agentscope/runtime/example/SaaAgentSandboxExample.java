@@ -21,6 +21,9 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
+
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import reactor.core.publisher.Flux;
 
 /**
@@ -100,6 +103,11 @@ public class SaaAgentSandboxExample {
 
             // Create Runner with the SaaAgent
             Runner runner = new Runner(saaAgent, contextManager, true);
+
+            BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+            System.out.println(clientConfig.getClientType());
+            System.out.println(clientConfig.getIsLocal());
+            runner.registerClientConfig(clientConfig);
 
             // Create AgentRequest
             AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);

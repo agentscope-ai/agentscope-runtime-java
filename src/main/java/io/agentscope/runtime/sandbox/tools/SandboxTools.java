@@ -21,6 +21,7 @@ import io.agentscope.runtime.sandbox.manager.model.SandboxType;
 import io.agentscope.runtime.sandbox.tools.model.ShellCommandRequest;
 import io.agentscope.runtime.sandbox.manager.util.HttpClient;
 import io.agentscope.runtime.sandbox.tools.model.IpythonRequest;
+import io.agentscope.runtime.engine.Runner;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -35,11 +36,10 @@ public class SandboxTools {
     private final SandboxManager sandboxManager;
     private final HttpClient httpClient;
     
-    // Use singleton pattern to ensure all instances share the same SandboxManager
-    private static final SandboxManager SHARED_SANDBOX_MANAGER = new SandboxManager();
+
 
     public SandboxTools() {
-        this.sandboxManager = SHARED_SANDBOX_MANAGER;
+        this.sandboxManager = Runner.getSandboxManager();
         this.httpClient = new HttpClient();
     }
 

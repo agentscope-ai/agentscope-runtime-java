@@ -15,6 +15,12 @@
  */
 package io.agentscope.runtime.sandbox.manager;
 
+import io.agentscope.runtime.sandbox.manager.client.BaseClient;
+import io.agentscope.runtime.sandbox.manager.client.DockerClient;
+import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.SandboxType;
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
@@ -37,9 +43,10 @@ public class SandboxManager {
     private final Map<SandboxType, ContainerModel> sandboxMap = new HashMap<>();
     String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     public com.github.dockerjava.api.DockerClient client;
+    private BaseClientConfig clientConfig;
 
     public SandboxManager() {
-        this(ContainerManagerType.KUBERNETES);
+        this(new DockerClientConfig());
     }
     
     public SandboxManager(ContainerManagerType containerManagerType) {
@@ -54,6 +61,42 @@ public class SandboxManager {
                 break;
             case KUBERNETES:
                 KubernetesClient kubernetesClient = new KubernetesClient("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+                this.containerClient = kubernetesClient;
+                kubernetesClient.connect();
+                this.client = null; // Kubernetes不需要Docker客户端
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported container manager type: " + containerManagerType);
+        }
+    }
+    
+    /**
+     * 构造函数，支持Kubernetes配置
+     *
+     * @param clientConfig 客户端配置
+     */
+    public SandboxManager(BaseClientConfig clientConfig) {
+        this.containerManagerType = clientConfig.getClientType();
+        this.clientConfig = clientConfig;
+        logger.info("Initializing SandboxManager with container manager: " + containerManagerType.getValue());
+        
+        switch (containerManagerType) {
+            case DOCKER:
+                DockerClient dockerClient = new DockerClient();
+                this.containerClient = dockerClient;
+                this.client = dockerClient.connectDocker();
+                break;
+            case KUBERNETES:
+                if (clientConfig == null) {
+                    throw new IllegalArgumentException("KubernetesClientConfig cannot be null for Kubernetes container manager");
+                }
+                KubernetesClient kubernetesClient;
+                if (clientConfig instanceof KubernetesClientConfig) {
+                    kubernetesClient = new KubernetesClient((KubernetesClientConfig) clientConfig);
+                } else {
+                    logger.warning("Provided clientConfig is not an instance of KubernetesClientConfig, using default configuration");
+                    kubernetesClient = new KubernetesClient();
+                }
                 this.containerClient = kubernetesClient;
                 kubernetesClient.connect();
                 this.client = null; // Kubernetes不需要Docker客户端
@@ -137,7 +180,6 @@ public class SandboxManager {
                 try {
                     // 等待LoadBalancer分配External IP（最多等待60秒）
                     String externalIP = ((KubernetesClient) containerClient).waitForLoadBalancerExternalIP(containerName, 60);
-                    System.out.println("External IP: " + externalIP);
                     if (externalIP != null && !externalIP.isEmpty()) {
                         baseHost = externalIP;
                         accessPort = "80"; // LoadBalancer默认使用80端口
@@ -149,7 +191,6 @@ public class SandboxManager {
                     }
                 } catch (Exception e) {
                     logger.warning("获取LoadBalancer External IP失败，使用localhost和映射端口: " + e.getMessage());
-                    System.out.println("Error getting External IP: " + e.getMessage());
                     baseHost = "localhost";
                     accessPort = mappedPorts[0];
                 }
@@ -281,6 +322,15 @@ public class SandboxManager {
      */
     public ContainerManagerType getContainerManagerType() {
         return containerManagerType;
+    }
+    
+    /**
+     * Get Kubernetes configuration
+     *
+     * @return Kubernetes configuration
+     */
+    public BaseClientConfig getClientConfig() {
+        return clientConfig;
     }
 
     /**

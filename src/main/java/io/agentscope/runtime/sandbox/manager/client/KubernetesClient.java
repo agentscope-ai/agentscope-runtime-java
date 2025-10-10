@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.manager;
+package io.agentscope.runtime.sandbox.manager.client;
 
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.openapi.ApiClient;
@@ -43,6 +44,8 @@ public class KubernetesClient extends BaseClient {
     private AppsV1Api appsApi;
     private boolean connected = false;
     private String kubeconfigPath = null;
+    private KubernetesClientConfig config;
+    private String namespace;
     
     /**
      * 默认构造函数
@@ -58,11 +61,26 @@ public class KubernetesClient extends BaseClient {
      */
     public KubernetesClient(String kubeconfigPath) {
         this.kubeconfigPath = kubeconfigPath;
+        this.namespace = DEFAULT_NAMESPACE;
+    }
+    
+    /**
+     * 构造函数，使用KubernetesClientConfig配置
+     * 
+     * @param config Kubernetes客户端配置
+     */
+    public KubernetesClient(KubernetesClientConfig config) {
+        this.config = config;
+        this.kubeconfigPath = config.getKubeConfigPath();
+        this.namespace = config.getNamespace() != null ? config.getNamespace() : DEFAULT_NAMESPACE;
     }
     
     @Override
     public boolean connect() {
         try {
+            // 验证配置
+            validateConfig();
+            
             // 根据是否指定了 kubeconfig 文件路径来选择连接方式
             if (kubeconfigPath != null && !kubeconfigPath.trim().isEmpty()) {
                 // 从指定的 kubeconfig 文件加载配置
@@ -135,6 +153,37 @@ public class KubernetesClient extends BaseClient {
     public String getKubeconfigPath() {
         return kubeconfigPath;
     }
+    
+    /**
+     * 验证配置
+     */
+    private void validateConfig() {
+        if (config != null) {
+            // 验证namespace
+            if (config.getNamespace() != null && config.getNamespace().trim().isEmpty()) {
+                throw new IllegalArgumentException("Namespace cannot be empty");
+            }
+            
+            // 验证kubeconfig路径
+            if (config.getKubeConfigPath() != null && !config.getKubeConfigPath().trim().isEmpty()) {
+                File kubeconfigFile = new File(config.getKubeConfigPath());
+                if (!kubeconfigFile.exists()) {
+                    throw new IllegalArgumentException("Kubeconfig file does not exist: " + config.getKubeConfigPath());
+                }
+                if (!kubeconfigFile.isFile()) {
+                    throw new IllegalArgumentException("Kubeconfig path is not a file: " + config.getKubeConfigPath());
+                }
+            }
+            
+            logger.info("Kubernetes configuration validated successfully");
+            logger.info("Using namespace: " + namespace);
+            if (kubeconfigPath != null) {
+                logger.info("Using kubeconfig: " + kubeconfigPath);
+            } else {
+                logger.info("Using default kubeconfig");
+            }
+        }
+    }
 
     @Override
     public String createContainer(String containerName, String imageName,
@@ -152,13 +201,13 @@ public class KubernetesClient extends BaseClient {
             // Step 1: 创建 Deployment
             V1Deployment deployment = createDeploymentObject(deploymentName, imageName,
                     ports, portMapping, volumeBindings, environment, runtimeConfig);
-            V1Deployment createdDeployment = appsApi.createNamespacedDeployment(DEFAULT_NAMESPACE, deployment).execute();
+            V1Deployment createdDeployment = appsApi.createNamespacedDeployment(namespace, deployment).execute();
             logger.info("Deployment created: " + createdDeployment.getMetadata().getName());
 
             // Step 2: 如果有 portMapping，创建 LoadBalancer Service
             if (portMapping != null && !portMapping.isEmpty()) {
                 V1Service service = createLoadBalancerServiceObject(serviceName, deploymentName, portMapping);
-                V1Service createdService = coreApi.createNamespacedService(DEFAULT_NAMESPACE, service).execute();
+                V1Service createdService = coreApi.createNamespacedService(namespace, service).execute();
                 logger.info("LoadBalancer Service created: " + createdService.getMetadata().getName() +
                         ", ports: " + createdService.getSpec().getPorts().stream()
                         .map(p -> p.getPort() + "->" + p.getTargetPort())
@@ -170,8 +219,8 @@ public class KubernetesClient extends BaseClient {
         } catch (ApiException e) {
             logger.severe("Failed to create container (Deployment/Service): " + e.getMessage());
             try {
-                appsApi.deleteNamespacedDeployment(deploymentName, DEFAULT_NAMESPACE).execute();
-                coreApi.deleteNamespacedService(serviceName, DEFAULT_NAMESPACE).execute();
+                appsApi.deleteNamespacedDeployment(deploymentName, namespace).execute();
+                coreApi.deleteNamespacedService(serviceName, namespace).execute();
                 logger.info("Rolled back resources for: " + containerName);
             } catch (Exception cleanupEx) {
                 logger.warning("Failed to rollback after createContainer error: " + cleanupEx.getMessage());
@@ -197,7 +246,7 @@ public class KubernetesClient extends BaseClient {
                                                           ports, portMapping, volumeBindings, 
                                                           environment, runtimeConfig);
             
-            V1Deployment createdDeployment = appsApi.createNamespacedDeployment(DEFAULT_NAMESPACE, deployment).execute();
+            V1Deployment createdDeployment = appsApi.createNamespacedDeployment(namespace, deployment).execute();
             logger.info("Deployment created successfully: " + createdDeployment.getMetadata().getName());
             return createdDeployment.getMetadata().getName();
             
@@ -374,7 +423,7 @@ public class KubernetesClient extends BaseClient {
         }
         
         try {
-            V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, DEFAULT_NAMESPACE).execute();
+            V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, namespace).execute();
             Integer replicas = deployment.getStatus().getReplicas();
             Integer readyReplicas = deployment.getStatus().getReadyReplicas();
             logger.info("Deployment " + containerId + " replicas: " + replicas + ", ready: " + readyReplicas);
@@ -392,7 +441,7 @@ public class KubernetesClient extends BaseClient {
         
         try {
             // 删除Deployment
-            appsApi.deleteNamespacedDeployment(containerId, DEFAULT_NAMESPACE).execute();
+            appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
             logger.info("Deployment " + containerId + " deleted successfully");
             
             // 同时删除对应的Service
@@ -414,7 +463,7 @@ public class KubernetesClient extends BaseClient {
         
         try {
             // 删除Deployment
-            appsApi.deleteNamespacedDeployment(containerId, DEFAULT_NAMESPACE).execute();
+            appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
             logger.info("Deployment " + containerId + " deleted successfully");
             
             // 同时删除对应的Service
@@ -439,7 +488,7 @@ public class KubernetesClient extends BaseClient {
         
         try {
             // 获取Deployment状态
-            V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, DEFAULT_NAMESPACE).execute();
+            V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, namespace).execute();
             Integer replicas = deployment.getStatus().getReplicas();
             Integer readyReplicas = deployment.getStatus().getReadyReplicas();
             if (readyReplicas != null && replicas != null && readyReplicas.equals(replicas)) {
@@ -464,7 +513,7 @@ public class KubernetesClient extends BaseClient {
         }
         
         try {
-            V1PodList podList = coreApi.listNamespacedPod(DEFAULT_NAMESPACE).execute();
+            V1PodList podList = coreApi.listNamespacedPod(namespace).execute();
             return podList.getItems();
         } catch (ApiException e) {
             logger.severe("Failed to list pods: " + e.getMessage());
@@ -485,7 +534,7 @@ public class KubernetesClient extends BaseClient {
         }
         
         try {
-            V1DeploymentList deploymentList = appsApi.listNamespacedDeployment(DEFAULT_NAMESPACE).execute();
+            V1DeploymentList deploymentList = appsApi.listNamespacedDeployment(namespace).execute();
             return deploymentList.getItems();
         } catch (ApiException e) {
             logger.severe("Failed to list deployments: " + e.getMessage());
@@ -507,7 +556,7 @@ public class KubernetesClient extends BaseClient {
         String serviceName = containerId + "-svc";
         
         try {
-            V1Service service = coreApi.readNamespacedService(serviceName, DEFAULT_NAMESPACE).execute();
+            V1Service service = coreApi.readNamespacedService(serviceName, namespace).execute();
             V1ServiceStatus status = service.getStatus();
 
             if (status != null && status.getLoadBalancer() != null) {
@@ -576,7 +625,7 @@ public class KubernetesClient extends BaseClient {
         
         try {
             // 尝试删除Service
-            coreApi.deleteNamespacedService(serviceName, DEFAULT_NAMESPACE).execute();
+            coreApi.deleteNamespacedService(serviceName, namespace).execute();
             logger.info("Service " + serviceName + " deleted successfully");
         } catch (ApiException e) {
             if (e.getCode() == 404) {

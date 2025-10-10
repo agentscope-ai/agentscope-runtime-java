@@ -2,6 +2,8 @@ package io.agentscope.runtime.engine;
 
 import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.*;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
@@ -17,9 +19,28 @@ public class Runner implements AutoCloseable {
 
     private static volatile Runner defaultRunner;
 
+    private static SandboxManager SHARED_SANDBOX_MANAGER = new SandboxManager();
+
     private Agent agent;
     private ContextManager contextManager;
     private final boolean stream;
+    private BaseClientConfig clientConfig;
+
+    public static SandboxManager getSandboxManager() {
+        return SHARED_SANDBOX_MANAGER;
+    }
+
+    public void registerClientConfig(BaseClientConfig clientConfig) {
+        this.clientConfig = clientConfig;
+        System.out.println("Registered ClientConfig: " + clientConfig.getClientType());
+        System.out.println("Is Local: " + clientConfig.getIsLocal());
+        SHARED_SANDBOX_MANAGER= new SandboxManager(clientConfig);
+    }
+
+    public BaseClientConfig getClientConfig() {
+        return this.clientConfig;
+    }
+
 
     public Runner(Agent agent, ContextManager contextManager, boolean stream) {
         this.agent = agent;

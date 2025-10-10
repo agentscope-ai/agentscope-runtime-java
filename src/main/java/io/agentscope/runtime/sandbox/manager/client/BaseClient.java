@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.manager;
+package io.agentscope.runtime.sandbox.manager.client;
 
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
 

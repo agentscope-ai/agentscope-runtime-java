@@ -15,7 +15,7 @@
  */
 package io.agentscope.runtime.example;
 
-import io.agentscope.runtime.sandbox.manager.KubernetesClient;
+import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
 
 import java.util.*;
@@ -27,7 +27,7 @@ import java.util.*;
 public class KubernetesClientExample {
     
     public static void main(String[] args) {
-        KubernetesClient k8sClient = new KubernetesClient("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+        KubernetesClient k8sClient = new KubernetesClient();
         
         try {
             // 连接到Kubernetes集群
