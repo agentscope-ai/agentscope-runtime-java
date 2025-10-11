@@ -14,6 +14,9 @@ import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.tools.ToolsInit;
 
 import java.util.List;
 
@@ -87,11 +90,14 @@ public class SaaAgentDeployExample {
                     .name("saa_agent_proxy")
                     .description("An agent powered by Spring AI Alibaba ReactAgent")
                     .reactAgentBuilder(builder)
-                    .tools(List.of("runpython"))
+                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
                     .build();
 
             // Create Runner with the SaaAgent
-            Runner runner = new Runner(true);
+            Runner runner = new Runner();
+
+            BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+            runner.registerClientConfig(clientConfig);
 
             runner.registerAgent(saaAgent);
             runner.registerContextManager(contextManager);

@@ -98,7 +98,7 @@ public class SaaAgentExample {
                     .build();
 
             // Create Runner with the SaaAgent
-            Runner runner = new Runner(saaAgent, contextManager, true);
+            Runner runner = new Runner(saaAgent, contextManager);
 
             // Create AgentRequest
             AgentRequest request = createAgentRequest("Hello, can you tell me a joke?", null, null);

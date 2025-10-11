@@ -23,7 +23,9 @@ public class Runner implements AutoCloseable {
 
     private Agent agent;
     private ContextManager contextManager;
-    private final boolean stream;
+
+    // Todo: 当前的stream属性已经完全被设置成了true
+    private final boolean stream = true;
     private BaseClientConfig clientConfig;
 
     public static SandboxManager getSandboxManager() {
@@ -32,8 +34,6 @@ public class Runner implements AutoCloseable {
 
     public void registerClientConfig(BaseClientConfig clientConfig) {
         this.clientConfig = clientConfig;
-        System.out.println("Registered ClientConfig: " + clientConfig.getClientType());
-        System.out.println("Is Local: " + clientConfig.getIsLocal());
         SHARED_SANDBOX_MANAGER= new SandboxManager(clientConfig);
     }
 
@@ -42,23 +42,18 @@ public class Runner implements AutoCloseable {
     }
 
 
-    public Runner(Agent agent, ContextManager contextManager, boolean stream) {
+    public Runner(Agent agent, ContextManager contextManager) {
         this.agent = agent;
         this.contextManager = contextManager;
-        this.stream = stream;
         defaultRunner = this;
     }
 
     public Runner() {
-        this(null, null, false);
+        this(null, null);
     }
 
     public static Runner getRunner(){
         return defaultRunner;
-    }
-
-    public Runner(boolean stream) {
-        this(null, null, stream);
     }
 
     public void registerAgent(Agent agent) {
@@ -89,6 +84,8 @@ public class Runner implements AutoCloseable {
                 session.setId(memorySession.getId());
                 session.setUserId(memorySession.getUserId());
                 // Convert history message types
+
+                // Todo：记忆模块的具体实现
                 List<io.agentscope.runtime.engine.schemas.agent.Message> convertedMessages = new ArrayList<>();
                 if (memorySession.getMessages() != null) {
                     for (io.agentscope.runtime.engine.memory.model.Message memoryMsg : memorySession.getMessages()) {

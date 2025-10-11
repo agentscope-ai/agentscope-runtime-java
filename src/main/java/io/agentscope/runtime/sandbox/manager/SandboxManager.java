@@ -134,8 +134,6 @@ public class SandboxManager {
             String secretToken = RandomStringGenerator.generateRandomString(16);
             environment.put("SECRET_TOKEN", secretToken);
 
-            System.out.println("Secret Token: " + secretToken);
-
             String sessionId = secretToken;
             String currentDir = System.getProperty("user.dir");
             String mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;

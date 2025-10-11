@@ -35,10 +35,10 @@ import java.util.logging.Logger;
  * Implements container management functionality based on Kubernetes Java client
  */
 public class KubernetesClient extends BaseClient {
-    
+
     private static final Logger logger = Logger.getLogger(KubernetesClient.class.getName());
     private static final String DEFAULT_NAMESPACE = "default";
-    
+
     private ApiClient apiClient;
     private CoreV1Api coreApi;
     private AppsV1Api appsApi;
@@ -46,27 +46,27 @@ public class KubernetesClient extends BaseClient {
     private String kubeconfigPath = null;
     private KubernetesClientConfig config;
     private String namespace;
-    
+
     /**
      * Default constructor
      */
     public KubernetesClient() {
         // Use default configuration
     }
-    
+
     /**
      * Constructor specifying kubeconfig file path
-     * 
+     *
      * @param kubeconfigPath kubeconfig file path
      */
     public KubernetesClient(String kubeconfigPath) {
         this.kubeconfigPath = kubeconfigPath;
         this.namespace = DEFAULT_NAMESPACE;
     }
-    
+
     /**
      * Constructor using KubernetesClientConfig configuration
-     * 
+     *
      * @param config Kubernetes client configuration
      */
     public KubernetesClient(KubernetesClientConfig config) {
@@ -74,13 +74,13 @@ public class KubernetesClient extends BaseClient {
         this.kubeconfigPath = config.getKubeConfigPath();
         this.namespace = config.getNamespace() != null ? config.getNamespace() : DEFAULT_NAMESPACE;
     }
-    
+
     @Override
     public boolean connect() {
         try {
             // Validate configuration
             validateConfig();
-            
+
             // Choose connection method based on whether kubeconfig file path is specified
             if (kubeconfigPath != null && !kubeconfigPath.trim().isEmpty()) {
                 // Load configuration from specified kubeconfig file
@@ -96,11 +96,11 @@ public class KubernetesClient extends BaseClient {
                 this.apiClient = Config.defaultClient();
             }
             Configuration.setDefaultApiClient(this.apiClient);
-            
+
             // Initialize API clients
             this.coreApi = new CoreV1Api();
             this.appsApi = new AppsV1Api();
-            
+
             try {
                 this.coreApi.getAPIResources().execute();
                 logger.info("Successfully connected to Kubernetes cluster");
@@ -108,12 +108,12 @@ public class KubernetesClient extends BaseClient {
                 return true;
             } catch (Exception e) {
                 logger.warning("API resources check failed, trying alternative connection test: " + e.getMessage());
-                
+
                 // Use kubectl command for connection test
                 ProcessBuilder processBuilder = new ProcessBuilder("kubectl", "cluster-info");
                 Process process = processBuilder.start();
                 int exitCode = process.waitFor();
-                
+
                 if (exitCode == 0) {
                     logger.info("Successfully connected to Kubernetes cluster via kubectl");
                     this.connected = true;
@@ -128,10 +128,10 @@ public class KubernetesClient extends BaseClient {
             return false;
         }
     }
-    
+
     /**
      * Connect using specified kubeconfig file path
-     * 
+     *
      * @param kubeconfigPath kubeconfig file path
      * @return whether connection is successful
      */
@@ -139,21 +139,21 @@ public class KubernetesClient extends BaseClient {
         this.kubeconfigPath = kubeconfigPath;
         return connect();
     }
-    
+
     @Override
     public boolean isConnected() {
         return connected && apiClient != null;
     }
-    
+
     /**
      * Get the currently used kubeconfig file path
-     * 
+     *
      * @return kubeconfig file path, returns null if using default configuration
      */
     public String getKubeconfigPath() {
         return kubeconfigPath;
     }
-    
+
     /**
      * Validate configuration
      */
@@ -163,7 +163,7 @@ public class KubernetesClient extends BaseClient {
             if (config.getNamespace() != null && config.getNamespace().trim().isEmpty()) {
                 throw new IllegalArgumentException("Namespace cannot be empty");
             }
-            
+
             // Validate kubeconfig path
             if (config.getKubeConfigPath() != null && !config.getKubeConfigPath().trim().isEmpty()) {
                 File kubeconfigFile = new File(config.getKubeConfigPath());
@@ -174,7 +174,7 @@ public class KubernetesClient extends BaseClient {
                     throw new IllegalArgumentException("Kubeconfig path is not a file: " + config.getKubeConfigPath());
                 }
             }
-            
+
             logger.info("Kubernetes configuration validated successfully");
             logger.info("Using namespace: " + namespace);
             if (kubeconfigPath != null) {
@@ -228,28 +228,28 @@ public class KubernetesClient extends BaseClient {
             throw new RuntimeException("Failed to create container", e);
         }
     }
-    
-    
+
+
     /**
      * Create Deployment (more advanced controller)
      */
     public String createDeployment(String deploymentName, String imageName,
-                                  List<String> ports, Map<String, Integer> portMapping,
-                                  List<VolumeBinding> volumeBindings,
-                                  Map<String, String> environment, String runtimeConfig) {
+                                   List<String> ports, Map<String, Integer> portMapping,
+                                   List<VolumeBinding> volumeBindings,
+                                   Map<String, String> environment, String runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-        
+
         try {
-            V1Deployment deployment = createDeploymentObject(deploymentName, imageName, 
-                                                          ports, portMapping, volumeBindings, 
-                                                          environment, runtimeConfig);
-            
+            V1Deployment deployment = createDeploymentObject(deploymentName, imageName,
+                    ports, portMapping, volumeBindings,
+                    environment, runtimeConfig);
+
             V1Deployment createdDeployment = appsApi.createNamespacedDeployment(namespace, deployment).execute();
             logger.info("Deployment created successfully: " + createdDeployment.getMetadata().getName());
             return createdDeployment.getMetadata().getName();
-            
+
         } catch (ApiException e) {
             logger.severe("Failed to create deployment: " + e.getMessage());
             throw new RuntimeException("Failed to create deployment", e);
@@ -277,7 +277,7 @@ public class KubernetesClient extends BaseClient {
 
             V1ServicePort servicePortObj = new V1ServicePort()
                     .name("port-" + index++)
-                    .port(servicePort) 
+                    .port(servicePort)
                     .targetPort(new IntOrString(containerPort))
                     .protocol(protocol);
 
@@ -353,7 +353,9 @@ public class KubernetesClient extends BaseClient {
         // Volume mounts
         List<V1VolumeMount> volumeMounts = new ArrayList<>();
         List<V1Volume> volumes = new ArrayList<>();
-        volumeBindings=null;
+        volumeBindings = null;
+
+        // Todo: 当前的文件挂载功能没有启用，需要考虑如何在远程的情况下实现文件的挂载，还有在删除容器之后应该怎么处理创建的文件夹
         if (volumeBindings != null) {
             for (int i = 0; i < volumeBindings.size(); i++) {
                 VolumeBinding binding = volumeBindings.get(i);
@@ -420,7 +422,7 @@ public class KubernetesClient extends BaseClient {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-        
+
         try {
             V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, namespace).execute();
             Integer replicas = deployment.getStatus().getReplicas();
@@ -431,42 +433,42 @@ public class KubernetesClient extends BaseClient {
             throw new RuntimeException("Failed to start container", e);
         }
     }
-    
+
     @Override
     public void stopContainer(String containerId) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-        
+
         try {
             // Delete Deployment
             appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
             logger.info("Deployment " + containerId + " deleted successfully");
-            
+
             // Also delete corresponding Service
             deleteServiceIfExists(containerId);
-            
+
         } catch (ApiException e) {
             logger.severe("Failed to stop container: " + e.getMessage());
             throw new RuntimeException("Failed to stop container", e);
         }
     }
-    
+
     @Override
     public void removeContainer(String containerId) {
 
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-        
+
         try {
             // Delete Deployment
             appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
             logger.info("Deployment " + containerId + " deleted successfully");
-            
+
             // Also delete corresponding Service
             deleteServiceIfExists(containerId);
-            
+
         } catch (ApiException e) {
             if (e.getCode() == 404) {
                 logger.info("Deployment " + containerId + " already deleted");
@@ -476,13 +478,13 @@ public class KubernetesClient extends BaseClient {
             }
         }
     }
-    
+
     @Override
     public String getContainerStatus(String containerId) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-        
+
         try {
             // Get Deployment status
             V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, namespace).execute();
@@ -500,7 +502,7 @@ public class KubernetesClient extends BaseClient {
             return "unknown";
         }
     }
-    
+
     /**
      * Get all Pod list
      */
@@ -508,7 +510,7 @@ public class KubernetesClient extends BaseClient {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-        
+
         try {
             V1PodList podList = coreApi.listNamespacedPod(namespace).execute();
             return podList.getItems();
@@ -519,7 +521,7 @@ public class KubernetesClient extends BaseClient {
             return new ArrayList<>();
         }
     }
-    
+
     /**
      * Get all Deployment list
      */
@@ -527,7 +529,7 @@ public class KubernetesClient extends BaseClient {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-        
+
         try {
             V1DeploymentList deploymentList = appsApi.listNamespacedDeployment(namespace).execute();
             return deploymentList.getItems();
@@ -536,10 +538,10 @@ public class KubernetesClient extends BaseClient {
             throw new RuntimeException("Failed to list deployments", e);
         }
     }
-    
+
     /**
      * Get LoadBalancer Service's External IP
-     * 
+     *
      * @param containerId container ID (Deployment name)
      * @return External IP address, returns null if not assigned
      */
@@ -547,9 +549,9 @@ public class KubernetesClient extends BaseClient {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-        
+
         String serviceName = containerId + "-svc";
-        
+
         try {
             V1Service service = coreApi.readNamespacedService(serviceName, namespace).execute();
             V1ServiceStatus status = service.getStatus();
@@ -567,7 +569,7 @@ public class KubernetesClient extends BaseClient {
                     }
                 }
             }
-            
+
             logger.info("LoadBalancer External IP not yet assigned for service: " + serviceName);
             return null;
         } catch (ApiException e) {
@@ -580,24 +582,24 @@ public class KubernetesClient extends BaseClient {
             }
         }
     }
-    
+
     /**
      * Wait for LoadBalancer Service's External IP assignment
-     * 
-     * @param containerId container ID (Deployment name)
+     *
+     * @param containerId    container ID (Deployment name)
      * @param timeoutSeconds timeout time (seconds)
      * @return External IP address, returns null if timeout
      */
     public String waitForLoadBalancerExternalIP(String containerId, int timeoutSeconds) {
         long startTime = System.currentTimeMillis();
         long timeoutMs = timeoutSeconds * 1000L;
-        
+
         while (System.currentTimeMillis() - startTime < timeoutMs) {
             String externalIP = getLoadBalancerExternalIP(containerId);
             if (externalIP != null && !externalIP.isEmpty()) {
                 return externalIP;
             }
-            
+
             try {
                 Thread.sleep(2000); // Wait 2 seconds before retry
             } catch (InterruptedException e) {
@@ -605,19 +607,19 @@ public class KubernetesClient extends BaseClient {
                 break;
             }
         }
-        
+
         logger.warning("Timeout waiting for LoadBalancer External IP for container: " + containerId);
         return null;
     }
 
     /**
      * Delete Service associated with container (if exists)
-     * 
+     *
      * @param containerId container ID (Deployment name)
      */
     private void deleteServiceIfExists(String containerId) {
         String serviceName = containerId + "-svc";
-        
+
         try {
             // Try to delete Service
             coreApi.deleteNamespacedService(serviceName, namespace).execute();

@@ -8,9 +8,8 @@ import io.agentscope.runtime.engine.agents.AgentCallback;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
 import io.agentscope.runtime.engine.memory.model.MessageType;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
-import org.w3c.dom.Node;
+import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.agent.Event;
@@ -39,8 +38,8 @@ public class SaaAgent extends BaseAgent {
     private Builder reactAgentBuilder;
     private Function<Context, Object> contextAdapter;
     private Function<Object, String> responseProcessor;
-    private Function<Object, String> streamResponseProcessor;
-    private List<String> tools;
+    private final Function<Object, String> streamResponseProcessor;
+    private List<ToolCallback> tools;
 
     public static class SaaContextAdapter {
         private final Context context;
@@ -147,7 +146,7 @@ public class SaaAgent extends BaseAgent {
                     Function<Context, Object> contextAdapter,
                     Function<Object, String> responseProcessor,
                     Function<Object, String> streamResponseProcessor,
-                    List<String> tools) {
+                    List<ToolCallback> tools) {
         super();
         this.reactAgentBuilder = reactAgentBuilder;
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;
@@ -164,7 +163,7 @@ public class SaaAgent extends BaseAgent {
                     Function<Context, Object> contextAdapter,
                     Function<Object, String> responseProcessor,
                     Function<Object, String> streamResponseProcessor,
-                    List<String> tools) {
+                    List<ToolCallback> tools) {
         super(name, description, beforeCallbacks, afterCallbacks, config);
         this.reactAgentBuilder = reactAgentBuilder;
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;
@@ -179,7 +178,8 @@ public class SaaAgent extends BaseAgent {
             try {
 
                 // Build ReactAgent from Builder with specified tools
-                ReactAgent reactAgent = reactAgentBuilder.tools(ToolsInit.getToolsByName(tools)).build();
+                // Todo: 当前的工具策略是直接将所有工具替换掉 Agent，修改策略
+                ReactAgent reactAgent = reactAgentBuilder.tools(tools).build();
 
                 // Create and initialize context adapter
                 SaaContextAdapter adapter = new SaaContextAdapter(context, reactAgent);
@@ -210,14 +210,15 @@ public class SaaAgent extends BaseAgent {
                         Message deltaMessage = new Message();
                         if (part instanceof StreamingOutput) {
                             deltaMessage.setType(MessageType.CHUNK.name());
+                            deltaMessage.setRole("assistant");
+                            deltaMessage.setStatus(RunStatus.IN_PROGRESS);
+                            deltaMessage.setContent(List.of(textContent));
+                            sink.next(deltaMessage);
                         } else {
-                            deltaMessage.setType(MessageType.MESSAGE.name());
-                            contentBuilder.append(contentPart);
+//                            Todo: 当前把除了chunk之外的都直接跳过了
+//                            deltaMessage.setType(MessageType.MESSAGE.name());
+//                            contentBuilder.append(contentPart);
                         }
-                        deltaMessage.setRole("assistant");
-                        deltaMessage.setStatus(RunStatus.IN_PROGRESS);
-                        deltaMessage.setContent(List.of(textContent));
-                        sink.next(deltaMessage);
                     }, error -> {
                         // Handle error during streaming
                         Message errorMessage = new Message();
@@ -324,7 +325,9 @@ public class SaaAgent extends BaseAgent {
             String content;
 
             if (output instanceof StreamingOutput streamingOutput) {
-                return JSON.toJSONString(Map.of(nodeName, streamingOutput.chunk()));
+//                Todo: 这里先简单返回 chunk 内容，后续可以根据需要调整返回格式
+//                return JSON.toJSONString(Map.of(nodeName, streamingOutput.chunk()));
+                return streamingOutput.chunk();
             } else {
                 JSONObject result = new JSONObject();
                 result.put("data", nodeOutput.state().data());
@@ -473,7 +476,7 @@ public class SaaAgent extends BaseAgent {
         private Function<Context, Object> contextAdapter;
         private Function<Object, String> responseProcessor;
         private Function<Object, String> streamResponseProcessor;
-        private List<String> tools;
+        private List<ToolCallback> tools;
         private io.agentscope.runtime.engine.agents.AgentConfig config = new io.agentscope.runtime.engine.agents.AgentConfig();
 
         public SaaAgentBuilder name(String name) {
@@ -506,7 +509,7 @@ public class SaaAgent extends BaseAgent {
             return this;
         }
 
-        public SaaAgentBuilder tools(List<String> tools) {
+        public SaaAgentBuilder tools(List<ToolCallback> tools) {
             this.tools = tools;
             return this;
         }
@@ -546,11 +549,11 @@ public class SaaAgent extends BaseAgent {
         this.responseProcessor = responseProcessor;
     }
 
-    public List<String> getTools() {
+    public List<ToolCallback> getTools() {
         return tools;
     }
 
-    public void setTools(List<String> tools) {
+    public void setTools(List<ToolCallback> tools) {
         this.tools = tools;
     }
 }

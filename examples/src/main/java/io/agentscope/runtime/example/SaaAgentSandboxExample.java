@@ -24,6 +24,7 @@ import io.agentscope.runtime.engine.schemas.agent.TextContent;
 
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.tools.ToolsInit;
 import reactor.core.publisher.Flux;
 
 /**
@@ -96,17 +97,15 @@ public class SaaAgentSandboxExample {
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
                     .name("saa_agent_proxy")
-                    .tools(List.of("run_python"))
+                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
                     .description("An agent powered by Spring AI Alibaba ReactAgent.")
                     .reactAgentBuilder(builder)
                     .build();
 
             // Create Runner with the SaaAgent
-            Runner runner = new Runner(saaAgent, contextManager, true);
+            Runner runner = new Runner(saaAgent, contextManager);
 
             BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
-            System.out.println(clientConfig.getClientType());
-            System.out.println(clientConfig.getIsLocal());
             runner.registerClientConfig(clientConfig);
 
             // Create AgentRequest
