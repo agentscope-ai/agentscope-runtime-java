@@ -14,11 +14,11 @@ public class GenericToolsTest extends BaseSandboxTest {
         recordSandboxUsage(SandboxType.BASE);
         SandboxTools tools = new SandboxTools();
 
-        String py = tools.run_ipython_cell("print(1+1)");
+        String py = tools.run_ipython_cell("print(1+1)","","");
         System.out.println("Python output: " + py);
         assertNotNull(py);
 
-        String sh = tools.run_shell_command("echo hello");
+        String sh = tools.run_shell_command("echo hello", "", "");
         System.out.println("Shell output: " + sh);
         assertNotNull(sh);
     }

@@ -193,7 +193,7 @@ public class SaaAgent extends BaseAgent {
                             deltaMessage.setContent(List.of(textContent));
                             sink.next(deltaMessage);
                         } else {
-//                            Todo: 当前把除了chunk之外的都直接跳过了
+//                            Todo: Currently skipping everything except chunks
 //                            deltaMessage.setType(MessageType.MESSAGE.name());
 //                            contentBuilder.append(contentPart);
                         }
@@ -303,7 +303,7 @@ public class SaaAgent extends BaseAgent {
             String content;
 
             if (output instanceof StreamingOutput streamingOutput) {
-//                Todo: 这里先简单返回 chunk 内容，后续可以根据需要调整返回格式
+//                Todo: Simply return chunk content for now, can adjust return format as needed later
 //                return JSON.toJSONString(Map.of(nodeName, streamingOutput.chunk()));
                 return streamingOutput.chunk();
             } else {
@@ -384,7 +384,6 @@ public class SaaAgent extends BaseAgent {
             // Use the Agent from adapter (which was built from builder)
             com.alibaba.cloud.ai.graph.agent.Agent agent = adapter.getAgent();
             if (stream) {
-                System.out.println(agent.stream(reactInput));
                 return agent.stream(reactInput);
             } else {
                 Optional<OverAllState> state = agent.invoke(reactInput);

@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -31,8 +32,11 @@ public class GetFileInfoTool implements BiFunction<GetFileInfoTool.Request, Tool
     @Override
     public Response apply(Request request, ToolContext toolContext) {
         try {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
             SandboxTools tools = new SandboxTools();
-            String result = tools.fs_get_file_info(request.path);
+            String result = tools.fs_get_file_info(request.path, userID, sessionID);
             return new Response(result, "Filesystem get_file_info completed");
         } catch (Exception e) {
             return new Response("Error", "Filesystem get_file_info error: " + e.getMessage());

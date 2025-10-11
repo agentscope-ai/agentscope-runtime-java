@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -32,8 +33,11 @@ public class EditFileTool implements BiFunction<EditFileTool.Request, ToolContex
     @Override
     public Response apply(Request request, ToolContext toolContext) {
         try {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
             SandboxTools tools = new SandboxTools();
-            String result = tools.fs_edit_file(request.path, request.edits);
+            String result = tools.fs_edit_file(request.path, request.edits, userID, sessionID);
             return new Response(result, "Filesystem edit_file completed");
         } catch (Exception e) {
             return new Response("Error", "Filesystem edit_file error: " + e.getMessage());

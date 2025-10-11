@@ -57,16 +57,16 @@ public class SandboxTools {
      * @param code Python code to execute
      * @return execution result
      */
-    public String run_ipython_cell(String code) {
+    public String run_ipython_cell(String code, String userID, String sessionID) {
         try {
             // Get sandbox
             SandboxType sandboxType = SandboxType.FILESYSTEM;
-            ContainerModel sandbox = sandboxManager.getSandbox(sandboxType);
+            ContainerModel sandbox = sandboxManager.getSandbox(sandboxType, userID, sessionID);
 
             // Ensure sandbox is running
-            if (!isSandboxRunning(sandboxType)) {
+            if (!isSandboxRunning(sandboxType, userID, sessionID)) {
                 logger.info("Sandbox is not running, starting...");
-                sandboxManager.startSandbox(sandboxType);
+                sandboxManager.startSandbox(sandboxType, userID, sessionID);
             }
 
             // Build request URL
@@ -99,16 +99,16 @@ public class SandboxTools {
         }
     }
 
-    public String run_shell_command(String command) {
+    public String run_shell_command(String command, String userID, String sessionID) {
         try {
             // Get sandbox
             SandboxType sandboxType = SandboxType.FILESYSTEM;
-            ContainerModel sandbox = sandboxManager.getSandbox(sandboxType);
+            ContainerModel sandbox = sandboxManager.getSandbox(sandboxType, userID, sessionID);
 
             // Ensure sandbox is running
-            if (!isSandboxRunning(sandboxType)) {
+            if (!isSandboxRunning(sandboxType, userID, sessionID)) {
                 logger.info("Sandbox is not running, starting...");
-                sandboxManager.startSandbox(sandboxType);
+                sandboxManager.startSandbox(sandboxType, userID, sessionID);
             }
 
             // Build request URL
@@ -145,17 +145,17 @@ public class SandboxTools {
      * @param arguments parameter Map
      * @return execution result JSON string
      */
-    public String call_mcp_tool(String toolName, Map<String, Object> arguments) {
-        return call_mcp_tool(SandboxType.FILESYSTEM, toolName, arguments);
+    public String call_mcp_tool(String toolName,String userID, String sessionID, Map<String, Object> arguments) {
+        return call_mcp_tool(SandboxType.FILESYSTEM, toolName, arguments, userID, sessionID);
     }
 
-    public String call_mcp_tool(SandboxType sandboxType, String toolName, Map<String, Object> arguments) {
+    public String call_mcp_tool(SandboxType sandboxType, String toolName, Map<String, Object> arguments, String userID, String sessionID) {
         try {
-            ContainerModel sandbox = sandboxManager.getSandbox(sandboxType);
+            ContainerModel sandbox = sandboxManager.getSandbox(sandboxType, userID, sessionID);
 
-            if (!isSandboxRunning(sandboxType)) {
+            if (!isSandboxRunning(sandboxType, userID, sessionID)) {
                 logger.info("Sandbox is not running, starting...");
-                sandboxManager.startSandbox(sandboxType);
+                sandboxManager.startSandbox(sandboxType, userID, sessionID);
             }
 
             String baseUrl = sandbox.getBaseUrl();
@@ -184,58 +184,58 @@ public class SandboxTools {
     }
 
     // Below are convenient wrappers for filesystem tools
-    public String fs_read_file(String path) {
+    public String fs_read_file(String path, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("path", path);
-        return call_mcp_tool("read_file", args);
+        return call_mcp_tool("read_file", userID, sessionID, args);
     }
 
-    public String fs_read_multiple_files(String[] paths) {
+    public String fs_read_multiple_files(String[] paths, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("paths", paths);
-        return call_mcp_tool("read_multiple_files", args);
+        return call_mcp_tool("read_multiple_files", userID, sessionID, args);
     }
 
-    public String fs_write_file(String path, String content) {
+    public String fs_write_file(String path, String content, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("path", path);
         args.put("content", content);
-        return call_mcp_tool("write_file", args);
+        return call_mcp_tool("write_file", userID, sessionID, args);
     }
 
-    public String fs_edit_file(String path, Object[] edits) {
+    public String fs_edit_file(String path, Object[] edits, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("path", path);
         args.put("edits", edits);
-        return call_mcp_tool("edit_file", args);
+        return call_mcp_tool("edit_file", userID, sessionID, args);
     }
 
-    public String fs_create_directory(String path) {
+    public String fs_create_directory(String path, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("path", path);
-        return call_mcp_tool("create_directory", args);
+        return call_mcp_tool("create_directory", userID, sessionID, args);
     }
 
-    public String fs_list_directory(String path) {
+    public String fs_list_directory(String path, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("path", path);
-        return call_mcp_tool("list_directory", args);
+        return call_mcp_tool("list_directory", userID, sessionID, args);
     }
 
-    public String fs_directory_tree(String path) {
+    public String fs_directory_tree(String path, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("path", path);
-        return call_mcp_tool("directory_tree", args);
+        return call_mcp_tool("directory_tree", userID, sessionID, args);
     }
 
-    public String fs_move_file(String source, String destination) {
+    public String fs_move_file(String source, String destination, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("source", source);
         args.put("destination", destination);
-        return call_mcp_tool("move_file", args);
+        return call_mcp_tool("move_file", userID, sessionID, args);
     }
 
-    public String fs_search_files(String path, String pattern, String[] excludePatterns) {
+    public String fs_search_files(String path, String pattern, String[] excludePatterns, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("path", path);
         args.put("pattern", pattern);
@@ -245,164 +245,164 @@ public class SandboxTools {
         else{
             args.put("excludePatterns", new String[]{});
         }
-        return call_mcp_tool("search_files", args);
+        return call_mcp_tool("search_files", userID, sessionID, args);
     }
 
-    public String fs_get_file_info(String path) {
+    public String fs_get_file_info(String path, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("path", path);
-        return call_mcp_tool("get_file_info", args);
+        return call_mcp_tool("get_file_info", userID, sessionID, args);
     }
 
-    public String fs_list_allowed_directories() {
-        return call_mcp_tool("list_allowed_directories", new HashMap<>());
+    public String fs_list_allowed_directories(String userID, String sessionID) {
+        return call_mcp_tool("list_allowed_directories", userID, sessionID, new HashMap<>());
     }
 
     // browser tool wrappers
-    public String browser_navigate(String url) {
+    public String browser_navigate(String url, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("url", url);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_navigate", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_navigate", args, userID, sessionID);
     }
 
-    public String browser_console_messages_tool(){
-        return call_mcp_tool(SandboxType.BROWSER, "browser_console_messages", new HashMap<>());
+    public String browser_console_messages_tool(String userID, String sessionID){
+        return call_mcp_tool(SandboxType.BROWSER, "browser_console_messages", new HashMap<>(), userID, sessionID);
     }
 
-    public String browser_click(String element, String ref) {
+    public String browser_click(String element, String ref, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("element", element);
         args.put("ref", ref);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_click", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_click", args, userID, sessionID);
     }
 
-    public String browser_type(String element, String ref, String text, Boolean submit, Boolean slowly) {
+    public String browser_type(String element, String ref, String text, Boolean submit, Boolean slowly, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("element", element);
         args.put("ref", ref);
         args.put("text", text);
         if (submit != null) args.put("submit", submit);
         if (slowly != null) args.put("slowly", slowly);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_type", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_type", args, userID, sessionID);
     }
 
-    public String browser_take_screenshot(Boolean raw, String filename, String element, String ref) {
+    public String browser_take_screenshot(Boolean raw, String filename, String element, String ref, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         if (raw != null) args.put("raw", raw);
         if (filename != null) args.put("filename", filename);
         if (element != null) args.put("element", element);
         if (ref != null) args.put("ref", ref);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_take_screenshot", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_take_screenshot", args, userID, sessionID);
     }
 
-    public String browser_snapshot() {
-        return call_mcp_tool(SandboxType.BROWSER, "browser_snapshot", new HashMap<>());
+    public String browser_snapshot(String userID, String sessionID) {
+        return call_mcp_tool(SandboxType.BROWSER, "browser_snapshot", new HashMap<>(), userID, sessionID);
     }
 
-    public String browser_tab_new(String url) {
+    public String browser_tab_new(String url, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         if (url != null) args.put("url", url);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_tab_new", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_tab_new", args, userID, sessionID);
     }
 
-    public String browser_tab_select(Integer index) {
+    public String browser_tab_select(Integer index, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         if (index != null) args.put("index", index);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_tab_select", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_tab_select", args, userID, sessionID);
     }
 
-    public String browser_tab_close(Integer index) {
+    public String browser_tab_close(Integer index, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         if (index != null) args.put("index", index);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_tab_close", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_tab_close", args, userID, sessionID);
     }
 
-    public String browser_wait_for(Double time, String text, String textGone) {
+    public String browser_wait_for(Double time, String text, String textGone, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         if (time != null) args.put("time", time);
         if (text != null) args.put("text", text);
         if (textGone != null) args.put("textGone", textGone);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_wait_for", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_wait_for", args, userID, sessionID);
     }
 
-    public String browser_resize(Double width, Double height) {
+    public String browser_resize(Double width, Double height, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("width", width);
         args.put("height", height);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_resize", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_resize", args, userID, sessionID);
     }
 
-    public String browser_close() {
-        return call_mcp_tool(SandboxType.BROWSER, "browser_close", new HashMap<>());
+    public String browser_close(String userID, String sessionID) {
+        return call_mcp_tool(SandboxType.BROWSER, "browser_close", new HashMap<>(), userID, sessionID);
     }
 
-    public String browser_handle_dialog(Boolean accept, String promptText) {
+    public String browser_handle_dialog(Boolean accept, String promptText, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("accept", accept);
         if (promptText != null) {
             args.put("promptText", promptText);
         }
-        return call_mcp_tool(SandboxType.BROWSER, "browser_handle_dialog", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_handle_dialog", args, userID, sessionID);
     }
 
-    public String browser_file_upload(String[] paths) {
+    public String browser_file_upload(String[] paths, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("paths", paths);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_file_upload", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_file_upload", args, userID, sessionID);
     }
 
-    public String browser_press_key(String key) {
+    public String browser_press_key(String key, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("key", key);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_press_key", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_press_key", args, userID, sessionID);
     }
 
-    public String browser_navigate_back() {
-        return call_mcp_tool(SandboxType.BROWSER, "browser_navigate_back", new HashMap<>());
+    public String browser_navigate_back(String userID, String sessionID) {
+        return call_mcp_tool(SandboxType.BROWSER, "browser_navigate_back", new HashMap<>(), userID, sessionID);
     }
 
-    public String browser_navigate_forward() {
-        return call_mcp_tool(SandboxType.BROWSER, "browser_navigate_forward", new HashMap<>());
+    public String browser_navigate_forward(String userID, String sessionID) {
+        return call_mcp_tool(SandboxType.BROWSER, "browser_navigate_forward", new HashMap<>(), userID, sessionID);
     }
 
-    public String browser_network_requests() {
-        return call_mcp_tool(SandboxType.BROWSER, "browser_network_requests", new HashMap<>());
+    public String browser_network_requests(String userID, String sessionID) {
+        return call_mcp_tool(SandboxType.BROWSER, "browser_network_requests", new HashMap<>(), userID, sessionID);
     }
 
-    public String browser_pdf_save(String filename) {
+    public String browser_pdf_save(String filename, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         if (filename != null) {
             args.put("filename", filename);
         }
-        return call_mcp_tool(SandboxType.BROWSER, "browser_pdf_save", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_pdf_save", args, userID, sessionID);
     }
 
-    public String browser_drag(String startElement, String startRef, String endElement, String endRef) {
+    public String browser_drag(String startElement, String startRef, String endElement, String endRef, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("startElement", startElement);
         args.put("startRef", startRef);
         args.put("endElement", endElement);
         args.put("endRef", endRef);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_drag", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_drag", args, userID, sessionID);
     }
 
-    public String browser_hover(String element, String ref) {
+    public String browser_hover(String element, String ref, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("element", element);
         args.put("ref", ref);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_hover", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_hover", args, userID, sessionID);
     }
 
-    public String browser_select_option(String element, String ref, String[] values) {
+    public String browser_select_option(String element, String ref, String[] values, String userID, String sessionID) {
         Map<String, Object> args = new HashMap<>();
         args.put("element", element);
         args.put("ref", ref);
         args.put("values", values);
-        return call_mcp_tool(SandboxType.BROWSER, "browser_select_option", args);
+        return call_mcp_tool(SandboxType.BROWSER, "browser_select_option", args, userID, sessionID);
     }
 
-    public String browser_tab_list() {
-        return call_mcp_tool(SandboxType.BROWSER, "browser_tab_list", new HashMap<>());
+    public String browser_tab_list(String userID, String sessionID) {
+        return call_mcp_tool(SandboxType.BROWSER, "browser_tab_list", new HashMap<>(), userID, sessionID);
     }
 
     /**
@@ -411,9 +411,9 @@ public class SandboxTools {
      * @param sandboxType sandbox model
      * @return whether it is running
      */
-    private boolean isSandboxRunning(SandboxType sandboxType) {
+    private boolean isSandboxRunning(SandboxType sandboxType, String userID, String sessionID) {
         try {
-            String status = sandboxManager.getSandboxStatus(sandboxType);
+            String status = sandboxManager.getSandboxStatus(sandboxType, userID, sessionID);
             return "running".equals(status);
         } catch (Exception e) {
             System.err.println("Failed to check sandbox status: " + e.getMessage());

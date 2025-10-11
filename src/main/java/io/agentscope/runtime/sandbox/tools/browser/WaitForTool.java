@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -27,7 +28,10 @@ public class WaitForTool implements BiFunction<WaitForTool.Request, ToolContext,
 
     @Override
     public Response apply(Request request, ToolContext toolContext) {
-        String result = new SandboxTools().browser_wait_for(request.time, request.text, request.textGone);
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        String result = new SandboxTools().browser_wait_for(request.time, request.text, request.textGone, userID, sessionID);
         return new Response(result, "Browser wait_for completed");
     }
 
@@ -35,7 +39,7 @@ public class WaitForTool implements BiFunction<WaitForTool.Request, ToolContext,
             @JsonProperty("time") @JsonPropertyDescription("time in seconds") Double time,
             @JsonProperty("text") String text,
             @JsonProperty("textGone") String textGone
-    ) { 
+    ) {
         public Request {
             // Provide default value handling for optional parameters
             if (time == null) {
@@ -51,5 +55,6 @@ public class WaitForTool implements BiFunction<WaitForTool.Request, ToolContext,
     }
 
     @JsonClassDescription("The result contains browser tool output and message")
-    public record Response(String result, String message) {}
+    public record Response(String result, String message) {
+    }
 }

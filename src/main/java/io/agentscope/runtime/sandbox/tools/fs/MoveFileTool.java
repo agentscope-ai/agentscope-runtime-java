@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -31,8 +32,11 @@ public class MoveFileTool implements BiFunction<MoveFileTool.Request, ToolContex
     @Override
     public Response apply(Request request, ToolContext toolContext) {
         try {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
             SandboxTools tools = new SandboxTools();
-            String result = tools.fs_move_file(request.source, request.destination);
+            String result = tools.fs_move_file(request.source, request.destination, userID, sessionID);
             return new Response(result, "Filesystem move_file completed");
         } catch (Exception e) {
             return new Response("Error", "Filesystem move_file error: " + e.getMessage());

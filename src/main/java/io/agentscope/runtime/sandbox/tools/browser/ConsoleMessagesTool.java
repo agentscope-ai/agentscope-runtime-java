@@ -16,6 +16,7 @@
 package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -25,12 +26,17 @@ public class ConsoleMessagesTool implements BiFunction<ConsoleMessagesTool.Reque
 
     @Override
     public Response apply(Request request, ToolContext toolContext) {
-        String result = new SandboxTools().browser_console_messages_tool();
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        String result = new SandboxTools().browser_console_messages_tool(userID, sessionID);
         return new Response(result, "success");
     }
 
-    public record Request() { }
+    public record Request() {
+    }
 
     @JsonClassDescription("Returns all console messages")
-    public record Response(String result, String message) {}
+    public record Response(String result, String message) {
+    }
 }

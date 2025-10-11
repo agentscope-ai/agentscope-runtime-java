@@ -16,6 +16,7 @@
 package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -25,7 +26,10 @@ public class CloseTool implements BiFunction<CloseTool.Request, ToolContext, Clo
 
     @Override
     public Response apply(Request request, ToolContext toolContext) {
-        String result = new SandboxTools().browser_close();
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        String result = new SandboxTools().browser_close(userID, sessionID);
         return new Response(result, "Browser close completed");
     }
 

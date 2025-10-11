@@ -23,6 +23,7 @@ import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.SandboxType;
+import io.agentscope.runtime.sandbox.manager.model.SandboxKey;
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.model.ContainerManagerType;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
@@ -40,7 +41,7 @@ public class SandboxManager {
     Logger logger = Logger.getLogger(SandboxManager.class.getName());
     private final ContainerManagerType containerManagerType;
     private BaseClient containerClient;
-    private final Map<SandboxType, ContainerModel> sandboxMap = new HashMap<>();
+    private final Map<SandboxKey, ContainerModel> sandboxMap = new HashMap<>();
     String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     public com.github.dockerjava.api.DockerClient client;
     private BaseClientConfig clientConfig;
@@ -87,9 +88,6 @@ public class SandboxManager {
                 this.client = dockerClient.connectDocker();
                 break;
             case KUBERNETES:
-                if (clientConfig == null) {
-                    throw new IllegalArgumentException("KubernetesClientConfig cannot be null for Kubernetes container manager");
-                }
                 KubernetesClient kubernetesClient;
                 if (clientConfig instanceof KubernetesClientConfig) {
                     kubernetesClient = new KubernetesClient((KubernetesClientConfig) clientConfig);
@@ -112,9 +110,11 @@ public class SandboxManager {
         put(SandboxType.BROWSER, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest");
     }};
 
-    public ContainerModel getSandbox(SandboxType sandboxType) {
-        if (sandboxMap.containsKey(sandboxType)) {
-            return sandboxMap.get(sandboxType);
+    public ContainerModel getSandbox(SandboxType sandboxType, String userID, String sessionID) {
+        // Use composite key userID + sessionID + sandboxType to uniquely identify container
+        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        if (sandboxMap.containsKey(key)) {
+            return sandboxMap.get(key);
         } else {
             String workdir = "/workspace";
             String default_mount_dir = "sessions_mount_dir";
@@ -212,7 +212,7 @@ public class SandboxManager {
                     .authToken(secretToken)
                     .build();
 
-            sandboxMap.put(sandboxType, containerModel);
+            sandboxMap.put(key, containerModel);
 
             return containerModel;
         }
@@ -222,13 +222,16 @@ public class SandboxManager {
      * Start sandbox container
      *
      * @param sandboxType sandbox type
+     * @param userID user ID
+     * @param sessionID session ID
      */
-    public void startSandbox(SandboxType sandboxType) {
-        ContainerModel containerModel = sandboxMap.get(sandboxType);
+    public void startSandbox(SandboxType sandboxType, String userID, String sessionID) {
+        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        ContainerModel containerModel = sandboxMap.get(key);
         if (containerModel != null) {
             containerClient.startContainer(containerModel.getContainerId());
             logger.info("Container status updated to: running");
-            sandboxMap.put(sandboxType, containerModel);
+            sandboxMap.put(key, containerModel);
         }
     }
 
@@ -236,13 +239,16 @@ public class SandboxManager {
      * Stop sandbox container
      *
      * @param sandboxType sandbox type
+     * @param userID user ID
+     * @param sessionID session ID
      */
-    public void stopSandbox(SandboxType sandboxType) {
-        ContainerModel containerModel = sandboxMap.get(sandboxType);
+    public void stopSandbox(SandboxType sandboxType, String userID, String sessionID) {
+        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        ContainerModel containerModel = sandboxMap.get(key);
         if (containerModel != null) {
             containerClient.stopContainer(containerModel.getContainerId());
             logger.info("Container status updated to: stopped");
-            sandboxMap.put(sandboxType, containerModel);
+            sandboxMap.put(key, containerModel);
         }
     }
 
@@ -250,18 +256,22 @@ public class SandboxManager {
      * Remove sandbox container
      *
      * @param sandboxType sandbox type
+     * @param userID user ID
+     * @param sessionID session ID
      */
-    public void removeSandbox(SandboxType sandboxType) {
-        ContainerModel containerModel = sandboxMap.get(sandboxType);
+    public void removeSandbox(SandboxType sandboxType, String userID, String sessionID) {
+        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        ContainerModel containerModel = sandboxMap.get(key);
         if (containerModel != null) {
             containerClient.removeContainer(containerModel.getContainerId());
-            sandboxMap.remove(sandboxType);
+            sandboxMap.remove(key);
         }
     }
 
 
-    public void stopAndRemoveSandbox(SandboxType sandboxType) {
-        ContainerModel containerModel = sandboxMap.get(sandboxType);
+    public void stopAndRemoveSandbox(SandboxType sandboxType, String userID, String sessionID) {
+        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        ContainerModel containerModel = sandboxMap.get(key);
         if (containerModel != null) {
             try {
                 String containerId = containerModel.getContainerId();
@@ -277,13 +287,13 @@ public class SandboxManager {
                 containerClient.removeContainer(containerId);
 
                 // Remove from mapping
-                sandboxMap.remove(sandboxType);
+                sandboxMap.remove(key);
 
                 logger.info(sandboxType + " sandbox has been successfully removed");
             } catch (Exception e) {
                 System.err.println("Error removing " + sandboxType + " sandbox: " + e.getMessage());
                 e.printStackTrace();
-                sandboxMap.remove(sandboxType);
+                sandboxMap.remove(key);
             }
         } else {
             logger.warning("Sandbox " + sandboxType + " not found, may have already been removed");
@@ -296,8 +306,10 @@ public class SandboxManager {
      * @param sandboxType sandbox type
      * @return sandbox status
      */
-    public String getSandboxStatus(SandboxType sandboxType) {
-        ContainerModel containerModel = sandboxMap.get(sandboxType);
+    public String getSandboxStatus(SandboxType sandboxType, String userID, String sessionID) {
+        // Use composite key to find container status
+        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        ContainerModel containerModel = sandboxMap.get(key);
         if (containerModel != null) {
             return containerClient.getContainerStatus(containerModel.getContainerId());
         }
@@ -309,7 +321,7 @@ public class SandboxManager {
      *
      * @return sandbox mapping
      */
-    public Map<SandboxType, ContainerModel> getAllSandboxes() {
+    public Map<SandboxKey, ContainerModel> getAllSandboxes() {
         return new HashMap<>(sandboxMap);
     }
     
@@ -344,13 +356,13 @@ public class SandboxManager {
         logger.info("Current number of sandboxes: " + sandboxMap.size());
         logger.info("Sandbox types: " + sandboxMap.keySet());
 
-        for (SandboxType sandboxType : new HashSet<>(sandboxMap.keySet())) {
+        for (SandboxKey key : new HashSet<>(sandboxMap.keySet())) {
             try {
-                logger.info("Cleaning up " + sandboxType + " sandbox...");
-                stopAndRemoveSandbox(sandboxType);
-                logger.info(sandboxType + " sandbox cleanup complete");
+                logger.info("Cleaning up " + key.getSandboxType() + " sandbox for user " + key.getUserID() + " session " + key.getSessionID() + "...");
+                stopAndRemoveSandbox(key.getSandboxType(), key.getUserID(), key.getSessionID());
+                logger.info(key.getSandboxType() + " sandbox cleanup complete");
             } catch (Exception e) {
-                logger.severe("Error cleaning up " + sandboxType + " sandbox: " + e.getMessage());
+                logger.severe("Error cleaning up " + key.getSandboxType() + " sandbox: " + e.getMessage());
                 e.printStackTrace();
             }
         }

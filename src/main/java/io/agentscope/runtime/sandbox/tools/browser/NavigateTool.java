@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -27,7 +28,11 @@ public class NavigateTool implements BiFunction<NavigateTool.Request, ToolContex
 
     @Override
     public Response apply(Request request, ToolContext toolContext) {
-        String result = new SandboxTools().browser_navigate(request.url);
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        
+        String result = new SandboxTools().browser_navigate(request.url, userID, sessionID);
         return new Response(result, "Browser navigate completed");
     }
 

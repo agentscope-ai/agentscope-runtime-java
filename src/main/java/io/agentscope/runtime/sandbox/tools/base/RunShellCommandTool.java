@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.base;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -35,9 +36,15 @@ public class RunShellCommandTool implements BiFunction<RunShellCommandTool.RunSh
 
     @Override
     public RunShellCommandTool.RunShellCommandToolResponse apply(RunShellCommandTool.RunShellCommandToolRequest request, ToolContext toolContext) {
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        
         try {
             String result = performShellExecute(
-                    request.command
+                    request.command,
+                    userID,
+                    sessionID
             );
 
             return new RunShellCommandTool.RunShellCommandToolResponse(
@@ -51,10 +58,10 @@ public class RunShellCommandTool implements BiFunction<RunShellCommandTool.RunSh
     }
 
 
-    private String performShellExecute(String command) {
+    private String performShellExecute(String command, String userID, String sessionID) {
         logger.info("Run Shell Command: " + command);
         SandboxTools tools = new SandboxTools();
-        String result = tools.run_shell_command(command);
+        String result = tools.run_shell_command(command, userID, sessionID);
         logger.info("Execute Result: " + result);
         return result;
     }

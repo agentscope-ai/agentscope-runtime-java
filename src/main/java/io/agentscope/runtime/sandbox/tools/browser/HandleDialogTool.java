@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -30,7 +31,10 @@ public class HandleDialogTool implements BiFunction<HandleDialogTool.Request, To
 
     @Override
     public Response apply(Request request, ToolContext toolContext) {
-        String result = new SandboxTools().browser_handle_dialog(request.accept, request.promptText);
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        String result = new SandboxTools().browser_handle_dialog(request.accept, request.promptText, userID, sessionID);
         return new Response(result, "Browser handle dialog completed");
     }
 

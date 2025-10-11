@@ -17,6 +17,7 @@ package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -26,8 +27,11 @@ public class TakeScreenshotTool implements BiFunction<TakeScreenshotTool.Request
 
     @Override
     public Response apply(Request request, ToolContext toolContext) {
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
         String result = new SandboxTools().browser_take_screenshot(
-                request.raw, request.filename, request.element, request.ref);
+                request.raw, request.filename, request.element, request.ref, userID, sessionID);
         return new Response(result, "Browser take_screenshot completed");
     }
 
