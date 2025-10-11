@@ -13,16 +13,6 @@ import java.util.concurrent.CompletableFuture;
 public interface Agent {
     
     /**
-     * Get Agent name
-     */
-    String getName();
-    
-    /**
-     * Get Agent description
-     */
-    String getDescription();
-    
-    /**
      * Execute Agent asynchronously
      * Corresponds to the run_async method of the Python version
      *

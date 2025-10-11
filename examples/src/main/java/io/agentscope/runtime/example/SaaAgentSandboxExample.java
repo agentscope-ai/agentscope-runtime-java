@@ -92,14 +92,12 @@ public class SaaAgentSandboxExample {
             // Create ReactAgent Builder
             Builder builder = ReactAgent.builder()
                     .name("saa_agent")
+                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
                     .model(chatModel);
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                    .name("saa_agent_proxy")
-                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
-                    .description("An agent powered by Spring AI Alibaba ReactAgent.")
-                    .reactAgentBuilder(builder)
+                    .agentBuilder(builder.build())
                     .build();
 
             // Create Runner with the SaaAgent

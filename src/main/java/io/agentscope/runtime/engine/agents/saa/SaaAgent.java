@@ -9,7 +9,6 @@ import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
 import io.agentscope.runtime.engine.memory.model.MessageType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
-import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.agent.Event;
@@ -18,8 +17,6 @@ import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.engine.schemas.agent.RunStatus;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
-import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.alibaba.cloud.ai.graph.agent.Builder;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 
@@ -29,28 +26,28 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.logging.Logger;
 
 /**
- * AgentScope Agent implementation that proxies Spring AI Alibaba ReactAgent
+ * AgentScope Agent implementation that proxies Spring AI Alibaba Agent
  */
 public class SaaAgent extends BaseAgent {
-
-    private Builder reactAgentBuilder;
+    Logger logger = Logger.getLogger(SaaAgent.class.getName());
+    private com.alibaba.cloud.ai.graph.agent.Agent agentBuilder;
     private Function<Context, Object> contextAdapter;
     private Function<Object, String> responseProcessor;
     private final Function<Object, String> streamResponseProcessor;
-    private List<ToolCallback> tools;
 
     public static class SaaContextAdapter {
         private final Context context;
-        private final ReactAgent reactAgent;
+        private final com.alibaba.cloud.ai.graph.agent.Agent agent;
 
         private List<org.springframework.ai.chat.messages.Message> memory;
         private org.springframework.ai.chat.messages.Message newMessage;
 
-        public SaaContextAdapter(Context context, ReactAgent reactAgent) {
+        public SaaContextAdapter(Context context, com.alibaba.cloud.ai.graph.agent.Agent agent) {
             this.context = context;
-            this.reactAgent = reactAgent;
+            this.agent = agent;
         }
 
         public void initialize() {
@@ -98,8 +95,7 @@ public class SaaAgent extends BaseAgent {
 
         private String extractTextContent(Message message) {
             if (message.getContent() != null && !message.getContent().isEmpty()) {
-                if (message.getContent().get(0) instanceof TextContent) {
-                    TextContent textContent = (TextContent) message.getContent().get(0);
+                if (message.getContent().get(0) instanceof TextContent textContent) {
                     return textContent.getText() != null ? textContent.getText() : "";
                 }
             }
@@ -118,8 +114,8 @@ public class SaaAgent extends BaseAgent {
             return context;
         }
 
-        public ReactAgent getReactAgent() {
-            return reactAgent;
+        public com.alibaba.cloud.ai.graph.agent.Agent getAgent() {
+            return agent;
         }
     }
 
@@ -128,61 +124,43 @@ public class SaaAgent extends BaseAgent {
         this.contextAdapter = this::defaultContextAdapter;
         this.responseProcessor = this::defaultResponseProcessor;
         this.streamResponseProcessor = this::defaultStreamResponseProcessor;
-        this.tools = new ArrayList<>();
     }
 
-    public SaaAgent(Builder reactAgentBuilder) {
-        this(reactAgentBuilder, null, null, null, null);
+    public SaaAgent(com.alibaba.cloud.ai.graph.agent.Agent agentBuilder) {
+        this(agentBuilder, null, null, null);
     }
 
-    public SaaAgent(Builder reactAgentBuilder,
+    public SaaAgent(com.alibaba.cloud.ai.graph.agent.Agent agentBuilder,
                     Function<Context, Object> contextAdapter,
                     Function<Object, String> responseProcessor,
                     Function<Object, String> streamResponseProcessor) {
-        this(reactAgentBuilder, contextAdapter, responseProcessor, streamResponseProcessor, null);
-    }
-
-    public SaaAgent(Builder reactAgentBuilder,
-                    Function<Context, Object> contextAdapter,
-                    Function<Object, String> responseProcessor,
-                    Function<Object, String> streamResponseProcessor,
-                    List<ToolCallback> tools) {
         super();
-        this.reactAgentBuilder = reactAgentBuilder;
+        this.agentBuilder = agentBuilder;
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;
         this.responseProcessor = responseProcessor != null ? responseProcessor : this::defaultResponseProcessor;
         this.streamResponseProcessor = streamResponseProcessor != null ? streamResponseProcessor : this::defaultStreamResponseProcessor;
-        this.tools = tools != null ? new ArrayList<>(tools) : new ArrayList<>();
     }
 
-    public SaaAgent(String name, String description,
-                    List<AgentCallback> beforeCallbacks,
+    public SaaAgent(List<AgentCallback> beforeCallbacks,
                     List<AgentCallback> afterCallbacks,
                     io.agentscope.runtime.engine.agents.AgentConfig config,
-                    Builder reactAgentBuilder,
+                    com.alibaba.cloud.ai.graph.agent.Agent agentBuilder,
                     Function<Context, Object> contextAdapter,
                     Function<Object, String> responseProcessor,
-                    Function<Object, String> streamResponseProcessor,
-                    List<ToolCallback> tools) {
-        super(name, description, beforeCallbacks, afterCallbacks, config);
-        this.reactAgentBuilder = reactAgentBuilder;
+                    Function<Object, String> streamResponseProcessor) {
+        super(beforeCallbacks, afterCallbacks, config);
+        this.agentBuilder = agentBuilder;
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;
         this.responseProcessor = responseProcessor != null ? responseProcessor : this::defaultResponseProcessor;
         this.streamResponseProcessor = streamResponseProcessor != null ? streamResponseProcessor : this::defaultStreamResponseProcessor;
-        this.tools = tools != null ? new ArrayList<>(tools) : new ArrayList<>();
     }
 
     @Override
     protected Flux<Event> execute(Context context, boolean stream) {
         return Flux.create(sink -> {
             try {
-
-                // Build ReactAgent from Builder with specified tools
-                // Todo: 当前的工具策略是直接将所有工具替换掉 Agent，修改策略
-                ReactAgent reactAgent = reactAgentBuilder.tools(tools).build();
-
                 // Create and initialize context adapter
-                SaaContextAdapter adapter = new SaaContextAdapter(context, reactAgent);
+                SaaContextAdapter adapter = new SaaContextAdapter(context, agentBuilder);
                 adapter.initialize();
 
                 // Create initial response message
@@ -197,8 +175,8 @@ public class SaaAgent extends BaseAgent {
                 // Apply context adapter to process input
                 Object processedInput = contextAdapter.apply(context);
 
-                // Invoke ReactAgent with adapted context
-                Object output = invokeReactAgentWithContext(adapter, processedInput, stream);
+                // Invoke Agent with adapted context
+                Object output = invokeAgentWithContext(adapter, processedInput, stream);
                 StringBuilder contentBuilder = new StringBuilder();
 
                 if (stream && output instanceof Flux<?> outputFlux) {
@@ -363,9 +341,8 @@ public class SaaAgent extends BaseAgent {
             return "";
         }
 
-        // If the output is AssistantMessage from ReactAgent
-        if (output instanceof AssistantMessage) {
-            AssistantMessage assistantMessage = (AssistantMessage) output;
+        // If the output is AssistantMessage from Agent
+        if (output instanceof AssistantMessage assistantMessage) {
             return assistantMessage.getText();
         }
 
@@ -374,15 +351,15 @@ public class SaaAgent extends BaseAgent {
     }
 
     /**
-     * Invoke ReactAgent with context - enhanced version that uses context information
+     * Invoke Agent with context - enhanced version that uses context information
      */
-    private Object invokeReactAgentWithContext(SaaContextAdapter adapter, Object input, boolean stream) {
-        if (reactAgentBuilder == null) {
-            throw new IllegalStateException("ReactAgent Builder is not set");
+    private Object invokeAgentWithContext(SaaContextAdapter adapter, Object input, boolean stream) {
+        if (agentBuilder == null) {
+            throw new IllegalStateException("Agent Builder is not set");
         }
 
         try {
-            // Prepare input for ReactAgent using context information
+            // Prepare input for Agent using context information
             Map<String, Object> reactInput = new HashMap<>();
 
             // Add the new message
@@ -404,12 +381,13 @@ public class SaaAgent extends BaseAgent {
                 reactInput.put("user_id", adapter.getContext().getSession().getUserId());
             }
 
-            // Use the ReactAgent from adapter (which was built from builder)
-            ReactAgent reactAgent = adapter.getReactAgent();
+            // Use the Agent from adapter (which was built from builder)
+            com.alibaba.cloud.ai.graph.agent.Agent agent = adapter.getAgent();
             if (stream) {
-                return reactAgent.stream(reactInput);
+                System.out.println(agent.stream(reactInput));
+                return agent.stream(reactInput);
             } else {
-                Optional<OverAllState> state = reactAgent.invoke(reactInput);
+                Optional<OverAllState> state = agent.invoke(reactInput);
 
                 if (state.isPresent()) {
                     Optional<Object> messages = state.get().value("messages");
@@ -425,14 +403,14 @@ public class SaaAgent extends BaseAgent {
 
             return new AssistantMessage("No response generated");
         } catch (Exception e) {
-            throw new RuntimeException("Failed to invoke ReactAgent with context", e);
+            logger.severe("Error invoking Agent: " + e.getMessage());
+            throw new RuntimeException("Failed to invoke Agent with context", e);
         }
     }
 
     private String extractTextContent(Message message) {
         if (message.getContent() != null && !message.getContent().isEmpty()) {
-            if (message.getContent().get(0) instanceof TextContent) {
-                TextContent textContent = (TextContent) message.getContent().get(0);
+            if (message.getContent().get(0) instanceof TextContent textContent) {
                 return textContent.getText() != null ? textContent.getText() : "";
             }
         }
@@ -449,16 +427,13 @@ public class SaaAgent extends BaseAgent {
     @Override
     public Agent copy() {
         SaaAgent copy = new SaaAgent(
-                this.name,
-                this.description,
                 this.beforeCallbacks,
                 this.afterCallbacks,
                 this.config,
-                this.reactAgentBuilder,
+                this.agentBuilder,
                 this.contextAdapter,
                 this.responseProcessor,
-                this.streamResponseProcessor,
-                this.tools
+                this.streamResponseProcessor
         );
         copy.setKwargs(new HashMap<>(this.kwargs));
         return copy;
@@ -470,27 +445,14 @@ public class SaaAgent extends BaseAgent {
     }
 
     public static class SaaAgentBuilder {
-        private String name;
-        private String description;
-        private com.alibaba.cloud.ai.graph.agent.Builder reactAgentBuilder;
+        private com.alibaba.cloud.ai.graph.agent.Agent agentBuilder;
         private Function<Context, Object> contextAdapter;
         private Function<Object, String> responseProcessor;
         private Function<Object, String> streamResponseProcessor;
-        private List<ToolCallback> tools;
         private io.agentscope.runtime.engine.agents.AgentConfig config = new io.agentscope.runtime.engine.agents.AgentConfig();
 
-        public SaaAgentBuilder name(String name) {
-            this.name = name;
-            return this;
-        }
-
-        public SaaAgentBuilder description(String description) {
-            this.description = description;
-            return this;
-        }
-
-        public SaaAgentBuilder reactAgentBuilder(com.alibaba.cloud.ai.graph.agent.Builder reactAgentBuilder) {
-            this.reactAgentBuilder = reactAgentBuilder;
+        public SaaAgentBuilder agentBuilder(com.alibaba.cloud.ai.graph.agent.Agent agentBuilder) {
+            this.agentBuilder = agentBuilder;
             return this;
         }
 
@@ -509,28 +471,23 @@ public class SaaAgent extends BaseAgent {
             return this;
         }
 
-        public SaaAgentBuilder tools(List<ToolCallback> tools) {
-            this.tools = tools;
-            return this;
-        }
-
         public SaaAgentBuilder config(AgentConfig config) {
             this.config = config;
             return this;
         }
 
         public SaaAgent build() {
-            return new SaaAgent(name, description, null, null, config, reactAgentBuilder, contextAdapter, responseProcessor, streamResponseProcessor, tools);
+            return new SaaAgent(null, null, config, agentBuilder, contextAdapter, responseProcessor, streamResponseProcessor);
         }
     }
 
     // Getters and setters
-    public com.alibaba.cloud.ai.graph.agent.Builder getReactAgentBuilder() {
-        return reactAgentBuilder;
+    public com.alibaba.cloud.ai.graph.agent.Agent getAgentBuilder() {
+        return agentBuilder;
     }
 
-    public void setReactAgentBuilder(com.alibaba.cloud.ai.graph.agent.Builder reactAgentBuilder) {
-        this.reactAgentBuilder = reactAgentBuilder;
+    public void setAgentBuilder(com.alibaba.cloud.ai.graph.agent.Agent agentBuilder) {
+        this.agentBuilder = agentBuilder;
     }
 
     public Function<Context, Object> getContextAdapter() {
@@ -547,13 +504,5 @@ public class SaaAgent extends BaseAgent {
 
     public void setResponseProcessor(Function<Object, String> responseProcessor) {
         this.responseProcessor = responseProcessor;
-    }
-
-    public List<ToolCallback> getTools() {
-        return tools;
-    }
-
-    public void setTools(List<ToolCallback> tools) {
-        this.tools = tools;
     }
 }

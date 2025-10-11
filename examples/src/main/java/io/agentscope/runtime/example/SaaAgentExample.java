@@ -1,5 +1,6 @@
 package io.agentscope.runtime.example;
 
+import com.alibaba.cloud.ai.graph.agent.flow.agent.LlmRoutingAgent;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
@@ -16,7 +17,6 @@ import reactor.core.publisher.Flux;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 
 import java.util.List;
@@ -86,22 +86,37 @@ public class SaaAgentExample {
 
         try {
             // Create ReactAgent Builder
-            Builder builder = ReactAgent.builder()
-                    .name("saa_agent")
-                    .model(chatModel);
+            ReactAgent proseAgent = ReactAgent.builder()
+                    .name("prose_agent")
+                    .description("prose writing expert")
+                    .instruction("你是一个散文写作专家，擅长撰写散文。")
+                    .model(chatModel)
+                    .build();
+
+            ReactAgent poemAgent = ReactAgent.builder()
+                    .name("poem_agent")
+                    .description("poem writing expert")
+                    .instruction("你是一个诗歌写作专家，擅长撰写散文。")
+                    .model(chatModel)
+                    .build();
+
+            LlmRoutingAgent llmRoutingAgent = LlmRoutingAgent.builder()
+                    .name("llm_routing_agent")
+                    .model(chatModel)
+                    .subAgents(List.of(proseAgent, poemAgent))
+                    .build();
+
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                    .name("saa_agent_proxy")
-                    .description("An agent powered by Spring AI Alibaba ReactAgent")
-                    .reactAgentBuilder(builder)
+                    .agentBuilder(llmRoutingAgent)
                     .build();
 
             // Create Runner with the SaaAgent
             Runner runner = new Runner(saaAgent, contextManager);
 
             // Create AgentRequest
-            AgentRequest request = createAgentRequest("Hello, can you tell me a joke?", null, null);
+            AgentRequest request = createAgentRequest("给我写个关于西湖的散文", null, null);
 
             // Execute the agent and handle the response stream
             Flux<Event> eventStream = runner.streamQuery(request);

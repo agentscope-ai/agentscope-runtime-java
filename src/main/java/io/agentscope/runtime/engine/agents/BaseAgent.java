@@ -15,48 +15,34 @@ import java.util.concurrent.CompletableFuture;
  */
 public abstract class BaseAgent implements Agent {
     
-    protected String name;
-    protected String description;
+//    protected String name;
+//    protected String description;
     protected List<AgentCallback> beforeCallbacks;
     protected List<AgentCallback> afterCallbacks;
     protected AgentConfig config;
     protected Map<String, Object> kwargs;
     
     public BaseAgent() {
-        this("", "", null, null, new AgentConfig(), new HashMap<>());
+        this(null, null, new AgentConfig(), new HashMap<>());
     }
     
-    public BaseAgent(String name, AgentConfig config) {
-        this(name, "", null, null, config, new HashMap<>());
+    public BaseAgent(AgentConfig config) {
+        this(null, null, config, new HashMap<>());
     }
     
-    public BaseAgent(String name, String description, 
-                    List<AgentCallback> beforeCallbacks, 
+    public BaseAgent(List<AgentCallback> beforeCallbacks,
                     List<AgentCallback> afterCallbacks, 
                     AgentConfig config) {
-        this(name, description, beforeCallbacks, afterCallbacks, config, new HashMap<>());
+        this(beforeCallbacks, afterCallbacks, config, new HashMap<>());
     }
     
-    public BaseAgent(String name, String description, 
-                    List<AgentCallback> beforeCallbacks, 
+    public BaseAgent(List<AgentCallback> beforeCallbacks,
                     List<AgentCallback> afterCallbacks, 
                     AgentConfig config, Map<String, Object> kwargs) {
-        this.name = name;
-        this.description = description;
         this.beforeCallbacks = beforeCallbacks != null ? beforeCallbacks : new ArrayList<>();
         this.afterCallbacks = afterCallbacks != null ? afterCallbacks : new ArrayList<>();
         this.config = config != null ? config : new AgentConfig();
         this.kwargs = kwargs != null ? kwargs : new HashMap<>();
-    }
-    
-    @Override
-    public String getName() {
-        return name;
-    }
-    
-    @Override
-    public String getDescription() {
-        return description;
     }
     
     @Override
