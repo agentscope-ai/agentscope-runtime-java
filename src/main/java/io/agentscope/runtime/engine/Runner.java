@@ -24,7 +24,7 @@ public class Runner implements AutoCloseable {
     private Agent agent;
     private ContextManager contextManager;
 
-    // Todo: 当前的stream属性已经完全被设置成了true
+    // Todo: The current stream property has been completely set to true
     private final boolean stream = true;
     private BaseClientConfig clientConfig;
 
@@ -85,7 +85,7 @@ public class Runner implements AutoCloseable {
                 session.setUserId(memorySession.getUserId());
                 // Convert history message types
 
-                // Todo：记忆模块的具体实现
+                // Todo: Specific implementation of memory module
                 List<io.agentscope.runtime.engine.schemas.agent.Message> convertedMessages = new ArrayList<>();
                 if (memorySession.getMessages() != null) {
                     for (io.agentscope.runtime.engine.memory.model.Message memoryMsg : memorySession.getMessages()) {

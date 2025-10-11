@@ -355,7 +355,7 @@ public class KubernetesClient extends BaseClient {
         List<V1Volume> volumes = new ArrayList<>();
         volumeBindings = null;
 
-        // Todo: 当前的文件挂载功能没有启用，需要考虑如何在远程的情况下实现文件的挂载，还有在删除容器之后应该怎么处理创建的文件夹
+        // Todo: Current file mounting functionality is not enabled, need to consider how to implement file mounting in remote scenarios, and how to handle created folders after container deletion
         if (volumeBindings != null) {
             for (int i = 0; i < volumeBindings.size(); i++) {
                 VolumeBinding binding = volumeBindings.get(i);
