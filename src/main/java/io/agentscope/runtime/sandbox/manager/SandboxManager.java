@@ -108,6 +108,10 @@ public class SandboxManager {
         put(SandboxType.BASE, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
         put(SandboxType.FILESYSTEM, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem:latest");
         put(SandboxType.BROWSER, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest");
+        put(SandboxType.TRAINING, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest-arm64");
+        put(SandboxType.APPWORLD, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest-arm64");
+        put(SandboxType.BFCL, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-bfcl:latest-arm64");
+        put(SandboxType.WEBSHOP, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-webshop:latest");
     }};
 
     public ContainerModel getSandbox(SandboxType sandboxType, String userID, String sessionID) {
@@ -150,7 +154,6 @@ public class SandboxManager {
             ));
 
             String runtimeConfig = "runc"; // or "nvidia" etc.
-            // Kubernetes requires container names to comply with RFC 1123 standard: only lowercase letters, numbers, and hyphens
             String containerName = "sandbox-" + sandboxType.name().toLowerCase() + "-" + sessionId.toLowerCase();
 
             // Use unified BaseClient interface to create container
@@ -291,7 +294,7 @@ public class SandboxManager {
 
                 logger.info(sandboxType + " sandbox has been successfully removed");
             } catch (Exception e) {
-                System.err.println("Error removing " + sandboxType + " sandbox: " + e.getMessage());
+                logger.severe("Error removing " + sandboxType + " sandbox: " + e.getMessage());
                 e.printStackTrace();
                 sandboxMap.remove(key);
             }

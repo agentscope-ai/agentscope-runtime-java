@@ -31,16 +31,11 @@ import java.util.logging.Logger;
 /**
  * Sandbox tools class, providing various sandbox operation functions
  */
-public class SandboxTools {
+public class SandboxTools extends BaseSandboxTools{
     private final Logger logger = Logger.getLogger(SandboxTools.class.getName());
-    private final SandboxManager sandboxManager;
-    private final HttpClient httpClient;
-    
-
 
     public SandboxTools() {
-        this.sandboxManager = Runner.getSandboxManager();
-        this.httpClient = new HttpClient();
+        super(Runner.getSandboxManager(), new HttpClient());
     }
 
     /**
@@ -75,7 +70,7 @@ public class SandboxTools {
             String requestUrl = baseUrl + "/tools/run_ipython_cell";
 
             // Health check wait
-            waitUntilHealthy(sandbox);
+            waitUntilHealthy(sandbox, baseUrl);
 
             // Build request headers
             Map<String, String> headers = new HashMap<>();
@@ -117,7 +112,7 @@ public class SandboxTools {
             String requestUrl = baseUrl + "/tools/run_shell_command";
 
             // Health check wait
-            waitUntilHealthy(sandbox);
+            waitUntilHealthy(sandbox, baseUrl);
 
             // Build request headers
             Map<String, String> headers = new HashMap<>();
@@ -163,7 +158,7 @@ public class SandboxTools {
             String requestUrl = baseUrl + "/mcp/call_tool";
 
             // Health check wait
-            waitUntilHealthy(sandbox);
+            waitUntilHealthy(sandbox, baseUrl);
 
             Map<String, String> headers = new HashMap<>();
             headers.put("Authorization", "Bearer " + authToken);
@@ -405,59 +400,7 @@ public class SandboxTools {
         return call_mcp_tool(SandboxType.BROWSER, "browser_tab_list", new HashMap<>(), userID, sessionID);
     }
 
-    /**
-     * Check if sandbox is running
-     *
-     * @param sandboxType sandbox model
-     * @return whether it is running
-     */
-    private boolean isSandboxRunning(SandboxType sandboxType, String userID, String sessionID) {
-        try {
-            String status = sandboxManager.getSandboxStatus(sandboxType, userID, sessionID);
-            return "running".equals(status);
-        } catch (Exception e) {
-            System.err.println("Failed to check sandbox status: " + e.getMessage());
-            return false;
-        }
-    }
 
-    /**
-     * Wait for API service inside container to be healthy (/healthz returns 200)
-     */
-    private void waitUntilHealthy(ContainerModel sandbox) {
-        String baseUrl = sandbox.getBaseUrl();
-        String authToken = sandbox.getAuthToken();
-        String healthUrl = baseUrl + "/healthz";
-
-        Map<String, String> headers = new HashMap<>();
-        if (authToken != null) {
-            headers.put("Authorization", "Bearer " + authToken);
-        }
-        headers.put("Host", "localhost:" + sandbox.getPorts()[0]);
-
-        long start = System.currentTimeMillis();
-        long timeoutMs = 60_000;
-        long sleepMs = 700;
-        try {
-            Thread.sleep(1500); // Container process cold start wait
-        } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
-        while (System.currentTimeMillis() - start < timeoutMs) {
-            try {
-                String resp = httpClient.get(healthUrl, headers);
-                if (resp != null && !resp.isEmpty()) {
-                    return;
-                }
-            } catch (Exception ignored) {
-                // ignore and retry
-            }
-            try {
-                Thread.sleep(sleepMs);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                break;
-            }
-        }
-    }
 
     /**
      * Close resources
@@ -468,7 +411,7 @@ public class SandboxTools {
                 httpClient.close();
             }
         } catch (IOException e) {
-            System.err.println("Failed to close HTTP client: " + e.getMessage());
+            logger.severe("Failed to close HTTP client: " + e.getMessage());
         }
     }
 }

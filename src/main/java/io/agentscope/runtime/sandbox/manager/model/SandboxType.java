@@ -22,6 +22,10 @@ public enum SandboxType {
     BASE("base"),
     BROWSER("browser"),
     FILESYSTEM("filesystem"),
+    TRAINING("training"),
+    APPWORLD("appworld"),
+    BFCL("bfcl"),
+    WEBSHOP("webshop"),
     PYTHON("python"),
     NODE("node"),
     JAVA("java");

@@ -56,10 +56,13 @@ import io.agentscope.runtime.sandbox.tools.fs.ReadMultipleFilesTool;
 import io.agentscope.runtime.sandbox.tools.fs.SearchFilesTool;
 import io.agentscope.runtime.sandbox.tools.fs.WriteFileTool;
 
+import javax.tools.Tool;
 import java.util.List;
+import java.util.logging.Logger;
 
 @Component
 public class ToolsInit {
+    public static Logger logger =  Logger.getLogger(ToolsInit.class.getName());
 
     public static List<ToolCallback> getAllTools() {
         return List.of(
@@ -157,7 +160,7 @@ public class ToolsInit {
             case "browsertablist", "browser_tab_list" -> BrowserTabListTool();
             
             default -> {
-                System.err.println("Unknown tool name: " + toolName);
+                logger.severe("Unknown tool name: " + toolName);
                 yield null;
             }
         };

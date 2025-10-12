@@ -43,7 +43,7 @@ public abstract class BaseSandboxTest {
             for (SandboxType sandboxType : usedSandboxes) {
                 try {
                     System.out.println("Stopping and removing " + sandboxType + " sandbox...");
-                    sandboxManager.stopAndRemoveSandbox(sandboxType);
+                    sandboxManager.stopAndRemoveSandbox(sandboxType, "", "");
                     System.out.println(sandboxType + " sandbox successfully deleted");
                 } catch (Exception e) {
                     System.err.println("Error deleting " + sandboxType + " sandbox: " + e.getMessage());

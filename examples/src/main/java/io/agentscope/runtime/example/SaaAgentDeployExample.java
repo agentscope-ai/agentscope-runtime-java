@@ -94,8 +94,8 @@ public class SaaAgentDeployExample {
             // Create Runner with the SaaAgent
             Runner runner = new Runner();
 
-            BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
-            runner.registerClientConfig(clientConfig);
+//            BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+//            runner.registerClientConfig(clientConfig);
 
             runner.registerAgent(saaAgent);
             runner.registerContextManager(contextManager);

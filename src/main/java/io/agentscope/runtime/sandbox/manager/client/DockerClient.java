@@ -50,7 +50,7 @@ public class DockerClient extends BaseClient {
         this.connected = true;
         return this.client;
     }
-    
+
     @Override
     public boolean connect() {
         try {
@@ -64,26 +64,27 @@ public class DockerClient extends BaseClient {
             return false;
         }
     }
-    
+
     @Override
     public boolean isConnected() {
         return connected && client != null;
     }
-    
+
     @Override
     public String createContainer(String containerName, String imageName,
-                                 List<String> ports, Map<String, Integer> portMapping,
-                                 List<VolumeBinding> volumeBindings,
-                                 Map<String, String> environment, String runtimeConfig) {
+                                  List<String> ports, Map<String, Integer> portMapping,
+                                  List<VolumeBinding> volumeBindings,
+                                  Map<String, String> environment, String runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Docker client is not connected");
         }
-        
+
         CreateContainerResponse response = createContainers(client, containerName, imageName,
                 ports, portMapping, volumeBindings, environment, runtimeConfig);
+
         return response.getId();
     }
-    
+
     @Override
     public void startContainer(String containerId) {
         if (!isConnected()) {
@@ -91,7 +92,7 @@ public class DockerClient extends BaseClient {
         }
         startContainer(client, containerId);
     }
-    
+
     @Override
     public void stopContainer(String containerId) {
         if (!isConnected()) {
@@ -99,7 +100,7 @@ public class DockerClient extends BaseClient {
         }
         stopContainer(client, containerId);
     }
-    
+
     @Override
     public void removeContainer(String containerId) {
         if (!isConnected()) {
@@ -107,7 +108,7 @@ public class DockerClient extends BaseClient {
         }
         removeContainer(client, containerId);
     }
-    
+
     @Override
     public String getContainerStatus(String containerId) {
         if (!isConnected()) {
@@ -227,7 +228,7 @@ public class DockerClient extends BaseClient {
                 String protocol = portParts.length > 1 ? portParts[1] : "tcp";
 
                 ExposedPort exposedPort = ExposedPort.tcp(port);
-                if ("udp" .equals(protocol)) {
+                if ("udp".equals(protocol)) {
                     exposedPort = ExposedPort.udp(port);
                 }
                 exposedPorts[i] = exposedPort;
@@ -310,7 +311,7 @@ public class DockerClient extends BaseClient {
                 String protocol = portParts.length > 1 ? portParts[1] : "tcp";
 
                 ExposedPort exposedPort = ExposedPort.tcp(port);
-                if ("udp" .equals(protocol)) {
+                if ("udp".equals(protocol)) {
                     exposedPort = ExposedPort.udp(port);
                 }
                 exposedPorts[i] = exposedPort;
@@ -330,7 +331,7 @@ public class DockerClient extends BaseClient {
                 volumes[i] = volume;
 
                 // Set read-write permissions based on mode
-                if ("ro" .equals(binding.getMode())) {
+                if ("ro".equals(binding.getMode())) {
                     binds[i] = new Bind(binding.getHostPath(), volume, AccessMode.ro);
                 } else {
                     binds[i] = new Bind(binding.getHostPath(), volume, AccessMode.rw);
@@ -392,7 +393,7 @@ public class DockerClient extends BaseClient {
         if (ports != null && !ports.isEmpty() && portMapping != null && !portMapping.isEmpty()) {
             List<PortBinding> list = new ArrayList<>();
             List<ExposedPort> exposedPorts = new ArrayList<>();
-            
+
             for (String containerPort : portMapping.keySet()) {
                 Integer hostPort = portMapping.get(containerPort);
                 // Expose container port
@@ -401,7 +402,7 @@ public class DockerClient extends BaseClient {
                 // Bind host port -> container port
                 list.add(PortBinding.parse(hostPort + ":" + containerPort));
             }
-            
+
             createCmd = createCmd.withExposedPorts(exposedPorts);
             hostConfig = hostConfig.withPortBindings(list);
         }
@@ -417,7 +418,7 @@ public class DockerClient extends BaseClient {
                 volumes[i] = volume;
 
                 // Set read-write permissions based on mode
-                if ("ro" .equals(binding.getMode())) {
+                if ("ro".equals(binding.getMode())) {
                     binds[i] = new Bind(binding.getHostPath(), volume, AccessMode.ro);
                 } else {
                     binds[i] = new Bind(binding.getHostPath(), volume, AccessMode.rw);
@@ -477,7 +478,7 @@ public class DockerClient extends BaseClient {
         try {
             // Check container status first
             String status = getContainerStatus(client, containerId);
-            if ("running" .equals(status)) {
+            if ("running".equals(status)) {
                 client.stopContainerCmd(containerId).exec();
                 logger.info("Container stopped successfully: " + containerId);
             } else {
