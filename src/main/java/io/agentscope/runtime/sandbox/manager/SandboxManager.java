@@ -129,9 +129,20 @@ public class SandboxManager {
             Map<String, Integer> portMapping = createPortMapping(ports);
             logger.info("Port mapping: " + portMapping);
 
-            String imageName = "agentscope/runtime-manager-base";
+            String imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest";
             if (typeNameMap.containsKey(sandboxType)) {
                 imageName = typeNameMap.get(sandboxType);
+            }
+
+            logger.info("Checking image: " + imageName);
+            if (containerManagerType == ContainerManagerType.DOCKER) {
+                if (!containerClient.ensureImageAvailable(imageName)) {
+                    logger.severe("Can not get image: " + imageName);
+                    throw new RuntimeException("Pull image failed: " + imageName);
+                }
+                logger.info("Docker image is ready: " + imageName);
+            } else if (containerManagerType == ContainerManagerType.KUBERNETES) {
+                logger.info("Kubernetes image is ready: " + imageName);
             }
 
             Map<String, String> environment = new HashMap<>();
@@ -344,6 +355,15 @@ public class SandboxManager {
      */
     public BaseClientConfig getClientConfig() {
         return clientConfig;
+    }
+    
+    /**
+     * Get container client
+     *
+     * @return container client
+     */
+    public BaseClient getContainerClient() {
+        return containerClient;
     }
 
     /**

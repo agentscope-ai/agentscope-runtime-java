@@ -87,4 +87,30 @@ public abstract class BaseClient {
      * @return whether connected
      */
     public abstract boolean isConnected();
+    
+    /**
+     * Check if image exists locally
+     * @param imageName image name
+     * @return whether image exists locally
+     */
+    public abstract boolean imageExists(String imageName);
+    
+    /**
+     * Pull image from registry
+     * @param imageName image name
+     * @return whether pull was successful
+     */
+    public abstract boolean pullImage(String imageName);
+    
+    /**
+     * Ensure image is available (check and pull if needed)
+     * @param imageName image name
+     * @return whether image is available
+     */
+    public boolean ensureImageAvailable(String imageName) {
+        if (imageExists(imageName)) {
+            return true;
+        }
+        return pullImage(imageName);
+    }
 }

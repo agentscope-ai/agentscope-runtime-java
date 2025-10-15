@@ -99,7 +99,6 @@ public class HttpClient {
      */
     public String get(String url, Map<String, String> headers) throws IOException {
         HttpGet httpGet = new HttpGet(url);
-        headers = null;
         if (headers != null) {
             headers.forEach(httpGet::setHeader);
         }

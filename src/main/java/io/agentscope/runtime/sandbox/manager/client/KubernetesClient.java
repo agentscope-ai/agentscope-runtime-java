@@ -634,4 +634,21 @@ public class KubernetesClient extends BaseClient {
             logger.warning("Unexpected error while deleting service " + serviceName + ": " + e.getMessage());
         }
     }
+
+    @Override
+    public boolean imageExists(String imageName) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Kubernetes client is not connected");
+        }
+        return true;
+    }
+
+    @Override
+    public boolean pullImage(String imageName) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Kubernetes client is not connected");
+        }
+        return true;
+    }
+
 }

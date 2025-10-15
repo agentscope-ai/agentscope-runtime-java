@@ -24,6 +24,7 @@ import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.command.PullImageCmd;
 import com.github.dockerjava.api.model.*;
 
 import java.util.*;
@@ -535,5 +536,84 @@ public class DockerClient extends BaseClient {
     public void stopAndRemoveContainer(com.github.dockerjava.api.DockerClient client, String containerId) {
         this.stopContainer(client, containerId);
         this.removeContainer(client, containerId);
+    }
+
+    @Override
+    public boolean imageExists(String imageName) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        return imageExists(client, imageName);
+    }
+
+    @Override
+    public boolean pullImage(String imageName) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        return pullImage(client, imageName);
+    }
+
+    /**
+     * Check if image exists locally
+     *
+     * @param client     Docker client
+     * @param imageName  image name
+     * @return whether image exists locally
+     */
+    public boolean imageExists(com.github.dockerjava.api.DockerClient client, String imageName) {
+        try {
+            List<Image> images = client.listImagesCmd().exec();
+            for (Image image : images) {
+                String[] repoTags = image.getRepoTags();
+                if (repoTags != null) {
+                    for (String repoTag : repoTags) {
+                        if (repoTag.equals(imageName)) {
+                            logger.info("Image found locally: " + imageName);
+                            return true;
+                        }
+                    }
+                }
+            }
+            logger.info("Image not found locally: " + imageName);
+            return false;
+        } catch (Exception e) {
+            logger.severe("Failed to check if image exists: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Pull image from registry
+     *
+     * @param client     Docker client
+     * @param imageName  image name
+     * @return whether pull was successful
+     */
+    public boolean pullImage(com.github.dockerjava.api.DockerClient client, String imageName) {
+        try {
+            logger.info("Pulling image: " + imageName);
+            
+            PullImageCmd pullCmd = client.pullImageCmd(imageName);
+            
+            // Add callback to monitor pull progress
+            pullCmd.exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.PullResponseItem>() {
+                @Override
+                public void onNext(com.github.dockerjava.api.model.PullResponseItem item) {
+                    if (item.getStatus() != null) {
+                        logger.info("Pull progress: " + item.getStatus());
+                    }
+                    if (item.getErrorDetail() != null) {
+                        logger.warning("Pull error: " + item.getErrorDetail().getMessage());
+                    }
+                }
+            }).awaitCompletion();
+            
+            logger.info("Successfully pulled image: " + imageName);
+            return true;
+        } catch (Exception e) {
+            logger.severe("Failed to pull image " + imageName + ": " + e.getMessage());
+            return false;
+        }
     }
 }
