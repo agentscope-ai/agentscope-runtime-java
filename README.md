@@ -153,7 +153,7 @@ server:
   port: 8090
 ```
 
-Run `io.agentscope.runtime.engine.deployer.LocalDeployer` to start the A2A server.
+Run `io.agentscope.runtime.autoconfig.deployer.LocalDeployer` to start the A2A server.
 
 ---
 

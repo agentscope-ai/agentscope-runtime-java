@@ -22,6 +22,7 @@ import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -29,54 +30,55 @@ import java.util.stream.Collectors;
  * Stores all session data in dictionary, suitable for development, testing and scenarios that don't require persistence
  */
 public class InMemorySessionHistoryService implements SessionHistoryService {
-    
+    public static Logger logger = Logger.getLogger(InMemorySessionHistoryService.class.getName());
+
     private final Map<String, Map<String, Session>> sessions = new ConcurrentHashMap<>();
-    
+
     @Override
     public CompletableFuture<Void> start() {
         return CompletableFuture.completedFuture(null);
     }
-    
+
     @Override
     public CompletableFuture<Void> stop() {
         return CompletableFuture.completedFuture(null);
     }
-    
+
     @Override
     public CompletableFuture<Boolean> health() {
         return CompletableFuture.completedFuture(true);
     }
-    
+
     @Override
     public CompletableFuture<Session> createSession(String userId, Optional<String> sessionId) {
         return CompletableFuture.supplyAsync(() -> {
             String sid = sessionId.filter(s -> s != null && !s.trim().isEmpty())
                     .orElse(UUID.randomUUID().toString());
-            
+
             Session session = new Session(sid, userId, new ArrayList<>());
             sessions.computeIfAbsent(userId, k -> new ConcurrentHashMap<>())
                     .put(sid, session);
-            
+
             return deepCopy(session);
         });
     }
-    
+
     @Override
     public CompletableFuture<Optional<Session>> getSession(String userId, String sessionId) {
         return CompletableFuture.supplyAsync(() -> {
             Session session = sessions.getOrDefault(userId, Collections.emptyMap())
                     .get(sessionId);
-            
+
             if (session == null) {
                 session = new Session(sessionId, userId, new ArrayList<>());
                 sessions.computeIfAbsent(userId, k -> new ConcurrentHashMap<>())
                         .put(sessionId, session);
             }
-            
+
             return Optional.of(deepCopy(session));
         });
     }
-    
+
     @Override
     public CompletableFuture<Void> deleteSession(String userId, String sessionId) {
         return CompletableFuture.runAsync(() -> {
@@ -86,28 +88,28 @@ public class InMemorySessionHistoryService implements SessionHistoryService {
             }
         });
     }
-    
+
     @Override
     public CompletableFuture<List<Session>> listSessions(String userId) {
         return CompletableFuture.supplyAsync(() -> {
             Map<String, Session> userSessions = sessions.getOrDefault(userId, Collections.emptyMap());
-            
+
             return userSessions.values().stream()
                     .map(this::createSessionWithoutHistory)
                     .collect(Collectors.toList());
         });
     }
-    
+
     @Override
     public CompletableFuture<Void> appendMessage(Session session, List<Message> messages) {
         return CompletableFuture.runAsync(() -> {
             if (messages == null || messages.isEmpty()) {
                 return;
             }
-            
+
             // Update the passed session object
             session.getMessages().addAll(messages);
-            
+
             // Update the copy in memory
             Map<String, Session> userSessions = sessions.get(session.getUserId());
             if (userSessions != null) {
@@ -115,13 +117,13 @@ public class InMemorySessionHistoryService implements SessionHistoryService {
                 if (existingSession != null) {
                     existingSession.getMessages().addAll(messages);
                 } else {
-                    System.err.println("Warning: Session " + session.getId() + 
+                    logger.severe("Warning: Session " + session.getId() +
                             " not found in storage for append_message.");
                 }
             }
         });
     }
-    
+
     /**
      * Create session copy without history
      *
@@ -133,7 +135,7 @@ public class InMemorySessionHistoryService implements SessionHistoryService {
         copy.setMessages(new ArrayList<>());
         return copy;
     }
-    
+
     /**
      * Deep copy session object
      *

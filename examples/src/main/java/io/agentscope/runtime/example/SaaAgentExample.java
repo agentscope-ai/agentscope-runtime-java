@@ -1,5 +1,6 @@
 package io.agentscope.runtime.example;
 
+import com.alibaba.cloud.ai.graph.agent.flow.agent.LlmRoutingAgent;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
@@ -16,7 +17,6 @@ import reactor.core.publisher.Flux;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 
 import java.util.List;
@@ -42,13 +42,13 @@ public class SaaAgentExample {
     private void initializeChatModel() {
         // Create DashScopeApi instance using the API key from environment variable
         DashScopeApi dashScopeApi = DashScopeApi.builder()
-            .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-            .build();
+                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                .build();
 
         // Create DashScope ChatModel instance
         this.chatModel = DashScopeChatModel.builder()
-            .dashScopeApi(dashScopeApi)
-            .build();
+                .dashScopeApi(dashScopeApi)
+                .build();
     }
 
     private void initializeContextManager() {
@@ -61,9 +61,9 @@ public class SaaAgentExample {
 
             // Create ContextManager with the required services
             this.contextManager = new ContextManager(
-                ContextComposer.class,
-                sessionHistoryService,
-                memoryService
+                    ContextComposer.class,
+                    sessionHistoryService,
+                    memoryService
             );
 
             // Start the context manager services
@@ -86,30 +86,45 @@ public class SaaAgentExample {
 
         try {
             // Create ReactAgent Builder
-            Builder builder = ReactAgent.builder()
-                .name("saa_agent")
-                .model(chatModel);
+            ReactAgent proseAgent = ReactAgent.builder()
+                    .name("prose_agent")
+                    .description("prose writing expert")
+                    .instruction("You are a prose writing expert, skilled at writing prose.")
+                    .model(chatModel)
+                    .build();
+
+            ReactAgent poemAgent = ReactAgent.builder()
+                    .name("poem_agent")
+                    .description("poem writing expert")
+                    .instruction("You are a poetry writing expert, skilled at writing poetry.")
+                    .model(chatModel)
+                    .build();
+
+            LlmRoutingAgent llmRoutingAgent = LlmRoutingAgent.builder()
+                    .name("llm_routing_agent")
+                    .model(chatModel)
+                    .subAgents(List.of(proseAgent, poemAgent))
+                    .build();
+
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                .name("saa_agent_proxy")
-                .description("An agent powered by Spring AI Alibaba ReactAgent")
-                .reactAgentBuilder(builder)
-                .build();
+                    .agentBuilder(llmRoutingAgent)
+                    .build();
 
             // Create Runner with the SaaAgent
             Runner runner = new Runner(saaAgent, contextManager);
 
             // Create AgentRequest
-            AgentRequest request = createAgentRequest("Hello, can you tell me a joke?");
+            AgentRequest request = createAgentRequest("Please write a prose about West Lake", null, null);
 
             // Execute the agent and handle the response stream
             Flux<Event> eventStream = runner.streamQuery(request);
 
             eventStream.subscribe(
-                event -> handleEvent(event),
-                error -> System.err.println("Error occurred: " + error.getMessage()),
-                () -> System.out.println("Conversation completed.")
+                    this::handleEvent,
+                    error -> System.err.println("Error occurred: " + error.getMessage()),
+                    () -> System.out.println("Conversation completed.")
             );
 
             // Wait a bit for async execution (in real applications, you'd handle this properly)
@@ -123,8 +138,17 @@ public class SaaAgentExample {
     /**
      * Helper method to create AgentRequest
      */
-    private AgentRequest createAgentRequest(String text) {
+    private AgentRequest createAgentRequest(String text, String userId, String sessionId) {
+        if (userId == null || userId.isEmpty()) {
+            userId = "default_user";
+        }
+        if (sessionId == null || sessionId.isEmpty()) {
+            sessionId = UUID.randomUUID().toString();
+        }
         AgentRequest request = new AgentRequest();
+
+        request.setSessionId(sessionId);
+        request.setUserId(userId);
 
         // Create text content
         TextContent textContent = new TextContent();
@@ -147,11 +171,10 @@ public class SaaAgentExample {
      * Helper method to handle events from the agent
      */
     private void handleEvent(Event event) {
-        if (event instanceof Message) {
-            Message message = (Message) event;
+        if (event instanceof Message message) {
             System.out.println("Event - Type: " + message.getType() +
-                             ", Role: " + message.getRole() +
-                             ", Status: " + message.getStatus());
+                    ", Role: " + message.getRole() +
+                    ", Status: " + message.getStatus());
 
             if (message.getContent() != null && !message.getContent().isEmpty()) {
                 TextContent content = (TextContent) message.getContent().get(0);

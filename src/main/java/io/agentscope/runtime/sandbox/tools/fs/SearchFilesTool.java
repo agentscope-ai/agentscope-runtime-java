@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -31,8 +32,11 @@ public class SearchFilesTool implements BiFunction<SearchFilesTool.Request, Tool
     @Override
     public Response apply(Request request, ToolContext toolContext) {
         try {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
             SandboxTools tools = new SandboxTools();
-            String result = tools.fs_search_files(request.path, request.pattern, request.excludePatterns);
+            String result = tools.fs_search_files(request.path, request.pattern, request.excludePatterns, userID, sessionID);
             return new Response(result, "Filesystem search_files completed");
         } catch (Exception e) {
             return new Response("Error", "Filesystem search_files error: " + e.getMessage());

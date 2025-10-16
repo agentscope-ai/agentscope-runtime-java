@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -30,9 +31,13 @@ public class WriteFileTool implements BiFunction<WriteFileTool.Request, ToolCont
 
     @Override
     public Response apply(Request request, ToolContext toolContext) {
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        
         try {
             SandboxTools tools = new SandboxTools();
-            String result = tools.fs_write_file(request.path, request.content);
+            String result = tools.fs_write_file(request.path, request.content, userID, sessionID);
             return new Response(result, "Filesystem write_file completed");
         } catch (Exception e) {
             return new Response("Error", "Filesystem write_file error: " + e.getMessage());

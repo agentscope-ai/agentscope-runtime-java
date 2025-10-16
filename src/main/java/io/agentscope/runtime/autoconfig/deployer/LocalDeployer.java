@@ -13,12 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.engine.deployer;
+package io.agentscope.runtime.autoconfig.deployer;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {
+    "io.agentscope.runtime.autoconfig.deployer",
+    "io.agentscope.runtime.engine.a2a",
+    "io.agentscope.runtime.sandbox"
+})
 public class LocalDeployer {
 
     public static void main(String[] args) {

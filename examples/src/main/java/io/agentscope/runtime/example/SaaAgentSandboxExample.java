@@ -7,6 +7,7 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
@@ -20,17 +21,21 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
+
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.tools.ToolsInit;
 import reactor.core.publisher.Flux;
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
  */
-public class SaaAgentSadboxExample {
+public class SaaAgentSandboxExample {
 
     private DashScopeChatModel chatModel;
     private ContextManager contextManager;
 
-    public SaaAgentSadboxExample() {
+    public SaaAgentSandboxExample() {
         // Initialize DashScope ChatModel
         initializeChatModel();
 
@@ -41,13 +46,13 @@ public class SaaAgentSadboxExample {
     private void initializeChatModel() {
         // Create DashScopeApi instance using the API key from environment variable
         DashScopeApi dashScopeApi = DashScopeApi.builder()
-            .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-            .build();
+                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                .build();
 
         // Create DashScope ChatModel instance
         this.chatModel = DashScopeChatModel.builder()
-            .dashScopeApi(dashScopeApi)
-            .build();
+                .dashScopeApi(dashScopeApi)
+                .build();
     }
 
     private void initializeContextManager() {
@@ -60,9 +65,9 @@ public class SaaAgentSadboxExample {
 
             // Create ContextManager with the required services
             this.contextManager = new ContextManager(
-                ContextComposer.class,
-                sessionHistoryService,
-                memoryService
+                    ContextComposer.class,
+                    sessionHistoryService,
+                    memoryService
             );
 
             // Start the context manager services
@@ -81,39 +86,40 @@ public class SaaAgentSadboxExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public void basicExample() {
-        System.out.println("=== Basic SaaAgent Example ===");
+        System.out.println("=== Tool Using SaaAgent Example ===");
 
         try {
             // Create ReactAgent Builder
             Builder builder = ReactAgent.builder()
-                .name("saa_agent")
-                .model(chatModel);
+                    .name("saa_agent")
+                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
+                    .model(chatModel);
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                .name("saa_agent_proxy")
-                .tools(List.of("run_python"))
-                .description("An agent powered by Spring AI Alibaba ReactAgent.")
-                .reactAgentBuilder(builder)
-                .build();
+                    .agentBuilder(builder.build())
+                    .build();
 
             // Create Runner with the SaaAgent
             Runner runner = new Runner(saaAgent, contextManager);
 
+            BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+            runner.registerClientConfig(clientConfig);
+
             // Create AgentRequest
-            AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?");
+            AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);
 
             // Execute the agent and handle the response stream
             Flux<Event> eventStream = runner.streamQuery(request);
 
             eventStream.subscribe(
-                event -> handleEvent(event),
-                error -> System.err.println("Error occurred: " + error.getMessage()),
-                () -> System.out.println("Conversation completed.")
+                    this::handleEvent,
+                    error -> System.err.println("Error occurred: " + error.getMessage()),
+                    () -> System.out.println("Conversation completed.")
             );
 
             // Wait a bit for async execution (in real applications, you'd handle this properly)
-            Thread.sleep(5000);
+            Thread.sleep(500000);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -123,8 +129,17 @@ public class SaaAgentSadboxExample {
     /**
      * Helper method to create AgentRequest
      */
-    private AgentRequest createAgentRequest(String text) {
+    private AgentRequest createAgentRequest(String text, String userId, String sessionId) {
+        if (userId == null || userId.isEmpty()) {
+            userId = "default_user";
+        }
+        if (sessionId == null || sessionId.isEmpty()) {
+            sessionId = UUID.randomUUID().toString();
+        }
         AgentRequest request = new AgentRequest();
+
+        request.setSessionId(sessionId);
+        request.setUserId(userId);
 
         // Create text content
         TextContent textContent = new TextContent();
@@ -147,11 +162,10 @@ public class SaaAgentSadboxExample {
      * Helper method to handle events from the agent
      */
     private void handleEvent(Event event) {
-        if (event instanceof Message) {
-            Message message = (Message) event;
+        if (event instanceof Message message) {
             System.out.println("Event - Type: " + message.getType() +
-                             ", Role: " + message.getRole() +
-                             ", Status: " + message.getStatus());
+                    ", Role: " + message.getRole() +
+                    ", Status: " + message.getStatus());
 
             if (message.getContent() != null && !message.getContent().isEmpty()) {
                 TextContent content = (TextContent) message.getContent().get(0);
@@ -172,7 +186,7 @@ public class SaaAgentSadboxExample {
             System.exit(1);
         }
 
-        SaaAgentSadboxExample example = new SaaAgentSadboxExample();
+        SaaAgentSandboxExample example = new SaaAgentSandboxExample();
 
         try {
             example.basicExample();

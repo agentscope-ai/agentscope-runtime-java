@@ -57,21 +57,26 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- Explicitly add Jakarta Annotations for servlet filters (@PostConstruct) -->
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- A2A SDK Dependencies -->
-        <dependency>
-            <groupId>io.github.a2asdk</groupId>
-            <artifactId>a2a-java-reference-server</artifactId>
-            <version>${a2a-sdk.version}</version>
-        </dependency>
         <dependency>
             <groupId>io.github.a2asdk</groupId>
             <artifactId>a2a-java-sdk-server-common</artifactId>
             <version>${a2a-sdk.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.quarkus</groupId>
+                    <artifactId>quarkus-arc</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.github.a2asdk</groupId>
@@ -121,19 +126,13 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
-            <scope>test</scope>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
         </dependency>
 
-        <!-- Exclude conflicting SLF4J providers -->
-        <dependency>
-            <groupId>org.jboss.slf4j</groupId>
-            <artifactId>slf4j-jboss-logmanager</artifactId>
-            <version>2.0.0.Final</version>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
             <groupId>com.github.docker-java</groupId>
@@ -190,11 +189,28 @@
             <version>2.1.6</version>
         </dependency>
 
-        <!-- HTTP client dependency - using httpclient4 -->
+        <!-- HTTP client dependency - using OkHttp -->
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.14</version>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-okhttp</artifactId>
+            <version>3.4.0</version>
+        </dependency>
+
+        <!-- Kubernetes Java Client Dependencies -->
+        <dependency>
+            <groupId>io.kubernetes</groupId>
+            <artifactId>client-java-api</artifactId>
+            <version>24.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kubernetes</groupId>
+            <artifactId>client-java</artifactId>
+            <version>24.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kubernetes</groupId>
+            <artifactId>client-java-extended</artifactId>
+            <version>24.0.0</version>
         </dependency>
 
         <!-- Redis Dependencies -->
@@ -220,19 +236,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
-        <!-- MySQL database dependency -->
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
-        </dependency>
-        
-        <!-- Spring Data JPA -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
     </dependencies>
@@ -283,7 +286,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <configuration></configuration>
+                <configuration/>
             </plugin>
         </plugins>
     </reporting>

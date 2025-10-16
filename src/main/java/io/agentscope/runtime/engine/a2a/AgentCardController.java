@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.engine.deployer.a2a;
+package io.agentscope.runtime.engine.a2a;
 
 import io.a2a.spec.AgentCard;
 import org.springframework.http.MediaType;
@@ -27,8 +27,8 @@ public class AgentCardController {
 
 	private final JSONRPCHandler jsonRpcHandler;
 
-	public AgentCardController(JSONRPCHandler jsonRpcHandler) {
-		this.jsonRpcHandler = jsonRpcHandler;
+	public AgentCardController() {
+		this.jsonRpcHandler = AgentHandlerConfiguration.getInstance().jsonrpcHandler();
 	}
 
 	@GetMapping(value = "/.well-known/agent.json", produces = MediaType.APPLICATION_JSON_VALUE)

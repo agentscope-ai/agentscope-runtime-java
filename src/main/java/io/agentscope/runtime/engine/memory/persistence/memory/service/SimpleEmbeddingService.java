@@ -18,26 +18,25 @@ package io.agentscope.runtime.engine.memory.persistence.memory.service;
 import io.agentscope.runtime.engine.memory.service.EmbeddingService;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * 简单的文本嵌入服务实现
- * 使用TF-IDF和词频统计作为向量表示
+ * Simple text embedding service implementation
+ * Uses TF-IDF and term frequency statistics as vector representation
  */
 public class SimpleEmbeddingService implements EmbeddingService {
-    
-    private static final Logger logger = LoggerFactory.getLogger(SimpleEmbeddingService.class);
-    private static final int EMBEDDING_DIMENSION = 300; // 固定维度
-    
+
+    Logger logger = Logger.getLogger(SimpleEmbeddingService.class.getName());
+    private static final int EMBEDDING_DIMENSION = 300; // Fixed dimension
+
     private final Map<String, Integer> vocabulary = new HashMap<>();
     private final Map<String, Integer> documentFrequencies = new HashMap<>();
     private int totalDocuments = 0;
-    
+
     @Override
     public CompletableFuture<List<Double>> embedText(String text) {
         return CompletableFuture.supplyAsync(() -> {
@@ -45,128 +44,126 @@ public class SimpleEmbeddingService implements EmbeddingService {
                 if (text == null || text.trim().isEmpty()) {
                     return createZeroVector();
                 }
-                
-                // 预处理文本
+
+                // Preprocess text
                 String processedText = preprocessText(text);
                 List<String> tokens = tokenize(processedText);
-                
+
                 if (tokens.isEmpty()) {
                     return createZeroVector();
                 }
-                
-                // 计算TF-IDF向量
+
+                // Compute TF-IDF vector
                 List<Double> embedding = computeTfIdfVector(tokens);
-                
-                // 归一化向量
+
+                // Normalize vector
                 normalizeVector(embedding);
-                
-                logger.debug("生成文本嵌入，文本长度: {}, 向量维度: {}", text.length(), embedding.size());
-                
+
                 return embedding;
-                
+
             } catch (Exception e) {
-                logger.error("生成文本嵌入失败", e);
+                logger.severe("Failed to generate text embedding" + e.getMessage());
                 return createZeroVector();
             }
         });
     }
-    
+
     @Override
     public double cosineSimilarity(List<Double> vector1, List<Double> vector2) {
         if (vector1 == null || vector2 == null || vector1.size() != vector2.size()) {
             return 0.0;
         }
-        
+
         try {
             RealVector v1 = new ArrayRealVector(vector1.stream().mapToDouble(Double::doubleValue).toArray());
             RealVector v2 = new ArrayRealVector(vector2.stream().mapToDouble(Double::doubleValue).toArray());
-            
+
             double dotProduct = v1.dotProduct(v2);
             double norm1 = v1.getNorm();
             double norm2 = v2.getNorm();
-            
+
             if (norm1 == 0.0 || norm2 == 0.0) {
                 return 0.0;
             }
-            
+
             return dotProduct / (norm1 * norm2);
-            
+
         } catch (Exception e) {
-            logger.error("计算余弦相似度失败", e);
+            logger.severe("Failed to compute cosine similarity" + e.getMessage());
             return 0.0;
         }
     }
-    
+
     @Override
     public double euclideanDistance(List<Double> vector1, List<Double> vector2) {
         if (vector1 == null || vector2 == null || vector1.size() != vector2.size()) {
             return Double.MAX_VALUE;
         }
-        
+
         try {
             RealVector v1 = new ArrayRealVector(vector1.stream().mapToDouble(Double::doubleValue).toArray());
             RealVector v2 = new ArrayRealVector(vector2.stream().mapToDouble(Double::doubleValue).toArray());
-            
+
             return v1.getDistance(v2);
-            
+
         } catch (Exception e) {
-            logger.error("计算欧几里得距离失败", e);
+            logger.severe("Failed to compute Euclidean distance" + e.getMessage());
             return Double.MAX_VALUE;
         }
     }
-    
+
     @Override
     public int getEmbeddingDimension() {
         return EMBEDDING_DIMENSION;
     }
-    
+
     /**
-     * 预处理文本
+     * Preprocess text
      */
     private String preprocessText(String text) {
         if (text == null) {
             return "";
         }
-        
+
         return text.toLowerCase()
-                .replaceAll("[^\\p{L}\\p{N}\\s]", " ") // 保留字母、数字和空格
-                .replaceAll("\\s+", " ") // 合并多个空格
+                .replaceAll("[^\\p{L}\\p{N}\\s]", " ") // Keep letters, numbers and spaces
+                .replaceAll("\\s+", " ") // Merge multiple spaces
                 .trim();
     }
-    
+
     /**
-     * 分词
+     * Tokenize text
      */
     private List<String> tokenize(String text) {
         if (text == null || text.trim().isEmpty()) {
             return Collections.emptyList();
         }
-        
+
         return Arrays.stream(text.split("\\s+"))
-                .filter(token -> token.length() > 1) // 过滤单字符
+                .filter(token -> token.length() > 1) // Filter single characters
                 .collect(Collectors.toList());
     }
-    
+
     /**
-     * 计算TF-IDF向量
+     * Compute TF-IDF vector
      */
     private List<Double> computeTfIdfVector(List<String> tokens) {
-        // 计算词频
+        // Compute term frequencies
         Map<String, Integer> termFrequencies = new HashMap<>();
         for (String token : tokens) {
             termFrequencies.put(token, termFrequencies.getOrDefault(token, 0) + 1);
         }
-        
-        // 更新词汇表和文档频率
+
+        // Update vocabulary and document frequencies
         updateVocabulary(termFrequencies.keySet());
-        
-        // 创建向量
+
+        // Create vector
         List<Double> vector = new ArrayList<>(Collections.nCopies(EMBEDDING_DIMENSION, 0.0));
-        
+
         for (Map.Entry<String, Integer> entry : termFrequencies.entrySet()) {
             String term = entry.getKey();
             int tf = entry.getValue();
-            
+
             if (vocabulary.containsKey(term)) {
                 int termIndex = vocabulary.get(term) % EMBEDDING_DIMENSION;
                 double idf = computeIdf(term);
@@ -174,12 +171,12 @@ public class SimpleEmbeddingService implements EmbeddingService {
                 vector.set(termIndex, vector.get(termIndex) + tfIdf);
             }
         }
-        
+
         return vector;
     }
-    
+
     /**
-     * 更新词汇表
+     * Update vocabulary
      */
     private void updateVocabulary(Set<String> terms) {
         for (String term : terms) {
@@ -188,17 +185,17 @@ public class SimpleEmbeddingService implements EmbeddingService {
         }
         totalDocuments++;
     }
-    
+
     /**
-     * 计算IDF值
+     * Compute IDF value
      */
     private double computeIdf(String term) {
         int df = documentFrequencies.getOrDefault(term, 1);
         return Math.log((double) totalDocuments / df);
     }
-    
+
     /**
-     * 归一化向量
+     * Normalize vector
      */
     private void normalizeVector(List<Double> vector) {
         double norm = Math.sqrt(vector.stream().mapToDouble(v -> v * v).sum());
@@ -208,23 +205,23 @@ public class SimpleEmbeddingService implements EmbeddingService {
             }
         }
     }
-    
+
     /**
-     * 创建零向量
+     * Create zero vector
      */
     private List<Double> createZeroVector() {
         return new ArrayList<>(Collections.nCopies(EMBEDDING_DIMENSION, 0.0));
     }
-    
+
     /**
-     * 获取词汇表大小
+     * Get vocabulary size
      */
     public int getVocabularySize() {
         return vocabulary.size();
     }
-    
+
     /**
-     * 获取总文档数
+     * Get total document count
      */
     public int getTotalDocuments() {
         return totalDocuments;

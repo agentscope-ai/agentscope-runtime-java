@@ -13,45 +13,143 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.manager;
+package io.agentscope.runtime.sandbox.manager.client;
 
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.okhttp.OkDockerHttpClient;
+import com.github.dockerjava.transport.DockerHttpClient;
 import io.agentscope.runtime.sandbox.manager.model.DockerProp;
 import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
-import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.command.PullImageCmd;
 import com.github.dockerjava.api.model.*;
-import com.github.dockerjava.core.DockerClientBuilder;
 
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * @Author: agentscope
  * @Date: 2021/1/10 15:37
  * @Description: Java API implementation for creating Docker containers
  */
-public class DockerManager {
+public class DockerClient extends BaseClient {
+    Logger logger = Logger.getLogger(DockerClient.class.getName());
+    private com.github.dockerjava.api.DockerClient client;
+    private boolean connected = false;
 
     /**
      * Connect to Docker server (Mac default connection method)
      *
-     * @return
+     * @return: Docker client
      */
-    public DockerClient connectDocker() {
-        DockerClient dockerClient = DockerClientBuilder.getInstance().build();
-        dockerClient.infoCmd().exec();
-        return dockerClient;
+    public com.github.dockerjava.api.DockerClient connectDocker() {
+        this.client = openDockerClient();
+        this.client.infoCmd().exec();
+        this.connected = true;
+        return this.client;
+    }
+
+    @Override
+    public boolean connect() {
+        try {
+            this.client = openDockerClient();
+            this.client.infoCmd().exec();
+            this.connected = true;
+            return true;
+        } catch (Exception e) {
+            logger.severe("Failed to connect to Docker: " + e.getMessage());
+            this.connected = false;
+            return false;
+        }
+    }
+
+    @Override
+    public boolean isConnected() {
+        return connected && client != null;
+    }
+
+    @Override
+    public String createContainer(String containerName, String imageName,
+                                  List<String> ports, Map<String, Integer> portMapping,
+                                  List<VolumeBinding> volumeBindings,
+                                  Map<String, String> environment, String runtimeConfig) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+
+        CreateContainerResponse response = createContainers(client, containerName, imageName,
+                ports, portMapping, volumeBindings, environment, runtimeConfig);
+
+        return response.getId();
+    }
+
+    @Override
+    public void startContainer(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        startContainer(client, containerId);
+    }
+
+    @Override
+    public void stopContainer(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        stopContainer(client, containerId);
+    }
+
+    @Override
+    public void removeContainer(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        removeContainer(client, containerId);
+    }
+
+    @Override
+    public String getContainerStatus(String containerId) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        return getContainerStatus(client, containerId);
+    }
+
+    private static com.github.dockerjava.api.DockerClient openDockerClient() {
+        var config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
+
+        DockerHttpClient httpClient = new OkDockerHttpClient.Builder()
+                .dockerHost(config.getDockerHost())
+                .sslConfig(config.getSSLConfig())
+                .connectTimeout(30000)
+                .readTimeout(45000)
+                .build();
+
+        return DockerClientImpl.getInstance(config, httpClient);
     }
 
     /**
      * Connect to Docker server (specify connection address)
      *
      * @param dockerInstance Docker connection address
-     * @return
+     * @return: Docker client
      */
-    public DockerClient connectDocker(String dockerInstance) {
-        DockerClient dockerClient = DockerClientBuilder.getInstance(dockerInstance).build();
+    public com.github.dockerjava.api.DockerClient connectDocker(String dockerInstance) {
+        var config = DefaultDockerClientConfig.createDefaultConfigBuilder()
+                .withDockerHost(dockerInstance)
+                .build();
+
+        DockerHttpClient httpClient = new OkDockerHttpClient.Builder()
+                .dockerHost(config.getDockerHost())
+                .sslConfig(config.getSSLConfig())
+                .connectTimeout(30000)
+                .readTimeout(45000)
+                .build();
+
+        com.github.dockerjava.api.DockerClient dockerClient = DockerClientImpl.getInstance(config, httpClient);
         dockerClient.infoCmd().exec();
         return dockerClient;
     }
@@ -62,13 +160,12 @@ public class DockerManager {
      * @param client        Docker client
      * @param containerName container name
      * @param imageName     image name
-     * @return
+     * @return: CreateContainerResponse
      */
-    public CreateContainerResponse createContainers(DockerClient client, String containerName, String imageName) {
-        CreateContainerResponse container = client.createContainerCmd(imageName)
+    public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, String containerName, String imageName) {
+        return client.createContainerCmd(imageName)
                 .withName(containerName)
                 .exec();
-        return container;
     }
 
     /**
@@ -76,10 +173,9 @@ public class DockerManager {
      *
      * @param client     Docker client
      * @param dockerProp Docker configuration properties
-     * @return
+     * @return: CreateContainerResponse
      */
-    public CreateContainerResponse createContainers(DockerClient client, DockerProp dockerProp) {
-        // Port binding
+    public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, DockerProp dockerProp) {
         Map<Integer, Integer> portMap = Optional.ofNullable(dockerProp).map(DockerProp::getPartMap).orElse(new HashMap<>());
         Iterator<Map.Entry<Integer, Integer>> iterator = portMap.entrySet().iterator();
         List<PortBinding> portBindingList = new ArrayList<>();
@@ -93,10 +189,13 @@ public class DockerManager {
             exposedPortList.add(tcp);
         }
 
-        CreateContainerResponse container = client.createContainerCmd(dockerProp.getImageName())
-                .withName(dockerProp.getContainerName())
-                .withHostConfig(HostConfig.newHostConfig().withPortBindings(portBindingList))
-                .withExposedPorts(exposedPortList).exec();
+        CreateContainerResponse container = null;
+        if (dockerProp != null) {
+            container = client.createContainerCmd(dockerProp.getImageName())
+                    .withName(dockerProp.getContainerName())
+                    .withHostConfig(HostConfig.newHostConfig().withPortBindings(portBindingList))
+                    .withExposedPorts(exposedPortList).exec();
+        }
 
         return container;
     }
@@ -111,9 +210,9 @@ public class DockerManager {
      * @param volumeBindings volume mount mapping
      * @param environment    environment variables
      * @param runtimeConfig  runtime configuration
-     * @return
+     * @return: CreateContainerResponse
      */
-    public CreateContainerResponse createContainers(DockerClient client, String containerName, String imageName,
+    public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, String containerName, String imageName,
                                                     List<String> ports, Map<String, String> volumeBindings,
                                                     Map<String, String> environment, String runtimeConfig) {
 
@@ -130,7 +229,7 @@ public class DockerManager {
                 String protocol = portParts.length > 1 ? portParts[1] : "tcp";
 
                 ExposedPort exposedPort = ExposedPort.tcp(port);
-                if ("udp" .equals(protocol)) {
+                if ("udp".equals(protocol)) {
                     exposedPort = ExposedPort.udp(port);
                 }
                 exposedPorts[i] = exposedPort;
@@ -178,7 +277,7 @@ public class DockerManager {
         if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
             // Note: the withRuntime method may not be available in the current version
             // This parameter is reserved for future expansion
-            System.out.println("Runtime configuration: " + runtimeConfig + " (not supported in the current version)");
+            logger.info("Runtime configuration: " + runtimeConfig + " (not supported in the current version)");
         }
 
         return createCmd.exec();
@@ -196,7 +295,7 @@ public class DockerManager {
      * @param runtimeConfig  runtime configuration
      * @return
      */
-    public CreateContainerResponse createContainers(DockerClient client, String containerName, String imageName,
+    public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, String containerName, String imageName,
                                                     List<String> ports, List<VolumeBinding> volumeBindings,
                                                     Map<String, String> environment, String runtimeConfig) {
 
@@ -213,7 +312,7 @@ public class DockerManager {
                 String protocol = portParts.length > 1 ? portParts[1] : "tcp";
 
                 ExposedPort exposedPort = ExposedPort.tcp(port);
-                if ("udp" .equals(protocol)) {
+                if ("udp".equals(protocol)) {
                     exposedPort = ExposedPort.udp(port);
                 }
                 exposedPorts[i] = exposedPort;
@@ -233,7 +332,7 @@ public class DockerManager {
                 volumes[i] = volume;
 
                 // Set read-write permissions based on mode
-                if ("ro" .equals(binding.getMode())) {
+                if ("ro".equals(binding.getMode())) {
                     binds[i] = new Bind(binding.getHostPath(), volume, AccessMode.ro);
                 } else {
                     binds[i] = new Bind(binding.getHostPath(), volume, AccessMode.rw);
@@ -263,7 +362,7 @@ public class DockerManager {
         if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
             // Note: the withRuntime method may not be available in the current version
             // This parameter is reserved for future expansion
-            System.out.println("Runtime configuration: " + runtimeConfig + " (not supported in the current version)");
+            logger.info("Runtime configuration: " + runtimeConfig + " (not supported in the current version)");
         }
 
         return createCmd.exec();
@@ -282,7 +381,7 @@ public class DockerManager {
      * @param runtimeConfig  runtime configuration
      * @return
      */
-    public CreateContainerResponse createContainers(DockerClient client, String containerName, String imageName,
+    public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, String containerName, String imageName,
                                                     List<String> ports, Map<String, Integer> portMapping,
                                                     List<VolumeBinding> volumeBindings,
                                                     Map<String, String> environment, String runtimeConfig) {
@@ -295,7 +394,7 @@ public class DockerManager {
         if (ports != null && !ports.isEmpty() && portMapping != null && !portMapping.isEmpty()) {
             List<PortBinding> list = new ArrayList<>();
             List<ExposedPort> exposedPorts = new ArrayList<>();
-            
+
             for (String containerPort : portMapping.keySet()) {
                 Integer hostPort = portMapping.get(containerPort);
                 // Expose container port
@@ -304,7 +403,7 @@ public class DockerManager {
                 // Bind host port -> container port
                 list.add(PortBinding.parse(hostPort + ":" + containerPort));
             }
-            
+
             createCmd = createCmd.withExposedPorts(exposedPorts);
             hostConfig = hostConfig.withPortBindings(list);
         }
@@ -320,7 +419,7 @@ public class DockerManager {
                 volumes[i] = volume;
 
                 // Set read-write permissions based on mode
-                if ("ro" .equals(binding.getMode())) {
+                if ("ro".equals(binding.getMode())) {
                     binds[i] = new Bind(binding.getHostPath(), volume, AccessMode.ro);
                 } else {
                     binds[i] = new Bind(binding.getHostPath(), volume, AccessMode.rw);
@@ -348,7 +447,7 @@ public class DockerManager {
         if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
             // Note: the withRuntime method may not be available in the current version
             // This parameter is reserved for future expansion
-            System.out.println("Runtime configuration: " + runtimeConfig + " (not supported in the current version)");
+            logger.info("Runtime configuration: " + runtimeConfig + " (not supported in the current version)");
         }
 
         return createCmd.exec();
@@ -361,10 +460,10 @@ public class DockerManager {
      * @param client      Docker client
      * @param containerId container ID
      */
-    public void startContainer(DockerClient client, String containerId) {
+    public void startContainer(com.github.dockerjava.api.DockerClient client, String containerId) {
         try {
             client.startContainerCmd(containerId).exec();
-            System.out.println("Container started successfully: " + containerId);
+            logger.info("Container started successfully: " + containerId);
         } catch (Exception e) {
             System.err.println("Failed to start container: " + e.getMessage());
         }
@@ -376,15 +475,15 @@ public class DockerManager {
      * @param client      Docker client
      * @param containerId container ID
      */
-    public void stopContainer(DockerClient client, String containerId) {
+    public void stopContainer(com.github.dockerjava.api.DockerClient client, String containerId) {
         try {
             // Check container status first
             String status = getContainerStatus(client, containerId);
-            if ("running" .equals(status)) {
+            if ("running".equals(status)) {
                 client.stopContainerCmd(containerId).exec();
-                System.out.println("Container stopped successfully: " + containerId);
+                logger.info("Container stopped successfully: " + containerId);
             } else {
-                System.out.println("Container is already stopped, status: " + status);
+                logger.info("Container is already stopped, status: " + status);
             }
         } catch (Exception e) {
             System.err.println("Failed to stop container: " + e.getMessage());
@@ -397,14 +496,14 @@ public class DockerManager {
      * @param client      Docker client
      * @param containerId container ID
      */
-    public void removeContainer(DockerClient client, String containerId) {
+    public void removeContainer(com.github.dockerjava.api.DockerClient client, String containerId) {
         try {
             // Force delete the container, even if it is running
             client.removeContainerCmd(containerId)
                     .withForce(true)  // Force delete
                     .withRemoveVolumes(true)  // Also delete associated volumes
                     .exec();
-            System.out.println("Container deleted successfully: " + containerId);
+            logger.info("Container deleted successfully: " + containerId);
         } catch (Exception e) {
             System.err.println("Failed to delete container: " + e.getMessage());
             e.printStackTrace();
@@ -418,7 +517,7 @@ public class DockerManager {
      * @param containerId container ID
      * @return container status
      */
-    public String getContainerStatus(DockerClient client, String containerId) {
+    public String getContainerStatus(com.github.dockerjava.api.DockerClient client, String containerId) {
         try {
             InspectContainerResponse response = client.inspectContainerCmd(containerId).exec();
             return response.getState().getStatus();
@@ -434,8 +533,87 @@ public class DockerManager {
      * @param client      Docker client
      * @param containerId container ID
      */
-    public void stopAndRemoveContainer(DockerClient client, String containerId) {
+    public void stopAndRemoveContainer(com.github.dockerjava.api.DockerClient client, String containerId) {
         this.stopContainer(client, containerId);
         this.removeContainer(client, containerId);
+    }
+
+    @Override
+    public boolean imageExists(String imageName) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        return imageExists(client, imageName);
+    }
+
+    @Override
+    public boolean pullImage(String imageName) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        return pullImage(client, imageName);
+    }
+
+    /**
+     * Check if image exists locally
+     *
+     * @param client     Docker client
+     * @param imageName  image name
+     * @return whether image exists locally
+     */
+    public boolean imageExists(com.github.dockerjava.api.DockerClient client, String imageName) {
+        try {
+            List<Image> images = client.listImagesCmd().exec();
+            for (Image image : images) {
+                String[] repoTags = image.getRepoTags();
+                if (repoTags != null) {
+                    for (String repoTag : repoTags) {
+                        if (repoTag.equals(imageName)) {
+                            logger.info("Image found locally: " + imageName);
+                            return true;
+                        }
+                    }
+                }
+            }
+            logger.info("Image not found locally: " + imageName);
+            return false;
+        } catch (Exception e) {
+            logger.severe("Failed to check if image exists: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Pull image from registry
+     *
+     * @param client     Docker client
+     * @param imageName  image name
+     * @return whether pull was successful
+     */
+    public boolean pullImage(com.github.dockerjava.api.DockerClient client, String imageName) {
+        try {
+            logger.info("Pulling image: " + imageName);
+            
+            PullImageCmd pullCmd = client.pullImageCmd(imageName);
+            
+            // Add callback to monitor pull progress
+            pullCmd.exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.PullResponseItem>() {
+                @Override
+                public void onNext(com.github.dockerjava.api.model.PullResponseItem item) {
+                    if (item.getStatus() != null) {
+                        logger.info("Pull progress: " + item.getStatus());
+                    }
+                    if (item.getErrorDetail() != null) {
+                        logger.warning("Pull error: " + item.getErrorDetail().getMessage());
+                    }
+                }
+            }).awaitCompletion();
+            
+            logger.info("Successfully pulled image: " + imageName);
+            return true;
+        } catch (Exception e) {
+            logger.severe("Failed to pull image " + imageName + ": " + e.getMessage());
+            return false;
+        }
     }
 }

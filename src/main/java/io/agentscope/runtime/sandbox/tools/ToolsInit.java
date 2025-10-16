@@ -56,15 +56,18 @@ import io.agentscope.runtime.sandbox.tools.fs.ReadMultipleFilesTool;
 import io.agentscope.runtime.sandbox.tools.fs.SearchFilesTool;
 import io.agentscope.runtime.sandbox.tools.fs.WriteFileTool;
 
+import javax.tools.Tool;
 import java.util.List;
+import java.util.logging.Logger;
 
 @Component
 public class ToolsInit {
+    public static Logger logger =  Logger.getLogger(ToolsInit.class.getName());
 
     public static List<ToolCallback> getAllTools() {
         return List.of(
-                RunPythonCodeTools(),
-                RunShellCommandTools(),
+                RunPythonCodeTool(),
+                RunShellCommandTool(),
                 ReadFileTool(),
                 ReadMultipleFilesTool(),
                 WriteFileTool(),
@@ -115,8 +118,8 @@ public class ToolsInit {
         // Tool name mapping table
         return switch (toolName.toLowerCase().trim()) {
             // Base tools
-            case "runpython", "run_python", "python" -> RunPythonCodeTools();
-            case "runshell", "run_shell", "shell" -> RunShellCommandTools();
+            case "runpython", "run_python", "python" -> RunPythonCodeTool();
+            case "runshell", "run_shell", "shell" -> RunShellCommandTool();
             
             // File system tools
             case "readfile", "read_file", "fs_read" -> ReadFileTool();
@@ -157,7 +160,7 @@ public class ToolsInit {
             case "browsertablist", "browser_tab_list" -> BrowserTabListTool();
             
             default -> {
-                System.err.println("Unknown tool name: " + toolName);
+                logger.severe("Unknown tool name: " + toolName);
                 yield null;
             }
         };
@@ -176,8 +179,8 @@ public class ToolsInit {
 
     public static List<ToolCallback> getBaseTools() {
         return List.of(
-                RunPythonCodeTools(),
-                RunShellCommandTools()
+                RunPythonCodeTool(),
+                RunShellCommandTool()
         );
     }
 
@@ -225,7 +228,7 @@ public class ToolsInit {
         );
     }
 
-    private static ToolCallback RunPythonCodeTools() {
+    public static ToolCallback RunPythonCodeTool() {
         return FunctionToolCallback
                 .builder(
                         "PythonExecuteService",
@@ -250,7 +253,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback RunShellCommandTools() {
+    public static ToolCallback RunShellCommandTool() {
         return FunctionToolCallback
                 .builder(
                         "ShellExecuteService",
@@ -275,7 +278,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback ReadFileTool() {
+    public static ToolCallback ReadFileTool() {
         return FunctionToolCallback
                 .builder(
                         "FSReadFileService",
@@ -297,7 +300,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback ReadMultipleFilesTool() {
+    public static ToolCallback ReadMultipleFilesTool() {
         return FunctionToolCallback
                 .builder(
                         "FSReadMultipleFilesService",
@@ -319,7 +322,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback WriteFileTool() {
+    public static ToolCallback WriteFileTool() {
         return FunctionToolCallback
                 .builder(
                         "FSWriteFileService",
@@ -342,7 +345,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback EditFileTool() {
+    public static ToolCallback EditFileTool() {
         return FunctionToolCallback
                 .builder(
                         "FSEditFileService",
@@ -377,7 +380,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback CreateDirectoryTool() {
+    public static ToolCallback CreateDirectoryTool() {
         return FunctionToolCallback
                 .builder(
                         "FSCreateDirectoryService",
@@ -399,7 +402,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback ListDirectoryTool() {
+    public static ToolCallback ListDirectoryTool() {
         return FunctionToolCallback
                 .builder(
                         "FSListDirectoryService",
@@ -421,7 +424,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback DirectoryTreeTool() {
+    public static ToolCallback DirectoryTreeTool() {
         return FunctionToolCallback
                 .builder(
                         "FSDirectoryTreeService",
@@ -443,7 +446,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback MoveFileTool() {
+    public static ToolCallback MoveFileTool() {
         return FunctionToolCallback
                 .builder(
                         "FSMoveFileService",
@@ -466,7 +469,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback SearchFilesTool() {
+    public static ToolCallback SearchFilesTool() {
         return FunctionToolCallback
                 .builder(
                         "FSSearchFilesService",
@@ -490,7 +493,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback GetFileInfoTool() {
+    public static ToolCallback GetFileInfoTool() {
         return FunctionToolCallback
                 .builder(
                         "FSGetFileInfoService",
@@ -512,7 +515,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback ListAllowedDirectoriesTool() {
+    public static ToolCallback ListAllowedDirectoriesTool() {
         return FunctionToolCallback
                 .builder(
                         "FSListAllowedDirectoriesService",
@@ -533,7 +536,7 @@ public class ToolsInit {
     }
 
     // Browser tools
-    private static ToolCallback BrowserNavigateTool() {
+    public static ToolCallback BrowserNavigateTool() {
         return FunctionToolCallback.builder(
                         "BrowserNavigateService",
                         new NavigateTool()
@@ -551,7 +554,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserClickTool() {
+    public static ToolCallback BrowserClickTool() {
         return FunctionToolCallback.builder(
                         "BrowserClickService",
                         new ClickTool()
@@ -569,7 +572,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserTypeTool() {
+    public static ToolCallback BrowserTypeTool() {
         return FunctionToolCallback.builder(
                         "BrowserTypeService",
                         new TypeTool()
@@ -593,7 +596,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserTakeScreenshotTool() {
+    public static ToolCallback BrowserTakeScreenshotTool() {
         return FunctionToolCallback.builder(
                         "BrowserTakeScreenshotService",
                         new TakeScreenshotTool()
@@ -616,7 +619,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserSnapshotTool() {
+    public static ToolCallback BrowserSnapshotTool() {
         return FunctionToolCallback.builder(
                         "BrowserSnapshotService",
                         new SnapshotTool()
@@ -629,7 +632,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserTabNewTool() {
+    public static ToolCallback BrowserTabNewTool() {
         return FunctionToolCallback.builder(
                         "BrowserTabNewService",
                         new TabNewTool()
@@ -642,7 +645,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserTabSelectTool() {
+    public static ToolCallback BrowserTabSelectTool() {
         return FunctionToolCallback.builder(
                         "BrowserTabSelectService",
                         new TabSelectTool()
@@ -655,7 +658,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserTabCloseTool() {
+    public static ToolCallback BrowserTabCloseTool() {
         return FunctionToolCallback.builder(
                         "BrowserTabCloseService",
                         new TabCloseTool()
@@ -668,7 +671,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserWaitForTool() {
+    public static ToolCallback BrowserWaitForTool() {
         return FunctionToolCallback.builder(
                         "BrowserWaitForService",
                         new WaitForTool()
@@ -686,7 +689,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserResizeTool() {
+    public static ToolCallback BrowserResizeTool() {
         return FunctionToolCallback.builder(
                         "BrowserResizeService",
                         new ResizeTool()
@@ -699,7 +702,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserCloseTool() {
+    public static ToolCallback BrowserCloseTool() {
         return FunctionToolCallback.builder(
                         "BrowserCloseService",
                         new CloseTool()
@@ -712,7 +715,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserConsoleMessagesTool() {
+    public static ToolCallback BrowserConsoleMessagesTool() {
         return FunctionToolCallback.builder(
                         "BrowserConsoleMessagesService",
                         new ConsoleMessagesTool()
@@ -725,7 +728,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserHandleDialogTool() {
+    public static ToolCallback BrowserHandleDialogTool() {
         return FunctionToolCallback.builder(
                         "BrowserHandleDialogService",
                         new HandleDialogTool()
@@ -746,7 +749,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserFileUploadTool() {
+    public static ToolCallback BrowserFileUploadTool() {
         return FunctionToolCallback.builder(
                         "BrowserFileUploadService",
                         new FileUploadTool()
@@ -766,7 +769,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserPressKeyTool() {
+    public static ToolCallback BrowserPressKeyTool() {
         return FunctionToolCallback.builder(
                         "BrowserPressKeyService",
                         new PressKeyTool()
@@ -786,7 +789,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserNavigateBackTool() {
+    public static ToolCallback BrowserNavigateBackTool() {
         return FunctionToolCallback.builder(
                         "BrowserNavigateBackService",
                         new NavigateBackTool()
@@ -799,7 +802,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserNavigateForwardTool() {
+    public static ToolCallback BrowserNavigateForwardTool() {
         return FunctionToolCallback.builder(
                         "BrowserNavigateForwardService",
                         new NavigateForwardTool()
@@ -812,7 +815,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserNetworkRequestsTool() {
+    public static ToolCallback BrowserNetworkRequestsTool() {
         return FunctionToolCallback.builder(
                         "BrowserNetworkRequestsService",
                         new NetworkRequestsTool()
@@ -825,7 +828,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserPdfSaveTool() {
+    public static ToolCallback BrowserPdfSaveTool() {
         return FunctionToolCallback.builder(
                         "BrowserPdfSaveService",
                         new PdfSaveTool()
@@ -845,7 +848,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserDragTool() {
+    public static ToolCallback BrowserDragTool() {
         return FunctionToolCallback.builder(
                         "BrowserDragService",
                         new DragTool()
@@ -868,7 +871,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserHoverTool() {
+    public static ToolCallback BrowserHoverTool() {
         return FunctionToolCallback.builder(
                         "BrowserHoverService",
                         new HoverTool()
@@ -889,7 +892,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserSelectOptionTool() {
+    public static ToolCallback BrowserSelectOptionTool() {
         return FunctionToolCallback.builder(
                         "BrowserSelectOptionService",
                         new SelectOptionTool()
@@ -911,7 +914,7 @@ public class ToolsInit {
                 .build();
     }
 
-    private static ToolCallback BrowserTabListTool() {
+    public static ToolCallback BrowserTabListTool() {
         return FunctionToolCallback.builder(
                         "BrowserTabListService",
                         new TabListTool()

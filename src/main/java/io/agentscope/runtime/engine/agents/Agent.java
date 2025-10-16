@@ -13,23 +13,13 @@ import java.util.concurrent.CompletableFuture;
 public interface Agent {
     
     /**
-     * Get Agent name
-     */
-    String getName();
-    
-    /**
-     * Get Agent description
-     */
-    String getDescription();
-    
-    /**
      * Execute Agent asynchronously
      * Corresponds to the run_async method of the Python version
      *
      * @param context execution context
      * @return event stream
      */
-    CompletableFuture<Flux<Event>> runAsync(Context context);
+    CompletableFuture<Flux<Event>> runAsync(Context context, boolean stream);
     
     /**
      * Set pre-execution callback

@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -30,9 +31,13 @@ public class ReadFileTool implements BiFunction<ReadFileTool.Request, ToolContex
 
     @Override
     public Response apply(Request request, ToolContext toolContext) {
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        
         try {
             SandboxTools tools = new SandboxTools();
-            String result = tools.fs_read_file(request.path);
+            String result = tools.fs_read_file(request.path, userID, sessionID);
             return new Response(result, "Filesystem read_file completed");
         } catch (Exception e) {
             return new Response("Error", "Filesystem read_file error: " + e.getMessage());

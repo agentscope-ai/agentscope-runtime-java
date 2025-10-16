@@ -20,6 +20,7 @@ package io.agentscope.runtime.sandbox.tools.base;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.agentscope.runtime.sandbox.tools.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
@@ -38,9 +39,15 @@ public class RunPythonTool implements BiFunction<RunPythonTool.RunPythonToolRequ
 
     @Override
     public RunPythonToolResponse apply(RunPythonToolRequest request, ToolContext toolContext) {
+        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+        String userID = userAndSession[0];
+        String sessionID = userAndSession[1];
+        
         try {
             String result = performPythonExecute(
-                    request.code
+                    request.code,
+                    userID,
+                    sessionID
             );
 
             return new RunPythonToolResponse(
@@ -54,10 +61,10 @@ public class RunPythonTool implements BiFunction<RunPythonTool.RunPythonToolRequ
     }
 
 
-    private String performPythonExecute(String code) {
+    private String performPythonExecute(String code, String userID, String sessionID) {
         logger.info("Run Code: " + code);
         SandboxTools tools = new SandboxTools();
-        String result = tools.run_ipython_cell(code);
+        String result = tools.run_ipython_cell(code, userID, sessionID);
         logger.info("Execute Result: " + result);
         return result;
     }

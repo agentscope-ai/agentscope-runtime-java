@@ -27,60 +27,60 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * 记忆数据访问接口
+ * Memory data access interface
  */
 @Repository
 public interface MemoryRepository extends JpaRepository<MemoryEntity, Long> {
     
     /**
-     * 根据用户ID查找记忆
+     * Find memories by user ID
      */
     Page<MemoryEntity> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
     
     /**
-     * 根据用户ID和会话ID查找记忆
+     * Find memories by user ID and session ID
      */
     Page<MemoryEntity> findByUserIdAndSessionIdOrderByCreatedAtDesc(String userId, String sessionId, Pageable pageable);
     
     /**
-     * 根据用户ID删除记忆
+     * Delete memories by user ID
      */
     void deleteByUserId(String userId);
     
     /**
-     * 根据用户ID和会话ID删除记忆
+     * Delete memories by user ID and session ID
      */
     void deleteByUserIdAndSessionId(String userId, String sessionId);
     
     /**
-     * 获取所有用户ID
+     * Get all user IDs
      */
     @Query("SELECT DISTINCT m.userId FROM MemoryEntity m")
     List<String> findAllUserIds();
     
     /**
-     * 根据用户ID统计记忆数量
+     * Count memories by user ID
      */
     long countByUserId(String userId);
     
     /**
-     * 根据用户ID和消息类型统计记忆数量
+     * Count memories by user ID and message type
      */
     long countByUserIdAndMessageType(String userId, MessageType messageType);
     
     /**
-     * 搜索记忆（基于内容）
+     * Search memories (based on content)
      */
     @Query("SELECT m FROM MemoryEntity m WHERE m.userId = :userId AND m.content LIKE %:keyword% ORDER BY m.createdAt DESC")
     Page<MemoryEntity> searchByUserIdAndContent(@Param("userId") String userId, @Param("keyword") String keyword, Pageable pageable);
     
     /**
-     * 获取用户的所有记忆（不分页）
+     * Get all memories for user (without pagination)
      */
     List<MemoryEntity> findByUserIdOrderByCreatedAtDesc(String userId);
     
     /**
-     * 获取所有记忆（不分页）
+     * Get all memories (without pagination)
      */
     @Query("SELECT m FROM MemoryEntity m ORDER BY m.createdAt DESC")
     List<MemoryEntity> findAllOrderByCreatedAtDesc();

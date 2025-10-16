@@ -25,46 +25,45 @@ import io.agentscope.runtime.engine.memory.persistence.memory.repository.Session
 import io.agentscope.runtime.engine.memory.persistence.memory.repository.SessionRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
  * MySQL-based session history service implementation
  */
 public class MySQLSessionHistoryService implements SessionHistoryService {
-    
-    private static final Logger logger = LoggerFactory.getLogger(MySQLSessionHistoryService.class);
-    
+
+    Logger logger = Logger.getLogger(MySQLSessionHistoryService.class.getName());
+
     private SessionRepository sessionRepository;
     private SessionMessageRepository sessionMessageRepository;
     private ObjectMapper objectMapper;
-    
+
     public void setSessionRepository(SessionRepository sessionRepository) {
         this.sessionRepository = sessionRepository;
     }
-    
+
     public void setSessionMessageRepository(SessionMessageRepository sessionMessageRepository) {
         this.sessionMessageRepository = sessionMessageRepository;
     }
-    
+
     public void setObjectMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
-    
+
     @Override
     public CompletableFuture<Void> start() {
         return CompletableFuture.completedFuture(null);
     }
-    
+
     @Override
     public CompletableFuture<Void> stop() {
         return CompletableFuture.completedFuture(null);
     }
-    
+
     @Override
     public CompletableFuture<Boolean> health() {
         return CompletableFuture.supplyAsync(() -> {
@@ -73,112 +72,111 @@ public class MySQLSessionHistoryService implements SessionHistoryService {
                 sessionRepository.count();
                 return true;
             } catch (Exception e) {
-                logger.error("MySQL session service health check failed", e);
+                logger.severe("MySQL session service health check failed" + e.getMessage());
                 return false;
             }
         });
     }
-    
+
     @Override
     public CompletableFuture<Session> createSession(String userId, Optional<String> sessionId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String sid = sessionId.filter(s -> s != null && !s.trim().isEmpty())
-                    .orElse(UUID.randomUUID().toString());
-                
+                        .orElse(UUID.randomUUID().toString());
+
                 // Check if the session already exists
                 if (sessionRepository.existsBySessionId(sid)) {
-                    logger.warn("Session already exists: {}", sid);
+                    logger.warning("Session already exists: " + sid);
                     Optional<Session> existingSession = getSession(userId, sid).get();
                     return existingSession.orElseThrow(() -> new RuntimeException("Failed to get existing session"));
                 }
-                
+
                 SessionEntity entity = new SessionEntity(sid, userId);
                 sessionRepository.save(entity);
-                
+
                 Session session = new Session(sid, userId, new ArrayList<>());
-                logger.debug("Session created successfully, user: {}, session: {}", userId, sid);
+                logger.info("Session created successfully, user: " + userId + ", session: " + sid);
 
                 return session;
-                
+
             } catch (Exception e) {
-                logger.error("Failed to create session", e);
+                logger.severe("Failed to create session" + e.getMessage());
                 throw new RuntimeException("Failed to create session", e);
             }
         });
     }
-    
+
     @Override
     public CompletableFuture<Optional<Session>> getSession(String userId, String sessionId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Optional<SessionEntity> entityOpt = sessionRepository.findByUserIdAndSessionId(userId, sessionId);
-                
+
                 if (entityOpt.isPresent()) {
                     List<Message> messages = getSessionMessages(sessionId);
-                    
+
                     Session session = new Session(sessionId, userId, messages);
-                    logger.debug("Session retrieved successfully, user: {}, session: {}, message count: {}",
-                        userId, sessionId, messages.size());
-                    
+                    logger.info("Session retrieved successfully, user: " + userId + ", session: " + sessionId + ", message count: " + messages.size());
+
                     return Optional.of(session);
                 } else {
                     // If the session does not exist, create a new one
-                    logger.debug("Session does not exist, creating a new session, user: {}, session: {}", userId, sessionId);
+                    logger.info("Session does not exist, creating a new session, user: " + userId + ", session: " + sessionId);
                     Session newSession = createSession(userId, Optional.of(sessionId)).get();
                     return Optional.of(newSession);
                 }
-                
+
             } catch (Exception e) {
-                logger.error("Failed to get session", e);
+                logger.severe("Failed to get session" + e.getMessage());
                 return Optional.empty();
             }
         });
     }
-    
+
     @Override
     public CompletableFuture<Void> deleteSession(String userId, String sessionId) {
         return CompletableFuture.runAsync(() -> {
             try {
                 // First delete session messages
                 sessionMessageRepository.deleteBySessionId(sessionId);
-                
+
                 // Then delete the session
                 sessionRepository.deleteBySessionId(sessionId);
-                
-                logger.debug("Session deleted successfully, user: {}, session: {}", userId, sessionId);
+
+                logger.info("Session deleted successfully, user: " + userId + ", session: " + sessionId);
 
             } catch (Exception e) {
-                logger.error("Failed to delete session", e);
+                logger.severe("Failed to delete session" + e.getMessage());
                 throw new RuntimeException("Failed to delete session", e);
             }
         });
     }
-    
+
     @Override
     public CompletableFuture<List<Session>> listSessions(String userId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 List<SessionEntity> entities = sessionRepository.findByUserIdOrderByLastActivityDesc(userId);
-                
+
                 List<Session> sessions = entities.stream()
-                    .map(entity -> {
-                        Session session = new Session(entity.getSessionId(), entity.getUserId(), new ArrayList<>());
-                        return session;
-                    })
-                    .collect(Collectors.toList());
-                
-                logger.debug("Listed user sessions successfully, user: {}, session count: {}", userId, sessions.size());
+                        .map(entity -> {
+                            Session session = new Session(entity.getSessionId(), entity.getUserId(), new ArrayList<>());
+                            return session;
+                        })
+                        .collect(Collectors.toList());
+
+                logger.info("Listed user sessions successfully, user: " + userId + ", session count: " + sessions.size());
 
                 return sessions;
-                
+
             } catch (Exception e) {
-                logger.error("Failed to list user sessions", e);
+                logger.severe("Failed to list user sessions" + e.getMessage());
                 return Collections.emptyList();
             }
         });
     }
-    
+
     @Override
     public CompletableFuture<Void> appendMessage(Session session, List<Message> messages) {
         return CompletableFuture.runAsync(() -> {
@@ -186,7 +184,7 @@ public class MySQLSessionHistoryService implements SessionHistoryService {
                 if (messages == null || messages.isEmpty()) {
                     return;
                 }
-                
+
                 // Update session activity time
                 Optional<SessionEntity> entityOpt = sessionRepository.findBySessionId(session.getId());
                 if (entityOpt.isPresent()) {
@@ -194,7 +192,7 @@ public class MySQLSessionHistoryService implements SessionHistoryService {
                     entity.setLastActivity(new java.sql.Timestamp(System.currentTimeMillis()).toLocalDateTime());
                     sessionRepository.save(entity);
                 }
-                
+
                 // Add messages to the session
                 for (Message message : messages) {
                     SessionMessageEntity messageEntity = new SessionMessageEntity();
@@ -202,41 +200,40 @@ public class MySQLSessionHistoryService implements SessionHistoryService {
                     messageEntity.setMessageType(message.getType());
                     messageEntity.setContent(serializeMessageContent(message.getContent()));
                     messageEntity.setMetadata(serializeMetadata(message.getMetadata()));
-                    
+
                     sessionMessageRepository.save(messageEntity);
                 }
-                
+
                 // Update session object
                 session.getMessages().addAll(messages);
-                
-                logger.debug("Messages appended to session successfully, session: {}, message count: {}",
-                    session.getId(), messages.size());
-                
+
+                logger.info("Messages appended to session successfully, session: " + session.getId() + ", message count: " + messages.size());
+
             } catch (Exception e) {
-                logger.error("Failed to append messages to session", e);
+                logger.severe("Failed to append messages to session"+ e.getMessage());
                 throw new RuntimeException("Failed to append messages to session", e);
             }
         });
     }
-    
+
     /**
      * Get all messages of the session
      */
     private List<Message> getSessionMessages(String sessionId) {
         try {
             List<SessionMessageEntity> messageEntities = sessionMessageRepository
-                .findBySessionIdOrderByCreatedAtAsc(sessionId);
-            
+                    .findBySessionIdOrderByCreatedAtAsc(sessionId);
+
             return messageEntities.stream()
-                .map(this::convertToMessage)
-                .collect(Collectors.toList());
-                
+                    .map(this::convertToMessage)
+                    .collect(Collectors.toList());
+
         } catch (Exception e) {
-            logger.error("Failed to get session messages", e);
+            logger.severe("Failed to get session messages"+ e.getMessage());
             return Collections.emptyList();
         }
     }
-    
+
     /**
      * Serialize message content
      */
@@ -244,11 +241,11 @@ public class MySQLSessionHistoryService implements SessionHistoryService {
         try {
             return objectMapper.writeValueAsString(content);
         } catch (JsonProcessingException e) {
-            logger.warn("Failed to serialize message content", e);
+            logger.severe("Failed to serialize message content"+ e.getMessage());
             return "[]";
         }
     }
-    
+
     /**
      * Serialize metadata
      */
@@ -259,11 +256,11 @@ public class MySQLSessionHistoryService implements SessionHistoryService {
         try {
             return objectMapper.writeValueAsString(metadata);
         } catch (JsonProcessingException e) {
-            logger.warn("Failed to serialize metadata", e);
+            logger.severe("Failed to serialize metadata"+ e.getMessage());
             return null;
         }
     }
-    
+
     /**
      * Deserialize message content
      */
@@ -272,14 +269,14 @@ public class MySQLSessionHistoryService implements SessionHistoryService {
             if (contentJson == null || contentJson.trim().isEmpty()) {
                 return Collections.emptyList();
             }
-            return objectMapper.readValue(contentJson, 
-                objectMapper.getTypeFactory().constructCollectionType(List.class, MessageContent.class));
+            return objectMapper.readValue(contentJson,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, MessageContent.class));
         } catch (JsonProcessingException e) {
-            logger.warn("Failed to deserialize message content", e);
+            logger.severe("Failed to deserialize message content"+ e.getMessage());
             return Collections.emptyList();
         }
     }
-    
+
     /**
      * Deserialize metadata
      */
@@ -291,11 +288,11 @@ public class MySQLSessionHistoryService implements SessionHistoryService {
             }
             return objectMapper.readValue(metadataJson, Map.class);
         } catch (JsonProcessingException e) {
-            logger.warn("Failed to deserialize metadata", e);
+            logger.severe("Failed to deserialize metadata"+ e.getMessage());
             return null;
         }
     }
-    
+
     /**
      * Convert SessionMessageEntity to Message
      */

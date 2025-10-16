@@ -26,33 +26,33 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * 会话消息数据访问接口
+ * Session message data access interface
  */
 @Repository
 public interface SessionMessageRepository extends JpaRepository<SessionMessageEntity, Long> {
     
     /**
-     * 根据会话ID查找消息
+     * Find messages by session ID
      */
     List<SessionMessageEntity> findBySessionIdOrderByCreatedAtAsc(String sessionId);
     
     /**
-     * 根据会话ID分页查找消息
+     * Find messages by session ID with pagination
      */
     Page<SessionMessageEntity> findBySessionIdOrderByCreatedAtAsc(String sessionId, Pageable pageable);
     
     /**
-     * 根据会话ID删除消息
+     * Delete messages by session ID
      */
     void deleteBySessionId(String sessionId);
     
     /**
-     * 根据会话ID统计消息数量
+     * Count messages by session ID
      */
     long countBySessionId(String sessionId);
     
     /**
-     * 获取会话的最新消息
+     * Get latest messages for session
      */
     @Query("SELECT sm FROM SessionMessageEntity sm WHERE sm.sessionId = :sessionId ORDER BY sm.createdAt DESC")
     List<SessionMessageEntity> findLatestBySessionId(@Param("sessionId") String sessionId, Pageable pageable);

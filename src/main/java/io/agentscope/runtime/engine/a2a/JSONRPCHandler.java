@@ -13,11 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.engine.deployer.a2a;
+package io.agentscope.runtime.engine.a2a;
 
 import static io.a2a.server.util.async.AsyncUtils.createTubeConfig;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 
 import java.util.List;
 import java.util.concurrent.Flow;
@@ -53,7 +51,6 @@ import io.a2a.spec.TaskPushNotificationConfig;
 import io.a2a.spec.TaskResubscriptionRequest;
 import mutiny.zero.ZeroPublisher;
 
-@ApplicationScoped
 public class JSONRPCHandler {
 
 	private AgentCard agentCard;
@@ -63,7 +60,6 @@ public class JSONRPCHandler {
 	protected JSONRPCHandler() {
 	}
 
-	@Inject
 	public JSONRPCHandler(@PublicAgentCard AgentCard agentCard, RequestHandler requestHandler) {
 		this.agentCard = agentCard;
 		this.requestHandler = requestHandler;
