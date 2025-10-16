@@ -21,8 +21,8 @@ import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
 import java.util.*;
 
 /**
- * KubernetesClient使用示例
- * 演示如何使用KubernetesClient创建和管理Pod/Deployment
+ * KubernetesClient usage example
+ * Demonstrates how to use KubernetesClient to create and manage Pods/Deployments
  */
 public class KubernetesClientExample {
     
@@ -30,169 +30,169 @@ public class KubernetesClientExample {
         KubernetesClient k8sClient = new KubernetesClient();
         
         try {
-            // 连接到Kubernetes集群
-            System.out.println("正在连接到Kubernetes集群...");
+            // Connect to Kubernetes cluster
+            System.out.println("Connecting to Kubernetes cluster...");
             boolean connected = k8sClient.connect();
             if (!connected) {
-                System.err.println("无法连接到Kubernetes集群，请确保kubectl配置正确");
+                System.err.println("Unable to connect to Kubernetes cluster, please ensure kubectl is configured correctly");
                 return;
             }
-            System.out.println("成功连接到Kubernetes集群");
+            System.out.println("Successfully connected to Kubernetes cluster");
             
-            // 创建Pod示例
+            // Create Pod example
             createPodExample(k8sClient);
             
-            // 创建Deployment示例
+            // Create Deployment example
             createDeploymentExample(k8sClient);
             
-            // 列出所有Pod
+            // List all Pods
             listPodsExample(k8sClient);
             
-            // 列出所有Deployment
+            // List all Deployments
             listDeploymentsExample(k8sClient);
             
         } catch (Exception e) {
-            System.err.println("发生错误: " + e.getMessage());
+            System.err.println("Error occurred: " + e.getMessage());
             e.printStackTrace();
         }
     }
     
     /**
-     * 创建Deployment示例（通过createContainer方法）
+     * Create Deployment example (via createContainer method)
      */
     private static void createPodExample(KubernetesClient k8sClient) {
-        System.out.println("\n=== 创建Deployment示例（通过createContainer方法） ===");
+        System.out.println("\n=== Create Deployment Example (via createContainer method) ===");
         
         try {
             String containerName = "test-deployment-" + System.currentTimeMillis();
             String imageName = "nginx:latest";
             
-            // 端口配置
+            // Port configuration
             List<String> ports = Arrays.asList("80/TCP");
             Map<String, Integer> portMapping = new HashMap<>();
             portMapping.put("80", 8080);
             
-            // 卷挂载配置（简化，不使用卷挂载）
+            // Volume mount configuration (simplified, no volume mounts)
             List<VolumeBinding> volumeBindings = new ArrayList<>();
             
-            // 环境变量
+            // Environment variables
             Map<String, String> environment = new HashMap<>();
             environment.put("ENV_VAR_1", "value1");
             environment.put("ENV_VAR_2", "value2");
             
             String runtimeConfig = "runc";
             
-            // 创建Deployment（通过createContainer方法）
+            // Create Deployment (via createContainer method)
             String deploymentId = k8sClient.createContainer(containerName, imageName, 
                                                            ports, portMapping, volumeBindings, 
                                                            environment, runtimeConfig);
             
-            System.out.println("Deployment创建成功，ID: " + deploymentId);
+            System.out.println("Deployment created successfully, ID: " + deploymentId);
             
-            // 检查Deployment状态
-            Thread.sleep(3000); // 等待Deployment启动
+            // Check Deployment status
+            Thread.sleep(3000); // Wait for Deployment to start
             String status = k8sClient.getContainerStatus(deploymentId);
-            System.out.println("Deployment状态: " + status);
+            System.out.println("Deployment status: " + status);
             
-            // 清理Deployment
-            Thread.sleep(5000); // 让Deployment运行一段时间
+            // Clean up Deployment
+            Thread.sleep(5000); // Let Deployment run for a while
             k8sClient.stopAndRemoveContainer(deploymentId);
-            System.out.println("Deployment已删除");
+            System.out.println("Deployment deleted");
             
         } catch (Exception e) {
-            System.err.println("创建Deployment时发生错误: " + e.getMessage());
+            System.err.println("Error occurred while creating Deployment: " + e.getMessage());
             e.printStackTrace();
         }
     }
     
     /**
-     * 创建Deployment示例
+     * Create Deployment example
      */
     private static void createDeploymentExample(KubernetesClient k8sClient) {
-        System.out.println("\n=== 创建Deployment示例 ===");
+        System.out.println("\n=== Create Deployment Example ===");
         
         try {
             String deploymentName = "test-deployment-" + System.currentTimeMillis();
             String imageName = "nginx:latest";
             
-            // 端口配置
+            // Port configuration
             List<String> ports = Arrays.asList("80/TCP");
             Map<String, Integer> portMapping = new HashMap<>();
             portMapping.put("80", 8081);
             
-            // 卷挂载配置（简化，不使用卷挂载）
+            // Volume mount configuration (simplified, no volume mounts)
             List<VolumeBinding> volumeBindings = new ArrayList<>();
             
-            // 环境变量
+            // Environment variables
             Map<String, String> environment = new HashMap<>();
             environment.put("ENV_VAR_1", "value1");
             environment.put("ENV_VAR_2", "value2");
             
             String runtimeConfig = "runc";
             
-            // 创建Deployment
+            // Create Deployment
             String deploymentId = k8sClient.createDeployment(deploymentName, imageName, 
                                                           ports, portMapping, volumeBindings, 
                                                           environment, runtimeConfig);
             
-            System.out.println("Deployment创建成功，ID: " + deploymentId);
+            System.out.println("Deployment created successfully, ID: " + deploymentId);
             
-            // 检查Deployment状态
-            Thread.sleep(3000); // 等待Deployment启动
+            // Check Deployment status
+            Thread.sleep(3000); // Wait for Deployment to start
             String status = k8sClient.getContainerStatus(deploymentId);
-            System.out.println("Deployment状态: " + status);
+            System.out.println("Deployment status: " + status);
             
-            // 清理Deployment
-            Thread.sleep(5000); // 让Deployment运行一段时间
+            // Clean up Deployment
+            Thread.sleep(5000); // Let Deployment run for a while
             k8sClient.stopAndRemoveContainer(deploymentId);
-            System.out.println("Deployment已删除");
+            System.out.println("Deployment deleted");
             
         } catch (Exception e) {
-            System.err.println("创建Deployment时发生错误: " + e.getMessage());
+            System.err.println("Error occurred while creating Deployment: " + e.getMessage());
             e.printStackTrace();
         }
     }
     
     /**
-     * 列出所有Pod示例
+     * List all Pods example
      */
     private static void listPodsExample(KubernetesClient k8sClient) {
-        System.out.println("\n=== 列出所有Pod ===");
+        System.out.println("\n=== List All Pods ===");
         
         try {
             List<io.kubernetes.client.openapi.models.V1Pod> pods = k8sClient.listPods();
-            System.out.println("找到 " + pods.size() + " 个Pod:");
+            System.out.println("Found " + pods.size() + " Pods:");
             
             for (io.kubernetes.client.openapi.models.V1Pod pod : pods) {
                 String name = pod.getMetadata().getName();
                 String status = pod.getStatus().getPhase();
-                System.out.println("- Pod: " + name + " (状态: " + status + ")");
+                System.out.println("- Pod: " + name + " (Status: " + status + ")");
             }
             
         } catch (Exception e) {
-            System.err.println("列出Pod时发生错误: " + e.getMessage());
+            System.err.println("Error occurred while listing Pods: " + e.getMessage());
             e.printStackTrace();
         }
     }
     
     /**
-     * 列出所有Deployment示例
+     * List all Deployments example
      */
     private static void listDeploymentsExample(KubernetesClient k8sClient) {
-        System.out.println("\n=== 列出所有Deployment ===");
+        System.out.println("\n=== List All Deployments ===");
         
         try {
             List<io.kubernetes.client.openapi.models.V1Deployment> deployments = k8sClient.listDeployments();
-            System.out.println("找到 " + deployments.size() + " 个Deployment:");
+            System.out.println("Found " + deployments.size() + " Deployments:");
             
             for (io.kubernetes.client.openapi.models.V1Deployment deployment : deployments) {
                 String name = deployment.getMetadata().getName();
                 Integer replicas = deployment.getSpec().getReplicas();
-                System.out.println("- Deployment: " + name + " (副本数: " + replicas + ")");
+                System.out.println("- Deployment: " + name + " (Replicas: " + replicas + ")");
             }
             
         } catch (Exception e) {
-            System.err.println("列出Deployment时发生错误: " + e.getMessage());
+            System.err.println("Error occurred while listing Deployments: " + e.getMessage());
             e.printStackTrace();
         }
     }

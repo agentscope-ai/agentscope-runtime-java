@@ -89,14 +89,14 @@ public class SaaAgentExample {
             ReactAgent proseAgent = ReactAgent.builder()
                     .name("prose_agent")
                     .description("prose writing expert")
-                    .instruction("你是一个散文写作专家，擅长撰写散文。")
+                    .instruction("You are a prose writing expert, skilled at writing prose.")
                     .model(chatModel)
                     .build();
 
             ReactAgent poemAgent = ReactAgent.builder()
                     .name("poem_agent")
                     .description("poem writing expert")
-                    .instruction("你是一个诗歌写作专家，擅长撰写散文。")
+                    .instruction("You are a poetry writing expert, skilled at writing poetry.")
                     .model(chatModel)
                     .build();
 
@@ -116,7 +116,7 @@ public class SaaAgentExample {
             Runner runner = new Runner(saaAgent, contextManager);
 
             // Create AgentRequest
-            AgentRequest request = createAgentRequest("给我写个关于西湖的散文", null, null);
+            AgentRequest request = createAgentRequest("Please write a prose about West Lake", null, null);
 
             // Execute the agent and handle the response stream
             Flux<Event> eventStream = runner.streamQuery(request);
