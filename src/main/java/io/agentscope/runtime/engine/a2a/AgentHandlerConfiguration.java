@@ -40,12 +40,16 @@ public class AgentHandlerConfiguration {
     private final JSONRPCHandler jsonrpcHandler;
 
     public AgentHandlerConfiguration() {
-        this(new GraphAgentExecutor(Runner.getRunner()::streamQuery));
+        this(new GraphAgentExecutor(Runner.getRunner()::streamQuery), new NetworkUtils());
     }
 
     public AgentHandlerConfiguration(AgentExecutor agentExecutor) {
+        this(agentExecutor, new NetworkUtils());
+    }
+
+    public AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
         this.jsonrpcHandler = new JSONRPCHandler(
-                createDefaultAgentCard(),
+                createDefaultAgentCard(networkUtils),
                 requestHandler(agentExecutor)
         );
     }
@@ -70,12 +74,13 @@ public class AgentHandlerConfiguration {
         return inst;
     }
 
-    public static AgentCard createDefaultAgentCard() {
+    public static AgentCard createDefaultAgentCard(NetworkUtils networkUtils) {
         AgentCapabilities capabilities = createDefaultCapabilities();
+        String dynamicUrl = networkUtils.getServerUrl("/a2a/");
         return new AgentCard.Builder()
                 .name("agentscope-runtime")
                 .description("AgentScope Runtime")
-                .url("http://localhost:10001/a2a/")
+                .url(dynamicUrl)
                 .version("1.0.0")
                 .protocolVersion("1.0")
                 .capabilities(capabilities)
@@ -83,6 +88,10 @@ public class AgentHandlerConfiguration {
                 .defaultOutputModes(List.of("text"))
                 .skills(List.of())
                 .build();
+    }
+
+    public static AgentCard createDefaultAgentCard() {
+        return createDefaultAgentCard(new NetworkUtils());
     }
 
     private static AgentCapabilities createDefaultCapabilities() {

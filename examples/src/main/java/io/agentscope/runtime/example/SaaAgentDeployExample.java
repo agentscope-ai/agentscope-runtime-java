@@ -12,10 +12,9 @@ import io.agentscope.runtime.engine.memory.service.MemoryService;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.tools.ToolsInit;
 
 import java.util.List;
@@ -81,20 +80,21 @@ public class SaaAgentDeployExample {
     public void basicExample() {
         try {
             // Create ReactAgent Builder
-            Builder builder = ReactAgent.builder()
+            ReactAgent reactAgent = ReactAgent.builder()
                     .name("saa_agent")
                     .model(chatModel)
-                    .tools(List.of(ToolsInit.RunPythonCodeTool()));
+                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
+                    .build();
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(builder.build())
+                    .agentBuilder(reactAgent)
                     .build();
 
             // Create Runner with the SaaAgent
             Runner runner = new Runner();
 
-            BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+            BaseClientConfig clientConfig = new DockerClientConfig(true);
             runner.registerClientConfig(clientConfig);
 
             runner.registerAgent(saaAgent);

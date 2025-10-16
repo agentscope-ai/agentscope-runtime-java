@@ -186,6 +186,7 @@ public class SaaAgent extends BaseAgent {
                         textContent.setText(contentPart);
                         textContent.setDelta(true);
                         Message deltaMessage = new Message();
+                        System.out.println("Streaming part: " + part);
                         if (part instanceof StreamingOutput) {
                             deltaMessage.setType(MessageType.CHUNK.name());
                             deltaMessage.setRole("assistant");
