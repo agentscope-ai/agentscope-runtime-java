@@ -17,6 +17,7 @@ package io.agentscope.runtime.sandbox.tools;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import org.springframework.ai.chat.model.ToolContext;
+import java.util.UUID;
 
 /**
  * Utility class for extracting userID and sessionID from ToolContext
@@ -30,28 +31,28 @@ public class ContextUtils {
      * Extract userID from ToolContext
      *
      * @param toolContext tool context
-     * @return userID, returns "default_user" if not found
+     * @return userID, returns a random UUID if not found
      */
     public static String extractUserID(ToolContext toolContext) {
         OverAllState overAllState = (OverAllState) toolContext.getContext().get("state");
         if (overAllState != null && overAllState.data().containsKey("user_id")) {
-            return overAllState.value("user_id", String.class).orElse("default_user");
+            return overAllState.value("user_id", String.class).orElse(UUID.randomUUID().toString());
         }
-        return "default_user";
+        return UUID.randomUUID().toString();
     }
 
     /**
      * Extract sessionID from ToolContext
      *
      * @param toolContext tool context
-     * @return sessionID, returns "default_session" if not found
+     * @return sessionID, returns a random UUID if not found
      */
     public static String extractSessionID(ToolContext toolContext) {
         OverAllState overAllState = (OverAllState) toolContext.getContext().get("state");
         if (overAllState != null && overAllState.data().containsKey("session_id")) {
-            return overAllState.value("session_id", String.class).orElse("default_session");
+            return overAllState.value("session_id", String.class).orElse(UUID.randomUUID().toString());
         }
-        return "default_session";
+        return UUID.randomUUID().toString();
     }
 
     /**

@@ -22,6 +22,8 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
@@ -81,58 +83,78 @@ public class SaaAgentExample {
     /**
      * Basic example of using SaaAgent with ReactAgent
      */
-    public void basicExample() {
+    public CompletableFuture<Void> basicExample() {
         System.out.println("=== Basic SaaAgent Example ===");
 
-        try {
-            // Create ReactAgent Builder
-            ReactAgent proseAgent = ReactAgent.builder()
-                    .name("prose_agent")
-                    .description("prose writing expert")
-                    .instruction("You are a prose writing expert, skilled at writing prose.")
-                    .model(chatModel)
-                    .build();
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Create ReactAgent Builder
+                ReactAgent reactAgent = ReactAgent.builder()
+                        .name("saa Agent")
+                        .description("saa Agent")
+                        .model(chatModel)
+                        .build();
 
-            ReactAgent poemAgent = ReactAgent.builder()
-                    .name("poem_agent")
-                    .description("poem writing expert")
-                    .instruction("You are a poetry writing expert, skilled at writing poetry.")
-                    .model(chatModel)
-                    .build();
+                ReactAgent proseAgent = ReactAgent.builder()
+                        .name("prose_agent")
+                        .description("prose writing expert")
+                        .instruction("You are a prose writing expert, skilled at writing prose.")
+                        .model(chatModel)
+                        .build();
 
-            LlmRoutingAgent llmRoutingAgent = LlmRoutingAgent.builder()
-                    .name("llm_routing_agent")
-                    .model(chatModel)
-                    .subAgents(List.of(proseAgent, poemAgent))
-                    .build();
+                ReactAgent poemAgent = ReactAgent.builder()
+                        .name("poem_agent")
+                        .description("poem writing expert")
+                        .instruction("You are a poetry writing expert, skilled at writing poetry.")
+                        .model(chatModel)
+                        .build();
 
+                LlmRoutingAgent llmRoutingAgent = LlmRoutingAgent.builder()
+                        .name("llm_routing_agent")
+                        .model(chatModel)
+                        .subAgents(List.of(proseAgent, poemAgent))
+                        .build();
 
-            // Create SaaAgent using the ReactAgent Builder
-            SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(llmRoutingAgent)
-                    .build();
+                // Create SaaAgent using the ReactAgent Builder
+                SaaAgent saaAgent = SaaAgent.builder()
+                        .agentBuilder(reactAgent)
+                        .build();
 
-            // Create Runner with the SaaAgent
-            Runner runner = new Runner(saaAgent, contextManager);
+                // Create Runner with the SaaAgent
+                Runner runner = new Runner(saaAgent, contextManager);
 
-            // Create AgentRequest
-            AgentRequest request = createAgentRequest("Please write a prose about West Lake", null, null);
+                // Create AgentRequest
+                AgentRequest request = createAgentRequest("给我讲个笑话", null, null);
 
-            // Execute the agent and handle the response stream
-            Flux<Event> eventStream = runner.streamQuery(request);
+                // Execute the agent and handle the response stream
+                Flux<Event> eventStream = runner.streamQuery(request);
 
-            eventStream.subscribe(
-                    this::handleEvent,
-                    error -> System.err.println("Error occurred: " + error.getMessage()),
-                    () -> System.out.println("Conversation completed.")
-            );
+                // Create a CompletableFuture to handle the completion of the event stream
+                CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+                
+                eventStream.subscribe(
+                        this::handleEvent,
+                        error -> {
+                            System.err.println("Error occurred: " + error.getMessage());
+                            completionFuture.completeExceptionally(error);
+                        },
+                        () -> {
+                            System.out.println("Conversation completed.");
+                            completionFuture.complete(null);
+                        }
+                );
 
-            // Wait a bit for async execution (in real applications, you'd handle this properly)
-            Thread.sleep(5000);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+                return completionFuture;
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }).thenCompose(future -> future)
+          .orTimeout(30, TimeUnit.SECONDS)
+          .exceptionally(throwable -> {
+              System.err.println("Operation failed or timed out: " + throwable.getMessage());
+              return null;
+          });
     }
 
     /**
@@ -198,11 +220,15 @@ public class SaaAgentExample {
         SaaAgentExample example = new SaaAgentExample();
 
         try {
-            example.basicExample();
+            example.basicExample()
+                    .thenRun(() -> System.out.println("\n=== All examples completed ==="))
+                    .exceptionally(throwable -> {
+                        System.err.println("Example execution failed: " + throwable.getMessage());
+                        return null;
+                    })
+                    .join();
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        System.out.println("\n=== All examples completed ===");
     }
 }

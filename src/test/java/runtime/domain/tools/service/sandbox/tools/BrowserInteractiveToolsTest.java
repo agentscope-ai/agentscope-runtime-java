@@ -1,22 +1,51 @@
-package runtime.domain.tools.service;
+package runtime.domain.tools.service.sandbox.tools;
 
-import org.junit.jupiter.api.Assumptions;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import io.agentscope.runtime.sandbox.manager.model.SandboxType;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
 /**
  * Test browser tools that require page element interaction
  * These tests require pages with specific elements to work properly
  */
-public class BrowserInteractiveToolsTest extends BaseSandboxTest {
+public class BrowserInteractiveToolsTest {
+
+    private SandboxManager sandboxManager;
+
+    @BeforeEach
+    void setUp() {
+        // Initialize Docker sandbox manager
+        try {
+            BaseClientConfig config = new DockerClientConfig();
+            sandboxManager = new SandboxManager(config);
+            System.out.println("Docker SandboxManager initialized successfully");
+        } catch (Exception e) {
+            System.err.println("Failed to initialize Docker SandboxManager: " + e.getMessage());
+            throw new RuntimeException("Failed to initialize test environment", e);
+        }
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (sandboxManager != null) {
+            try {
+                // Clean up all test-created sandboxes
+                sandboxManager.cleanupAllSandboxes();
+                System.out.println("All test sandboxes cleaned up successfully");
+            } catch (Exception e) {
+                System.err.println("Error during cleanup: " + e.getMessage());
+            }
+        }
+    }
 
     @Test
     void testClickAndType() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         // Navigate to a page with input fields
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
@@ -56,9 +85,7 @@ public class BrowserInteractiveToolsTest extends BaseSandboxTest {
 
     @Test
     void testHoverAndDrag() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
         System.out.println("Navigation result: " + nav);
@@ -93,9 +120,7 @@ public class BrowserInteractiveToolsTest extends BaseSandboxTest {
 
     @Test
     void testSelectOption() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         // Navigate to a page with dropdown selection
         String nav = tools.browser_navigate("https://www.w3schools.com/tags/tryit.asp?filename=tryhtml5_select", "", "");
@@ -123,9 +148,7 @@ public class BrowserInteractiveToolsTest extends BaseSandboxTest {
 
     @Test
     void testWaitForText() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
         System.out.println("Navigation result: " + nav);
@@ -144,9 +167,7 @@ public class BrowserInteractiveToolsTest extends BaseSandboxTest {
 
     @Test
     void testScreenshotWithElement() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
         System.out.println("Navigation result: " + nav);

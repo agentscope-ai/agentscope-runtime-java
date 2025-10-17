@@ -8,6 +8,8 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
@@ -23,6 +25,7 @@ import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
 
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.tools.ToolsInit;
 import reactor.core.publisher.Flux;
@@ -85,45 +88,60 @@ public class SaaAgentSandboxExample {
     /**
      * Basic example of using SaaAgent with ReactAgent
      */
-    public void basicExample() {
+    public CompletableFuture<Void> basicExample() {
         System.out.println("=== Tool Using SaaAgent Example ===");
 
-        try {
-            // Create ReactAgent Builder
-            Builder builder = ReactAgent.builder()
-                    .name("saa_agent")
-                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
-                    .model(chatModel);
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // Create ReactAgent Builder
+                Builder builder = ReactAgent.builder()
+                        .name("saa_agent")
+                        .tools(List.of(ToolsInit.RunPythonCodeTool()))
+                        .model(chatModel);
 
-            // Create SaaAgent using the ReactAgent Builder
-            SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(builder.build())
-                    .build();
+                // Create SaaAgent using the ReactAgent Builder
+                SaaAgent saaAgent = SaaAgent.builder()
+                        .agentBuilder(builder.build())
+                        .build();
 
-            // Create Runner with the SaaAgent
-            Runner runner = new Runner(saaAgent, contextManager);
+                // Create Runner with the SaaAgent
+                Runner runner = new Runner(saaAgent, contextManager);
 
-            BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
-            runner.registerClientConfig(clientConfig);
+                BaseClientConfig clientConfig = new DockerClientConfig();
+                runner.registerClientConfig(clientConfig);
 
-            // Create AgentRequest
-            AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);
+                // Create AgentRequest
+                AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);
 
-            // Execute the agent and handle the response stream
-            Flux<Event> eventStream = runner.streamQuery(request);
+                // Execute the agent and handle the response stream
+                Flux<Event> eventStream = runner.streamQuery(request);
 
-            eventStream.subscribe(
-                    this::handleEvent,
-                    error -> System.err.println("Error occurred: " + error.getMessage()),
-                    () -> System.out.println("Conversation completed.")
-            );
+                // Create a CompletableFuture to handle the completion of the event stream
+                CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+                
+                eventStream.subscribe(
+                        this::handleEvent,
+                        error -> {
+                            System.err.println("Error occurred: " + error.getMessage());
+                            completionFuture.completeExceptionally(error);
+                        },
+                        () -> {
+                            System.out.println("Conversation completed.");
+                            completionFuture.complete(null);
+                        }
+                );
 
-            // Wait a bit for async execution (in real applications, you'd handle this properly)
-            Thread.sleep(500000);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+                return completionFuture;
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }).thenCompose(future -> future)
+          .orTimeout(30, TimeUnit.SECONDS)
+          .exceptionally(throwable -> {
+              System.err.println("Operation failed or timed out: " + throwable.getMessage());
+              return null;
+          });
     }
 
     /**
@@ -189,11 +207,15 @@ public class SaaAgentSandboxExample {
         SaaAgentSandboxExample example = new SaaAgentSandboxExample();
 
         try {
-            example.basicExample();
+            example.basicExample()
+                    .thenRun(() -> System.out.println("\n=== All examples completed ==="))
+                    .exceptionally(throwable -> {
+                        System.err.println("Example execution failed: " + throwable.getMessage());
+                        return null;
+                    })
+                    .join();
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        System.out.println("\n=== All examples completed ===");
     }
 }

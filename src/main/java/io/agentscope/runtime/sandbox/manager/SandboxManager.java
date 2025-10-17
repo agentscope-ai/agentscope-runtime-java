@@ -40,7 +40,7 @@ import java.util.logging.Logger;
 public class SandboxManager {
     Logger logger = Logger.getLogger(SandboxManager.class.getName());
     private final ContainerManagerType containerManagerType;
-    private BaseClient containerClient;
+    private final BaseClient containerClient;
     private final Map<SandboxKey, ContainerModel> sandboxMap = new HashMap<>();
     String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     public com.github.dockerjava.api.DockerClient client;
@@ -49,11 +49,11 @@ public class SandboxManager {
     public SandboxManager() {
         this(new DockerClientConfig());
     }
-    
+
     public SandboxManager(ContainerManagerType containerManagerType) {
         this.containerManagerType = containerManagerType;
         logger.info("Initializing SandboxManager with container manager: " + containerManagerType.getValue());
-        
+
         switch (containerManagerType) {
             case DOCKER:
                 DockerClient dockerClient = new DockerClient();
@@ -61,7 +61,7 @@ public class SandboxManager {
                 this.client = dockerClient.connectDocker();
                 break;
             case KUBERNETES:
-                KubernetesClient kubernetesClient = new KubernetesClient("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+                KubernetesClient kubernetesClient = new KubernetesClient();
                 this.containerClient = kubernetesClient;
                 kubernetesClient.connect();
                 this.client = null; // Kubernetes does not need Docker client
@@ -70,7 +70,7 @@ public class SandboxManager {
                 throw new IllegalArgumentException("Unsupported container manager type: " + containerManagerType);
         }
     }
-    
+
     /**
      * Constructor supporting Kubernetes configuration
      *
@@ -80,7 +80,7 @@ public class SandboxManager {
         this.containerManagerType = clientConfig.getClientType();
         this.clientConfig = clientConfig;
         logger.info("Initializing SandboxManager with container manager: " + containerManagerType.getValue());
-        
+
         switch (containerManagerType) {
             case DOCKER:
                 DockerClient dockerClient = new DockerClient();
@@ -107,10 +107,10 @@ public class SandboxManager {
     private final Map<SandboxType, String> typeNameMap = new HashMap<>() {{
         put(SandboxType.BASE, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
         put(SandboxType.FILESYSTEM, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem:latest");
-        put(SandboxType.BROWSER, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest");
-        put(SandboxType.TRAINING, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest-arm64");
-        put(SandboxType.APPWORLD, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest-arm64");
-        put(SandboxType.BFCL, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-bfcl:latest-arm64");
+        put(SandboxType.BROWSER, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser");
+        put(SandboxType.TRAINING, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest");
+        put(SandboxType.APPWORLD, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest");
+        put(SandboxType.BFCL, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-bfcl:latest");
         put(SandboxType.WEBSHOP, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-webshop:latest");
     }};
 
@@ -158,35 +158,21 @@ public class SandboxManager {
             }
 
             List<VolumeBinding> volumeBindings = new ArrayList<>();
-            volumeBindings.add(new VolumeBinding(
-                    mountDir,
-                    workdir,
-                    "rw"
-            ));
+            volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
 
             String runtimeConfig = "runc"; // or "nvidia" etc.
             String containerName = "sandbox-" + sandboxType.name().toLowerCase() + "-" + sessionId.toLowerCase();
 
             // Use unified BaseClient interface to create container
-            String containerId = containerClient.createContainer(
-                    containerName,
-                    imageName,
-                    ports,
-                    portMapping,
-                    volumeBindings,
-                    environment,
-                    runtimeConfig
-            );
+            String containerId = containerClient.createContainer(containerName, imageName, ports, portMapping, volumeBindings, environment, runtimeConfig);
 
             // Convert mapped host ports to string array
-            String[] mappedPorts = portMapping.values().stream()
-                    .map(String::valueOf)
-                    .toArray(String[]::new);
+            String[] mappedPorts = portMapping.values().stream().map(String::valueOf).toArray(String[]::new);
 
             // Determine correct access URL based on container manager type
             String baseHost;
             String accessPort;
-            
+
             if (containerManagerType == ContainerManagerType.KUBERNETES) {
                 // In Kubernetes environment, use LoadBalancer's External IP
                 try {
@@ -212,21 +198,11 @@ public class SandboxManager {
                 accessPort = mappedPorts[0];
             }
 
-            ContainerModel containerModel = ContainerModel.builder()
-                    .sessionId(sessionId)
-                    .containerId(containerId)
-                    .containerName(containerName)
-                    .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
-                    .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, secretToken))
-                    .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, secretToken))
-                    .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, secretToken, BROWSER_SESSION_ID))
-                    .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
-                    .ports(mappedPorts)
-                    .mountDir(workdir)
-                    .authToken(secretToken)
-                    .build();
+            ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, secretToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, secretToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, secretToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(workdir).authToken(secretToken).build();
 
             sandboxMap.put(key, containerModel);
+
+            startSandbox(sandboxType, userID, sessionID);
 
             return containerModel;
         }
@@ -236,8 +212,8 @@ public class SandboxManager {
      * Start sandbox container
      *
      * @param sandboxType sandbox type
-     * @param userID user ID
-     * @param sessionID session ID
+     * @param userID      user ID
+     * @param sessionID   session ID
      */
     public void startSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
@@ -253,8 +229,8 @@ public class SandboxManager {
      * Stop sandbox container
      *
      * @param sandboxType sandbox type
-     * @param userID user ID
-     * @param sessionID session ID
+     * @param userID      user ID
+     * @param sessionID   session ID
      */
     public void stopSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
@@ -270,8 +246,8 @@ public class SandboxManager {
      * Remove sandbox container
      *
      * @param sandboxType sandbox type
-     * @param userID user ID
-     * @param sessionID session ID
+     * @param userID      user ID
+     * @param sessionID   session ID
      */
     public void removeSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
@@ -306,7 +282,6 @@ public class SandboxManager {
                 logger.info(sandboxType + " sandbox has been successfully removed");
             } catch (Exception e) {
                 logger.severe("Error removing " + sandboxType + " sandbox: " + e.getMessage());
-                e.printStackTrace();
                 sandboxMap.remove(key);
             }
         } else {
@@ -338,7 +313,7 @@ public class SandboxManager {
     public Map<SandboxKey, ContainerModel> getAllSandboxes() {
         return new HashMap<>(sandboxMap);
     }
-    
+
     /**
      * Get container manager type
      *
@@ -347,7 +322,7 @@ public class SandboxManager {
     public ContainerManagerType getContainerManagerType() {
         return containerManagerType;
     }
-    
+
     /**
      * Get Kubernetes configuration
      *
@@ -356,7 +331,7 @@ public class SandboxManager {
     public BaseClientConfig getClientConfig() {
         return clientConfig;
     }
-    
+
     /**
      * Get container client
      *
@@ -386,7 +361,6 @@ public class SandboxManager {
                 logger.info(key.getSandboxType() + " sandbox cleanup complete");
             } catch (Exception e) {
                 logger.severe("Error cleaning up " + key.getSandboxType() + " sandbox: " + e.getMessage());
-                e.printStackTrace();
             }
         }
 
@@ -465,7 +439,7 @@ public class SandboxManager {
             }
             return false;
         } finally {
-            if (executor != null && !executor.isShutdown()) {
+            if (!executor.isShutdown()) {
                 executor.shutdownNow();
             }
         }
@@ -503,6 +477,7 @@ public class SandboxManager {
                 }
             } else {
                 // For Docker, use dynamically assigned ports
+                // Todo: 当前的实现方式仍旧只考虑了本地的docker环境
                 List<Integer> freePorts = findFreePorts(containerPorts.size());
                 for (int i = 0; i < containerPorts.size() && i < freePorts.size(); i++) {
                     String containerPort = containerPorts.get(i);
