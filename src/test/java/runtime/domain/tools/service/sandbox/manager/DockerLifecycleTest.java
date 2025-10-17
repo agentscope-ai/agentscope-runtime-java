@@ -14,7 +14,7 @@ import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
 
 import java.util.UUID;
 
-// Todo: 目前只支持了本地Docker环境的测试
+// Todo: Currently only supports testing for local Docker environment
 /**
  * Docker Sandbox Lifecycle Test
  * Tests sandbox creation, startup, status checking, stopping and cleanup functionality in Docker environment

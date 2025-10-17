@@ -38,12 +38,12 @@ public class KubernetesClientExample {
                 return;
             }
             System.out.println("Successfully connected to Kubernetes cluster");
-//
-//            // Create Pod example
-//            createPodExample(k8sClient);
-//
-//            // Create Deployment example
-//            createDeploymentExample(k8sClient);
+
+            // Create Pod example
+            createPodExample(k8sClient);
+
+            // Create Deployment example
+            createDeploymentExample(k8sClient);
             
             // List all Pods
             listPodsExample(k8sClient);

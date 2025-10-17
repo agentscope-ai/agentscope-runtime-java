@@ -477,7 +477,7 @@ public class SandboxManager {
                 }
             } else {
                 // For Docker, use dynamically assigned ports
-                // Todo: 当前的实现方式仍旧只考虑了本地的docker环境
+                // Todo: Current implementation still only considers local Docker environment
                 List<Integer> freePorts = findFreePorts(containerPorts.size());
                 for (int i = 0; i < containerPorts.size() && i < freePorts.size(); i++) {
                     String containerPort = containerPorts.get(i);

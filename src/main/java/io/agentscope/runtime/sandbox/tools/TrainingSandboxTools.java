@@ -16,6 +16,7 @@
 package io.agentscope.runtime.sandbox.tools;
 
 import io.agentscope.runtime.engine.Runner;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.SandboxType;
 import io.agentscope.runtime.sandbox.manager.util.HttpClient;
@@ -35,7 +36,11 @@ public class TrainingSandboxTools extends BaseSandboxTools {
         super(Runner.getSandboxManager(), new HttpClient());
     }
 
-    public String call_mcp_tool(SandboxType sandboxType, String envType, String toolName, String taskID, String instanceID, Map<String, String> messages, Map<String, String> params, String userID, String sessionID) {
+    public TrainingSandboxTools(SandboxManager sandboxManager){
+        super(sandboxManager, new HttpClient());
+    }
+
+    public String call_mcp_tool(SandboxType sandboxType, String envType, String toolName, String taskID, String instanceID, Map<String, String> messages, Map<String, Object> params, String userID, String sessionID) {
         try {
             ContainerModel sandbox = sandboxManager.getSandbox(sandboxType, userID, sessionID);
 
@@ -95,19 +100,19 @@ public class TrainingSandboxTools extends BaseSandboxTools {
         return call_mcp_tool(sandboxType, envType, "/get_env_profile", null, null, null, Map.of("split", split), userID, sessionID);
     }
 
-    public String getToolsInfo(String instanceId, Map<String, String> messages, Map<String, String> params, String userID, String sessionID) {
-        return call_mcp_tool(SandboxType.TRAINING, "default", "get_info", null, instanceId, messages, params, userID, sessionID);
+    public String getToolsInfo(String instanceId, Map<String, String> messages, Map<String, Object> params, String userID, String sessionID) {
+        return call_mcp_tool(SandboxType.TRAINING, "default", "/get_info", null, instanceId, messages, params, userID, sessionID);
     }
 
-    public String createInstance(String envType, String taskID, String instanceID, Map<String, String> params, String userID, String sessionID) {
+    public String createInstance(String envType, String taskID, String instanceID, Map<String, Object> params, String userID, String sessionID) {
         return call_mcp_tool(SandboxType.TRAINING, envType, "/create", taskID, instanceID, null, params, userID, sessionID);
     }
 
-    public String step(String instanceID, Map<String, String> action, Map<String, String> params, String userID, String sessionID) {
+    public String step(String instanceID, Map<String, String> action, Map<String, Object> params, String userID, String sessionID) {
         return call_mcp_tool(SandboxType.TRAINING, "default", "/step", null, instanceID, action, params, userID, sessionID);
     }
 
-    public String evaluate(String instanceId, Map<String, String> messages, Map<String, String> params, String userID, String sessionID) {
+    public String evaluate(String instanceId, Map<String, String> messages, Map<String, Object> params, String userID, String sessionID) {
         return call_mcp_tool(SandboxType.TRAINING, "default", "/evaluate", null, instanceId, messages, params, userID, sessionID);
     }
 
@@ -125,7 +130,7 @@ public class TrainingSandboxTools extends BaseSandboxTools {
             return getToolsInfo(
                     (String) args.get("instance_id"),
                     (Map<String, String>) args.get("messages"),
-                    (Map<String, String>) args.get("params"),
+                    (Map<String, Object>) args.get("params"),
                     (String) args.get("user_id"),
                     (String) args.get("session_id")
             );
