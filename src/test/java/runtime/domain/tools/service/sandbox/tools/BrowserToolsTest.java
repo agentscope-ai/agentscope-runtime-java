@@ -3,6 +3,7 @@ package runtime.domain.tools.service.sandbox.tools;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,13 +16,13 @@ public class BrowserToolsTest{
 
     @BeforeEach
     void setUp() {
-        // Initialize Docker sandbox manager
+        // Initialize sandbox manager
         try {
             BaseClientConfig config = new DockerClientConfig();
             sandboxManager = new SandboxManager(config);
-            System.out.println("Docker SandboxManager initialized successfully");
+            System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {
-            System.err.println("Failed to initialize Docker SandboxManager: " + e.getMessage());
+            System.err.println("Failed to initialize SandboxManager: " + e.getMessage());
             throw new RuntimeException("Failed to initialize test environment", e);
         }
     }
@@ -30,7 +31,6 @@ public class BrowserToolsTest{
     void tearDown() {
         if (sandboxManager != null) {
             try {
-                // Clean up all test-created sandboxes
                 sandboxManager.cleanupAllSandboxes();
                 System.out.println("All test sandboxes cleaned up successfully");
             } catch (Exception e) {
@@ -162,7 +162,7 @@ public class BrowserToolsTest{
         System.out.println("New tab 1 result: " + newTab1);
         assertNotNull(newTab1);
 
-        String newTab2 = tools.browser_tab_new("https://www.google.com", "", "");
+        String newTab2 = tools.browser_tab_new("https://cn.bing.com", "", "");
         System.out.println("New tab 2 result: " + newTab2);
         assertNotNull(newTab2);
 

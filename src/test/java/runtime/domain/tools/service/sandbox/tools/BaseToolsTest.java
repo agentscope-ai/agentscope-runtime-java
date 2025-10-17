@@ -15,13 +15,13 @@ public class BaseToolsTest {
 
     @BeforeEach
     void setUp() {
-        // Initialize Docker sandbox manager
+        // Initialize sandbox manager
         try {
             BaseClientConfig config = new DockerClientConfig();
             sandboxManager = new SandboxManager(config);
-            System.out.println("Docker SandboxManager initialized successfully");
+            System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {
-            System.err.println("Failed to initialize Docker SandboxManager: " + e.getMessage());
+            System.err.println("Failed to initialize SandboxManager: " + e.getMessage());
             throw new RuntimeException("Failed to initialize test environment", e);
         }
     }

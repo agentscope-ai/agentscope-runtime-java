@@ -27,7 +27,7 @@ import java.util.*;
 public class KubernetesClientExample {
     
     public static void main(String[] args) {
-        KubernetesClient k8sClient = new KubernetesClient();
+        KubernetesClient k8sClient = new KubernetesClient("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
         
         try {
             // Connect to Kubernetes cluster
@@ -38,12 +38,12 @@ public class KubernetesClientExample {
                 return;
             }
             System.out.println("Successfully connected to Kubernetes cluster");
-            
-            // Create Pod example
-            createPodExample(k8sClient);
-            
-            // Create Deployment example
-            createDeploymentExample(k8sClient);
+//
+//            // Create Pod example
+//            createPodExample(k8sClient);
+//
+//            // Create Deployment example
+//            createDeploymentExample(k8sClient);
             
             // List all Pods
             listPodsExample(k8sClient);
