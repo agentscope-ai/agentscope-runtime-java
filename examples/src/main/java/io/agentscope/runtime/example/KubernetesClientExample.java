@@ -27,7 +27,11 @@ import java.util.*;
 public class KubernetesClientExample {
     
     public static void main(String[] args) {
-        KubernetesClient k8sClient = new KubernetesClient("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+        if (System.getenv("KUBECONFIG_PATH") == null || System.getenv("KUBECONFIG_PATH").isEmpty()) {
+            System.err.println("Please set the KUBECONFIG_PATH environment variable to point to your kubeconfig file");
+            return;
+        }
+        KubernetesClient k8sClient = new KubernetesClient(System.getenv("KUBECONFIG_PATH"));
         
         try {
             // Connect to Kubernetes cluster

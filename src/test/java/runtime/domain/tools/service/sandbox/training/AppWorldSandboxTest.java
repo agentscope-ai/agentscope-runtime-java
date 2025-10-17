@@ -10,6 +10,7 @@ import io.agentscope.runtime.sandbox.tools.TrainingSandboxTools;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,6 +19,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+@EnabledIfEnvironmentVariable(named = "KUBECONFIG_PATH", matches = ".+")
 public class AppWorldSandboxTest {
 
     private SandboxManager sandboxManager;
@@ -27,7 +29,7 @@ public class AppWorldSandboxTest {
         // Initialize sandbox manager
         java.util.logging.Logger.getLogger("").setLevel(java.util.logging.Level.OFF);
         try {
-            BaseClientConfig config = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+            BaseClientConfig config = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
             sandboxManager = new SandboxManager(config);
             System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {
