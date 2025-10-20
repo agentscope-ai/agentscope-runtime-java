@@ -1,6 +1,7 @@
 package io.agentscope.runtime.engine.agents.saa;
 
 import com.alibaba.cloud.ai.graph.NodeOutput;
+import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import io.agentscope.runtime.engine.agents.Agent;
@@ -72,12 +73,13 @@ public class SaaAgent extends BaseAgent {
         }
 
         private org.springframework.ai.chat.messages.Message adaptNewMessage() {
-            List<Message> sessionMessages = context.getSession().getMessages();
-            if (!sessionMessages.isEmpty()) {
-                Message lastMessage = sessionMessages.get(sessionMessages.size() - 1);
-                return convertToSpringMessage(lastMessage);
-            }
-            return null;
+//            List<Message> sessionMessages = context.getSession().getMessages();
+//            if (!sessionMessages.isEmpty()) {
+//                Message lastMessage = sessionMessages.get(sessionMessages.size() - 1);
+//                return convertToSpringMessage(lastMessage);
+//            }
+//            return null;
+            return convertToSpringMessage(context.getCurrentMessages().get(0));
         }
 
         private org.springframework.ai.chat.messages.Message convertToSpringMessage(Message message) {
@@ -319,7 +321,7 @@ public class SaaAgent extends BaseAgent {
                         List<Object> messagesList = (List<Object>) messages.get();
                         if (!messagesList.isEmpty()) {
                             Object message = messagesList.get(messagesList.size() - 1);
-                            if(message instanceof AssistantMessage){
+                            if (message instanceof AssistantMessage) {
                                 return this.responseProcessor.apply(message);
                             }
                             return "";
@@ -362,31 +364,40 @@ public class SaaAgent extends BaseAgent {
             // Prepare input for Agent using context information
             Map<String, Object> reactInput = new HashMap<>();
 
-            // Add the new message
-            if (adapter.getNewMessage() != null) {
-                reactInput.put("messages", adapter.getNewMessage());
-            } else {
-                // Fallback to input string
-                reactInput.put("messages", new UserMessage(input.toString()));
-            }
-
-            // Add memory/context if available
-            if (!adapter.getMemory().isEmpty()) {
-                reactInput.put("history", adapter.getMemory());
-            }
-
-            // Add session information from context
-            if (adapter.getContext().getSession() != null) {
-                reactInput.put("session_id", adapter.getContext().getSession().getId());
-                reactInput.put("user_id", adapter.getContext().getSession().getUserId());
-            }
-
-            // Use the Agent from adapter (which was built from builder)
+//            // Add the new message
+//            if (adapter.getNewMessage() != null) {
+//                reactInput.put("messages", adapter.getNewMessage());
+//            } else {
+//                // Fallback to input string
+//                reactInput.put("messages", new UserMessage(input.toString()));
+//            }
+//
+//            // Add memory/context if available
+//            if (!adapter.getMemory().isEmpty()) {
+//                reactInput.put("history", adapter.getMemory());
+//            }
+//
+//            // Add session information from context
+//            if (adapter.getContext().getSession() != null) {
+//                reactInput.put("session_id", adapter.getContext().getSession().getId());
+//                reactInput.put("user_id", adapter.getContext().getSession().getUserId());
+//            }
+//
+//
+//            // Use the Agent from adapter (which was built from builder)
             com.alibaba.cloud.ai.graph.agent.Agent agent = adapter.getAgent();
+
+            System.out.println(adapter.getNewMessage());
+
+            RunnableConfig runnableConfig = RunnableConfig.builder()
+                    .addMetadata("session_id", adapter.getContext().getSession().getId())
+                    .addMetadata("user_id", adapter.getContext().getSession().getUserId())
+                    .build();
+
             if (stream) {
-                return agent.stream(reactInput);
+                return agent.stream((UserMessage) adapter.getNewMessage(), runnableConfig);
             } else {
-                Optional<OverAllState> state = agent.invoke(reactInput);
+                Optional<OverAllState> state = agent.invoke((UserMessage) adapter.getNewMessage(), runnableConfig);
 
                 if (state.isPresent()) {
                     Optional<Object> messages = state.get().value("messages");

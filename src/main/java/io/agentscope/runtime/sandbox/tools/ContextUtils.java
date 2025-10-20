@@ -16,6 +16,7 @@
 package io.agentscope.runtime.sandbox.tools;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.RunnableConfig;
 import org.springframework.ai.chat.model.ToolContext;
 import java.util.UUID;
 
@@ -34,9 +35,9 @@ public class ContextUtils {
      * @return userID, returns a random UUID if not found
      */
     public static String extractUserID(ToolContext toolContext) {
-        OverAllState overAllState = (OverAllState) toolContext.getContext().get("state");
-        if (overAllState != null && overAllState.data().containsKey("user_id")) {
-            return overAllState.value("user_id", String.class).orElse(UUID.randomUUID().toString());
+        RunnableConfig runnableConfig = (RunnableConfig) toolContext.getContext().get("config");
+        if (runnableConfig != null && runnableConfig.metadata("user_id").isPresent()) {
+            return runnableConfig.metadata("user_id").orElse(UUID.randomUUID().toString()).toString();
         }
         return UUID.randomUUID().toString();
     }
@@ -48,9 +49,9 @@ public class ContextUtils {
      * @return sessionID, returns a random UUID if not found
      */
     public static String extractSessionID(ToolContext toolContext) {
-        OverAllState overAllState = (OverAllState) toolContext.getContext().get("state");
-        if (overAllState != null && overAllState.data().containsKey("session_id")) {
-            return overAllState.value("session_id", String.class).orElse(UUID.randomUUID().toString());
+        RunnableConfig runnableConfig = (RunnableConfig) toolContext.getContext().get("config");
+        if (runnableConfig != null && runnableConfig.metadata("session_id").isPresent()) {
+            return runnableConfig.metadata("session_id").orElse(UUID.randomUUID().toString()).toString();
         }
         return UUID.randomUUID().toString();
     }
