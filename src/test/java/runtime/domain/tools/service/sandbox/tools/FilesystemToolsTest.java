@@ -1,18 +1,47 @@
-package runtime.domain.tools.service;
+package runtime.domain.tools.service.sandbox.tools;
 
-import org.junit.jupiter.api.Assumptions;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import io.agentscope.runtime.sandbox.manager.model.SandboxType;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
-public class FilesystemToolsTest extends BaseSandboxTest {
+public class FilesystemToolsTest{
+
+    private SandboxManager sandboxManager;
+
+    @BeforeEach
+    void setUp() {
+        // Initialize sandbox manager
+        try {
+            BaseClientConfig config = new DockerClientConfig();
+            sandboxManager = new SandboxManager(config);
+            System.out.println("SandboxManager initialized successfully");
+        } catch (Exception e) {
+            System.err.println("Failed to initialize SandboxManager: " + e.getMessage());
+            throw new RuntimeException("Failed to initialize test environment", e);
+        }
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (sandboxManager != null) {
+            try {
+                // Clean up all test-created sandboxes
+                sandboxManager.cleanupAllSandboxes();
+                System.out.println("All test sandboxes cleaned up successfully");
+            } catch (Exception e) {
+                System.err.println("Error during cleanup: " + e.getMessage());
+            }
+        }
+    }
 
     @Test
     void testReadWriteAndEditFile() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.FILESYSTEM);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String write = tools.fs_write_file("/workspace/test.txt", "hello", "", "");
         System.out.println("write: "+write);
@@ -29,10 +58,21 @@ public class FilesystemToolsTest extends BaseSandboxTest {
     }
 
     @Test
+    void testReadMultipleFiles() {
+        SandboxTools tools = new SandboxTools(sandboxManager);
+
+        tools.fs_write_file("/workspace/test1.txt", "content1", "", "");
+        tools.fs_write_file("/workspace/test2.txt", "content2", "", "");
+
+        String[] paths = {"/workspace/test1.txt", "/workspace/test2.txt"};
+        String result = tools.fs_read_multiple_files(paths, "", "");
+        System.out.println("read multiple files: " + result);
+        assertNotNull(result);
+    }
+
+    @Test
     void testDirectoryOps() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.FILESYSTEM);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String created = tools.fs_create_directory("/workspace/dirA", "", "");
         System.out.println("created: "+created);
@@ -49,9 +89,7 @@ public class FilesystemToolsTest extends BaseSandboxTest {
 
     @Test
     void testMoveSearchInfoAllowed() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.FILESYSTEM);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String write = tools.fs_write_file("/workspace/test.txt", "hello", "", "");
         System.out.println("write: "+write);

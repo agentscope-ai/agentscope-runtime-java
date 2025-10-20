@@ -1,18 +1,47 @@
-package runtime.domain.tools.service;
+package runtime.domain.tools.service.sandbox.tools;
 
-import org.junit.jupiter.api.Assumptions;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import io.agentscope.runtime.sandbox.manager.model.SandboxType;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
-public class BrowserToolsTest extends BaseSandboxTest {
+public class BrowserToolsTest{
+
+    private SandboxManager sandboxManager;
+
+    @BeforeEach
+    void setUp() {
+        // Initialize sandbox manager
+        try {
+            BaseClientConfig config = new DockerClientConfig();
+            sandboxManager = new SandboxManager(config);
+            System.out.println("SandboxManager initialized successfully");
+        } catch (Exception e) {
+            System.err.println("Failed to initialize SandboxManager: " + e.getMessage());
+            throw new RuntimeException("Failed to initialize test environment", e);
+        }
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (sandboxManager != null) {
+            try {
+                sandboxManager.cleanupAllSandboxes();
+                System.out.println("All test sandboxes cleaned up successfully");
+            } catch (Exception e) {
+                System.err.println("Error during cleanup: " + e.getMessage());
+            }
+        }
+    }
 
     @Test
     void testNavigateAndSnapshot() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
         System.out.println("Navigation result: " + nav);
@@ -25,9 +54,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
 
     @Test
     void testTabAndResize() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
         System.out.println("Navigation result: " + nav);
@@ -56,9 +83,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
 
     @Test
     void testConsoleMessagesAndNetworkRequests() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
         System.out.println("Navigation result: " + nav);
@@ -77,9 +102,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
 
     @Test
     void testNavigationControls() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         // First navigate to a page
         String nav1 = tools.browser_navigate("https://cn.bing.com", "", "");
@@ -104,9 +127,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
 
     @Test
     void testScreenshotAndPdf() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
         System.out.println("Navigation result: " + nav);
@@ -130,9 +151,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
 
     @Test
     void testTabManagement() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         // Create multiple tabs
         String nav1 = tools.browser_navigate("https://cn.bing.com", "", "");
@@ -143,7 +162,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
         System.out.println("New tab 1 result: " + newTab1);
         assertNotNull(newTab1);
 
-        String newTab2 = tools.browser_tab_new("https://www.google.com", "", "");
+        String newTab2 = tools.browser_tab_new("https://cn.bing.com", "", "");
         System.out.println("New tab 2 result: " + newTab2);
         assertNotNull(newTab2);
 
@@ -165,9 +184,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
 
     @Test
     void testKeyboardAndDialog() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         String nav = tools.browser_navigate("https://cn.bing.com", "", "");
         System.out.println("Navigation result: " + nav);
@@ -178,7 +195,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
         System.out.println("Press key result: " + pressKey);
         assertNotNull(pressKey);
 
-        // Test dialog handling (if any)
+        // Test dialog handling (if any
         String handleDialog = tools.browser_handle_dialog(true, null, "", "");
         System.out.println("Handle dialog result: " + handleDialog);
         assertNotNull(handleDialog);
@@ -186,9 +203,7 @@ public class BrowserToolsTest extends BaseSandboxTest {
 
     @Test
     void testFileUpload() {
-        Assumptions.assumeTrue(TestUtil.shouldRunIntegration());
-        recordSandboxUsage(SandboxType.BROWSER);
-        SandboxTools tools = new SandboxTools();
+        SandboxTools tools = new SandboxTools(sandboxManager);
 
         // Navigate to a page that may have file upload functionality
         String nav = tools.browser_navigate("https://www.w3schools.com/tags/tryit.asp?filename=tryhtml5_input_type_file", "", "");

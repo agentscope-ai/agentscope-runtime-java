@@ -27,7 +27,11 @@ import java.util.*;
 public class KubernetesClientExample {
     
     public static void main(String[] args) {
-        KubernetesClient k8sClient = new KubernetesClient();
+        if (System.getenv("KUBECONFIG_PATH") == null || System.getenv("KUBECONFIG_PATH").isEmpty()) {
+            System.err.println("Please set the KUBECONFIG_PATH environment variable to point to your kubeconfig file");
+            return;
+        }
+        KubernetesClient k8sClient = new KubernetesClient(System.getenv("KUBECONFIG_PATH"));
         
         try {
             // Connect to Kubernetes cluster
@@ -38,10 +42,10 @@ public class KubernetesClientExample {
                 return;
             }
             System.out.println("Successfully connected to Kubernetes cluster");
-            
+
             // Create Pod example
             createPodExample(k8sClient);
-            
+
             // Create Deployment example
             createDeploymentExample(k8sClient);
             

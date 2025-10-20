@@ -25,13 +25,13 @@ public class LocalDeployManager extends DeployManager{
     private ConfigurableApplicationContext applicationContext;
     Logger logger = Logger.getLogger(LocalDeployManager.class.getName());
 
-
     @Override
     public synchronized void deployStreaming(String endpointName) {
         if (this.applicationContext != null && this.applicationContext.isActive()) {
             return;
         }
 
+        // Todo: Currently, only the A2A protocol is supported for calls. The protocol format for regular calls needs to be determined in the future
         this.applicationContext = new SpringApplicationBuilder(LocalDeployer.class)
             .initializers((GenericApplicationContext ctx) -> ctx.registerBean("endpointName", String.class, () -> endpointName))
             .properties("spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration")

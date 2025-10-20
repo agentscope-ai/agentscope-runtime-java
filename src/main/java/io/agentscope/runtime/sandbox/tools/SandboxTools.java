@@ -38,6 +38,10 @@ public class SandboxTools extends BaseSandboxTools{
         super(Runner.getSandboxManager(), new HttpClient());
     }
 
+    public SandboxTools(SandboxManager sandboxManager){
+        super(sandboxManager, new HttpClient());
+    }
+
     /**
      * Get the shared SandboxManager instance
      * @return SandboxManager instance
