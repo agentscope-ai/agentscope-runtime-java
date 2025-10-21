@@ -16,7 +16,7 @@
 package io.agentscope.runtime.sandbox.manager.client;
 
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
+import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;

@@ -15,7 +15,7 @@
  */
 package io.agentscope.runtime.example;
 
-import io.agentscope.runtime.sandbox.manager.model.SandboxType;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.TrainingSandboxTools;
 
 /**

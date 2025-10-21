@@ -1,6 +1,6 @@
 package io.agentscope.runtime.sandbox.manager.client.config;
 
-import io.agentscope.runtime.sandbox.manager.model.ContainerManagerType;
+import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
 
 public class KubernetesClientConfig extends BaseClientConfig {
     private String kubeConfigPath;

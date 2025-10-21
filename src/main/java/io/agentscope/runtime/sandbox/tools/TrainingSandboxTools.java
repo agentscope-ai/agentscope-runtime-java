@@ -17,8 +17,8 @@ package io.agentscope.runtime.sandbox.tools;
 
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
-import io.agentscope.runtime.sandbox.manager.model.SandboxType;
+import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.util.HttpClient;
 
 import java.util.HashMap;

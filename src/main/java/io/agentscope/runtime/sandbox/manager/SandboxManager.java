@@ -21,11 +21,11 @@ import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
-import io.agentscope.runtime.sandbox.manager.model.SandboxType;
-import io.agentscope.runtime.sandbox.manager.model.SandboxKey;
-import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
-import io.agentscope.runtime.sandbox.manager.model.ContainerManagerType;
+import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
+import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
+import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
 
 import java.io.IOException;

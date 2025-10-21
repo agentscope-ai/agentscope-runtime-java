@@ -13,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.manager.model;
+package io.agentscope.runtime.sandbox.manager.model.container;
 
 /**
  * Container management type enumeration
  */
 public enum ContainerManagerType {
     DOCKER("docker"),
-    KUBERNETES("kubernetes");
+    KUBERNETES("kubernetes"),
+    CLOUD("cloud"),
+    AGENTRUN("agentrun");
     
     private final String value;
     

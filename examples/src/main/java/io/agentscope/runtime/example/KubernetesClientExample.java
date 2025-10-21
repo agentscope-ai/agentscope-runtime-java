@@ -16,7 +16,7 @@
 package io.agentscope.runtime.example;
 
 import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
-import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
+import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 
 import java.util.*;
 
