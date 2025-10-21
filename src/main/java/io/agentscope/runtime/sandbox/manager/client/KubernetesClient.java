@@ -650,5 +650,25 @@ public class KubernetesClient extends BaseClient {
         }
         return true;
     }
+    
+    @Override
+    public boolean inspectContainer(String containerIdOrName) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Kubernetes client is not connected");
+        }
+        try {
+            // Try to read the Deployment to check if it exists
+            appsApi.readNamespacedDeployment(containerIdOrName, namespace).execute();
+            return true;
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                // Deployment does not exist
+                return false;
+            }
+            // Other errors, assume it exists
+            logger.warning("Error inspecting container " + containerIdOrName + ": " + e.getMessage());
+            return false;
+        }
+    }
 
 }

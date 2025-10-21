@@ -553,6 +553,20 @@ public class DockerClient extends BaseClient {
         }
         return pullImage(client, imageName);
     }
+    
+    @Override
+    public boolean inspectContainer(String containerIdOrName) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        try {
+            client.inspectContainerCmd(containerIdOrName).exec();
+            return true;
+        } catch (Exception e) {
+            // Container does not exist or other error
+            return false;
+        }
+    }
 
     /**
      * Check if image exists locally

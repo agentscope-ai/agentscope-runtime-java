@@ -96,6 +96,13 @@ public abstract class BaseClient {
     public abstract boolean imageExists(String imageName);
     
     /**
+     * Inspect container to check if it exists
+     * @param containerIdOrName container ID or name
+     * @return true if container exists, false otherwise
+     */
+    public abstract boolean inspectContainer(String containerIdOrName);
+    
+    /**
      * Pull image from registry
      * @param imageName image name
      * @return whether pull was successful
