@@ -183,24 +183,37 @@ public class SaaAgent extends BaseAgent {
 
                 if (stream && output instanceof Flux<?> outputFlux) {
                     outputFlux.subscribe(part -> {
-                        String contentPart = this.streamResponseProcessor.apply(part);
-                        TextContent textContent = new TextContent();
-                        textContent.setText(contentPart);
-                        textContent.setDelta(true);
-                        Message deltaMessage = new Message();
-                        if (part instanceof StreamingOutput) {
-                            deltaMessage.setType(MessageType.CHUNK.name());
-                            deltaMessage.setRole("assistant");
-                            deltaMessage.setStatus(RunStatus.IN_PROGRESS);
-                            deltaMessage.setContent(List.of(textContent));
-                            sink.next(deltaMessage);
-                        } else {
-//                            Todo: Currently skipping everything except chunks
-//                            deltaMessage.setType(MessageType.MESSAGE.name());
-//                            contentBuilder.append(contentPart);
+                        try {
+                            String contentPart = this.streamResponseProcessor.apply(part);
+                            if (contentPart != null && !contentPart.isEmpty()) {
+                                contentBuilder.append(contentPart);
+
+                                TextContent textContent = new TextContent();
+                                textContent.setText(contentPart);
+                                textContent.setDelta(true);
+                                Message deltaMessage = new Message();
+
+                                if (part instanceof StreamingOutput) {
+                                    deltaMessage.setType(MessageType.CHUNK.name());
+                                    deltaMessage.setRole("assistant");
+                                    deltaMessage.setStatus(RunStatus.IN_PROGRESS);
+                                    deltaMessage.setContent(List.of(textContent));
+                                    sink.next(deltaMessage);
+                                } else {
+                                    // Also emit non-streaming parts as chunks
+                                    deltaMessage.setType(MessageType.CHUNK.name());
+                                    deltaMessage.setRole("assistant");
+                                    deltaMessage.setStatus(RunStatus.IN_PROGRESS);
+                                    deltaMessage.setContent(List.of(textContent));
+                                    sink.next(deltaMessage);
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.warning("Error processing streaming part: " + e.getMessage());
                         }
                     }, error -> {
                         // Handle error during streaming
+                        logger.severe("Streaming error: " + error.getMessage());
                         Message errorMessage = new Message();
                         errorMessage.setType(MessageType.MESSAGE.name());
                         errorMessage.setRole("assistant");
@@ -211,6 +224,8 @@ public class SaaAgent extends BaseAgent {
                         sink.next(errorMessage);
                         sink.error(error);
                     }, () -> {
+                        // Stream completed successfully
+                        logger.info("Stream completed with content length: " + contentBuilder.length());
                         TextContent textContent = new TextContent();
                         textContent.setText(contentBuilder.toString());
                         textContent.setDelta(false);
