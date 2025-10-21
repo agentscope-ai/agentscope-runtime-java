@@ -107,9 +107,6 @@ public class SaaAgentSandboxExample {
                 // Create Runner with the SaaAgent
                 Runner runner = new Runner(saaAgent, contextManager);
 
-                BaseClientConfig clientConfig = new DockerClientConfig();
-                runner.registerClientConfig(clientConfig);
-
                 // Create AgentRequest
                 AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);
 

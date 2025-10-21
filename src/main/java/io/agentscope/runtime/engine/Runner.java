@@ -4,6 +4,7 @@ import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
@@ -26,25 +27,26 @@ public class Runner implements AutoCloseable {
 
     // Todo: The current stream property has been completely set to true
     private final boolean stream = true;
-    private BaseClientConfig clientConfig;
+    private ManagerConfig managerConfig;
 
     public static SandboxManager getSandboxManager() {
         return SHARED_SANDBOX_MANAGER;
     }
 
-    public void registerClientConfig(BaseClientConfig clientConfig) {
-        this.clientConfig = clientConfig;
-        SHARED_SANDBOX_MANAGER= new SandboxManager(clientConfig);
+    public void registerClientConfig(ManagerConfig managerConfig) {
+        this.managerConfig = managerConfig;
+        SHARED_SANDBOX_MANAGER= new SandboxManager(managerConfig);
     }
 
-    public BaseClientConfig getClientConfig() {
-        return this.clientConfig;
+    public ManagerConfig getManagerClient() {
+        return this.managerConfig;
     }
 
 
     public Runner(Agent agent, ContextManager contextManager) {
         this.agent = agent;
         this.contextManager = contextManager;
+        SHARED_SANDBOX_MANAGER = new SandboxManager();
         defaultRunner = this;
     }
 

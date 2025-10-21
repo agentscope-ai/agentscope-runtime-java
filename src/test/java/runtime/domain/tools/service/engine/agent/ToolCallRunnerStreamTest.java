@@ -90,8 +90,6 @@ public class ToolCallRunnerStreamTest {
 
             Runner runner = new Runner(saaAgent, contextManager);
 
-            runner.registerClientConfig(new DockerClientConfig());
-
             AgentRequest request = createAgentRequest("Calculate the 10th Fibonacci number using Python for me", null, null);
 
             Flux<Event> eventStream = runner.streamQuery(request);

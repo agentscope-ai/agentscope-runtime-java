@@ -21,6 +21,7 @@ import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
@@ -39,58 +40,37 @@ import java.util.logging.Logger;
 
 public class SandboxManager {
     Logger logger = Logger.getLogger(SandboxManager.class.getName());
-    private final ContainerManagerType containerManagerType;
-    private final BaseClient containerClient;
+    private ManagerConfig managerConfig;
     private final Map<SandboxKey, ContainerModel> sandboxMap = new HashMap<>();
     String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     public com.github.dockerjava.api.DockerClient client;
-    private BaseClientConfig clientConfig;
+    private BaseClient containerClient;
+    private final ContainerManagerType containerManagerType;
 
     public SandboxManager() {
-        this(new DockerClientConfig());
-    }
-
-    public SandboxManager(ContainerManagerType containerManagerType) {
-        this.containerManagerType = containerManagerType;
-        logger.info("Initializing SandboxManager with container manager: " + containerManagerType.getValue());
-
-        switch (containerManagerType) {
-            case DOCKER:
-                DockerClient dockerClient = new DockerClient();
-                this.containerClient = dockerClient;
-                this.client = dockerClient.connectDocker();
-                break;
-            case KUBERNETES:
-                KubernetesClient kubernetesClient = new KubernetesClient();
-                this.containerClient = kubernetesClient;
-                kubernetesClient.connect();
-                this.client = null; // Kubernetes does not need Docker client
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported container manager type: " + containerManagerType);
-        }
+        this(new ManagerConfig.Builder().build());
     }
 
     /**
      * Constructor supporting Kubernetes configuration
      *
-     * @param clientConfig client configuration
+     * @param managerConfig manager configuration
      */
-    public SandboxManager(BaseClientConfig clientConfig) {
-        this.containerManagerType = clientConfig.getClientType();
-        this.clientConfig = clientConfig;
-        logger.info("Initializing SandboxManager with container manager: " + containerManagerType.getValue());
+    public SandboxManager(ManagerConfig managerConfig) {
+        this.containerManagerType = managerConfig.getClientConfig().getClientType();
+        logger.info("Initializing SandboxManager with container manager: " + this.containerManagerType);
 
-        switch (containerManagerType) {
+        switch (this.containerManagerType) {
             case DOCKER:
+                // Todo: 让DockerClient支持DockerClientConfig配置
                 DockerClient dockerClient = new DockerClient();
                 this.containerClient = dockerClient;
                 this.client = dockerClient.connectDocker();
                 break;
             case KUBERNETES:
                 KubernetesClient kubernetesClient;
-                if (clientConfig instanceof KubernetesClientConfig) {
-                    kubernetesClient = new KubernetesClient((KubernetesClientConfig) clientConfig);
+                if (managerConfig.getClientConfig() instanceof KubernetesClientConfig kubernetesClientConfig) {
+                    kubernetesClient = new KubernetesClient(kubernetesClientConfig);
                 } else {
                     logger.warning("Provided clientConfig is not an instance of KubernetesClientConfig, using default configuration");
                     kubernetesClient = new KubernetesClient();
@@ -99,8 +79,12 @@ public class SandboxManager {
                 kubernetesClient.connect();
                 this.client = null; // Kubernetes does not need Docker client
                 break;
+            case AGENTRUN:
+                break;
+            case CLOUD:
+                break;
             default:
-                throw new IllegalArgumentException("Unsupported container manager type: " + containerManagerType);
+                throw new IllegalArgumentException("Unsupported container manager type: " + this.containerManagerType);
         }
     }
 
@@ -324,12 +308,12 @@ public class SandboxManager {
     }
 
     /**
-     * Get Kubernetes configuration
+     * Get manager configuration
      *
-     * @return Kubernetes configuration
+     * @return manager configuration
      */
-    public BaseClientConfig getClientConfig() {
-        return clientConfig;
+    public ManagerConfig getManagerConfig() {
+        return managerConfig;
     }
 
     /**

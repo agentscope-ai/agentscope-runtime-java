@@ -94,9 +94,6 @@ public class SaaAgentDeployExample {
             // Create Runner with the SaaAgent
             Runner runner = new Runner();
 
-            BaseClientConfig clientConfig = new DockerClientConfig(true);
-            runner.registerClientConfig(clientConfig);
-
             runner.registerAgent(saaAgent);
             runner.registerContextManager(contextManager);
 
