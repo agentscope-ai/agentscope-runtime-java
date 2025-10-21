@@ -3,6 +3,7 @@ package runtime.domain.tools.service.sandbox.tools;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,10 @@ public class BrowserInteractiveToolsTest {
     void setUp() {
         // Initialize sandbox manager
         try {
-            BaseClientConfig config = new DockerClientConfig();
+            BaseClientConfig clientConfig = new DockerClientConfig();
+            ManagerConfig config = new ManagerConfig.Builder()
+                    .containerDeployment(clientConfig)
+                    .build();
             sandboxManager = new SandboxManager(config);
             System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {

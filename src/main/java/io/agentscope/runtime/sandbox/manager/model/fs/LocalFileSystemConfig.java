@@ -16,7 +16,7 @@
 package io.agentscope.runtime.sandbox.manager.model.fs;
 
 /**
- * 本地文件系统配置类
+ * Local File System Configuration Class
  */
 public class LocalFileSystemConfig extends FileSystemConfig {
 
@@ -29,7 +29,7 @@ public class LocalFileSystemConfig extends FileSystemConfig {
     }
 
     /**
-     * Builder类，用于构建LocalFileSystemConfig实例
+     * Builder class for constructing LocalFileSystemConfig instances
      */
     public static class Builder extends FileSystemConfig.Builder<Builder> {
 

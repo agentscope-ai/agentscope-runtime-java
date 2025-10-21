@@ -16,7 +16,7 @@
 package io.agentscope.runtime.sandbox.manager.model.fs;
 
 /**
- * OSS文件系统配置类
+ * OSS File System Configuration Class
  */
 public class OssConfig extends FileSystemConfig {
     private String ossEndpoint;
@@ -54,7 +54,7 @@ public class OssConfig extends FileSystemConfig {
     }
 
     /**
-     * Builder类，用于构建OssConfig实例
+     * Builder class for constructing OssConfig instances
      */
     public static class Builder extends FileSystemConfig.Builder<Builder> {
         private String ossEndpoint = "http://oss-cn-hangzhou.aliyuncs.com";

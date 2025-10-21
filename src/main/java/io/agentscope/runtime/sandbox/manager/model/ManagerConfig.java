@@ -30,17 +30,17 @@ import jakarta.validation.constraints.NotNull;
 import java.io.File;
 
 /**
- * Sandbox管理器环境配置类
- * 对应Python中的SandboxManagerEnvConfig
+ * Sandbox Manager Environment Configuration Class
+ * Corresponds to Python's SandboxManagerEnvConfig
  */
 public class ManagerConfig {
 
     private static final int UUID_LENGTH = 25;
 
-    // 容器相关配置
+    // Container related configuration
     private String containerPrefixKey;
 
-    // Redis配置
+    // Redis configuration
     @NotNull
     private Boolean redisEnabled;
 
@@ -62,15 +62,15 @@ public class ManagerConfig {
         this.portRange = builder.portRange;
         this.poolSize = builder.poolSize;
 
-        // 执行验证
+        // Execute validation
         validate();
     }
 
     /**
-     * 验证配置的有效性
+     * Validate configuration validity
      */
     private void validate() {
-        // 创建defaultMountDir目录（如果指定）
+        // Create defaultMountDir directory (if specified)
         if (fileSystemConfig.getFileSystemType() == FileSystemType.LOCAL && fileSystemConfig instanceof LocalFileSystemConfig localFileSystemConfig) {
             File dir = new File(localFileSystemConfig.getMountDir());
             if (!dir.exists()) {
@@ -78,7 +78,7 @@ public class ManagerConfig {
             }
         }
 
-        // 验证OSS配置
+        // Validate OSS configuration
         if (fileSystemConfig.getFileSystemType() == FileSystemType.OSS && fileSystemConfig instanceof OssConfig ossConfig) {
             validateRequired("ossEndpoint", ossConfig.getOssEndpoint(), "file_system is 'oss'");
             validateRequired("ossAccessKeyId", ossConfig.getOssAccessKeyId(), "file_system is 'oss'");
@@ -86,7 +86,7 @@ public class ManagerConfig {
             validateRequired("ossBucketName", ossConfig.getOssBucketName(), "file_system is 'oss'");
         }
 
-        // 验证Redis配置
+        // Validate Redis configuration
         if (redisEnabled) {
             validateRequired("redisServer", redisConfig.getRedisServer(), "redis is enabled");
             validateRequired("redisPort", redisConfig.getRedisPort(), "redis is enabled");
@@ -95,7 +95,7 @@ public class ManagerConfig {
             validateRequired("redisContainerPoolKey", redisConfig.getRedisContainerPoolKey(), "redis is enabled");
         }
 
-        // 验证AgentRun配置
+        // Validate AgentRun configuration
         if (clientConfig.getClientType() == ContainerManagerType.AGENTRUN && clientConfig instanceof AgentRunClientConfig agentRunClientConfig) {
             validateRequired("agentRunAccessKeyId", agentRunClientConfig.getAgentRunAccessKeyId(), "container_deployment is 'agentrun'");
             validateRequired("agentRunAccessKeySecret", agentRunClientConfig.getAgentRunAccessKeySecret(), "container_deployment is 'agentrun'");
@@ -143,7 +143,7 @@ public class ManagerConfig {
     }
 
     /**
-     * Builder类，用于构建ManagerConfig实例
+     * Builder class for constructing ManagerConfig instances
      */
     public static class Builder {
         private String containerPrefixKey = "runtime_sandbox_container_";

@@ -22,11 +22,7 @@ import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfi
 import io.agentscope.runtime.sandbox.manager.collections.ContainerQueue;
 import io.agentscope.runtime.sandbox.manager.collections.InMemoryContainerQueue;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
-import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.model.container.*;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistry;
 import io.agentscope.runtime.sandbox.manager.util.PortManager;
@@ -59,12 +55,12 @@ public class SandboxManager implements AutoCloseable {
     private final ManagerConfig managerConfig;
     private BaseClient containerClient;
     private final StorageManager storageManager;
-    
+
     // Container pool management
     private final int poolSize;
     private final ContainerQueue poolQueue;
     private final SandboxType defaultPoolType;
-    
+
     // Port management (thread-safe)
     private final PortManager portManager;
 
@@ -85,13 +81,13 @@ public class SandboxManager implements AutoCloseable {
         this.defaultPoolType = SandboxType.BASE; // Default pool type
         this.poolQueue = new InMemoryContainerQueue(); // Use in-memory queue for now
         this.portManager = new PortManager(managerConfig.getPortRange()); // Thread-safe port manager
-        
+
         logger.info("Initializing SandboxManager with container manager: " + this.containerManagerType);
         logger.info("Container pool size: " + this.poolSize);
 
         switch (this.containerManagerType) {
             case DOCKER:
-                // Todo: 让DockerClient支持DockerClientConfig配置
+                // Todo: Make DockerClient support DockerClientConfig configuration
                 DockerClient dockerClient = new DockerClient();
                 this.containerClient = dockerClient;
                 this.client = dockerClient.connectDocker();
@@ -115,7 +111,7 @@ public class SandboxManager implements AutoCloseable {
             default:
                 throw new IllegalArgumentException("Unsupported container manager type: " + this.containerManagerType);
         }
-        
+
         // Initialize container pool if pool size > 0
         if (this.poolSize > 0) {
             initContainerPool();
@@ -128,22 +124,22 @@ public class SandboxManager implements AutoCloseable {
      */
     private void initContainerPool() {
         logger.info("Initializing container pool with size: " + poolSize);
-        
+
         while (poolQueue.size() < poolSize) {
             try {
                 // Create a container for the pool using default pool type
                 ContainerModel containerModel = createContainer(defaultPoolType, null, null, null);
-                
+
                 if (containerModel != null) {
                     // Check pool size again to avoid race condition
                     if (poolQueue.size() < poolSize) {
                         poolQueue.enqueue(containerModel);
-                        logger.info("Added container to pool: " + containerModel.getContainerName() + 
-                                   " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
+                        logger.info("Added container to pool: " + containerModel.getContainerName() +
+                                " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
                     } else {
                         // Pool size reached, release this container
-                        logger.info("Pool size limit reached, releasing container: " + 
-                                   containerModel.getContainerName());
+                        logger.info("Pool size limit reached, releasing container: " +
+                                containerModel.getContainerName());
                         releaseContainer(containerModel);
                         break;
                     }
@@ -157,133 +153,180 @@ public class SandboxManager implements AutoCloseable {
                 break;
             }
         }
-        
+
         logger.info("Container pool initialization complete. Pool size: " + poolQueue.size());
     }
-    
+
     /**
      * Create a container from the pool
      * Corresponds to Python's create_from_pool()
-     * 
+     *
      * @param sandboxType The type of sandbox to create
      * @return The container name, or null if failed
      */
     public ContainerModel createFromPool(SandboxType sandboxType) {
         // If requested type is not the default pool type, create directly
         if (sandboxType != defaultPoolType) {
-            logger.info("Requested type " + sandboxType + " differs from pool type " + 
-                       defaultPoolType + ", creating directly");
+            logger.info("Requested type " + sandboxType + " differs from pool type " +
+                    defaultPoolType + ", creating directly");
             return createContainer(sandboxType, null, null, null);
         }
-        
+
         int attempts = 0;
         int maxAttempts = poolSize + 1;
-        
+
         while (attempts < maxAttempts) {
             attempts++;
-            
+
             try {
                 // Create a new container to add to the pool first
                 ContainerModel newContainer = createContainer(defaultPoolType, null, null, null);
                 if (newContainer != null) {
                     poolQueue.enqueue(newContainer);
                 }
-                
+
                 // Dequeue a container from the pool
                 ContainerModel containerModel = poolQueue.dequeue();
-                
+
                 if (containerModel == null) {
                     logger.warning("No container available in pool after " + attempts + " attempts");
                     continue;
                 }
-                
+
                 logger.info("Retrieved container from pool: " + containerModel.getContainerName());
-                
+
                 // Verify the container version matches the current registered image
                 String currentImage = SandboxRegistry.getImageByType(defaultPoolType)
                         .orElse(containerModel.getVersion());
-                
+
                 if (!currentImage.equals(containerModel.getVersion())) {
-                    logger.warning("Container " + containerModel.getContainerName() + 
-                                 " is outdated (has: " + containerModel.getVersion() + 
-                                 ", current: " + currentImage + "), releasing and trying next");
+                    logger.warning("Container " + containerModel.getContainerName() +
+                            " is outdated (has: " + containerModel.getVersion() +
+                            ", current: " + currentImage + "), releasing and trying next");
                     releaseContainer(containerModel);
                     continue;
                 }
-                
+
                 // Verify container still exists
                 if (!containerClient.inspectContainer(containerModel.getContainerId())) {
-                    logger.warning("Container " + containerModel.getContainerId() + 
-                                 " not found or has been removed externally, trying next");
+                    logger.warning("Container " + containerModel.getContainerId() +
+                            " not found or has been removed externally, trying next");
                     // Container doesn't exist, just continue to next one
                     continue;
                 }
-                
+
                 // Verify container is still running
                 String status = containerClient.getContainerStatus(containerModel.getContainerId());
                 if (!"running".equals(status)) {
-                    logger.warning("Container " + containerModel.getContainerId() + 
-                                 " is not running (status: " + status + "), trying next");
+                    logger.warning("Container " + containerModel.getContainerId() +
+                            " is not running (status: " + status + "), trying next");
                     releaseContainer(containerModel);
                     continue;
                 }
-                
-                logger.info("Successfully retrieved running container from pool: " + 
-                           containerModel.getContainerName());
+
+                logger.info("Successfully retrieved running container from pool: " +
+                        containerModel.getContainerName());
                 return containerModel;
-                
+
             } catch (Exception e) {
-                logger.severe("Error getting container from pool (attempt " + attempts + "): " + 
-                            e.getMessage());
+                logger.severe("Error getting container from pool (attempt " + attempts + "): " +
+                        e.getMessage());
                 e.printStackTrace();
             }
         }
-        
+
         // Failed to get from pool, create a new one
-        logger.warning("Failed to get container from pool after " + maxAttempts + 
-                      " attempts, creating new container");
+        logger.warning("Failed to get container from pool after " + maxAttempts +
+                " attempts, creating new container");
         return createContainer(sandboxType, null, null, null);
     }
-    
+
+    /**
+     * Create a container from the pool and add it to the sandbox map for management
+     * This allows the container to be released using release(sessionId)
+     *
+     * @param sandboxType The type of sandbox to create
+     * @param userID      The user ID
+     * @param sessionID   The session ID
+     * @return The container model, or null if failed
+     */
+    public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID) {
+        // Get container from pool (call the single-parameter version)
+        ContainerModel containerModel = createFromPool(sandboxType);
+
+        if (containerModel == null) {
+            logger.severe("Failed to get container from pool");
+            return null;
+        }
+
+        // Add to sandbox map for unified management using the provided sessionID as the key
+        // but keep the container's original random sessionId
+        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        sandboxMap.put(key, containerModel);
+
+        logger.info("Added pool container to sandbox map: " + containerModel.getContainerName() +
+                " (userID: " + userID + ", sessionID(key): " + sessionID +
+                ", container sessionId: " + containerModel.getSessionId() + ")");
+
+        return containerModel;
+    }
+
     /**
      * Helper method to create a container (internal use)
      * This is separated from getSandbox for pool management
      */
-    private ContainerModel createContainer(SandboxType sandboxType, String mountDir, 
-                                          String storagePath, Map<String, String> environment) {
+    private ContainerModel createContainer(SandboxType sandboxType, String mountDir,
+                                           String storagePath, Map<String, String> environment) {
+        // Initialize environment if null
         if (environment == null) {
             environment = new HashMap<>();
         }
-        
+
+// Validate environment values
+        for (Map.Entry<String, String> entry : environment.entrySet()) {
+            String value = entry.getValue();
+            if (value == null) {
+                logger.warning("Environment variable " + entry.getKey() + " has null value");
+                return null;
+            }
+        }
+
         String workdir = "/workspace";
         String default_mount_dir = managerConfig.getFileSystemConfig().getMountDir();
         String[] portsArray = {"80/tcp"};
         List<String> ports = Arrays.asList(portsArray);
 
-        // Create port mapping
+// Create port mapping
         Map<String, Integer> portMapping = createPortMapping(ports);
+        logger.info("Port mapping: " + portMapping);
 
-        // Get image name and configuration from registry
+// Get image name and configuration from registry
         String imageName = SandboxRegistry.getImageByType(sandboxType)
                 .orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
-        
-        // Get sandbox configuration if available
+
+// Get sandbox configuration if available
         SandboxConfig sandboxConfig = SandboxRegistry.getConfigByType(sandboxType).orElse(null);
         if (sandboxConfig != null) {
+            logger.info("Using registered sandbox configuration: " + sandboxConfig.getDescription());
             // Merge environment variables from config
             if (sandboxConfig.getEnvironment() != null && !sandboxConfig.getEnvironment().isEmpty()) {
                 Map<String, String> mergedEnv = new HashMap<>(sandboxConfig.getEnvironment());
-                mergedEnv.putAll(environment);
+                if (environment != null) {
+                    mergedEnv.putAll(environment);
+                }
                 environment = mergedEnv;
             }
         }
 
-        logger.info("Creating container with image: " + imageName);
+        logger.info("Checking image: " + imageName);
         if (containerManagerType == ContainerManagerType.DOCKER) {
             if (!containerClient.ensureImageAvailable(imageName)) {
-                logger.severe("Cannot get image: " + imageName);
-                return null;
+                logger.severe("Can not get image: " + imageName);
+                throw new RuntimeException("Pull image failed: " + imageName);
             }
+            logger.info("Docker image is ready: " + imageName);
+        } else if (containerManagerType == ContainerManagerType.KUBERNETES) {
+            logger.info("Kubernetes image is ready: " + imageName);
         }
 
         String sessionId = RandomStringGenerator.generateRandomString(22);
@@ -303,13 +346,18 @@ public class SandboxManager implements AutoCloseable {
         }
 
         if (storagePath == null) {
-            storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath() + '/' + sessionId;
+            storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath();
         }
 
-        // Download from storage if configured
-        if (!mountDir.isEmpty() && !storagePath.isEmpty() && 
-            containerManagerType != ContainerManagerType.AGENTRUN) {
-            storageManager.downloadFolder(storagePath, mountDir);
+// If storage path is configured and not AgentRun deployment, download files from storage to mount directory
+        if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN) {
+            logger.info("Downloading from storage path: " + storagePath + " to mount dir: " + mountDir);
+            boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
+            if (downloadSuccess) {
+                logger.info("Successfully downloaded files from storage");
+            } else {
+                logger.warning("Failed to download files from storage, continuing with empty mount dir");
+            }
         }
 
         String runtimeToken = RandomStringGenerator.generateRandomString(32);
@@ -318,98 +366,94 @@ public class SandboxManager implements AutoCloseable {
         List<VolumeBinding> volumeBindings = new ArrayList<>();
         volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
 
-        // Add readonly mounts
+// Add read-only mounts
         Map<String, String> readonlyMounts = managerConfig.getFileSystemConfig().getReadonlyMounts();
         if (readonlyMounts != null && !readonlyMounts.isEmpty()) {
+            logger.info("Adding readonly mounts: " + readonlyMounts.size() + " mount(s)");
             for (Map.Entry<String, String> entry : readonlyMounts.entrySet()) {
                 String hostPath = entry.getKey();
                 String containerPath = entry.getValue();
 
+                // Ensure host path is absolute path
                 if (!java.nio.file.Paths.get(hostPath).isAbsolute()) {
                     hostPath = java.nio.file.Paths.get(hostPath).toAbsolutePath().toString();
+                    logger.info("Converting relative path to absolute: " + hostPath);
                 }
 
+                // Check if host path exists
                 java.io.File hostFile = new java.io.File(hostPath);
                 if (!hostFile.exists()) {
-                    logger.warning("Readonly mount host path does not exist: " + hostPath);
+                    logger.warning("Readonly mount host path does not exist: " + hostPath + ", skipping");
                     continue;
                 }
 
                 volumeBindings.add(new VolumeBinding(hostPath, containerPath, "ro"));
+                logger.info("Added readonly mount: " + hostPath + " -> " + containerPath);
             }
         }
 
-        String runtimeConfig = "runc";
+        String runtimeConfig = "runc"; // or "nvidia" etc.
         String containerName = this.managerConfig.getContainerPrefixKey() + sessionId.toLowerCase();
 
-        try {
-            String containerId = containerClient.createContainer(containerName, imageName, ports, 
-                                                                portMapping, volumeBindings, 
-                                                                environment, runtimeConfig);
+// Todo: need to judge container name uniqueness?
 
-            String[] mappedPorts = portMapping.values().stream()
-                                              .map(String::valueOf)
-                                              .toArray(String[]::new);
+// Use unified BaseClient interface to create container
+        String containerId = containerClient.createContainer(containerName, imageName, ports, portMapping, volumeBindings, environment, runtimeConfig);
 
-            String baseHost;
-            String accessPort;
+// Convert mapped host ports to string array
+        String[] mappedPorts = portMapping.values().stream().map(String::valueOf).toArray(String[]::new);
 
-            if (containerManagerType == ContainerManagerType.KUBERNETES) {
-                try {
-                    String externalIP = ((KubernetesClient) containerClient)
-                                       .waitForLoadBalancerExternalIP(containerName, 60);
-                    if (externalIP != null && !externalIP.isEmpty()) {
-                        baseHost = externalIP;
-                        accessPort = "80";
-                    } else {
-                        baseHost = "localhost";
-                        accessPort = mappedPorts[0];
-                    }
-                } catch (Exception e) {
+// Determine correct access URL based on container manager type
+        String baseHost;
+        String accessPort;
+
+        if (containerManagerType == ContainerManagerType.KUBERNETES) {
+            // In Kubernetes environment, use LoadBalancer's External IP
+            try {
+                // Wait for LoadBalancer to assign External IP (max 60 seconds)
+                String externalIP = ((KubernetesClient) containerClient).waitForLoadBalancerExternalIP(containerName, 60);
+                if (externalIP != null && !externalIP.isEmpty()) {
+                    baseHost = externalIP;
+                    accessPort = "80"; // LoadBalancer uses port 80 by default
+                    logger.info("Kubernetes LoadBalancer environment: using External IP " + externalIP + " port 80");
+                } else {
+                    logger.warning("Unable to get LoadBalancer External IP, using localhost and mapped port");
                     baseHost = "localhost";
                     accessPort = mappedPorts[0];
                 }
-            } else {
+            } catch (Exception e) {
+                logger.warning("Failed to get LoadBalancer External IP, using localhost and mapped port: " + e.getMessage());
                 baseHost = "localhost";
                 accessPort = mappedPorts[0];
             }
-
-            ContainerModel containerModel = ContainerModel.builder()
-                    .sessionId(sessionId)
-                    .containerId(containerId)
-                    .containerName(containerName)
-                    .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
-                    .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken))
-                    .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
-                    .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
-                    .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
-                    .ports(mappedPorts)
-                    .mountDir(mountDir)
-                    .storagePath(storagePath)
-                    .runtimeToken(runtimeToken)
-                    .authToken(runtimeToken)
-                    .version(imageName)
-                    .build();
-
-            // Register ports for this container (for later cleanup)
-            if (containerManagerType != ContainerManagerType.KUBERNETES) {
-                int[] allocatedPorts = portMapping.values().stream().mapToInt(Integer::intValue).toArray();
-                portManager.registerContainerPorts(containerName, allocatedPorts);
-            }
-            
-            // Start the container
-            containerClient.startContainer(containerId);
-            
-            logger.info("Created and started container: " + containerName);
-            return containerModel;
-            
-        } catch (Exception e) {
-            logger.severe("Failed to create container: " + e.getMessage());
-            e.printStackTrace();
-            return null;
+        } else {
+            // Docker environment uses mapped ports
+            baseHost = "localhost";
+            accessPort = mappedPorts[0];
         }
+
+        ContainerModel containerModel = ContainerModel.builder()
+                .sessionId(sessionId)
+                .containerId(containerId)
+                .containerName(containerName)
+                .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
+                .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken))
+                .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
+                .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
+                .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
+                .ports(mappedPorts)
+                .mountDir(mountDir)
+                .storagePath(storagePath)
+                .runtimeToken(runtimeToken)
+                .authToken(runtimeToken)
+                .version(imageName)
+                .build();
+
+        containerClient.startContainer(containerId);
+
+        return containerModel;
     }
-    
+
     /**
      * Release a container (stop and remove)
      */
@@ -417,25 +461,24 @@ public class SandboxManager implements AutoCloseable {
         if (containerModel == null) {
             return;
         }
-        
+
         try {
             logger.info("Releasing container: " + containerModel.getContainerName());
-            
+
             // Release ports first
             portManager.releaseContainerPorts(containerModel.getContainerName());
-            
+
             // Stop and remove container
             containerClient.stopContainer(containerModel.getContainerId());
             containerClient.removeContainer(containerModel.getContainerId());
-            
+
             // Upload to storage if configured
             if (containerModel.getMountDir() != null && containerModel.getStoragePath() != null) {
-                // TODO: Implement upload to storage when container is released
-                // storageManager.uploadToStorage(containerModel.getMountDir(), containerModel.getStoragePath());
+                storageManager.uploadFolder(containerModel.getMountDir(), containerModel.getStoragePath());
             }
         } catch (Exception e) {
-            logger.warning("Error releasing container " + containerModel.getContainerName() + 
-                         ": " + e.getMessage());
+            logger.warning("Error releasing container " + containerModel.getContainerName() +
+                    ": " + e.getMessage());
         }
     }
 
@@ -464,182 +507,9 @@ public class SandboxManager implements AutoCloseable {
         if (sandboxMap.containsKey(key)) {
             return sandboxMap.get(key);
         } else {
-            // Initialize environment if null
-            if (environment == null) {
-                environment = new HashMap<>();
-            }
-            
-            // Validate environment values
-            for (Map.Entry<String, String> entry : environment.entrySet()) {
-                String value = entry.getValue();
-                if (value == null) {
-                    logger.warning("Environment variable " + entry.getKey() + " has null value");
-                    return null;
-                }
-            }
-
-            String workdir = "/workspace";
-            String default_mount_dir = managerConfig.getFileSystemConfig().getMountDir();
-            String[] portsArray = {"80/tcp"};
-            List<String> ports = Arrays.asList(portsArray);
-
-            // Create port mapping
-            Map<String, Integer> portMapping = createPortMapping(ports);
-            logger.info("Port mapping: " + portMapping);
-
-            // Get image name and configuration from registry
-            String imageName = SandboxRegistry.getImageByType(sandboxType)
-                    .orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
-            
-            // Get sandbox configuration if available
-            SandboxConfig sandboxConfig = SandboxRegistry.getConfigByType(sandboxType).orElse(null);
-            if (sandboxConfig != null) {
-                logger.info("Using registered sandbox configuration: " + sandboxConfig.getDescription());
-                // Merge environment variables from config
-                if (sandboxConfig.getEnvironment() != null && !sandboxConfig.getEnvironment().isEmpty()) {
-                    Map<String, String> mergedEnv = new HashMap<>(sandboxConfig.getEnvironment());
-                    if (environment != null) {
-                        mergedEnv.putAll(environment);
-                    }
-                    environment = mergedEnv;
-                }
-            }
-
-            logger.info("Checking image: " + imageName);
-            if (containerManagerType == ContainerManagerType.DOCKER) {
-                if (!containerClient.ensureImageAvailable(imageName)) {
-                    logger.severe("Can not get image: " + imageName);
-                    throw new RuntimeException("Pull image failed: " + imageName);
-                }
-                logger.info("Docker image is ready: " + imageName);
-            } else if (containerManagerType == ContainerManagerType.KUBERNETES) {
-                logger.info("Kubernetes image is ready: " + imageName);
-            }
-
-            String sessionId = RandomStringGenerator.generateRandomString(22);
-            String currentDir = System.getProperty("user.dir");
-
-            if (mountDir == null || mountDir.isEmpty()) {
-                mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
-            }
-
-            if (this.managerConfig.getClientConfig().getClientType() == ContainerManagerType.AGENTRUN) {
-                mountDir = Paths.get(mountDir).toAbsolutePath().toString();
-            }
-
-            java.io.File file = new java.io.File(mountDir);
-            if (!file.exists()) {
-                file.mkdirs();
-            }
-
-            if (storagePath == null) {
-                storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath() + '/' + sessionId;
-            }
-
-            // 如果配置了存储路径且不是 AgentRun 部署，从存储下载文件到挂载目录
-            if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN) {
-                logger.info("Downloading from storage path: " + storagePath + " to mount dir: " + mountDir);
-                boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
-                if (downloadSuccess) {
-                    logger.info("Successfully downloaded files from storage");
-                } else {
-                    logger.warning("Failed to download files from storage, continuing with empty mount dir");
-                }
-            }
-
-            String runtimeToken = RandomStringGenerator.generateRandomString(32);
-            environment.put("SECRET_TOKEN", runtimeToken);
-
-            List<VolumeBinding> volumeBindings = new ArrayList<>();
-            volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
-
-            // 添加只读挂载
-            Map<String, String> readonlyMounts = managerConfig.getFileSystemConfig().getReadonlyMounts();
-            if (readonlyMounts != null && !readonlyMounts.isEmpty()) {
-                logger.info("Adding readonly mounts: " + readonlyMounts.size() + " mount(s)");
-                for (Map.Entry<String, String> entry : readonlyMounts.entrySet()) {
-                    String hostPath = entry.getKey();
-                    String containerPath = entry.getValue();
-
-                    // 确保主机路径是绝对路径
-                    if (!java.nio.file.Paths.get(hostPath).isAbsolute()) {
-                        hostPath = java.nio.file.Paths.get(hostPath).toAbsolutePath().toString();
-                        logger.info("Converting relative path to absolute: " + hostPath);
-                    }
-
-                    // 检查主机路径是否存在
-                    java.io.File hostFile = new java.io.File(hostPath);
-                    if (!hostFile.exists()) {
-                        logger.warning("Readonly mount host path does not exist: " + hostPath + ", skipping");
-                        continue;
-                    }
-
-                    volumeBindings.add(new VolumeBinding(hostPath, containerPath, "ro"));
-                    logger.info("Added readonly mount: " + hostPath + " -> " + containerPath);
-                }
-            }
-
-            String runtimeConfig = "runc"; // or "nvidia" etc.
-            String containerName = this.managerConfig.getContainerPrefixKey() + sessionId.toLowerCase();
-
-            // Todo: 需要判断一下是否已经有了同名的容器
-
-            // Use unified BaseClient interface to create container
-            String containerId = containerClient.createContainer(containerName, imageName, ports, portMapping, volumeBindings, environment, runtimeConfig);
-
-            // Convert mapped host ports to string array
-            String[] mappedPorts = portMapping.values().stream().map(String::valueOf).toArray(String[]::new);
-
-            // Determine correct access URL based on container manager type
-            String baseHost;
-            String accessPort;
-
-            if (containerManagerType == ContainerManagerType.KUBERNETES) {
-                // In Kubernetes environment, use LoadBalancer's External IP
-                try {
-                    // Wait for LoadBalancer to assign External IP (max 60 seconds)
-                    String externalIP = ((KubernetesClient) containerClient).waitForLoadBalancerExternalIP(containerName, 60);
-                    if (externalIP != null && !externalIP.isEmpty()) {
-                        baseHost = externalIP;
-                        accessPort = "80"; // LoadBalancer uses port 80 by default
-                        logger.info("Kubernetes LoadBalancer environment: using External IP " + externalIP + " port 80");
-                    } else {
-                        logger.warning("Unable to get LoadBalancer External IP, using localhost and mapped port");
-                        baseHost = "localhost";
-                        accessPort = mappedPorts[0];
-                    }
-                } catch (Exception e) {
-                    logger.warning("Failed to get LoadBalancer External IP, using localhost and mapped port: " + e.getMessage());
-                    baseHost = "localhost";
-                    accessPort = mappedPorts[0];
-                }
-            } else {
-                // Docker environment uses mapped ports
-                baseHost = "localhost";
-                accessPort = mappedPorts[0];
-            }
-
-            ContainerModel containerModel = ContainerModel.builder()
-                    .sessionId(sessionId)
-                    .containerId(containerId)
-                    .containerName(containerName)
-                    .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
-                    .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken))
-                    .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
-                    .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
-                    .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
-                    .ports(mappedPorts)
-                    .mountDir(workdir)
-                    .storagePath(storagePath)
-                    .runtimeToken(runtimeToken)
-                    .authToken(runtimeToken)
-                    .version(imageName)
-                    .build();
-
+            ContainerModel containerModel = createContainer(sandboxType, mountDir, storagePath, environment);
             sandboxMap.put(key, containerModel);
-
             startSandbox(sandboxType, userID, sessionID);
-
             return containerModel;
         }
     }
@@ -706,7 +576,7 @@ public class SandboxManager implements AutoCloseable {
 
                 // Release ports
                 portManager.releaseContainerPorts(containerName);
-                
+
                 containerClient.stopContainer(containerId);
 
                 Thread.sleep(1000);
@@ -751,11 +621,11 @@ public class SandboxManager implements AutoCloseable {
     public Map<SandboxKey, ContainerModel> getAllSandboxes() {
         return new HashMap<>(sandboxMap);
     }
-    
+
     /**
      * Get container information by identity
      * Corresponds to Python's get_info(identity) method
-     * 
+     *
      * @param identity Container identifier - can be:
      *                 - containerName (e.g., "runtime_sandbox_container_abc123")
      *                 - sessionId (e.g., "abc123")
@@ -767,7 +637,7 @@ public class SandboxManager implements AutoCloseable {
         if (identity == null || identity.isEmpty()) {
             throw new IllegalArgumentException("Identity cannot be null or empty");
         }
-        
+
         // 1. Try to find by container name directly
         for (ContainerModel model : sandboxMap.values()) {
             if (identity.equals(model.getContainerName())) {
@@ -775,7 +645,7 @@ public class SandboxManager implements AutoCloseable {
                 return model;
             }
         }
-        
+
         // 2. Try to find by session ID
         for (ContainerModel model : sandboxMap.values()) {
             if (identity.equals(model.getSessionId())) {
@@ -783,7 +653,7 @@ public class SandboxManager implements AutoCloseable {
                 return model;
             }
         }
-        
+
         // 3. Try to find by container ID
         for (ContainerModel model : sandboxMap.values()) {
             if (identity.equals(model.getContainerId())) {
@@ -791,7 +661,7 @@ public class SandboxManager implements AutoCloseable {
                 return model;
             }
         }
-        
+
         // 4. Try as prefixed session ID (container_prefix + sessionId)
         String prefixedName = managerConfig.getContainerPrefixKey() + identity.toLowerCase();
         for (ContainerModel model : sandboxMap.values()) {
@@ -800,14 +670,14 @@ public class SandboxManager implements AutoCloseable {
                 return model;
             }
         }
-        
+
         throw new RuntimeException("No container found with identity: " + identity);
     }
-    
+
     /**
      * Release (destroy) a container by identity
      * Corresponds to Python's release(identity) method
-     * 
+     *
      * @param identity Container identifier (containerName, sessionId, or containerId)
      * @return true if successfully released, false otherwise
      */
@@ -815,10 +685,10 @@ public class SandboxManager implements AutoCloseable {
         try {
             // Get container info
             ContainerModel containerModel = getInfo(identity);
-            
-            logger.info("Releasing container with identity: " + identity + 
-                       " (container: " + containerModel.getContainerName() + ")");
-            
+
+            logger.info("Releasing container with identity: " + identity +
+                    " (container: " + containerModel.getContainerName() + ")");
+
             // Remove from sandboxMap first
             SandboxKey keyToRemove = null;
             for (Map.Entry<SandboxKey, ContainerModel> entry : sandboxMap.entrySet()) {
@@ -827,39 +697,45 @@ public class SandboxManager implements AutoCloseable {
                     break;
                 }
             }
-            
+
             if (keyToRemove != null) {
                 sandboxMap.remove(keyToRemove);
                 logger.info("Removed container from sandbox map: " + keyToRemove);
             }
-            
+
             // Release ports
             portManager.releaseContainerPorts(containerModel.getContainerName());
-            
+
             // Stop and remove container
             containerClient.stopContainer(containerModel.getContainerId());
             containerClient.removeContainer(containerModel.getContainerId());
-            
+
             logger.info("Container destroyed: " + containerModel.getContainerName());
-            
+
             // Upload to storage if configured
-            if (containerModel.getMountDir() != null && 
-                containerModel.getStoragePath() != null) {
+            if (containerModel.getMountDir() != null &&
+                    containerModel.getStoragePath() != null) {
                 try {
-                    logger.info("Uploading container data to storage: " + 
-                               containerModel.getStoragePath());
-                    // TODO: Implement uploadFolder when ready
-                    // storageManager.uploadFolder(
-                    //     containerModel.getMountDir(), 
-                    //     containerModel.getStoragePath()
-                    // );
+                    logger.info("Uploading container data to storage: " +
+                            containerModel.getStoragePath());
+                    System.out.println("Uploading from " + containerModel.getMountDir() +
+                            " to " + containerModel.getStoragePath());
+                    boolean uploaded = storageManager.uploadFolder(
+                            containerModel.getMountDir(),
+                            containerModel.getStoragePath()
+                    );
+                    if (uploaded) {
+                        logger.info("Successfully uploaded container data to storage");
+                    } else {
+                        logger.warning("Failed to upload container data to storage");
+                    }
                 } catch (Exception e) {
                     logger.warning("Failed to upload to storage: " + e.getMessage());
                 }
             }
-            
+
             return true;
-            
+
         } catch (RuntimeException e) {
             logger.warning("Container not found for identity: " + identity);
             return false;
@@ -912,7 +788,7 @@ public class SandboxManager implements AutoCloseable {
      */
     public void cleanupAllSandboxes() {
         logger.info("Starting cleanup of all sandbox containers...");
-        
+
         // Clean up pool first (corresponds to Python's pool cleanup)
         try {
             logger.info("Cleaning up container pool (current size: " + poolQueue.size() + ")");
@@ -928,7 +804,7 @@ public class SandboxManager implements AutoCloseable {
             logger.severe("Error cleaning up container pool: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         // Clean up rest of containers in sandboxMap
         if (sandboxMap.isEmpty()) {
             logger.info("No additional sandbox containers to clean up");
@@ -938,19 +814,19 @@ public class SandboxManager implements AutoCloseable {
 
             for (SandboxKey key : new HashSet<>(sandboxMap.keySet())) {
                 try {
-                    logger.info("Cleaning up " + key.getSandboxType() + " sandbox for user " + 
-                               key.getUserID() + " session " + key.getSessionID());
+                    logger.info("Cleaning up " + key.getSandboxType() + " sandbox for user " +
+                            key.getUserID() + " session " + key.getSessionID());
                     stopAndRemoveSandbox(key.getSandboxType(), key.getUserID(), key.getSessionID());
                     logger.info(key.getSandboxType() + " sandbox cleanup complete");
                 } catch (Exception e) {
-                    logger.severe("Error cleaning up " + key.getSandboxType() + 
-                                 " sandbox: " + e.getMessage());
+                    logger.severe("Error cleaning up " + key.getSandboxType() +
+                            " sandbox: " + e.getMessage());
                 }
             }
 
             sandboxMap.clear();
         }
-        
+
         logger.info("All sandbox containers have been cleaned up!");
     }
 
@@ -962,20 +838,20 @@ public class SandboxManager implements AutoCloseable {
     @Override
     public void close() {
         logger.info("Closing SandboxManager and cleaning up all resources");
-        
+
         // Cleanup all containers first
         cleanupAllSandboxes();
-        
+
         // Close storage manager
         if (storageManager != null) {
             storageManager.close();
         }
-        
+
         // Clear port manager
         if (portManager != null) {
             portManager.clear();
         }
-        
+
         logger.info("SandboxManager closed successfully");
     }
 
@@ -1078,7 +954,7 @@ public class SandboxManager implements AutoCloseable {
                     logger.severe("Failed to allocate " + containerPorts.size() + " ports");
                     return portMapping;
                 }
-                
+
                 for (int i = 0; i < containerPorts.size() && i < allocatedPorts.length; i++) {
                     String containerPort = containerPorts.get(i);
                     Integer hostPort = allocatedPorts[i];

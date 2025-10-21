@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.TrainingSandboxTools;
 import org.junit.jupiter.api.AfterEach;
@@ -77,7 +78,10 @@ public class BfclSandboxTest {
         // Initialize sandbox manager
         java.util.logging.Logger.getLogger("").setLevel(java.util.logging.Level.OFF);
         try {
-            BaseClientConfig config = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+            BaseClientConfig clientConfig = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+            ManagerConfig config = new ManagerConfig.Builder()
+                    .containerDeployment(clientConfig)
+                    .build();
             sandboxManager = new SandboxManager(config);
             tools = new TrainingSandboxTools(sandboxManager);
             System.out.println("SandboxManager initialized successfully");

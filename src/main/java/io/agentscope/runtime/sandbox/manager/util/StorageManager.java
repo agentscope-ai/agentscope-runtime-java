@@ -33,7 +33,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.logging.Logger;
 
 /**
- * 存储管理器，负责处理本地和云存储的文件下载
+ * Storage Manager responsible for handling file downloads from local and cloud storage
  */
 public class StorageManager {
     private static final Logger logger = Logger.getLogger(StorageManager.class.getName());
@@ -44,7 +44,7 @@ public class StorageManager {
     public StorageManager(FileSystemConfig fileSystemConfig) {
         this.fileSystemConfig = fileSystemConfig;
         
-        // 如果是 OSS 存储，初始化 OSS 客户端
+        // If OSS storage, initialize OSS client
         if (fileSystemConfig.getFileSystemType() == FileSystemType.OSS && fileSystemConfig instanceof OssConfig ossConfig) {
             this.ossClient = new OSSClientBuilder().build(
                 ossConfig.getOssEndpoint(),
@@ -56,10 +56,10 @@ public class StorageManager {
     }
 
     /**
-     * 路径连接，类似 Python 的 os.path.join
+     * Path join, similar to Python's os.path.join
      *
-     * @param parts 路径部分
-     * @return 连接后的路径
+     * @param parts path components
+     * @return joined path
      */
     public String pathJoin(String... parts) {
         if (parts == null || parts.length == 0) {
@@ -75,11 +75,11 @@ public class StorageManager {
     }
 
     /**
-     * 从存储下载文件夹到本地目录
+     * Download folder from storage to local directory
      *
-     * @param storagePath 存储路径（OSS 对象前缀或本地路径）
-     * @param localDir    本地目标目录
-     * @return 是否成功下载
+     * @param storagePath storage path (OSS object prefix or local path)
+     * @param localDir    local target directory
+     * @return whether download succeeded
      */
     public boolean downloadFolder(String storagePath, String localDir) {
         if (storagePath == null || storagePath.isEmpty()) {
@@ -96,7 +96,7 @@ public class StorageManager {
             if (fileSystemConfig.getFileSystemType() == FileSystemType.OSS) {
                 return downloadFromOss(storagePath, localDir);
             } else {
-                // LOCAL 类型：从本地路径复制到目标路径
+                // LOCAL type: copy from local path to target path
                 return copyLocalFolder(storagePath, localDir);
             }
         } catch (Exception e) {
@@ -106,11 +106,11 @@ public class StorageManager {
     }
 
     /**
-     * 从 OSS 下载文件夹
+     * Download folder from OSS
      *
-     * @param ossPrefix  OSS 对象前缀
-     * @param localDir   本地目标目录
-     * @return 是否成功下载
+     * @param ossPrefix  OSS object prefix
+     * @param localDir   local target directory
+     * @return whether download succeeded
      */
     private boolean downloadFromOss(String ossPrefix, String localDir) {
         if (ossClient == null || !(fileSystemConfig instanceof OssConfig ossConfig)) {
@@ -119,7 +119,7 @@ public class StorageManager {
         }
 
         try {
-            // 确保本地目录存在
+            // Ensure local directory exists
             File localDirectory = new File(localDir);
             if (!localDirectory.exists()) {
                 localDirectory.mkdirs();
@@ -127,12 +127,12 @@ public class StorageManager {
 
             String bucketName = ossConfig.getOssBucketName();
             
-            // 确保前缀以 / 结尾
+            // Ensure prefix ends with /
             String prefix = ossPrefix.endsWith("/") ? ossPrefix : ossPrefix + "/";
             
             logger.info("Downloading from OSS bucket: " + bucketName + ", prefix: " + prefix + " to " + localDir);
 
-            // 列出所有对象
+            // List all objects
             ListObjectsRequest listObjectsRequest = new ListObjectsRequest(bucketName)
                 .withPrefix(prefix)
                 .withMaxKeys(1000);
@@ -146,22 +146,22 @@ public class StorageManager {
                 for (OSSObjectSummary objectSummary : objectListing.getObjectSummaries()) {
                     String objectKey = objectSummary.getKey();
                     
-                    // 跳过目录标记对象
+                    // Skip directory marker objects
                     if (objectKey.endsWith("/")) {
                         continue;
                     }
                     
-                    // 计算相对路径
+                    // Calculate relative path
                     String relativePath = objectKey.substring(prefix.length());
                     File localFile = new File(localDir, relativePath);
                     
-                    // 确保父目录存在
+                    // Ensure parent directory exists
                     File parentDir = localFile.getParentFile();
                     if (parentDir != null && !parentDir.exists()) {
                         parentDir.mkdirs();
                     }
                     
-                    // 下载文件
+                    // Download file
                     try {
                         OSSObject ossObject = ossClient.getObject(bucketName, objectKey);
                         try (InputStream inputStream = ossObject.getObjectContent();
@@ -193,11 +193,11 @@ public class StorageManager {
     }
 
     /**
-     * 从本地路径复制文件夹
+     * Copy folder from local path
      *
-     * @param sourcePath 源路径
-     * @param targetPath 目标路径
-     * @return 是否成功复制
+     * @param sourcePath source path
+     * @param targetPath target path
+     * @return whether copy succeeded
      */
     private boolean copyLocalFolder(String sourcePath, String targetPath) {
         try {
@@ -209,12 +209,12 @@ public class StorageManager {
                 return false;
             }
 
-            // 确保目标目录存在
+            // Ensure target directory exists
             if (!Files.exists(target)) {
                 Files.createDirectories(target);
             }
 
-            // 如果源是目录，递归复制
+            // If source is directory, copy recursively
             if (Files.isDirectory(source)) {
                 Files.walk(source)
                     .forEach(srcPath -> {
@@ -232,7 +232,7 @@ public class StorageManager {
                         }
                     });
             } else {
-                // 如果源是文件，直接复制
+                // If source is file, copy directly
                 Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
             }
 
@@ -247,7 +247,126 @@ public class StorageManager {
     }
 
     /**
-     * 关闭 OSS 客户端
+     * Upload local folder to storage
+     *
+     * @param localDir    local source directory
+     * @param storagePath storage path (OSS object prefix or local path)
+     * @return whether upload succeeded
+     */
+    public boolean uploadFolder(String localDir, String storagePath) {
+        if (localDir == null || localDir.isEmpty()) {
+            logger.warning("Local directory is empty, skipping upload");
+            return false;
+        }
+
+        if (storagePath == null || storagePath.isEmpty()) {
+            logger.warning("Storage path is empty, skipping upload");
+            return false;
+        }
+
+        // Check if local directory exists
+        File localDirectory = new File(localDir);
+        if (!localDirectory.exists()) {
+            logger.warning("Local directory does not exist: " + localDir);
+            return false;
+        }
+
+        try {
+            if (fileSystemConfig.getFileSystemType() == FileSystemType.OSS) {
+                return uploadToOss(localDir, storagePath);
+            } else {
+                return copyLocalFolder(localDir, storagePath);
+            }
+        } catch (Exception e) {
+            logger.severe("Failed to upload folder from " + localDir + " to " + storagePath + ": " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Upload local folder to OSS
+     *
+     * @param localDir   local source directory
+     * @param ossPrefix  OSS object prefix
+     * @return whether upload succeeded
+     */
+    private boolean uploadToOss(String localDir, String ossPrefix) {
+        if (ossClient == null || !(fileSystemConfig instanceof OssConfig ossConfig)) {
+            logger.severe("OSS client not initialized");
+            return false;
+        }
+
+        try {
+            File localDirectory = new File(localDir);
+            if (!localDirectory.exists() || !localDirectory.isDirectory()) {
+                logger.warning("Local directory does not exist or is not a directory: " + localDir);
+                return false;
+            }
+
+            String bucketName = ossConfig.getOssBucketName();
+            
+            // Ensure prefix ends with /
+            String prefix = ossPrefix.endsWith("/") ? ossPrefix : ossPrefix + "/";
+            
+            logger.info("Uploading to OSS bucket: " + bucketName + ", prefix: " + prefix + " from " + localDir);
+
+            int uploadedCount = 0;
+            uploadedCount = uploadDirectoryToOss(localDirectory, bucketName, prefix, "");
+
+            logger.info("Uploaded " + uploadedCount + " files to OSS");
+            return true;
+
+        } catch (Exception e) {
+            logger.severe("Failed to upload to OSS: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Recursively upload directory to OSS
+     *
+     * @param directory    current directory
+     * @param bucketName   OSS bucket name
+     * @param basePrefix   base prefix
+     * @param relativePath relative path
+     * @return number of files uploaded
+     */
+    private int uploadDirectoryToOss(File directory, String bucketName, String basePrefix, String relativePath) {
+        int uploadedCount = 0;
+
+        File[] files = directory.listFiles();
+        if (files == null) {
+            return 0;
+        }
+
+        for (File file : files) {
+            String currentRelativePath = relativePath.isEmpty() ? file.getName() : relativePath + "/" + file.getName();
+
+            if (file.isDirectory()) {
+                // Recursively upload subdirectories
+                uploadedCount += uploadDirectoryToOss(file, bucketName, basePrefix, currentRelativePath);
+            } else {
+                // Upload file
+                String objectKey = basePrefix + currentRelativePath;
+                
+                try {
+                    // Upload file to OSS
+                    ossClient.putObject(bucketName, objectKey, file);
+                    uploadedCount++;
+                    logger.fine("Uploaded: " + file.getAbsolutePath() + " to " + objectKey);
+                } catch (Exception e) {
+                    logger.warning("Failed to upload " + file.getAbsolutePath() + " to " + objectKey + ": " + e.getMessage());
+                }
+            }
+        }
+
+        return uploadedCount;
+    }
+
+    /**
+     * Close OSS client
      */
     public void close() {
         if (ossClient != null) {

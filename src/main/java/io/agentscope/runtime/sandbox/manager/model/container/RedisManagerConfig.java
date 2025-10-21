@@ -16,7 +16,7 @@
 package io.agentscope.runtime.sandbox.manager.model.container;
 
 /**
- * Redis管理器配置类
+ * Redis Manager Configuration Class
  */
 public class RedisManagerConfig {
     private String redisServer;
@@ -71,7 +71,7 @@ public class RedisManagerConfig {
     }
 
     /**
-     * Builder类，用于构建RedisManagerConfig实例
+     * Builder class for constructing RedisManagerConfig instances
      */
     public static class Builder {
         private String redisServer = "localhost";

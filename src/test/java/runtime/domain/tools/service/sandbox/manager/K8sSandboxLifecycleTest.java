@@ -2,6 +2,7 @@ package runtime.domain.tools.service.sandbox.manager;
 
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,8 +35,11 @@ public class K8sSandboxLifecycleTest {
 
         // Initialize Kubernetes sandbox manager
         try {
-            BaseClientConfig config = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+            BaseClientConfig clientConfig = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
             System.out.println(System.getenv("KUBECONFIG_PATH"));
+            ManagerConfig config = new ManagerConfig.Builder()
+                    .containerDeployment(clientConfig)
+                    .build();
             sandboxManager = new SandboxManager(config);
             System.out.println("Kubernetes SandboxManager initialized successfully");
         } catch (Exception e) {

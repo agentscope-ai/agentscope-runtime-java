@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 文件系统配置基类
+ * File System Configuration Base Class
  */
 public class FileSystemConfig {
     private FileSystemType fileSystemType;
@@ -56,7 +56,7 @@ public class FileSystemConfig {
     }
 
     /**
-     * Builder基类
+     * Builder Base Class
      */
     public static abstract class Builder<T extends Builder<T>> {
         protected FileSystemType fileSystemType;
