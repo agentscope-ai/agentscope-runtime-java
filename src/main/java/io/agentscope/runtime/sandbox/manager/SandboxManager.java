@@ -20,16 +20,19 @@ import io.agentscope.runtime.sandbox.manager.client.DockerClient;
 import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
-import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
+import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
 import io.agentscope.runtime.sandbox.manager.util.StorageManager;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,14 +41,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class SandboxManager {
-    Logger logger = Logger.getLogger(SandboxManager.class.getName());
-    private ManagerConfig managerConfig;
     private final Map<SandboxKey, ContainerModel> sandboxMap = new HashMap<>();
-    String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
-    public com.github.dockerjava.api.DockerClient client;
-    private BaseClient containerClient;
     private final ContainerManagerType containerManagerType;
-    private StorageManager storageManager;
+    private final Map<SandboxType, String> typeNameMap = new HashMap<>() {{
+        put(SandboxType.BASE, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
+        put(SandboxType.FILESYSTEM, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem:latest");
+        put(SandboxType.BROWSER, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest");
+        put(SandboxType.TRAINING, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest");
+        put(SandboxType.APPWORLD, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest");
+        put(SandboxType.BFCL, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-bfcl:latest");
+        put(SandboxType.WEBSHOP, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-webshop:latest");
+    }};
+    public com.github.dockerjava.api.DockerClient client;
+    Logger logger = Logger.getLogger(SandboxManager.class.getName());
+    String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
+    private final ManagerConfig managerConfig;
+    private BaseClient containerClient;
+    private final StorageManager storageManager;
 
     public SandboxManager() {
         this(new ManagerConfig.Builder().build());
@@ -90,22 +102,39 @@ public class SandboxManager {
         }
     }
 
-    private final Map<SandboxType, String> typeNameMap = new HashMap<>() {{
-        put(SandboxType.BASE, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
-        put(SandboxType.FILESYSTEM, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem:latest");
-        put(SandboxType.BROWSER, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest");
-        put(SandboxType.TRAINING, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest");
-        put(SandboxType.APPWORLD, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest");
-        put(SandboxType.BFCL, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-bfcl:latest");
-        put(SandboxType.WEBSHOP, "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-webshop:latest");
-    }};
+    private static boolean canBindPort(int port) {
+        List<String> addressesToTest = Arrays.asList("0.0.0.0", "127.0.0.1", "localhost");
+
+        for (String addr : addressesToTest) {
+            try (ServerSocket socket = new ServerSocket()) {
+                socket.setReuseAddress(false);
+                socket.bind(new InetSocketAddress(addr, port), 1);
+                return true;
+            } catch (IOException e) {
+                // Port is in use or cannot bind to this address
+            }
+        }
+        return false;
+    }
 
     public ContainerModel getSandbox(SandboxType sandboxType, String userID, String sessionID) {
+        return getSandbox(sandboxType, null, null, null, userID, sessionID);
+    }
+
+    public ContainerModel getSandbox(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID) {
         // Use composite key userID + sessionID + sandboxType to uniquely identify container
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         if (sandboxMap.containsKey(key)) {
             return sandboxMap.get(key);
         } else {
+            // Todo: 这里的environment部分还没有处理
+            for (Map.Entry<String, String> entry : environment.entrySet()) {
+                String value = entry.getValue();
+                if (value == null) {
+                    return null;
+                }
+            }
+
             String workdir = "/workspace";
             String default_mount_dir = managerConfig.getFileSystemConfig().getMountDir();
             String[] portsArray = {"80/tcp"};
@@ -131,27 +160,28 @@ public class SandboxManager {
                 logger.info("Kubernetes image is ready: " + imageName);
             }
 
-            Map<String, String> environment = new HashMap<>();
-            String secretToken = RandomStringGenerator.generateRandomString(16);
-            environment.put("SECRET_TOKEN", secretToken);
-
-            // Todo: 这里的environment部分还没有处理
-
-            String sessionId = secretToken;
+            String sessionId = RandomStringGenerator.generateRandomString(22);
             String currentDir = System.getProperty("user.dir");
-            String mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
-            
+
+            if (mountDir == null || mountDir.isEmpty()) {
+                mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
+            }
+
+            if (this.managerConfig.getClientConfig().getClientType() == ContainerManagerType.AGENTRUN) {
+                mountDir = Paths.get(mountDir).toAbsolutePath().toString();
+            }
+
             java.io.File file = new java.io.File(mountDir);
             if (!file.exists()) {
                 file.mkdirs();
             }
 
-            // 处理存储路径和下载逻辑
-            String storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath();
+            if (storagePath == null) {
+                storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath() + '/' + sessionId;
+            }
 
             // 如果配置了存储路径且不是 AgentRun 部署，从存储下载文件到挂载目录
-            if (mountDir != null && storagePath != null && 
-                containerManagerType != ContainerManagerType.AGENTRUN) {
+            if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN) {
                 logger.info("Downloading from storage path: " + storagePath + " to mount dir: " + mountDir);
                 boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
                 if (downloadSuccess) {
@@ -161,11 +191,42 @@ public class SandboxManager {
                 }
             }
 
+            String runtimeToken = RandomStringGenerator.generateRandomString(32);
+            environment.put("SECRET_TOKEN", runtimeToken);
+
             List<VolumeBinding> volumeBindings = new ArrayList<>();
             volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
 
+            // 添加只读挂载
+            Map<String, String> readonlyMounts = managerConfig.getFileSystemConfig().getReadonlyMounts();
+            if (readonlyMounts != null && !readonlyMounts.isEmpty()) {
+                logger.info("Adding readonly mounts: " + readonlyMounts.size() + " mount(s)");
+                for (Map.Entry<String, String> entry : readonlyMounts.entrySet()) {
+                    String hostPath = entry.getKey();
+                    String containerPath = entry.getValue();
+
+                    // 确保主机路径是绝对路径
+                    if (!java.nio.file.Paths.get(hostPath).isAbsolute()) {
+                        hostPath = java.nio.file.Paths.get(hostPath).toAbsolutePath().toString();
+                        logger.info("Converting relative path to absolute: " + hostPath);
+                    }
+
+                    // 检查主机路径是否存在
+                    java.io.File hostFile = new java.io.File(hostPath);
+                    if (!hostFile.exists()) {
+                        logger.warning("Readonly mount host path does not exist: " + hostPath + ", skipping");
+                        continue;
+                    }
+
+                    volumeBindings.add(new VolumeBinding(hostPath, containerPath, "ro"));
+                    logger.info("Added readonly mount: " + hostPath + " -> " + containerPath);
+                }
+            }
+
             String runtimeConfig = "runc"; // or "nvidia" etc.
-            String containerName = "sandbox-" + sandboxType.name().toLowerCase() + "-" + sessionId.toLowerCase();
+            String containerName = this.managerConfig.getContainerPrefixKey() + sessionId.toLowerCase();
+
+            // Todo: 需要判断一下是否已经有了同名的容器
 
             // Use unified BaseClient interface to create container
             String containerId = containerClient.createContainer(containerName, imageName, ports, portMapping, volumeBindings, environment, runtimeConfig);
@@ -202,7 +263,22 @@ public class SandboxManager {
                 accessPort = mappedPorts[0];
             }
 
-            ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, secretToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, secretToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, secretToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(workdir).storagePath(storagePath).runtimeToken(secretToken).authToken(secretToken).version(imageName).build();
+            ContainerModel containerModel = ContainerModel.builder()
+                    .sessionId(sessionId)
+                    .containerId(containerId)
+                    .containerName(containerName)
+                    .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
+                    .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken))
+                    .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
+                    .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
+                    .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
+                    .ports(mappedPorts)
+                    .mountDir(workdir)
+                    .storagePath(storagePath)
+                    .runtimeToken(runtimeToken)
+                    .authToken(runtimeToken)
+                    .version(imageName)
+                    .build();
 
             sandboxMap.put(key, containerModel);
 
@@ -261,7 +337,6 @@ public class SandboxManager {
             sandboxMap.remove(key);
         }
     }
-
 
     public void stopAndRemoveSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
@@ -465,21 +540,6 @@ public class SandboxManager {
                 executor.shutdownNow();
             }
         }
-    }
-
-    private static boolean canBindPort(int port) {
-        List<String> addressesToTest = Arrays.asList("0.0.0.0", "127.0.0.1", "localhost");
-
-        for (String addr : addressesToTest) {
-            try (ServerSocket socket = new ServerSocket()) {
-                socket.setReuseAddress(false);
-                socket.bind(new InetSocketAddress(addr, port), 1);
-                return true;
-            } catch (IOException e) {
-                // Port is in use or cannot bind to this address
-            }
-        }
-        return false;
     }
 
     /**
