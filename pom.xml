@@ -219,6 +219,13 @@
             <artifactId>lettuce-core</artifactId>
         </dependency>
 
+        <!-- Aliyun OSS SDK -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.17.4</version>
+        </dependency>
+
         <!-- MySQL Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

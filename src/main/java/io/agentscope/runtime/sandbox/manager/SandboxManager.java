@@ -18,8 +18,6 @@ package io.agentscope.runtime.sandbox.manager;
 import io.agentscope.runtime.sandbox.manager.client.BaseClient;
 import io.agentscope.runtime.sandbox.manager.client.DockerClient;
 import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
@@ -28,6 +26,7 @@ import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
+import io.agentscope.runtime.sandbox.manager.util.StorageManager;
 
 import java.io.IOException;
 import java.net.*;
@@ -46,6 +45,7 @@ public class SandboxManager {
     public com.github.dockerjava.api.DockerClient client;
     private BaseClient containerClient;
     private final ContainerManagerType containerManagerType;
+    private StorageManager storageManager;
 
     public SandboxManager() {
         this(new ManagerConfig.Builder().build());
@@ -57,7 +57,9 @@ public class SandboxManager {
      * @param managerConfig manager configuration
      */
     public SandboxManager(ManagerConfig managerConfig) {
+        this.managerConfig = managerConfig;
         this.containerManagerType = managerConfig.getClientConfig().getClientType();
+        this.storageManager = new StorageManager(managerConfig.getFileSystemConfig());
         logger.info("Initializing SandboxManager with container manager: " + this.containerManagerType);
 
         switch (this.containerManagerType) {
@@ -105,7 +107,7 @@ public class SandboxManager {
             return sandboxMap.get(key);
         } else {
             String workdir = "/workspace";
-            String default_mount_dir = "sessions_mount_dir";
+            String default_mount_dir = managerConfig.getFileSystemConfig().getMountDir();
             String[] portsArray = {"80/tcp"};
             List<String> ports = Arrays.asList(portsArray);
 
@@ -133,12 +135,30 @@ public class SandboxManager {
             String secretToken = RandomStringGenerator.generateRandomString(16);
             environment.put("SECRET_TOKEN", secretToken);
 
+            // Todo: 这里的environment部分还没有处理
+
             String sessionId = secretToken;
             String currentDir = System.getProperty("user.dir");
             String mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
+            
             java.io.File file = new java.io.File(mountDir);
             if (!file.exists()) {
                 file.mkdirs();
+            }
+
+            // 处理存储路径和下载逻辑
+            String storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath();
+
+            // 如果配置了存储路径且不是 AgentRun 部署，从存储下载文件到挂载目录
+            if (mountDir != null && storagePath != null && 
+                containerManagerType != ContainerManagerType.AGENTRUN) {
+                logger.info("Downloading from storage path: " + storagePath + " to mount dir: " + mountDir);
+                boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
+                if (downloadSuccess) {
+                    logger.info("Successfully downloaded files from storage");
+                } else {
+                    logger.warning("Failed to download files from storage, continuing with empty mount dir");
+                }
             }
 
             List<VolumeBinding> volumeBindings = new ArrayList<>();
@@ -182,7 +202,7 @@ public class SandboxManager {
                 accessPort = mappedPorts[0];
             }
 
-            ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, secretToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, secretToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, secretToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(workdir).authToken(secretToken).build();
+            ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, secretToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, secretToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, secretToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(workdir).storagePath(storagePath).runtimeToken(secretToken).authToken(secretToken).version(imageName).build();
 
             sandboxMap.put(key, containerModel);
 
@@ -326,6 +346,15 @@ public class SandboxManager {
     }
 
     /**
+     * Get storage manager
+     *
+     * @return storage manager
+     */
+    public StorageManager getStorageManager() {
+        return storageManager;
+    }
+
+    /**
      * Clean up all sandbox containers
      */
     public void cleanupAllSandboxes() {
@@ -353,6 +382,15 @@ public class SandboxManager {
     }
 
     /**
+     * Close resources including storage manager
+     */
+    public void close() {
+        if (storageManager != null) {
+            storageManager.close();
+        }
+    }
+
+    /**
      * Find available ports
      *
      * @param count number of ports to find
@@ -360,10 +398,10 @@ public class SandboxManager {
      */
     private List<Integer> findFreePorts(int count) {
         List<Integer> freePorts = new ArrayList<>();
-        int startPort = 30004;
-        int maxAttempts = 2000;
+        int startPort = managerConfig.getPortRange().getStart();
+        int endPort = managerConfig.getPortRange().getEnd();
         for (int i = 0; i < count && freePorts.size() < count; i++) {
-            for (int port = startPort + i; port < startPort + maxAttempts; port++) {
+            for (int port = startPort + i; port < endPort; port++) {
                 if (isPortAvailable(port)) {
                     freePorts.add(port);
                     break;
@@ -473,6 +511,4 @@ public class SandboxManager {
 
         return portMapping;
     }
-
-
 }

@@ -19,15 +19,9 @@ package io.agentscope.runtime.sandbox.manager.model.fs;
  * 本地文件系统配置类
  */
 public class LocalFileSystemConfig extends FileSystemConfig {
-    private String mountDir;
 
     private LocalFileSystemConfig(Builder builder) {
         super(builder);
-        this.mountDir = builder.mountDir;
-    }
-
-    public String getMountDir() {
-        return mountDir;
     }
 
     public static Builder builder() {
@@ -38,7 +32,6 @@ public class LocalFileSystemConfig extends FileSystemConfig {
      * Builder类，用于构建LocalFileSystemConfig实例
      */
     public static class Builder extends FileSystemConfig.Builder<Builder> {
-        private String mountDir = "sessions_mount_dir";
 
         public Builder() {
             super(FileSystemType.LOCAL);
@@ -46,11 +39,6 @@ public class LocalFileSystemConfig extends FileSystemConfig {
 
         @Override
         protected Builder self() {
-            return this;
-        }
-
-        public Builder mountDir(String mountDir) {
-            this.mountDir = mountDir;
             return this;
         }
 

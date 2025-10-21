@@ -25,6 +25,7 @@ public class FileSystemConfig {
     private FileSystemType fileSystemType;
     private Map<String, String> readonlyMounts;
     private String storageFolderPath;
+    private String mountDir;
 
     protected FileSystemConfig(FileSystemType fileSystemType) {
         this.fileSystemType = fileSystemType;
@@ -34,6 +35,7 @@ public class FileSystemConfig {
         this.fileSystemType = builder.fileSystemType;
         this.readonlyMounts = builder.readonlyMounts;
         this.storageFolderPath = builder.storageFolderPath;
+        this.mountDir = builder.mountDir;
     }
 
     // Getters
@@ -49,6 +51,10 @@ public class FileSystemConfig {
         return storageFolderPath;
     }
 
+    public String getMountDir() {
+        return mountDir;
+    }
+
     /**
      * Builder基类
      */
@@ -56,6 +62,8 @@ public class FileSystemConfig {
         protected FileSystemType fileSystemType;
         protected Map<String, String> readonlyMounts;
         protected String storageFolderPath = "";
+        protected String mountDir = "sessions_mount_dir";
+
 
         protected Builder(FileSystemType fileSystemType) {
             this.fileSystemType = fileSystemType;
@@ -78,6 +86,11 @@ public class FileSystemConfig {
 
         public T storageFolderPath(String storageFolderPath) {
             this.storageFolderPath = storageFolderPath;
+            return self();
+        }
+
+        public T mountDir(String mountDir) {
+            this.mountDir = mountDir;
             return self();
         }
 
