@@ -130,6 +130,14 @@ public class ManagerConfig {
         return poolSize;
     }
 
+    public FileSystemConfig getFileSystemConfig() {
+        return fileSystemConfig;
+    }
+
+    public RedisManagerConfig getRedisConfig() {
+        return redisConfig;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -145,7 +153,7 @@ public class ManagerConfig {
         private PortRange portRange = new PortRange(49152, 59152);
         private int poolSize = 0;
 
-        private FileSystemConfig fileSystemConfig = new LocalFileSystemConfig();
+        private FileSystemConfig fileSystemConfig = LocalFileSystemConfig.builder().build();
 
         public Builder containerPrefixKey(String containerPrefixKey) {
             if (containerPrefixKey.length() > 63 - UUID_LENGTH) {
