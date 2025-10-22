@@ -21,12 +21,15 @@ import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.collections.ContainerQueue;
 import io.agentscope.runtime.sandbox.manager.collections.InMemoryContainerQueue;
+import io.agentscope.runtime.sandbox.manager.collections.RedisContainerQueue;
+import io.agentscope.runtime.sandbox.manager.collections.RedisContainerMapping;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.*;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistry;
 import io.agentscope.runtime.sandbox.manager.util.PortManager;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
+import io.agentscope.runtime.sandbox.manager.util.RedisClientWrapper;
 import io.agentscope.runtime.sandbox.manager.util.StorageManager;
 
 import java.io.IOException;
@@ -63,6 +66,11 @@ public class SandboxManager implements AutoCloseable {
 
     // Port management (thread-safe)
     private final PortManager portManager;
+    
+    // Redis management (optional)
+    private RedisClientWrapper redisClient;
+    private RedisContainerMapping redisContainerMapping;
+    private final boolean redisEnabled;
 
     public SandboxManager() {
         this(null, null);
@@ -90,21 +98,56 @@ public class SandboxManager implements AutoCloseable {
      * @param managerConfig manager configuration
      */
     public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken, SandboxType defaultType) {
-        // Todo: 这里需要支持远程的http session，目前先忽略
+        // TODO: Support for remote HTTP session needs to be added, currently ignored
         this.managerConfig = managerConfig;
         this.containerManagerType = managerConfig.getClientConfig().getClientType();
         this.storageManager = new StorageManager(managerConfig.getFileSystemConfig());
         this.poolSize = managerConfig.getPoolSize();
         this.defaultType = defaultType;
-        this.poolQueue = new InMemoryContainerQueue(); // Use in-memory queue for now
+        this.redisEnabled = managerConfig.getRedisEnabled();
         this.portManager = new PortManager(managerConfig.getPortRange()); // Thread-safe port manager
 
         logger.info("Initializing SandboxManager with container manager: " + this.containerManagerType);
         logger.info("Container pool size: " + this.poolSize);
+        logger.info("Redis enabled: " + this.redisEnabled);
+        
+        // Initialize Redis if enabled
+        if (this.redisEnabled) {
+            try {
+                RedisManagerConfig redisConfig = managerConfig.getRedisConfig();
+                this.redisClient = new RedisClientWrapper(redisConfig);
+                
+                // Test Redis connection
+                String pong = this.redisClient.ping();
+                logger.info("Redis connection test: " + pong);
+                
+                // Initialize Redis container mapping with prefix
+                String mappingPrefix = managerConfig.getContainerPrefixKey() + "mapping";
+                this.redisContainerMapping = new RedisContainerMapping(this.redisClient, mappingPrefix);
+                
+                // Initialize Redis queue for pool if pool size > 0
+                if (this.poolSize > 0) {
+                    String queueName = redisConfig.getRedisContainerPoolKey();
+                    this.poolQueue = new RedisContainerQueue(this.redisClient, queueName);
+                    logger.info("Using Redis-backed container pool with queue: " + queueName);
+                } else {
+                    this.poolQueue = new InMemoryContainerQueue();
+                }
+                
+                logger.info("Redis client initialized successfully for container management");
+            } catch (Exception e) {
+                logger.severe("Failed to initialize Redis client: " + e.getMessage());
+                e.printStackTrace();
+                throw new RuntimeException("Failed to initialize Redis", e);
+            }
+        } else {
+            this.poolQueue = new InMemoryContainerQueue(); // Use in-memory queue
+            logger.info("Using in-memory container storage");
+        }
 
         switch (this.containerManagerType) {
             case DOCKER:
-                // Todo: Make DockerClient support DockerClientConfig configuration
+                // TODO: Make DockerClient support DockerClientConfig configuration
                 DockerClient dockerClient = new DockerClient();
                 this.containerClient = dockerClient;
                 this.client = dockerClient.connectDocker();
@@ -269,6 +312,12 @@ public class SandboxManager implements AutoCloseable {
         // but keep the container's original random sessionId
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         sandboxMap.put(key, containerModel);
+        
+        // Store in Redis if enabled
+        if (redisEnabled && redisContainerMapping != null) {
+            redisContainerMapping.put(key, containerModel);
+            logger.info("Stored pool container in Redis");
+        }
 
         logger.info("Added pool container to sandbox map: " + containerModel.getContainerName() + " (userID: " + userID + ", sessionID(key): " + sessionID + ", container sessionId: " + containerModel.getSessionId() + ")");
 
@@ -396,7 +445,7 @@ public class SandboxManager implements AutoCloseable {
         String runtimeConfig = "runc"; // or "nvidia" etc.
         String containerName = this.managerConfig.getContainerPrefixKey() + sessionId.toLowerCase();
 
-        // Todo: need to judge container name uniqueness?
+        // TODO: Need to check container name uniqueness?
 
         // Use unified BaseClient interface to create container
         String containerId = containerClient.createContainer(containerName, imageName, ports, portMapping, volumeBindings, environment, runtimeConfig);
@@ -489,11 +538,31 @@ public class SandboxManager implements AutoCloseable {
     public ContainerModel getSandbox(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID) {
         // Use composite key userID + sessionID + sandboxType to uniquely identify container
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        
+        // Check Redis first if enabled
+        if (redisEnabled && redisContainerMapping != null) {
+            ContainerModel existingModel = redisContainerMapping.get(key);
+            if (existingModel != null) {
+                logger.info("Found existing container in Redis: " + existingModel.getContainerName());
+                // Also update local cache
+                sandboxMap.put(key, existingModel);
+                return existingModel;
+            }
+        }
+        
+        // Check local cache
         if (sandboxMap.containsKey(key)) {
             return sandboxMap.get(key);
         } else {
             ContainerModel containerModel = createContainer(sandboxType, mountDir, storagePath, environment);
             sandboxMap.put(key, containerModel);
+            
+            // Store in Redis if enabled
+            if (redisEnabled && redisContainerMapping != null) {
+                redisContainerMapping.put(key, containerModel);
+                logger.info("Stored container in Redis: " + containerModel.getContainerName());
+            }
+            
             startSandbox(sandboxType, userID, sessionID);
             return containerModel;
         }
@@ -509,10 +578,21 @@ public class SandboxManager implements AutoCloseable {
     public void startSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
+        
+        // Try Redis if not in local cache
+        if (containerModel == null && redisEnabled && redisContainerMapping != null) {
+            containerModel = redisContainerMapping.get(key);
+        }
+        
         if (containerModel != null) {
             containerClient.startContainer(containerModel.getContainerId());
             logger.info("Container status updated to: running");
             sandboxMap.put(key, containerModel);
+            
+            // Update Redis if enabled
+            if (redisEnabled && redisContainerMapping != null) {
+                redisContainerMapping.put(key, containerModel);
+            }
         }
     }
 
@@ -526,10 +606,21 @@ public class SandboxManager implements AutoCloseable {
     public void stopSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
+        
+        // Try Redis if not in local cache
+        if (containerModel == null && redisEnabled && redisContainerMapping != null) {
+            containerModel = redisContainerMapping.get(key);
+        }
+        
         if (containerModel != null) {
             containerClient.stopContainer(containerModel.getContainerId());
             logger.info("Container status updated to: stopped");
             sandboxMap.put(key, containerModel);
+            
+            // Update Redis if enabled
+            if (redisEnabled && redisContainerMapping != null) {
+                redisContainerMapping.put(key, containerModel);
+            }
         }
     }
 
@@ -543,15 +634,33 @@ public class SandboxManager implements AutoCloseable {
     public void removeSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
+        
+        // Try Redis if not in local cache
+        if (containerModel == null && redisEnabled && redisContainerMapping != null) {
+            containerModel = redisContainerMapping.get(key);
+        }
+        
         if (containerModel != null) {
             containerClient.removeContainer(containerModel.getContainerId());
             sandboxMap.remove(key);
+            
+            // Remove from Redis if enabled
+            if (redisEnabled && redisContainerMapping != null) {
+                redisContainerMapping.remove(key);
+                logger.info("Removed container from Redis");
+            }
         }
     }
 
     public void stopAndRemoveSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
+        
+        // Try Redis if not in local cache
+        if (containerModel == null && redisEnabled && redisContainerMapping != null) {
+            containerModel = redisContainerMapping.get(key);
+        }
+        
         if (containerModel != null) {
             try {
                 String containerId = containerModel.getContainerId();
@@ -571,11 +680,22 @@ public class SandboxManager implements AutoCloseable {
 
                 // Remove from mapping
                 sandboxMap.remove(key);
+                
+                // Remove from Redis if enabled
+                if (redisEnabled && redisContainerMapping != null) {
+                    redisContainerMapping.remove(key);
+                    logger.info("Removed container from Redis");
+                }
 
                 logger.info(sandboxType + " sandbox has been successfully removed");
             } catch (Exception e) {
                 logger.severe("Error removing " + sandboxType + " sandbox: " + e.getMessage());
                 sandboxMap.remove(key);
+                
+                // Try to remove from Redis even if error occurred
+                if (redisEnabled && redisContainerMapping != null) {
+                    redisContainerMapping.remove(key);
+                }
             }
         } else {
             logger.warning("Sandbox " + sandboxType + " not found, may have already been removed");
@@ -592,6 +712,16 @@ public class SandboxManager implements AutoCloseable {
         // Use composite key to find container status
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
+        
+        // Try Redis if not in local cache
+        if (containerModel == null && redisEnabled && redisContainerMapping != null) {
+            containerModel = redisContainerMapping.get(key);
+            // Update local cache if found in Redis
+            if (containerModel != null) {
+                sandboxMap.put(key, containerModel);
+            }
+        }
+        
         if (containerModel != null) {
             return containerClient.getContainerStatus(containerModel.getContainerId());
         }
@@ -600,11 +730,29 @@ public class SandboxManager implements AutoCloseable {
 
     /**
      * Get all sandbox information
+     * If Redis is enabled, merges data from both local cache and Redis
      *
      * @return sandbox mapping
      */
     public Map<SandboxKey, ContainerModel> getAllSandboxes() {
-        return new HashMap<>(sandboxMap);
+        Map<SandboxKey, ContainerModel> allSandboxes = new HashMap<>(sandboxMap);
+        
+        // Merge with Redis data if enabled
+        if (redisEnabled && redisContainerMapping != null) {
+            try {
+                Map<SandboxKey, ContainerModel> redisData = redisContainerMapping.getAll();
+                logger.info("Retrieved " + redisData.size() + " containers from Redis");
+                
+                // Merge Redis data into result (Redis data takes precedence for conflicts)
+                for (Map.Entry<SandboxKey, ContainerModel> entry : redisData.entrySet()) {
+                    allSandboxes.put(entry.getKey(), entry.getValue());
+                }
+            } catch (Exception e) {
+                logger.warning("Failed to retrieve containers from Redis: " + e.getMessage());
+            }
+        }
+        
+        return allSandboxes;
     }
 
     /**
@@ -685,6 +833,12 @@ public class SandboxManager implements AutoCloseable {
             if (keyToRemove != null) {
                 sandboxMap.remove(keyToRemove);
                 logger.info("Removed container from sandbox map: " + keyToRemove);
+                
+                // Remove from Redis if enabled
+                if (redisEnabled && redisContainerMapping != null) {
+                    redisContainerMapping.remove(keyToRemove);
+                    logger.info("Removed container from Redis");
+                }
             }
 
             // Release ports
@@ -826,6 +980,16 @@ public class SandboxManager implements AutoCloseable {
         // Clear port manager
         if (portManager != null) {
             portManager.clear();
+        }
+        
+        // Close Redis connection if enabled
+        if (redisEnabled && redisClient != null) {
+            try {
+                redisClient.close();
+                logger.info("Redis connection closed");
+            } catch (Exception e) {
+                logger.warning("Error closing Redis connection: " + e.getMessage());
+            }
         }
 
         logger.info("SandboxManager closed successfully");

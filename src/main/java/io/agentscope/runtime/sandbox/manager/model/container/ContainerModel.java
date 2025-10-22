@@ -35,6 +35,13 @@ public class ContainerModel {
         return new Builder();
     }
 
+    /**
+     * Default constructor for Jackson deserialization
+     */
+    public ContainerModel() {
+        // Default constructor for JSON deserialization
+    }
+
     private ContainerModel(Builder builder) {
         this.sessionId = builder.sessionId;
         this.containerId = builder.containerId;
