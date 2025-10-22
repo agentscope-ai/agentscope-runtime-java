@@ -387,8 +387,6 @@ public class SaaAgent extends BaseAgent {
 //            // Use the Agent from adapter (which was built from builder)
             com.alibaba.cloud.ai.graph.agent.Agent agent = adapter.getAgent();
 
-            System.out.println(adapter.getNewMessage());
-
             RunnableConfig runnableConfig = RunnableConfig.builder()
                     .addMetadata("session_id", adapter.getContext().getSession().getId())
                     .addMetadata("user_id", adapter.getContext().getSession().getUserId())
