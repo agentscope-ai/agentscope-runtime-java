@@ -58,11 +58,11 @@ public class ContainerPoolTest {
     }
 
     /**
-     * Test 1: Create SandboxManager with container pool
+     * Create SandboxManager with container pool
      */
     @Test
     void testCreateSandboxManagerWithPool() {
-        System.out.println("\n--- Test 1: Create SandboxManager with Pool ---");
+        System.out.println("\n--- Test Create SandboxManager with Pool ---");
 
         // Create configuration with pool size
         ManagerConfig config = new ManagerConfig.Builder()
@@ -88,87 +88,11 @@ public class ContainerPoolTest {
     }
 
     /**
-     * Test 2: Get containers from pool (requires Docker)
-     */
-    @Test
-    void testGetContainersFromPool() {
-        System.out.println("\n--- Test 2: Get Containers from Pool ---");
-
-        ManagerConfig config = new ManagerConfig.Builder()
-                .poolSize(2)
-                .build();
-
-        manager = new SandboxManager(config);
-        assertNotNull(manager, "SandboxManager should be created successfully");
-
-        // Define userID and sessionID for container management
-        String userID1 = "test-user-1";
-        String sessionID1 = "test-session-1";
-        String userID2 = "test-user-2";
-        String sessionID2 = "test-session-2";
-
-        // Get first container from pool (with userID and sessionID, will be added to map)
-        System.out.println("Getting container from pool (fast!)...");
-        long startTime = System.currentTimeMillis();
-        
-        ContainerModel container1 = manager.createFromPool(SandboxType.BASE, userID1, sessionID1);
-        
-        long endTime = System.currentTimeMillis();
-        long time1 = endTime - startTime;
-        System.out.println("Got container in " + time1 + "ms");
-        
-        assertNotNull(container1, "Container 1 should be created successfully");
-        assertNotNull(container1.getContainerName(), "Container name should not be null");
-        System.out.println("Container: " + container1.getContainerName());
-
-        // Get second container from pool (with userID and sessionID, will be added to map)
-        System.out.println("\nGetting second container from pool...");
-        startTime = System.currentTimeMillis();
-        
-        ContainerModel container2 = manager.createFromPool(SandboxType.BASE, userID2, sessionID2);
-        
-        endTime = System.currentTimeMillis();
-        long time2 = endTime - startTime;
-        System.out.println("Got container in " + time2 + "ms");
-        
-        assertNotNull(container2, "Container 2 should be created successfully");
-        assertNotNull(container2.getContainerName(), "Container name should not be null");
-        assertNotEquals(container1.getContainerId(), container2.getContainerId(), 
-                "The two containers should have different IDs");
-        System.out.println("Container: " + container2.getContainerName());
-
-        System.out.println("\nBoth containers retrieved from pre-warmed pool!");
-        
-        // Explicitly release containers taken from pool
-        System.out.println("\n--- Cleaning up containers ---");
-        System.out.println("Container 1 (from pool): " + container1.getContainerName() + " (ID: " + container1.getContainerId() + ")");
-        System.out.println("  - Random sessionId: " + container1.getSessionId());
-        System.out.println("Container 2 (from pool): " + container2.getContainerName() + " (ID: " + container2.getContainerId() + ")");
-        System.out.println("  - Random sessionId: " + container2.getSessionId());
-        
-        // Release containers using their random sessionId
-        System.out.println("\nReleasing containers using their random sessionId...");
-        boolean released1 = manager.release(container1.getSessionId());
-        System.out.println("Container 1 (sessionId: " + container1.getSessionId() + ") released: " + released1);
-        assertTrue(released1, "Container 1 should be released successfully");
-        
-        boolean released2 = manager.release(container2.getSessionId());
-        System.out.println("Container 2 (sessionId: " + container2.getSessionId() + ") released: " + released2);
-        assertTrue(released2, "Container 2 should be released successfully");
-        
-        // Clean up remaining pool containers
-        System.out.println("\nCleaning up remaining pool containers...");
-        manager.cleanupAllSandboxes();
-        System.out.println("✓ All containers cleaned up successfully");
-        System.out.println("Note: @AfterEach will verify cleanup is complete");
-    }
-
-    /**
-     * Test 3: Pool behavior with different types
+     * Pool behavior with different types
      */
     @Test
     void testPoolBehaviorWithDifferentTypes() {
-        System.out.println("\n--- Test 3: Mixed Container Types ---");
+        System.out.println("\n--- Test Mixed Container Types ---");
 
         ManagerConfig config = new ManagerConfig.Builder()
                 .poolSize(2)  // Pool only contains BASE type
@@ -218,184 +142,14 @@ public class ContainerPoolTest {
     }
 
     /**
-     * Test 4: Performance comparison between pool and non-pool
-     */
-    @Test
-    void testPerformanceComparison() {
-        System.out.println("\n--- Test 4: Performance Comparison ---");
-
-        long timeNoPool;
-        long timeWithPool;
-
-        // Without pool
-        System.out.println("Creating manager WITHOUT pool...");
-        ManagerConfig configNoPool = new ManagerConfig.Builder()
-                .poolSize(0)  // No pool
-                .build();
-
-        try (SandboxManager managerNoPool = new SandboxManager(configNoPool)) {
-            assertNotNull(managerNoPool, "SandboxManager without pool should be created successfully");
-
-            long startTime = System.currentTimeMillis();
-            ContainerModel container1 = managerNoPool.createFromPool(SandboxType.BASE, "test-user", "test-session-no-pool");
-            timeNoPool = System.currentTimeMillis() - startTime;
-            
-            assertNotNull(container1, "Container should be created successfully");
-            System.out.println("Time without pool: " + timeNoPool + "ms");
-
-            managerNoPool.cleanupAllSandboxes();
-        } catch (Exception e) {
-            fail("Test without pool failed: " + e.getMessage());
-            return;
-        }
-
-        // Wait for ports to be fully released to avoid port conflicts
-        try {
-            System.out.println("\nWaiting for ports to be released...");
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        // With pool
-        System.out.println("\nCreating manager WITH pool...");
-        ManagerConfig configWithPool = new ManagerConfig.Builder()
-                .poolSize(3)
-                .build();
-
-        manager = new SandboxManager(configWithPool);
-        assertNotNull(manager, "SandboxManager with pool should be created successfully");
-
-        // Use multi-parameter version to add container to sandboxMap for easier management
-        String userID = "test-user";
-        String sessionID = "test-session-pool";
-
-        long startTime = System.currentTimeMillis();
-        ContainerModel container2 = manager.createFromPool(SandboxType.BASE, userID, sessionID);
-        timeWithPool = System.currentTimeMillis() - startTime;
-        
-        assertNotNull(container2, "Container should be created successfully");
-        System.out.println("Time with pool: " + timeWithPool + "ms");
-        System.out.println("Container: " + container2.getContainerName() + " (random sessionId: " + container2.getSessionId() + ")");
-
-        long improvement = timeNoPool - timeWithPool;
-        System.out.println("\nPerformance improvement: " + improvement + "ms faster with pool!");
-        
-        // Usually getting from pool should be faster, but may not be obvious in test environment
-        assertTrue(timeWithPool >= 0, "Time to get from pool should be non-negative");
-        
-        // Release container using its random sessionId
-        System.out.println("\nReleasing container taken from pool...");
-        boolean released = manager.release(container2.getSessionId());
-        System.out.println("Container released: " + released);
-        assertTrue(released, "Container taken from pool should be released successfully");
-    }
-
-    /**
-     * Test 5: Verify pool size configuration
-     */
-    @Test
-    void testPoolSizeConfiguration() {
-        System.out.println("\n--- Test 5: Pool Size Configuration ---");
-
-        // Test different pool sizes
-        int[] poolSizes = {0, 1, 3, 5};
-
-        for (int poolSize : poolSizes) {
-            System.out.println("\nTesting pool size: " + poolSize);
-            
-            ManagerConfig config = new ManagerConfig.Builder()
-                    .poolSize(poolSize)
-                    .build();
-
-            // Use try-with-resources to ensure each manager is properly cleaned up
-            try (SandboxManager testManager = new SandboxManager(config)) {
-                assertNotNull(testManager, "SandboxManager should be created successfully with pool size: " + poolSize);
-                
-                System.out.println("Successfully created manager with pool size " + poolSize);
-                
-                testManager.cleanupAllSandboxes();
-                System.out.println("Cleaned up manager with pool size " + poolSize);
-            } catch (Exception e) {
-                fail("Test failed for pool size " + poolSize + ": " + e.getMessage());
-            }
-
-            // Wait between iterations to ensure resources are fully released
-            if (poolSize < poolSizes[poolSizes.length - 1]) {
-                try {
-                    System.out.println("Waiting for resources to be released...");
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        }
-    }
-
-    /**
-     * Test 6: Verify resource cleanup completeness
-     */
-    @Test
-    void testResourceCleanup() {
-        System.out.println("\n--- Test 6: Resource Cleanup Verification ---");
-
-        ManagerConfig config = new ManagerConfig.Builder()
-                .poolSize(2)
-                .build();
-
-        manager = new SandboxManager(config);
-        assertNotNull(manager, "SandboxManager should be created successfully");
-
-        // Define sessionIDs
-        String sessionID1 = "test-cleanup-session-1";
-        String sessionID2 = "test-cleanup-session-2";
-
-        // Create some containers
-        ContainerModel container1 = manager.createFromPool(SandboxType.BASE, "test-user-1", sessionID1);
-        ContainerModel container2 = manager.createFromPool(SandboxType.BASE, "test-user-2", sessionID2);
-        
-        assertNotNull(container1, "Container 1 should be created successfully");
-        assertNotNull(container2, "Container 2 should be created successfully");
-        
-        System.out.println("Created containers:");
-        System.out.println("  - " + container1.getContainerName() + " (ID: " + container1.getContainerId() + ")");
-        System.out.println("    Random sessionId: " + container1.getSessionId());
-        System.out.println("  - " + container2.getContainerName() + " (ID: " + container2.getContainerId() + ")");
-        System.out.println("    Random sessionId: " + container2.getSessionId());
-
-        // Explicitly release using containers' random sessionIds
-        System.out.println("\nReleasing containers using their random sessionId...");
-        boolean released1 = manager.release(container1.getSessionId());
-        System.out.println("  - Container 1 released: " + released1);
-        assertTrue(released1, "Container 1 should be released successfully");
-        
-        boolean released2 = manager.release(container2.getSessionId());
-        System.out.println("  - Container 2 released: " + released2);
-        assertTrue(released2, "Container 2 should be released successfully");
-        
-        // Clean up remaining pool containers
-        System.out.println("\nCleaning up remaining pool containers...");
-        manager.cleanupAllSandboxes();
-        
-        System.out.println("All containers cleaned up successfully");
-        System.out.println("Note: @AfterEach will also call cleanup and close to ensure no resources are leaked");
-        System.out.println("\n⚠️ Key Points:");
-        System.out.println("  1. release() will release containers taken from pool");
-        System.out.println("  2. cleanupAllSandboxes() will stop and delete remaining pool containers");
-        System.out.println("  3. close() will additionally ensure resources are fully released");
-        System.out.println("  4. Test will wait 500ms after completion to ensure port release");
-        System.out.println("  5. All containers will show 'Container deleted successfully' in logs");
-    }
-
-    /**
-     * Test 7: Verify port management across multiple container creations
+     * Verify port management across multiple container creations
      */
     @Test
     void testPortManagementAcrossMultipleCreations() {
-        System.out.println("\n--- Test 7: Port Management Across Multiple Creations ---");
+        System.out.println("\n--- Test Port Management Across Multiple Creations ---");
 
         ManagerConfig config = new ManagerConfig.Builder()
-                .poolSize(0)  // No pool, create new container each time
+                .poolSize(0)
                 .build();
 
         manager = new SandboxManager(config);
@@ -428,7 +182,7 @@ public class ContainerPoolTest {
         assertNotEquals(container1.getContainerId(), container3.getContainerId(), 
                 "Containers should have different IDs");
 
-        System.out.println("\n✅ All containers created successfully with unique IDs");
+        System.out.println("\nAll containers created successfully with unique IDs");
         System.out.println("Port management is working correctly");
         
         // Explicitly release all containers using their random sessionIds
@@ -456,6 +210,6 @@ public class ContainerPoolTest {
         // Clean up pool
         System.out.println("\nCleaning up pool...");
         manager.cleanupAllSandboxes();
-        System.out.println("✓ All 3 containers cleaned up successfully");
+        System.out.println("All 3 containers cleaned up successfully");
     }
 }

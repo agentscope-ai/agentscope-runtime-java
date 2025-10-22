@@ -25,7 +25,6 @@ import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 import io.agentscope.runtime.sandbox.manager.model.fs.LocalFileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.OssConfig;
-import jakarta.validation.constraints.NotNull;
 
 import java.io.File;
 
@@ -41,8 +40,7 @@ public class ManagerConfig {
     private String containerPrefixKey;
 
     // Redis configuration
-    @NotNull
-    private Boolean redisEnabled;
+    private Boolean redisEnabled = false;
 
 
     private PortRange portRange;

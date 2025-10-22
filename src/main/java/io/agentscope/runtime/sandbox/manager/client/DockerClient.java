@@ -465,7 +465,7 @@ public class DockerClient extends BaseClient {
             client.startContainerCmd(containerId).exec();
             logger.info("Container started successfully: " + containerId);
         } catch (Exception e) {
-            System.err.println("Failed to start container: " + e.getMessage());
+            logger.severe("Failed to start container: " + e.getMessage());
         }
     }
 

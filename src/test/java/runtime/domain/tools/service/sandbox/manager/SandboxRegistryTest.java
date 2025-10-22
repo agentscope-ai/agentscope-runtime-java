@@ -36,7 +36,7 @@ public class SandboxRegistryTest {
             System.out.println("  Security Level: " + config.getSecurityLevel());
             
             assertNotNull(config.getImageName(), "Image name should not be null");
-            assertTrue(config.getTimeout() > 0, "Timeout should be greater than 0");
+            assertEquals(300, config.getTimeout(), "Timeout should be greater than 0");
         });
 
         // Get image name directly

@@ -59,13 +59,29 @@ public class SandboxManager implements AutoCloseable {
     // Container pool management
     private final int poolSize;
     private final ContainerQueue poolQueue;
-    private final SandboxType defaultPoolType;
+    private final SandboxType defaultType;
 
     // Port management (thread-safe)
     private final PortManager portManager;
 
     public SandboxManager() {
-        this(new ManagerConfig.Builder().build());
+        this(null, null);
+    }
+
+    public SandboxManager(String baseUrl, String bearerToken) {
+        this(new ManagerConfig.Builder().build(), baseUrl, bearerToken);
+    }
+
+    public SandboxManager(ManagerConfig managerConfig) {
+        this(managerConfig, null, null);
+    }
+
+    public SandboxManager(SandboxType defaultType) {
+        this(new ManagerConfig.Builder().build(), null, null, defaultType);
+    }
+
+    public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken) {
+        this(managerConfig, baseUrl, bearerToken, SandboxType.BASE);
     }
 
     /**
@@ -73,12 +89,13 @@ public class SandboxManager implements AutoCloseable {
      *
      * @param managerConfig manager configuration
      */
-    public SandboxManager(ManagerConfig managerConfig) {
+    public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken, SandboxType defaultType) {
+        // Todo: 这里需要支持远程的http session，目前先忽略
         this.managerConfig = managerConfig;
         this.containerManagerType = managerConfig.getClientConfig().getClientType();
         this.storageManager = new StorageManager(managerConfig.getFileSystemConfig());
         this.poolSize = managerConfig.getPoolSize();
-        this.defaultPoolType = SandboxType.BASE; // Default pool type
+        this.defaultType = defaultType;
         this.poolQueue = new InMemoryContainerQueue(); // Use in-memory queue for now
         this.portManager = new PortManager(managerConfig.getPortRange()); // Thread-safe port manager
 
@@ -128,18 +145,16 @@ public class SandboxManager implements AutoCloseable {
         while (poolQueue.size() < poolSize) {
             try {
                 // Create a container for the pool using default pool type
-                ContainerModel containerModel = createContainer(defaultPoolType, null, null, null);
+                ContainerModel containerModel = createContainer(defaultType, null, null, null);
 
                 if (containerModel != null) {
                     // Check pool size again to avoid race condition
                     if (poolQueue.size() < poolSize) {
                         poolQueue.enqueue(containerModel);
-                        logger.info("Added container to pool: " + containerModel.getContainerName() +
-                                " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
+                        logger.info("Added container to pool: " + containerModel.getContainerName() + " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
                     } else {
                         // Pool size reached, release this container
-                        logger.info("Pool size limit reached, releasing container: " +
-                                containerModel.getContainerName());
+                        logger.info("Pool size limit reached, releasing container: " + containerModel.getContainerName());
                         releaseContainer(containerModel);
                         break;
                     }
@@ -166,9 +181,8 @@ public class SandboxManager implements AutoCloseable {
      */
     public ContainerModel createFromPool(SandboxType sandboxType) {
         // If requested type is not the default pool type, create directly
-        if (sandboxType != defaultPoolType) {
-            logger.info("Requested type " + sandboxType + " differs from pool type " +
-                    defaultPoolType + ", creating directly");
+        if (sandboxType != defaultType) {
+            logger.info("Requested type " + sandboxType + " differs from pool type " + defaultType + ", creating directly");
             return createContainer(sandboxType, null, null, null);
         }
 
@@ -180,7 +194,7 @@ public class SandboxManager implements AutoCloseable {
 
             try {
                 // Create a new container to add to the pool first
-                ContainerModel newContainer = createContainer(defaultPoolType, null, null, null);
+                ContainerModel newContainer = createContainer(defaultType, null, null, null);
                 if (newContainer != null) {
                     poolQueue.enqueue(newContainer);
                 }
@@ -196,21 +210,17 @@ public class SandboxManager implements AutoCloseable {
                 logger.info("Retrieved container from pool: " + containerModel.getContainerName());
 
                 // Verify the container version matches the current registered image
-                String currentImage = SandboxRegistry.getImageByType(defaultPoolType)
-                        .orElse(containerModel.getVersion());
+                String currentImage = SandboxRegistry.getImageByType(defaultType).orElse(containerModel.getVersion());
 
                 if (!currentImage.equals(containerModel.getVersion())) {
-                    logger.warning("Container " + containerModel.getContainerName() +
-                            " is outdated (has: " + containerModel.getVersion() +
-                            ", current: " + currentImage + "), releasing and trying next");
+                    logger.warning("Container " + containerModel.getContainerName() + " is outdated (has: " + containerModel.getVersion() + ", current: " + currentImage + "), releasing and trying next");
                     releaseContainer(containerModel);
                     continue;
                 }
 
                 // Verify container still exists
                 if (!containerClient.inspectContainer(containerModel.getContainerId())) {
-                    logger.warning("Container " + containerModel.getContainerId() +
-                            " not found or has been removed externally, trying next");
+                    logger.warning("Container " + containerModel.getContainerId() + " not found or has been removed externally, trying next");
                     // Container doesn't exist, just continue to next one
                     continue;
                 }
@@ -218,26 +228,22 @@ public class SandboxManager implements AutoCloseable {
                 // Verify container is still running
                 String status = containerClient.getContainerStatus(containerModel.getContainerId());
                 if (!"running".equals(status)) {
-                    logger.warning("Container " + containerModel.getContainerId() +
-                            " is not running (status: " + status + "), trying next");
+                    logger.warning("Container " + containerModel.getContainerId() + " is not running (status: " + status + "), trying next");
                     releaseContainer(containerModel);
                     continue;
                 }
 
-                logger.info("Successfully retrieved running container from pool: " +
-                        containerModel.getContainerName());
+                logger.info("Successfully retrieved running container from pool: " + containerModel.getContainerName());
                 return containerModel;
 
             } catch (Exception e) {
-                logger.severe("Error getting container from pool (attempt " + attempts + "): " +
-                        e.getMessage());
+                logger.severe("Error getting container from pool (attempt " + attempts + "): " + e.getMessage());
                 e.printStackTrace();
             }
         }
 
         // Failed to get from pool, create a new one
-        logger.warning("Failed to get container from pool after " + maxAttempts +
-                " attempts, creating new container");
+        logger.warning("Failed to get container from pool after " + maxAttempts + " attempts, creating new container");
         return createContainer(sandboxType, null, null, null);
     }
 
@@ -264,9 +270,7 @@ public class SandboxManager implements AutoCloseable {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         sandboxMap.put(key, containerModel);
 
-        logger.info("Added pool container to sandbox map: " + containerModel.getContainerName() +
-                " (userID: " + userID + ", sessionID(key): " + sessionID +
-                ", container sessionId: " + containerModel.getSessionId() + ")");
+        logger.info("Added pool container to sandbox map: " + containerModel.getContainerName() + " (userID: " + userID + ", sessionID(key): " + sessionID + ", container sessionId: " + containerModel.getSessionId() + ")");
 
         return containerModel;
     }
@@ -275,14 +279,13 @@ public class SandboxManager implements AutoCloseable {
      * Helper method to create a container (internal use)
      * This is separated from getSandbox for pool management
      */
-    private ContainerModel createContainer(SandboxType sandboxType, String mountDir,
-                                           String storagePath, Map<String, String> environment) {
+    private ContainerModel createContainer(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment) {
         // Initialize environment if null
         if (environment == null) {
             environment = new HashMap<>();
         }
 
-// Validate environment values
+        // Validate environment values
         for (Map.Entry<String, String> entry : environment.entrySet()) {
             String value = entry.getValue();
             if (value == null) {
@@ -296,24 +299,21 @@ public class SandboxManager implements AutoCloseable {
         String[] portsArray = {"80/tcp"};
         List<String> ports = Arrays.asList(portsArray);
 
-// Create port mapping
+        // Create port mapping
         Map<String, Integer> portMapping = createPortMapping(ports);
         logger.info("Port mapping: " + portMapping);
 
-// Get image name and configuration from registry
-        String imageName = SandboxRegistry.getImageByType(sandboxType)
-                .orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
+        // Get image name and configuration from registry
+        String imageName = SandboxRegistry.getImageByType(sandboxType).orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
 
-// Get sandbox configuration if available
+        // Get sandbox configuration if available
         SandboxConfig sandboxConfig = SandboxRegistry.getConfigByType(sandboxType).orElse(null);
         if (sandboxConfig != null) {
             logger.info("Using registered sandbox configuration: " + sandboxConfig.getDescription());
             // Merge environment variables from config
             if (sandboxConfig.getEnvironment() != null && !sandboxConfig.getEnvironment().isEmpty()) {
                 Map<String, String> mergedEnv = new HashMap<>(sandboxConfig.getEnvironment());
-                if (environment != null) {
-                    mergedEnv.putAll(environment);
-                }
+                mergedEnv.putAll(environment);
                 environment = mergedEnv;
             }
         }
@@ -345,11 +345,12 @@ public class SandboxManager implements AutoCloseable {
             file.mkdirs();
         }
 
+        // Todo：Currently using global storage path if not provided, still need to wait for next movement of python version
         if (storagePath == null) {
             storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath();
         }
 
-// If storage path is configured and not AgentRun deployment, download files from storage to mount directory
+        // If storage path is configured and not AgentRun deployment, download files from storage to mount directory
         if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN) {
             logger.info("Downloading from storage path: " + storagePath + " to mount dir: " + mountDir);
             boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
@@ -366,7 +367,7 @@ public class SandboxManager implements AutoCloseable {
         List<VolumeBinding> volumeBindings = new ArrayList<>();
         volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
 
-// Add read-only mounts
+        // Add read-only mounts
         Map<String, String> readonlyMounts = managerConfig.getFileSystemConfig().getReadonlyMounts();
         if (readonlyMounts != null && !readonlyMounts.isEmpty()) {
             logger.info("Adding readonly mounts: " + readonlyMounts.size() + " mount(s)");
@@ -395,15 +396,15 @@ public class SandboxManager implements AutoCloseable {
         String runtimeConfig = "runc"; // or "nvidia" etc.
         String containerName = this.managerConfig.getContainerPrefixKey() + sessionId.toLowerCase();
 
-// Todo: need to judge container name uniqueness?
+        // Todo: need to judge container name uniqueness?
 
-// Use unified BaseClient interface to create container
+        // Use unified BaseClient interface to create container
         String containerId = containerClient.createContainer(containerName, imageName, ports, portMapping, volumeBindings, environment, runtimeConfig);
 
-// Convert mapped host ports to string array
+        // Convert mapped host ports to string array
         String[] mappedPorts = portMapping.values().stream().map(String::valueOf).toArray(String[]::new);
 
-// Determine correct access URL based on container manager type
+        // Determine correct access URL based on container manager type
         String baseHost;
         String accessPort;
 
@@ -432,22 +433,7 @@ public class SandboxManager implements AutoCloseable {
             accessPort = mappedPorts[0];
         }
 
-        ContainerModel containerModel = ContainerModel.builder()
-                .sessionId(sessionId)
-                .containerId(containerId)
-                .containerName(containerName)
-                .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
-                .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken))
-                .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
-                .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
-                .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
-                .ports(mappedPorts)
-                .mountDir(mountDir)
-                .storagePath(storagePath)
-                .runtimeToken(runtimeToken)
-                .authToken(runtimeToken)
-                .version(imageName)
-                .build();
+        ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(mountDir).storagePath(storagePath).runtimeToken(runtimeToken).authToken(runtimeToken).version(imageName).build();
 
         containerClient.startContainer(containerId);
 
@@ -477,8 +463,7 @@ public class SandboxManager implements AutoCloseable {
                 storageManager.uploadFolder(containerModel.getMountDir(), containerModel.getStoragePath());
             }
         } catch (Exception e) {
-            logger.warning("Error releasing container " + containerModel.getContainerName() +
-                    ": " + e.getMessage());
+            logger.warning("Error releasing container " + containerModel.getContainerName() + ": " + e.getMessage());
         }
     }
 
@@ -686,8 +671,7 @@ public class SandboxManager implements AutoCloseable {
             // Get container info
             ContainerModel containerModel = getInfo(identity);
 
-            logger.info("Releasing container with identity: " + identity +
-                    " (container: " + containerModel.getContainerName() + ")");
+            logger.info("Releasing container with identity: " + identity + " (container: " + containerModel.getContainerName() + ")");
 
             // Remove from sandboxMap first
             SandboxKey keyToRemove = null;
@@ -713,17 +697,11 @@ public class SandboxManager implements AutoCloseable {
             logger.info("Container destroyed: " + containerModel.getContainerName());
 
             // Upload to storage if configured
-            if (containerModel.getMountDir() != null &&
-                    containerModel.getStoragePath() != null) {
+            if (containerModel.getMountDir() != null && containerModel.getStoragePath() != null) {
                 try {
-                    logger.info("Uploading container data to storage: " +
-                            containerModel.getStoragePath());
-                    System.out.println("Uploading from " + containerModel.getMountDir() +
-                            " to " + containerModel.getStoragePath());
-                    boolean uploaded = storageManager.uploadFolder(
-                            containerModel.getMountDir(),
-                            containerModel.getStoragePath()
-                    );
+                    logger.info("Uploading container data to storage: " + containerModel.getStoragePath());
+                    System.out.println("Uploading from " + containerModel.getMountDir() + " to " + containerModel.getStoragePath());
+                    boolean uploaded = storageManager.uploadFolder(containerModel.getMountDir(), containerModel.getStoragePath());
                     if (uploaded) {
                         logger.info("Successfully uploaded container data to storage");
                     } else {
@@ -814,13 +792,11 @@ public class SandboxManager implements AutoCloseable {
 
             for (SandboxKey key : new HashSet<>(sandboxMap.keySet())) {
                 try {
-                    logger.info("Cleaning up " + key.getSandboxType() + " sandbox for user " +
-                            key.getUserID() + " session " + key.getSessionID());
+                    logger.info("Cleaning up " + key.getSandboxType() + " sandbox for user " + key.getUserID() + " session " + key.getSessionID());
                     stopAndRemoveSandbox(key.getSandboxType(), key.getUserID(), key.getSessionID());
                     logger.info(key.getSandboxType() + " sandbox cleanup complete");
                 } catch (Exception e) {
-                    logger.severe("Error cleaning up " + key.getSandboxType() +
-                            " sandbox: " + e.getMessage());
+                    logger.severe("Error cleaning up " + key.getSandboxType() + " sandbox: " + e.getMessage());
                 }
             }
 
@@ -965,5 +941,9 @@ public class SandboxManager implements AutoCloseable {
         }
 
         return portMapping;
+    }
+
+    public String listTools(String identity, String toolType){
+        return "";
     }
 }

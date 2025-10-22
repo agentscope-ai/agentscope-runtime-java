@@ -40,7 +40,6 @@ public class SandboxRegistry {
     // Registry for custom string-based sandbox types (for dynamic type support)
     private static final Map<String, SandboxConfig> customTypeRegistry = new ConcurrentHashMap<>();
     
-    // Static initializer to automatically register default sandbox types when class is loaded
     static {
         initializeDefaults();
     }
