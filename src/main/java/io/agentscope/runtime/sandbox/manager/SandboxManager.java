@@ -31,6 +31,7 @@ import io.agentscope.runtime.sandbox.manager.util.PortManager;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
 import io.agentscope.runtime.sandbox.manager.util.RedisClientWrapper;
 import io.agentscope.runtime.sandbox.manager.util.StorageManager;
+import io.agentscope.runtime.sandbox.manager.util.SandboxHttpClient;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -300,7 +301,28 @@ public class SandboxManager implements AutoCloseable {
      * @return The container model, or null if failed
      */
     public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID) {
-        // Get container from pool (call the single-parameter version)
+        // First check if container already exists for this user/session/type
+        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
+        ContainerModel existingContainer = sandboxMap.get(key);
+        
+        // If found in memory, return it
+        if (existingContainer != null) {
+            logger.info("Reusing existing container: " + existingContainer.getContainerName() + " (userID: " + userID + ", sessionID: " + sessionID + ")");
+            return existingContainer;
+        }
+        
+        // If not in memory but Redis is enabled, check Redis
+        if (redisEnabled && redisContainerMapping != null) {
+            existingContainer = redisContainerMapping.get(key);
+            if (existingContainer != null) {
+                // Add to local cache
+                sandboxMap.put(key, existingContainer);
+                logger.info("Retrieved container from Redis: " + existingContainer.getContainerName() + " (userID: " + userID + ", sessionID: " + sessionID + ")");
+                return existingContainer;
+            }
+        }
+        
+        // No existing container found, create new one from pool
         ContainerModel containerModel = createFromPool(sandboxType);
 
         if (containerModel == null) {
@@ -310,7 +332,6 @@ public class SandboxManager implements AutoCloseable {
 
         // Add to sandbox map for unified management using the provided sessionID as the key
         // but keep the container's original random sessionId
-        SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         sandboxMap.put(key, containerModel);
         
         // Store in Redis if enabled
@@ -482,7 +503,23 @@ public class SandboxManager implements AutoCloseable {
             accessPort = mappedPorts[0];
         }
 
-        ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(mountDir).storagePath(storagePath).runtimeToken(runtimeToken).authToken(runtimeToken).version(imageName).build();
+        ContainerModel containerModel = ContainerModel
+                .builder()
+                .sessionId(sessionId)
+                .containerId(containerId)
+                .containerName(containerName)
+                .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
+                .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken))
+                .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
+                .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
+                .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
+                .ports(mappedPorts)
+                .mountDir(mountDir)
+                .storagePath(storagePath)
+                .runtimeToken(runtimeToken)
+                .authToken(runtimeToken)
+                .version(imageName)
+                .build();
 
         containerClient.startContainer(containerId);
 
@@ -1109,5 +1146,126 @@ public class SandboxManager implements AutoCloseable {
 
     public String listTools(String identity, String toolType){
         return "";
+    }
+
+    // ==================== Tool Call Methods (Python版本对齐) ====================
+    
+    /**
+     * 建立与沙箱的HTTP连接
+     * 对应Python版本的_establish_connection
+     * 
+     * @param sandboxId 沙箱ID
+     * @param userId 用户ID
+     * @param sessionId 会话ID
+     * @return SandboxHttpClient实例
+     */
+    private SandboxHttpClient establishConnection(
+            String sandboxId, String userId, String sessionId) {
+        try {
+            ContainerModel containerInfo = getInfo(sandboxId, userId, sessionId);
+            if (containerInfo == null) {
+                throw new RuntimeException("Container not found: " + sandboxId);
+            }
+            
+            return new SandboxHttpClient(containerInfo, 60);
+        } catch (Exception e) {
+            logger.severe("Failed to establish connection to sandbox: " + e.getMessage());
+            throw new RuntimeException("Failed to establish connection", e);
+        }
+    }
+    
+    /**
+     * 获取沙箱信息
+     * 对应Python版本的get_info
+     * 
+     * @param sandboxId 沙箱ID (可以是容器名称或ID)
+     * @param userId 用户ID
+     * @param sessionId 会话ID
+     * @return 容器信息Map
+     */
+    public ContainerModel getInfo(String sandboxId, String userId, String sessionId) {
+        // 尝试通过不同的沙箱类型查找
+        for (SandboxType type : SandboxType.values()) {
+            SandboxKey key = new SandboxKey(userId, sessionId, type);
+            ContainerModel model = sandboxMap.get(key);
+            
+            // 如果本地缓存没有，尝试从Redis获取
+            if (model == null && redisEnabled && redisContainerMapping != null) {
+                model = redisContainerMapping.get(key);
+                if (model != null) {
+                    sandboxMap.put(key, model);
+                }
+            }
+            
+            // 如果找到了就返回
+            if (model != null) {
+                return model;
+            }
+        }
+        
+        throw new RuntimeException("No container found with id: " + sandboxId);
+    }
+    
+    /**
+     * 列出沙箱中可用的工具
+     * 对应Python版本的list_tools
+     * 
+     * @param sandboxId 沙箱ID
+     * @param userId 用户ID  
+     * @param sessionId 会话ID
+     * @param toolType 工具类型（可选）
+     * @return 工具列表Map
+     */
+    public Map<String, Object> listTools(String sandboxId, String userId, String sessionId, String toolType) {
+        try (SandboxHttpClient client = establishConnection(sandboxId, userId, sessionId)) {
+            return client.listTools(toolType);
+        } catch (Exception e) {
+            logger.severe("Error listing tools: " + e.getMessage());
+            return new HashMap<>();
+        }
+    }
+    
+    /**
+     * 调用沙箱工具
+     * 对应Python版本的call_tool
+     * 
+     * @param sandboxId 沙箱ID
+     * @param userId 用户ID
+     * @param sessionId 会话ID
+     * @param toolName 工具名称
+     * @param arguments 工具参数
+     * @return 执行结果JSON字符串
+     */
+    public String callTool(String sandboxId, String userId, String sessionId, 
+                          String toolName, Map<String, Object> arguments) {
+        try (SandboxHttpClient client = establishConnection(sandboxId, userId, sessionId)) {
+            return client.callTool(toolName, arguments);
+        } catch (Exception e) {
+            logger.severe("Error calling tool " + toolName + ": " + e.getMessage());
+            e.printStackTrace();
+            return "{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"Error calling tool: " + 
+                   e.getMessage() + "\"}]}";
+        }
+    }
+    
+    /**
+     * 释放沙箱资源
+     * 对应Python版本的release
+     * 
+     * @param sandboxType 沙箱类型
+     * @param userId 用户ID
+     * @param sessionId 会话ID
+     * @return 是否成功
+     */
+    public boolean releaseSandbox(SandboxType sandboxType, String userId, String sessionId) {
+        try {
+            stopAndRemoveSandbox(sandboxType, userId, sessionId);
+            logger.info("Released sandbox: type=" + sandboxType + ", user=" + userId + 
+                       ", session=" + sessionId);
+            return true;
+        } catch (Exception e) {
+            logger.severe("Failed to release sandbox: " + e.getMessage());
+            return false;
+        }
     }
 }

@@ -353,9 +353,8 @@ public class KubernetesClient extends BaseClient {
         // Volume mounts
         List<V1VolumeMount> volumeMounts = new ArrayList<>();
         List<V1Volume> volumes = new ArrayList<>();
-        volumeBindings = null;
 
-        // Todo: Current file mounting functionality is not enabled, need to consider how to implement file mounting in remote scenarios, and how to handle created folders after container deletion
+        // Enable file mounting in Kubernetes using hostPath volumes
         if (volumeBindings != null) {
             for (int i = 0; i < volumeBindings.size(); i++) {
                 VolumeBinding binding = volumeBindings.get(i);

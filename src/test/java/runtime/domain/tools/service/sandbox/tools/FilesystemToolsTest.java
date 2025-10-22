@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
+import java.util.HashMap;
+
 public class FilesystemToolsTest{
 
     private SandboxManager sandboxManager;
@@ -55,10 +57,14 @@ public class FilesystemToolsTest{
         System.out.println("read: "+read);
         assertNotNull(read);
 
-        Object[] edits = new Object[] { new java.util.HashMap<String, Object>() {{ put("oldText", "hello"); put("newText", "world"); }} };
+        Object[] edits = new Object[] { new HashMap<String, Object>() {{ put("oldText", "hello"); put("newText", "world"); }} };
         String edited = tools.fs_edit_file("/workspace/test.txt", edits, "", "");
         System.out.println("edited: "+edited);
         assertNotNull(edited);
+
+        read = tools.fs_read_file("/workspace/test.txt", "", "");
+        System.out.println("read: "+read);
+        assertNotNull(read);
     }
 
     @Test
