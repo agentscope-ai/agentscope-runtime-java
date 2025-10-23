@@ -18,51 +18,132 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class WriteFileTool implements BiFunction<WriteFileTool.Request, ToolContext, WriteFileTool.Response> {
+public class WriteFileTool extends SandboxTool {
 
-    Logger logger = Logger.getLogger(WriteFileTool.class.getName());
+    public WriteFileTool() {
+        super("fs_write_file", "filesystem", "Write content to a file");
+        schema = new HashMap<>();
+        
+        Map<String, Object> pathProperty = new HashMap<>();
+        pathProperty.put("type", "string");
+        pathProperty.put("description", "Path to the file to write to");
+        
+        Map<String, Object> contentProperty = new HashMap<>();
+        contentProperty.put("type", "string");
+        contentProperty.put("description", "Content to write into the file");
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("path", pathProperty);
+        properties.put("content", contentProperty);
+
+        List<String> required = Arrays.asList("path", "content");
+
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", required);
+        schema.put("description", "Request object to write file");
+    }
 
     @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
+
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
         try {
-            SandboxTools tools = new SandboxTools();
-            String result = tools.fs_write_file(request.path, request.content, userID, sessionID);
-            return new Response(result, "Filesystem write_file completed");
+            inputSchema = mapper.writeValueAsString(schema);
         } catch (Exception e) {
-            return new Response("Error", "Filesystem write_file error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new FileWriter()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(FileWriter.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+
+    /**
+     * 内部类：处理文件写入的工具
+     */
+    class FileWriter implements BiFunction<FileWriter.Request, ToolContext, FileWriter.Response> {
+
+        Logger logger = Logger.getLogger(FileWriter.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            try {
+                String result = fs_write_file(request.path, request.content, userID, sessionID);
+                return new Response(result, "Filesystem write_file completed");
+            } catch (Exception e) {
+                return new Response("Error", "Filesystem write_file error: " + e.getMessage());
+            }
+        }
+
+        private String fs_write_file(String path, String content, String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+                    return filesystemSandbox.writeFile(path, content);
+                }
+                FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
+                return filesystemSandbox.writeFile(path, content);
+            } catch (Exception e) {
+                String errorMsg = "Write File Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request(
+                @JsonProperty(required = true, value = "path")
+                @JsonPropertyDescription("Path to the file to write to")
+                String path,
+                @JsonProperty(required = true, value = "content")
+                @JsonPropertyDescription("Content to write into the file")
+                String content
+        ) { }
+
+        @JsonClassDescription("The result contains filesystem tool output and execution message")
+        public record Response(String result, String message) {
+            public Response(String result, String message) { this.result = result; this.message = message; }
+            @JsonProperty(required = true, value = "result")
+            @JsonPropertyDescription("tool output")
+            public String result() { return this.result; }
+            @JsonProperty(required = true, value = "message")
+            @JsonPropertyDescription("execute result")
+            public String message() { return this.message; }
         }
     }
-
-    public record Request(
-            @JsonProperty(required = true, value = "path")
-            @JsonPropertyDescription("Path to the file to write to")
-            String path,
-            @JsonProperty(required = true, value = "content")
-            @JsonPropertyDescription("Content to write into the file")
-            String content
-    ) { }
-
-    @JsonClassDescription("The result contains filesystem tool output and execution message")
-    public record Response(String result, String message) {
-        public Response(String result, String message) { this.result = result; this.message = message; }
-        @JsonProperty(required = true, value = "result")
-        @JsonPropertyDescription("tool output")
-        public String result() { return this.result; }
-        @JsonProperty(required = true, value = "message")
-        @JsonPropertyDescription("execute result")
-        public String message() { return this.message; }
-    }
 }
-
 

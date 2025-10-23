@@ -16,27 +16,95 @@
 package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
-public class CloseTool implements BiFunction<CloseTool.Request, ToolContext, CloseTool.Response> {
+public class CloseTool extends SandboxTool {
 
-    @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        String result = new SandboxTools().browser_close(userID, sessionID);
-        return new Response(result, "Browser close completed");
+    public CloseTool() {
+        super("browser_close", "browser", "Close the browser");
+        schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", new HashMap<>());
+        schema.put("description", "Request object to close browser");
     }
 
-    public record Request() { }
+    @Override
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
 
-    @JsonClassDescription("The result contains browser tool output and message")
-    public record Response(String result, String message) {}
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new BrowserCloser()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(BrowserCloser.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+
+    /**
+     * 内部类：处理浏览器关闭的工具
+     */
+    class BrowserCloser implements BiFunction<BrowserCloser.Request, ToolContext, BrowserCloser.Response> {
+
+        Logger logger = Logger.getLogger(BrowserCloser.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            String result = browser_close(userID, sessionID);
+            return new Response(result, "Browser close completed");
+        }
+
+        private String browser_close(String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+                    return browserSandbox.closeBrowser();
+                }
+                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+                return browserSandbox.closeBrowser();
+            } catch (Exception e) {
+                String errorMsg = "Browser Close Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request() { }
+
+        @JsonClassDescription("The result contains browser tool output and message")
+        public record Response(String result, String message) {}
+    }
 }
-
 

@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.tools;
+package io.agentscope.runtime.sandbox.tools.utils;
 
-import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import org.springframework.ai.chat.model.ToolContext;
 import java.util.UUID;

@@ -82,6 +82,12 @@ public class TrainingSandboxClient extends SandboxClient {
         waitUntilHealthy();
     }
 
+    public Map<String, Object> addMcpServers(Map<String, Object> serverConfigs, boolean overwrite){
+        // Todo: Python version still not implemented
+        return null;
+    }
+
+
     /**
      * Check if the training sandbox service is healthy
      *
@@ -249,7 +255,7 @@ public class TrainingSandboxClient extends SandboxClient {
      * @param instanceId Instance ID
      * @param messages   Messages
      * @param params     Parameters
-     * @return Tools information
+     * @return BaseSandboxTool information
      */
     public Map<String, Object> getToolsInfo(String instanceId, Map<String, Object> messages, Map<String, Object> params) {
         Map<String, Object> response = makeRequest(
@@ -382,9 +388,9 @@ public class TrainingSandboxClient extends SandboxClient {
     /**
      * Call a tool by name
      *
-     * @param name      Tool name
+     * @param name      BaseSandboxTool name
      * @param arguments Arguments
-     * @return Tool result
+     * @return BaseSandboxTool result
      */
     public String callTool(String name, Map<String, Object> arguments) {
         if (arguments == null) {

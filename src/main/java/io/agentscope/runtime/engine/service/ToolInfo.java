@@ -3,7 +3,7 @@ package io.agentscope.runtime.engine.service;
 import java.util.Map;
 
 /**
- * Tool information class
+ * BaseSandboxTool information class
  * Corresponds to the tool information structure in the Python version
  */
 public class ToolInfo {

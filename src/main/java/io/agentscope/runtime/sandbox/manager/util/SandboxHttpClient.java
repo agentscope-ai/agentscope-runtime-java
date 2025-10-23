@@ -179,6 +179,42 @@ public class SandboxHttpClient extends SandboxClient{
             return createErrorResponse("Error calling tool: " + e.getMessage());
         }
     }
+
+    public Map<String, Object> addMcpServers(Map<String, Object> serverConfigs, boolean overwrite) {
+        try {
+            String endpoint = baseUrl + "/mcp/add_servers";
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("server_configs", serverConfigs);
+            requestBody.put("overwrite", overwrite);
+
+            String jsonBody = objectMapper.writeValueAsString(requestBody);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(endpoint))
+                    .header("Authorization", "Bearer " + secret)
+                    .header("Content-Type", "application/json")
+                    .header("x-agentrun-session-id", "s" + sessionId)
+                    .timeout(Duration.ofSeconds(timeout))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request,
+                    HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                logger.warning("Failed to add MCP servers: HTTP " + response.statusCode());
+                return new HashMap<>();
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = objectMapper.readValue(response.body(), Map.class);
+            return result;
+        } catch (Exception e) {
+            logger.severe("Error adding MCP servers: " + e.getMessage());
+            return new HashMap<>();
+        }
+    }
     
     private String callGenericTool(String toolName, Map<String, Object> arguments) {
         try {

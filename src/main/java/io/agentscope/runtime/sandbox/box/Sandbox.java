@@ -137,6 +137,14 @@ public abstract class Sandbox implements AutoCloseable {
     public String callTool(String name, Map<String, Object> arguments) {
         return managerApi.callTool(sandboxId, userId, sessionId, name, arguments);
     }
+
+    public Map<String, Object> addMcpServers(Map<String, Object> serverConfigs) {
+        return addMcpServers(serverConfigs, false);
+    }
+
+    public Map<String, Object> addMcpServers(Map<String, Object> serverConfigs, boolean overwrite){
+        return managerApi.addMcpServers(sandboxId, userId, sessionId, serverConfigs, overwrite);
+    }
     
     /**
      * Close sandbox

@@ -9,11 +9,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
 
 public class BaseToolsTest {
 
     private SandboxManager sandboxManager;
+    private BaseSandbox sandbox;
 
     @BeforeEach
     void setUp() {
@@ -24,6 +24,7 @@ public class BaseToolsTest {
                     .containerDeployment(clientConfig)
                     .build();
             sandboxManager = new SandboxManager(config);
+            sandbox = new BaseSandbox(sandboxManager, "test-user", "test-session");
             System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {
             System.err.println("Failed to initialize SandboxManager: " + e.getMessage());
@@ -33,6 +34,13 @@ public class BaseToolsTest {
 
     @AfterEach
     void tearDown() {
+        if (sandbox != null) {
+            try {
+                sandbox.close();
+            } catch (Exception e) {
+                System.err.println("Error closing sandbox: " + e.getMessage());
+            }
+        }
         if (sandboxManager != null) {
             try {
                 // Clean up all test-created sandboxes
@@ -47,15 +55,17 @@ public class BaseToolsTest {
 
     @Test
     void testRunPythonAndShell() {
-        SandboxTools tools = new SandboxTools(sandboxManager);
-
-        String py = tools.run_ipython_cell("print(1+1)","","");
+        // Test Python execution
+        String py = sandbox.runIpythonCell("print(1+1)");
         System.out.println("Python output: " + py);
         assertNotNull(py);
+        assertTrue(py.contains("2") || py.contains("success"), "Python should execute successfully");
 
-        String sh = tools.run_shell_command("echo hello", "", "");
+        // Test Shell command execution
+        String sh = sandbox.runShellCommand("echo hello");
         System.out.println("Shell output: " + sh);
         assertNotNull(sh);
+        assertTrue(sh.contains("hello") || sh.contains("success"), "Shell command should execute successfully");
     }
 }
 

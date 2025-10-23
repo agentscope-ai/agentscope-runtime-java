@@ -12,6 +12,8 @@ public abstract class SandboxClient implements AutoCloseable {
 
     public abstract Map<String, Object> listTools(String toolType, Map<String, Object> arguments);
 
+    public abstract Map<String, Object> addMcpServers(Map<String, Object> serverConfigs, boolean overwrite);
+
     @Override
     public void close() throws Exception {
 

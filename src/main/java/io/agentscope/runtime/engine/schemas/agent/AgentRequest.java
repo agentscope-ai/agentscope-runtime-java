@@ -19,7 +19,7 @@ public class AgentRequest {
     private Object stop; // String or List<String>
     private Integer n = 1;
     private Integer seed;
-    private List<Object> tools; // List<Tool> or List<Map>
+    private List<Object> tools; // List<BaseSandboxTool> or List<Map>
     private String userId;
     private String sessionId;
     private String responseId;

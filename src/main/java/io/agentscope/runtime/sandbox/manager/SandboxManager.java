@@ -854,6 +854,8 @@ public class SandboxManager implements AutoCloseable {
         throw new RuntimeException("No container found with identity: " + identity);
     }
 
+
+
     /**
      * Release (destroy) a container by identity
      * Corresponds to Python's release(identity) method
@@ -1157,8 +1159,6 @@ public class SandboxManager implements AutoCloseable {
         return "";
     }
 
-    // ==================== Tool Call Methods ====================
-    
     /**
      * Establish HTTP connection to sandbox
      * Corresponds to Python's _establish_connection
@@ -1226,6 +1226,15 @@ public class SandboxManager implements AutoCloseable {
             e.printStackTrace();
             return "{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"Error calling tool: " + 
                    e.getMessage() + "\"}]}";
+        }
+    }
+
+    public Map<String, Object> addMcpServers(String sandboxId, String userId, String sessionId, Map<String, Object> serverConfigs, boolean overwrite){
+        try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
+            return client.addMcpServers(serverConfigs, overwrite);
+        } catch (Exception e) {
+            logger.severe("Error adding MCP servers: " + e.getMessage());
+            return new HashMap<>();
         }
     }
     

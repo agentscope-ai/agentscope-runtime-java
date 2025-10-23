@@ -89,10 +89,11 @@ public class SaaAgentSandboxExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public CompletableFuture<Void> basicExample() {
-        System.out.println("=== Tool Using SaaAgent Example ===");
+        System.out.println("=== BaseSandboxTool Using SaaAgent Example ===");
 
         return CompletableFuture.supplyAsync(() -> {
             try {
+
                 // Create ReactAgent Builder
                 Builder builder = ReactAgent.builder()
                         .name("saa_agent")

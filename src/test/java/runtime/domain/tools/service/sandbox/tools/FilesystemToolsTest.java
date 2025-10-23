@@ -1,5 +1,6 @@
 package runtime.domain.tools.service.sandbox.tools;
 
+import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
@@ -8,13 +9,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
-
-import java.util.HashMap;
 
 public class FilesystemToolsTest{
 
     private SandboxManager sandboxManager;
+    private FilesystemSandbox sandbox;
 
     @BeforeEach
     void setUp() {
@@ -25,6 +24,7 @@ public class FilesystemToolsTest{
                     .containerDeployment(clientConfig)
                     .build();
             sandboxManager = new SandboxManager(config);
+            sandbox = new FilesystemSandbox(sandboxManager, "test-user", "test-session");
             System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {
             System.err.println("Failed to initialize SandboxManager: " + e.getMessage());
@@ -34,6 +34,13 @@ public class FilesystemToolsTest{
 
     @AfterEach
     void tearDown() {
+        if (sandbox != null) {
+            try {
+                sandbox.close();
+            } catch (Exception e) {
+                System.err.println("Error closing sandbox: " + e.getMessage());
+            }
+        }
         if (sandboxManager != null) {
             try {
                 // Clean up all test-created sandboxes
@@ -47,78 +54,96 @@ public class FilesystemToolsTest{
 
     @Test
     void testReadWriteAndEditFile() {
-        SandboxTools tools = new SandboxTools(sandboxManager);
-
-        String write = tools.fs_write_file("/workspace/test.txt", "hello", "", "");
-        System.out.println("write: "+write);
+        // Test file write
+        String write = sandbox.writeFile("/workspace/test.txt", "hello");
+        System.out.println("write: " + write);
         assertNotNull(write);
 
-        String read = tools.fs_read_file("/workspace/test.txt", "", "");
-        System.out.println("read: "+read);
+        // Test file read
+        String read = sandbox.readFile("/workspace/test.txt");
+        System.out.println("read: " + read);
         assertNotNull(read);
+        assertTrue(read.contains("hello"), "File content should contain 'hello'");
 
-        Object[] edits = new Object[] { new HashMap<String, Object>() {{ put("oldText", "hello"); put("newText", "world"); }} };
-        String edited = tools.fs_edit_file("/workspace/test.txt", edits, "", "");
-        System.out.println("edited: "+edited);
+        // Test file edit
+        Object[] edits = new Object[] {
+            new java.util.HashMap<String, String>() {{
+                put("oldText", "hello");
+                put("newText", "world");
+            }}
+        };
+        String edited = sandbox.editFile("/workspace/test.txt", edits);
+        System.out.println("edited: " + edited);
         assertNotNull(edited);
 
-        read = tools.fs_read_file("/workspace/test.txt", "", "");
-        System.out.println("read: "+read);
+        // Verify edit
+        read = sandbox.readFile("/workspace/test.txt");
+        System.out.println("read after edit: " + read);
         assertNotNull(read);
+        assertTrue(read.contains("world"), "File content should contain 'world' after edit");
     }
 
     @Test
     void testReadMultipleFiles() {
-        SandboxTools tools = new SandboxTools(sandboxManager);
+        // Create test files
+        sandbox.writeFile("/workspace/test1.txt", "content1");
+        sandbox.writeFile("/workspace/test2.txt", "content2");
 
-        tools.fs_write_file("/workspace/test1.txt", "content1", "", "");
-        tools.fs_write_file("/workspace/test2.txt", "content2", "", "");
-
-        String[] paths = {"/workspace/test1.txt", "/workspace/test2.txt"};
-        String result = tools.fs_read_multiple_files(paths, "", "");
+        // Test reading multiple files
+        java.util.List<String> paths = java.util.Arrays.asList("/workspace/test1.txt", "/workspace/test2.txt");
+        String result = sandbox.readMultipleFiles(paths);
         System.out.println("read multiple files: " + result);
         assertNotNull(result);
+        assertTrue(result.contains("content1") || result.contains("test1.txt"), "Result should contain content from first file");
+        assertTrue(result.contains("content2") || result.contains("test2.txt"), "Result should contain content from second file");
     }
 
     @Test
     void testDirectoryOps() {
-        SandboxTools tools = new SandboxTools(sandboxManager);
-
-        String created = tools.fs_create_directory("/workspace/dirA", "", "");
-        System.out.println("created: "+created);
+        // Test directory creation
+        String created = sandbox.createDirectory("/workspace/dirA");
+        System.out.println("created: " + created);
         assertNotNull(created);
 
-        String list = tools.fs_list_directory("/workspace", "", "");
-        System.out.println("list: "+list);
+        // Test directory listing
+        String list = sandbox.listDirectory("/workspace");
+        System.out.println("list: " + list);
         assertNotNull(list);
+        assertTrue(list.contains("dirA"), "Directory listing should contain 'dirA'");
 
-        String tree = tools.fs_directory_tree("/workspace", "", "");
-        System.out.println("tree: "+tree);
+        // Test directory tree
+        String tree = sandbox.directoryTree("/workspace");
+        System.out.println("tree: " + tree);
         assertNotNull(tree);
+        assertTrue(tree.contains("dirA"), "Directory tree should contain 'dirA'");
     }
 
     @Test
     void testMoveSearchInfoAllowed() {
-        SandboxTools tools = new SandboxTools(sandboxManager);
-
-        String write = tools.fs_write_file("/workspace/test.txt", "hello", "", "");
-        System.out.println("write: "+write);
+        // Create a test file
+        String write = sandbox.writeFile("/workspace/test.txt", "hello");
+        System.out.println("write: " + write);
         assertNotNull(write);
 
-        String moved = tools.fs_move_file("/workspace/test.txt", "/workspace/test-moved.txt", "", "");
-        System.out.println("moved: "+moved);
+        // Test file move
+        String moved = sandbox.moveFile("/workspace/test.txt", "/workspace/test-moved.txt");
+        System.out.println("moved: " + moved);
         assertNotNull(moved);
 
-        String search = tools.fs_search_files("/workspace", "test-moved.txt", null, "", "");
-        System.out.println("search: "+search);
+        // Test file search
+        String search = sandbox.searchFiles("/workspace", "test-moved.txt", null);
+        System.out.println("search: " + search);
         assertNotNull(search);
+        assertTrue(search.contains("test-moved.txt"), "Search result should contain the moved file");
 
-        String info = tools.fs_get_file_info("/workspace/test-moved.txt", "", "");
-        System.out.println("info: "+info);
+        // Test get file info
+        String info = sandbox.getFileInfo("/workspace/test-moved.txt");
+        System.out.println("info: " + info);
         assertNotNull(info);
 
-        String allowed = tools.fs_list_allowed_directories("", "");
-        System.out.println("allowed: "+allowed);
+        // Test list allowed directories
+        String allowed = sandbox.listAllowedDirectories();
+        System.out.println("allowed: " + allowed);
         assertNotNull(allowed);
     }
 }
