@@ -17,36 +17,29 @@ package io.agentscope.runtime.sandbox.box;
 
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 基础沙箱实现
- * 对应Python版本的BaseSandbox
- * 提供基本的IPython和Shell命令执行能力
+ * Base Sandbox implementation
+ * Corresponds to Python's BaseSandbox
+ * Provides basic IPython and shell command execution capabilities
  */
+@RegisterSandbox(
+        imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest",
+        sandboxType = SandboxType.BASE,
+        securityLevel = "medium",
+        timeout = 30,
+        description = "Base Sandbox"
+)
 public class BaseSandbox extends Sandbox {
-    
-    /**
-     * 构造函数
-     * 
-     * @param managerApi SandboxManager实例
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     */
+
     public BaseSandbox(SandboxManager managerApi, String userId, String sessionId) {
         this(managerApi, userId, sessionId, 3000);
     }
-    
-    /**
-     * 构造函数
-     * 
-     * @param managerApi SandboxManager实例
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     * @param timeout 超时时间（秒）
-     */
+
     public BaseSandbox(
             SandboxManager managerApi,
             String userId,
@@ -54,24 +47,18 @@ public class BaseSandbox extends Sandbox {
             int timeout) {
         super(managerApi, userId, sessionId, SandboxType.BASE, timeout);
     }
-    
+
     /**
-     * 执行IPython代码
-     * 
-     * @param code Python代码
-     * @return 执行结果
+     * Execute IPython code
      */
     public String runIpythonCell(String code) {
         Map<String, Object> arguments = new HashMap<>();
         arguments.put("code", code);
         return callTool("run_ipython_cell", arguments);
     }
-    
+
     /**
-     * 执行Shell命令
-     * 
-     * @param command Shell命令
-     * @return 执行结果
+     * Execute shell command
      */
     public String runShellCommand(String command) {
         Map<String, Object> arguments = new HashMap<>();
@@ -79,4 +66,3 @@ public class BaseSandbox extends Sandbox {
         return callTool("run_shell_command", arguments);
     }
 }
-

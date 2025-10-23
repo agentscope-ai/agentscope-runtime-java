@@ -17,7 +17,7 @@ package io.agentscope.runtime.sandbox.manager.client;
 
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
-import com.github.dockerjava.okhttp.OkDockerHttpClient;
+import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
 import io.agentscope.runtime.sandbox.manager.model.container.DockerProp;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
@@ -75,7 +75,7 @@ public class DockerClient extends BaseClient {
     public String createContainer(String containerName, String imageName,
                                   List<String> ports, Map<String, Integer> portMapping,
                                   List<VolumeBinding> volumeBindings,
-                                  Map<String, String> environment, String runtimeConfig) {
+                                  Map<String, String> environment, Map<String, Object> runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Docker client is not connected");
         }
@@ -121,11 +121,9 @@ public class DockerClient extends BaseClient {
     private static com.github.dockerjava.api.DockerClient openDockerClient() {
         var config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
 
-        DockerHttpClient httpClient = new OkDockerHttpClient.Builder()
+        DockerHttpClient httpClient = new ZerodepDockerHttpClient.Builder()
                 .dockerHost(config.getDockerHost())
                 .sslConfig(config.getSSLConfig())
-                .connectTimeout(30000)
-                .readTimeout(45000)
                 .build();
 
         return DockerClientImpl.getInstance(config, httpClient);
@@ -142,11 +140,9 @@ public class DockerClient extends BaseClient {
                 .withDockerHost(dockerInstance)
                 .build();
 
-        DockerHttpClient httpClient = new OkDockerHttpClient.Builder()
+        DockerHttpClient httpClient = new ZerodepDockerHttpClient.Builder()
                 .dockerHost(config.getDockerHost())
                 .sslConfig(config.getSSLConfig())
-                .connectTimeout(30000)
-                .readTimeout(45000)
                 .build();
 
         com.github.dockerjava.api.DockerClient dockerClient = DockerClientImpl.getInstance(config, httpClient);
@@ -384,7 +380,7 @@ public class DockerClient extends BaseClient {
     public CreateContainerResponse createContainers(com.github.dockerjava.api.DockerClient client, String containerName, String imageName,
                                                     List<String> ports, Map<String, Integer> portMapping,
                                                     List<VolumeBinding> volumeBindings,
-                                                    Map<String, String> environment, String runtimeConfig) {
+                                                    Map<String, String> environment, Map<String, Object> runtimeConfig) {
 
         CreateContainerCmd createCmd = client.createContainerCmd(imageName)
                 .withName(containerName);
@@ -443,16 +439,196 @@ public class DockerClient extends BaseClient {
             createCmd.withEnv(envArray);
         }
 
-        // Set runtime configuration
+        // Set runtime configuration from runtimeConfig map
         if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
-            // Note: the withRuntime method may not be available in the current version
-            // This parameter is reserved for future expansion
-            logger.info("Runtime configuration: " + runtimeConfig + " (not supported in the current version)");
+            logger.info("Applying runtime configuration: " + runtimeConfig);
+            hostConfig = applyRuntimeConfig(hostConfig, runtimeConfig);
+            createCmd.withHostConfig(hostConfig);
         }
 
         return createCmd.exec();
     }
 
+
+    /**
+     * Apply runtime configuration to HostConfig
+     *
+     * @param hostConfig     current HostConfig
+     * @param runtimeConfig  runtime configuration map
+     * @return updated HostConfig
+     */
+    private HostConfig applyRuntimeConfig(HostConfig hostConfig, Map<String, Object> runtimeConfig) {
+        if (runtimeConfig == null || runtimeConfig.isEmpty()) {
+            return hostConfig;
+        }
+
+        // Handle memory limit (mem_limit)
+        if (runtimeConfig.containsKey("mem_limit")) {
+            Object memLimitObj = runtimeConfig.get("mem_limit");
+            Long memoryLimit = parseMemoryLimit(memLimitObj);
+            if (memoryLimit != null) {
+                hostConfig = hostConfig.withMemory(memoryLimit);
+                logger.info("Applied memory limit: " + memoryLimit + " bytes");
+            }
+        }
+
+        // Handle CPU limit (nano_cpus)
+        if (runtimeConfig.containsKey("nano_cpus")) {
+            Object nanoCpusObj = runtimeConfig.get("nano_cpus");
+            Long nanoCpus = parseNanoCpus(nanoCpusObj);
+            if (nanoCpus != null) {
+                hostConfig = hostConfig.withNanoCPUs(nanoCpus);
+                logger.info("Applied nano CPUs: " + nanoCpus);
+            }
+        }
+
+        // Handle GPU support (enable_gpu)
+        if (runtimeConfig.containsKey("enable_gpu")) {
+            Object enableGpuObj = runtimeConfig.get("enable_gpu");
+            boolean enableGpu = parseBoolean(enableGpuObj);
+            if (enableGpu) {
+                // Create GPU device request
+                DeviceRequest gpuRequest = new DeviceRequest()
+                        .withCapabilities(Arrays.asList(Arrays.asList("gpu")))
+                        .withCount(-1); // -1 means all GPUs
+                hostConfig = hostConfig.withDeviceRequests(Arrays.asList(gpuRequest));
+                logger.info("Applied GPU support: enabled");
+            }
+        }
+
+        // Handle max connections (max_connections) - set via ulimits
+        if (runtimeConfig.containsKey("max_connections")) {
+            Object maxConnectionsObj = runtimeConfig.get("max_connections");
+            Integer maxConnections = parseInteger(maxConnectionsObj);
+            if (maxConnections != null) {
+                Ulimit ulimit = new Ulimit("nofile", maxConnections.longValue(), maxConnections.longValue());
+                hostConfig = hostConfig.withUlimits(Arrays.asList(ulimit));
+                logger.info("Applied max connections (nofile limit): " + maxConnections);
+            }
+        }
+
+        return hostConfig;
+    }
+
+    /**
+     * Parse memory limit from various formats
+     * Supports: "4g", "4G", "512m", "512M", 4294967296 (bytes as number)
+     *
+     * @param memLimitObj memory limit object
+     * @return memory limit in bytes, or null if invalid
+     */
+    private Long parseMemoryLimit(Object memLimitObj) {
+        if (memLimitObj == null) {
+            return null;
+        }
+
+        if (memLimitObj instanceof Number) {
+            return ((Number) memLimitObj).longValue();
+        }
+
+        String memLimitStr = memLimitObj.toString().trim().toLowerCase();
+        if (memLimitStr.isEmpty()) {
+            return null;
+        }
+
+        try {
+            // Extract number and unit
+            String numberPart = memLimitStr.replaceAll("[^0-9.]", "");
+            String unitPart = memLimitStr.replaceAll("[0-9.]", "");
+
+            double value = Double.parseDouble(numberPart);
+
+            // Convert to bytes based on unit
+            switch (unitPart) {
+                case "k":
+                case "kb":
+                    return (long) (value * 1024);
+                case "m":
+                case "mb":
+                    return (long) (value * 1024 * 1024);
+                case "g":
+                case "gb":
+                    return (long) (value * 1024 * 1024 * 1024);
+                case "t":
+                case "tb":
+                    return (long) (value * 1024 * 1024 * 1024 * 1024);
+                case "":
+                    // No unit, assume bytes
+                    return (long) value;
+                default:
+                    logger.warning("Unknown memory unit: " + unitPart);
+                    return null;
+            }
+        } catch (NumberFormatException e) {
+            logger.warning("Failed to parse memory limit: " + memLimitStr);
+            return null;
+        }
+    }
+
+    /**
+     * Parse nano CPUs from various formats
+     *
+     * @param nanoCpusObj nano CPUs object
+     * @return nano CPUs value, or null if invalid
+     */
+    private Long parseNanoCpus(Object nanoCpusObj) {
+        if (nanoCpusObj == null) {
+            return null;
+        }
+
+        if (nanoCpusObj instanceof Number) {
+            return ((Number) nanoCpusObj).longValue();
+        }
+
+        try {
+            return Long.parseLong(nanoCpusObj.toString());
+        } catch (NumberFormatException e) {
+            logger.warning("Failed to parse nano CPUs: " + nanoCpusObj);
+            return null;
+        }
+    }
+
+    /**
+     * Parse integer from various formats
+     *
+     * @param obj object to parse
+     * @return integer value, or null if invalid
+     */
+    private Integer parseInteger(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+
+        if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        }
+
+        try {
+            return Integer.parseInt(obj.toString());
+        } catch (NumberFormatException e) {
+            logger.warning("Failed to parse integer: " + obj);
+            return null;
+        }
+    }
+
+    /**
+     * Parse boolean from various formats
+     *
+     * @param obj object to parse
+     * @return boolean value
+     */
+    private boolean parseBoolean(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+
+        if (obj instanceof Boolean) {
+            return (Boolean) obj;
+        }
+
+        String str = obj.toString().toLowerCase();
+        return "true".equals(str) || "1".equals(str) || "yes".equals(str);
+    }
 
     /**
      * Start container

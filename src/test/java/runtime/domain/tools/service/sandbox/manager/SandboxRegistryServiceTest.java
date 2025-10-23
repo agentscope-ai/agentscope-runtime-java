@@ -3,7 +3,7 @@ package runtime.domain.tools.service.sandbox.manager;
 import io.agentscope.runtime.sandbox.manager.model.container.DynamicSandboxType;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistry;
+import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryService;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -13,10 +13,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * SandboxRegistry and SandboxConfig Test
+ * SandboxRegistryService and SandboxConfig Test
  * Demonstrates how Java version aligns with Python's sandbox registration functionality
  */
-public class SandboxRegistryTest {
+public class SandboxRegistryServiceTest {
 
     /**
      * Test 1: Using predefined sandbox types
@@ -26,7 +26,7 @@ public class SandboxRegistryTest {
         System.out.println("\n--- Test 1: Predefined Sandbox Types ---");
 
         // Get predefined type configuration
-        Optional<SandboxConfig> baseConfig = SandboxRegistry.getConfigByType(SandboxType.BASE);
+        Optional<SandboxConfig> baseConfig = SandboxRegistryService.getConfigByType(SandboxType.BASE);
         assertTrue(baseConfig.isPresent(), "BASE type should exist");
         
         baseConfig.ifPresent(config -> {
@@ -36,11 +36,11 @@ public class SandboxRegistryTest {
             System.out.println("  Security Level: " + config.getSecurityLevel());
             
             assertNotNull(config.getImageName(), "Image name should not be null");
-            assertEquals(300, config.getTimeout(), "Timeout should be greater than 0");
+            assertEquals(30, config.getTimeout(), "Timeout should be greater than 0");
         });
 
         // Get image name directly
-        Optional<String> browserImage = SandboxRegistry.getImageByType(SandboxType.BROWSER);
+        Optional<String> browserImage = SandboxRegistryService.getImageByType(SandboxType.BROWSER);
         assertTrue(browserImage.isPresent(), "BROWSER image should exist");
         
         browserImage.ifPresent(image -> {
@@ -49,7 +49,7 @@ public class SandboxRegistryTest {
         });
 
         // Check if type is registered
-        boolean isRegistered = SandboxRegistry.isRegistered(SandboxType.FILESYSTEM);
+        boolean isRegistered = SandboxRegistryService.isRegistered(SandboxType.FILESYSTEM);
         System.out.println("\nFILESYSTEM type registered: " + isRegistered);
         assertTrue(isRegistered, "FILESYSTEM type should be registered");
     }
@@ -65,10 +65,10 @@ public class SandboxRegistryTest {
         String customImage = "testcompany/custom-sandbox:latest";
 
         // Register custom sandbox type (similar to Python's decorator registration)
-        SandboxRegistry.registerCustomType(customTypeName, customImage);
+        SandboxRegistryService.registerCustomType(customTypeName, customImage);
 
         // Retrieve custom type configuration
-        Optional<String> retrievedImage = SandboxRegistry.getCustomTypeImage(customTypeName);
+        Optional<String> retrievedImage = SandboxRegistryService.getCustomTypeImage(customTypeName);
         assertTrue(retrievedImage.isPresent(), "Custom type should be registered");
         
         retrievedImage.ifPresent(image -> {
@@ -77,7 +77,7 @@ public class SandboxRegistryTest {
         });
 
         // Check if custom type is registered
-        boolean isCustomRegistered = SandboxRegistry.isCustomTypeRegistered(customTypeName);
+        boolean isCustomRegistered = SandboxRegistryService.isCustomTypeRegistered(customTypeName);
         System.out.println("Custom type registered: " + isCustomRegistered);
         assertTrue(isCustomRegistered, "Custom type should be registered");
     }
@@ -106,7 +106,7 @@ public class SandboxRegistryTest {
         runtimeConfig.put("shm_size", "512m");
 
         // Register with full configuration (similar to Python's full registration)
-        SandboxRegistry.registerCustomType(
+        SandboxRegistryService.registerCustomType(
             customTypeName,
             "testcompany/advanced-sandbox:v1.0",
             resourceLimits,
@@ -118,7 +118,7 @@ public class SandboxRegistryTest {
         );
 
         // Retrieve and display configuration
-        Optional<SandboxConfig> config = SandboxRegistry.getCustomTypeConfig(customTypeName);
+        Optional<SandboxConfig> config = SandboxRegistryService.getCustomTypeConfig(customTypeName);
         assertTrue(config.isPresent(), "Custom configuration should exist");
         
         config.ifPresent(cfg -> {
@@ -186,7 +186,7 @@ public class SandboxRegistryTest {
         System.out.println("\n--- Test 5: List All Registrations ---");
 
         // List all predefined sandbox types
-        Map<SandboxType, SandboxConfig> allSandboxes = SandboxRegistry.listAllSandboxesByType();
+        Map<SandboxType, SandboxConfig> allSandboxes = SandboxRegistryService.listAllSandboxesByType();
         System.out.println("\nPredefined Sandbox Types (" + allSandboxes.size() + "):");
         allSandboxes.forEach((type, config) -> 
             System.out.println("  " + type + " -> " + config.getImageName())
@@ -196,14 +196,14 @@ public class SandboxRegistryTest {
         assertTrue(allSandboxes.containsKey(SandboxType.BASE), "Should contain BASE type");
 
         // List all custom sandbox types
-        Map<String, SandboxConfig> customTypes = SandboxRegistry.listAllCustomTypes();
+        Map<String, SandboxConfig> customTypes = SandboxRegistryService.listAllCustomTypes();
         System.out.println("\nCustom Sandbox Types (" + customTypes.size() + "):");
         customTypes.forEach((name, config) -> 
             System.out.println("  " + name + " -> " + config.getImageName())
         );
 
         // Get total count
-        int totalCount = SandboxRegistry.getRegisteredCount() + customTypes.size();
+        int totalCount = SandboxRegistryService.getRegisteredCount() + customTypes.size();
         System.out.println("\nTotal registered sandbox types: " + totalCount);
         assertTrue(totalCount > 0, "Should have at least one registered type");
 
@@ -267,14 +267,14 @@ public class SandboxRegistryTest {
         String image2 = "testcompany/sandbox:v2";
 
         // First registration
-        SandboxRegistry.registerCustomType(typeName, image1);
-        Optional<String> firstImage = SandboxRegistry.getCustomTypeImage(typeName);
+        SandboxRegistryService.registerCustomType(typeName, image1);
+        Optional<String> firstImage = SandboxRegistryService.getCustomTypeImage(typeName);
         assertTrue(firstImage.isPresent(), "First registration should succeed");
         assertEquals(image1, firstImage.get(), "Should be the first image");
 
         // Second registration (overwrite)
-        SandboxRegistry.registerCustomType(typeName, image2);
-        Optional<String> secondImage = SandboxRegistry.getCustomTypeImage(typeName);
+        SandboxRegistryService.registerCustomType(typeName, image2);
+        Optional<String> secondImage = SandboxRegistryService.getCustomTypeImage(typeName);
         assertTrue(secondImage.isPresent(), "Second registration should succeed");
         
         System.out.println("First image: " + image1);

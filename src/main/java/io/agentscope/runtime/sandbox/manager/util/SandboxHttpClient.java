@@ -29,9 +29,9 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * 沙箱HTTP客户端
- * 对应Python版本的SandboxHttpClient
- * 用于与沙箱容器进行HTTP通信，调用沙箱内的工具
+ * Sandbox HTTP Client
+ * Corresponds to Python's SandboxHttpClient
+ * Used for HTTP communication with sandbox containers and calling tools within the sandbox
  */
 public class SandboxHttpClient implements AutoCloseable {
     private static final Logger logger = Logger.getLogger(SandboxHttpClient.class.getName());
@@ -43,12 +43,6 @@ public class SandboxHttpClient implements AutoCloseable {
     private final HttpClient httpClient;
     private final int timeout;
     
-    /**
-     * 构造函数
-     * 
-     * @param containerModel 容器模型
-     * @param timeout 超时时间（秒）
-     */
     public SandboxHttpClient(ContainerModel containerModel, int timeout) {
         this.sessionId = containerModel.getSessionId();
         this.baseUrl = containerModel.getBaseUrl();
@@ -59,15 +53,9 @@ public class SandboxHttpClient implements AutoCloseable {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         
-        // 等待服务健康
         waitUntilHealthy();
     }
     
-    /**
-     * 检查服务健康状态
-     * 
-     * @return 是否健康
-     */
     public boolean checkHealth() {
         try {
             String endpoint = baseUrl + "/healthz";
@@ -89,9 +77,6 @@ public class SandboxHttpClient implements AutoCloseable {
         }
     }
     
-    /**
-     * 等待服务健康
-     */
     public void waitUntilHealthy() {
         long startTime = System.currentTimeMillis();
         long timeoutMillis = timeout * 1000L;
@@ -113,12 +98,6 @@ public class SandboxHttpClient implements AutoCloseable {
         throw new RuntimeException("Sandbox service did not start within timeout: " + timeout + "s");
     }
     
-    /**
-     * 列出可用工具
-     * 
-     * @param toolType 工具类型（可选）
-     * @return 工具列表
-     */
     public Map<String, Object> listTools(String toolType) {
         try {
             String endpoint = baseUrl + "/mcp/list_tools";
@@ -143,7 +122,6 @@ public class SandboxHttpClient implements AutoCloseable {
             @SuppressWarnings("unchecked")
             Map<String, Object> tools = objectMapper.readValue(response.body(), Map.class);
             
-            // 添加通用工具
             Map<String, Object> genericTools = getGenericToolsSchema();
             tools.put("generic", genericTools);
             
@@ -160,25 +138,16 @@ public class SandboxHttpClient implements AutoCloseable {
         }
     }
     
-    /**
-     * 调用工具
-     * 
-     * @param toolName 工具名称
-     * @param arguments 工具参数
-     * @return 执行结果JSON字符串
-     */
     public String callTool(String toolName, Map<String, Object> arguments) {
         if (arguments == null) {
             arguments = new HashMap<>();
         }
         
         try {
-            // 检查是否为通用工具
             if (isGenericTool(toolName)) {
                 return callGenericTool(toolName, arguments);
             }
             
-            // MCP工具调用
             String endpoint = baseUrl + "/mcp/call_tool";
             
             Map<String, Object> requestBody = new HashMap<>();
@@ -211,9 +180,6 @@ public class SandboxHttpClient implements AutoCloseable {
         }
     }
     
-    /**
-     * 调用通用工具（run_ipython_cell, run_shell_command）
-     */
     private String callGenericTool(String toolName, Map<String, Object> arguments) {
         try {
             String endpoint = baseUrl + "/tools/" + toolName;
@@ -243,16 +209,10 @@ public class SandboxHttpClient implements AutoCloseable {
         }
     }
     
-    /**
-     * 检查是否为通用工具
-     */
     private boolean isGenericTool(String toolName) {
         return "run_ipython_cell".equals(toolName) || "run_shell_command".equals(toolName);
     }
     
-    /**
-     * 创建错误响应
-     */
     private String createErrorResponse(String errorMessage) {
         try {
             Map<String, Object> error = new HashMap<>();
@@ -267,9 +227,6 @@ public class SandboxHttpClient implements AutoCloseable {
         }
     }
     
-    /**
-     * 获取通用工具的schema
-     */
     private Map<String, Object> getGenericToolsSchema() {
         Map<String, Object> tools = new HashMap<>();
         
@@ -322,7 +279,7 @@ public class SandboxHttpClient implements AutoCloseable {
     
     @Override
     public void close() throws IOException {
-        // HttpClient不需要显式关闭
+        // HttpClient doesn't need explicit closing
     }
 }
 

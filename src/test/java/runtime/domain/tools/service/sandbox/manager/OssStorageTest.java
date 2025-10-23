@@ -148,7 +148,7 @@ public class OssStorageTest {
 
             // 8. Destroy container and upload data
             System.out.println("\n--- Destroying container and uploading data to OSS ---");
-            boolean released = manager.release(container.getSessionId());
+            boolean released = manager.release(container.getContainerName());
             assertTrue(released, "Container should be released successfully");
             System.out.println("Container destroyed, data uploaded to OSS: " + container.getStoragePath());
 

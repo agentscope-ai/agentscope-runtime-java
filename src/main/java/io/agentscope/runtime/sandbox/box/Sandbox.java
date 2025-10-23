@@ -23,33 +23,33 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * Sandbox接口基类
- * 对应Python版本的Sandbox类
- * 通过SandboxManager中转所有工具调用，实现沙箱隔离
+ * Sandbox base class
+ * Corresponds to Python's Sandbox class
+ * Routes all tool calls through SandboxManager to achieve sandbox isolation
  * 
- * <p>使用模式：
+ * <p>Usage patterns:
  * <ul>
- *   <li>长期持有模式（推荐用于Agent）：手动管理生命周期，需要显式调用close()
- *   <li>短期使用模式：使用try-with-resources自动清理
+ *   <li>Long-lived mode (recommended for Agents): Manual lifecycle management, requires explicit close()
+ *   <li>Short-lived mode: Use try-with-resources for automatic cleanup
  * </ul>
  * 
- * <p>示例1 - 长期持有（Agent场景）：
+ * <p>Example 1 - Long-lived (Agent scenario):
  * <pre>{@code
- * // 在Agent构造函数中创建
+ * // Create in Agent constructor
  * Sandbox sandbox = new FilesystemSandbox(manager, userId, sessionId);
  * 
- * // 在Agent的工具回调中使用
+ * // Use in Agent's tool callbacks
  * String result = sandbox.callTool("read_file", args);
  * 
- * // 在Agent销毁时释放
+ * // Release when Agent is destroyed
  * sandbox.close();
  * }</pre>
  * 
- * <p>示例2 - 短期使用：
+ * <p>Example 2 - Short-lived:
  * <pre>{@code
  * try (Sandbox sandbox = new FilesystemSandbox(manager, userId, sessionId)) {
  *     String result = sandbox.callTool("read_file", args);
- * } // 自动释放
+ * } // Auto-released
  * }</pre>
  */
 public abstract class Sandbox implements AutoCloseable {
@@ -61,17 +61,11 @@ public abstract class Sandbox implements AutoCloseable {
     protected final String sessionId;
     protected final SandboxType sandboxType;
     protected final int timeout;
-    protected final boolean autoRelease; // 是否自动释放
-    private boolean closed = false; // 防止重复关闭
+    protected final boolean autoRelease;
+    private boolean closed = false;
     
     /**
-     * 构造函数（默认不自动释放，适合长期持有）
-     * 
-     * @param managerApi SandboxManager实例
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     * @param sandboxType 沙箱类型
-     * @param timeout 超时时间（秒）
+     * Constructor (default: no auto-release, suitable for long-lived instances)
      */
     public Sandbox(
             SandboxManager managerApi,
@@ -83,14 +77,7 @@ public abstract class Sandbox implements AutoCloseable {
     }
     
     /**
-     * 构造函数（可指定是否自动释放）
-     * 
-     * @param managerApi SandboxManager实例
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     * @param sandboxType 沙箱类型
-     * @param timeout 超时时间（秒）
-     * @param autoRelease 是否在close时自动释放沙箱资源
+     * Constructor (can specify auto-release)
      */
     public Sandbox(
             SandboxManager managerApi,
@@ -106,7 +93,6 @@ public abstract class Sandbox implements AutoCloseable {
         this.timeout = timeout;
         this.autoRelease = autoRelease;
         
-        // 从池中获取或创建沙箱（如果已存在会复用）
         try {
             ContainerModel containerModel = managerApi.createFromPool(sandboxType, userId, sessionId);
             if (containerModel == null) {
@@ -124,82 +110,52 @@ public abstract class Sandbox implements AutoCloseable {
         }
     }
     
-    /**
-     * 获取沙箱ID
-     */
     public String getSandboxId() {
         return sandboxId;
     }
     
-    /**
-     * 获取用户ID
-     */
     public String getUserId() {
         return userId;
     }
     
-    /**
-     * 获取会话ID
-     */
     public String getSessionId() {
         return sessionId;
     }
     
-    /**
-     * 获取沙箱类型
-     */
     public SandboxType getSandboxType() {
         return sandboxType;
     }
     
-    /**
-     * 获取沙箱信息
-     */
     public ContainerModel getInfo() {
         return managerApi.getInfo(sandboxId, userId, sessionId);
     }
     
-    /**
-     * 列出可用工具
-     * 
-     * @param toolType 工具类型（可选）
-     * @return 工具列表
-     */
     public Map<String, Object> listTools(String toolType) {
         return managerApi.listTools(sandboxId, userId, sessionId, toolType);
     }
     
-    /**
-     * 调用工具
-     * 
-     * @param name 工具名称
-     * @param arguments 工具参数
-     * @return 执行结果
-     */
     public String callTool(String name, Map<String, Object> arguments) {
         return managerApi.callTool(sandboxId, userId, sessionId, name, arguments);
     }
     
     /**
-     * 关闭沙箱
-     * 如果autoRelease=true，会释放底层容器资源
-     * 如果autoRelease=false，只是标记为已关闭，沙箱仍然可用（供其他实例复用）
+     * Close sandbox
+     * If autoRelease=true, releases underlying container resources
+     * If autoRelease=false, only marks as closed, sandbox remains available for reuse
      */
     @Override
     public void close() {
         if (closed) {
-            return; // 防止重复关闭
+            return;
         }
         
         closed = true;
         
         try {
             if (autoRelease) {
-                // 自动释放模式：销毁沙箱容器
                 logger.info("Auto-releasing sandbox: " + sandboxId);
                 managerApi.releaseSandbox(sandboxType, userId, sessionId);
             } else {
-                // 手动管理模式：仅标记关闭，不释放容器
                 logger.info("Sandbox closed (not released, can be reused): " + sandboxId);
             }
         } catch (Exception e) {
@@ -208,8 +164,8 @@ public abstract class Sandbox implements AutoCloseable {
     }
     
     /**
-     * 手动释放沙箱资源
-     * 无论autoRelease设置如何，都会强制释放底层容器
+     * Manually release sandbox resources
+     * Forces release of underlying container regardless of autoRelease setting
      */
     public void release() {
         try {
@@ -222,11 +178,7 @@ public abstract class Sandbox implements AutoCloseable {
         }
     }
     
-    /**
-     * 检查沙箱是否已关闭
-     */
     public boolean isClosed() {
         return closed;
     }
 }
-

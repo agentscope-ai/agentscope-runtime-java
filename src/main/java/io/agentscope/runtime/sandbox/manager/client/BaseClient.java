@@ -46,7 +46,7 @@ public abstract class BaseClient {
     public abstract String createContainer(String containerName, String imageName,
                                          List<String> ports, Map<String, Integer> portMapping,
                                          List<VolumeBinding> volumeBindings,
-                                         Map<String, String> environment, String runtimeConfig);
+                                         Map<String, String> environment, Map<String, Object> runtimeConfig);
     
     /**
      * Start container

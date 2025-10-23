@@ -27,10 +27,10 @@ import java.util.logging.Logger;
 
 /**
  * Sandbox registry for managing sandbox configurations
- * Corresponds to Python's SandboxRegistry class
+ * Corresponds to Python's SandboxRegistryService class
  */
-public class SandboxRegistry {
-    private static final Logger logger = Logger.getLogger(SandboxRegistry.class.getName());
+public class SandboxRegistryService {
+    private static final Logger logger = Logger.getLogger(SandboxRegistryService.class.getName());
     
     // Thread-safe registries
     private static final Map<Class<?>, SandboxConfig> classRegistry = new ConcurrentHashMap<>();

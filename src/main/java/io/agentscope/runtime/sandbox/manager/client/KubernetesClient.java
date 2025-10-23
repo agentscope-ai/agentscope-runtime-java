@@ -187,9 +187,9 @@ public class KubernetesClient extends BaseClient {
 
     @Override
     public String createContainer(String containerName, String imageName,
-                                  List<String> ports, Map<String, Integer> portMapping,
-                                  List<VolumeBinding> volumeBindings,
-                                  Map<String, String> environment, String runtimeConfig) {
+            List<String> ports, Map<String, Integer> portMapping,
+            List<VolumeBinding> volumeBindings,
+            Map<String, String> environment, Map<String, Object> runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
@@ -210,8 +210,8 @@ public class KubernetesClient extends BaseClient {
                 V1Service createdService = coreApi.createNamespacedService(namespace, service).execute();
                 logger.info("LoadBalancer Service created: " + createdService.getMetadata().getName() +
                         ", ports: " + createdService.getSpec().getPorts().stream()
-                        .map(p -> p.getPort() + "->" + p.getTargetPort())
-                        .toList());
+                                .map(p -> p.getPort() + "->" + p.getTargetPort())
+                                .toList());
             }
 
             return deploymentName; // Return Deployment name as container ID
@@ -229,14 +229,13 @@ public class KubernetesClient extends BaseClient {
         }
     }
 
-
     /**
      * Create Deployment (more advanced controller)
      */
     public String createDeployment(String deploymentName, String imageName,
-                                   List<String> ports, Map<String, Integer> portMapping,
-                                   List<VolumeBinding> volumeBindings,
-                                   Map<String, String> environment, String runtimeConfig) {
+            List<String> ports, Map<String, Integer> portMapping,
+            List<VolumeBinding> volumeBindings,
+            Map<String, String> environment, Map<String, Object> runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
@@ -257,15 +256,17 @@ public class KubernetesClient extends BaseClient {
     }
 
     /**
-     * Create LoadBalancer type Service object for exposing container ports to external
+     * Create LoadBalancer type Service object for exposing container ports to
+     * external
      */
-    private V1Service createLoadBalancerServiceObject(String serviceName, String appName, Map<String, Integer> portMapping) {
+    private V1Service createLoadBalancerServiceObject(String serviceName, String appName,
+            Map<String, Integer> portMapping) {
         List<V1ServicePort> servicePorts = new ArrayList<>();
         int index = 1;
 
         for (Map.Entry<String, Integer> entry : portMapping.entrySet()) {
             String containerPortSpec = entry.getKey(); // e.g., "80/tcp"
-            Integer servicePort = entry.getValue();    // e.g., 80
+            Integer servicePort = entry.getValue(); // e.g., 80
 
             String[] parts = containerPortSpec.split("/");
             int containerPort = Integer.parseInt(parts[0]);
@@ -301,9 +302,9 @@ public class KubernetesClient extends BaseClient {
      * Create Deployment object
      */
     private V1Deployment createDeploymentObject(String deploymentName, String imageName,
-                                                List<String> ports, Map<String, Integer> portMapping,
-                                                List<VolumeBinding> volumeBindings,
-                                                Map<String, String> environment, String runtimeConfig) {
+            List<String> ports, Map<String, Integer> portMapping,
+            List<VolumeBinding> volumeBindings,
+            Map<String, String> environment, Map<String, Object> runtimeConfig) {
 
         // Labels for selector and associated resources
         Map<String, String> labels = Collections.singletonMap("app", deploymentName);
@@ -312,7 +313,8 @@ public class KubernetesClient extends BaseClient {
         Set<Integer> containerPortNumbers = new HashSet<>();
         List<V1ContainerPort> containerPorts = new ArrayList<>();
 
-        // 1. Extract container ports from portMapping (value is host port, but we only care about container port)
+        // 1. Extract container ports from portMapping (value is host port, but we only
+        // care about container port)
         if (portMapping != null && !portMapping.isEmpty()) {
             for (String containerPortStr : portMapping.keySet()) {
                 String[] parts = containerPortStr.split("/");
@@ -354,6 +356,8 @@ public class KubernetesClient extends BaseClient {
         List<V1VolumeMount> volumeMounts = new ArrayList<>();
         List<V1Volume> volumes = new ArrayList<>();
 
+        volumeBindings = null;
+
         // Enable file mounting in Kubernetes using hostPath volumes
         if (volumeBindings != null) {
             for (int i = 0; i < volumeBindings.size(); i++) {
@@ -385,6 +389,12 @@ public class KubernetesClient extends BaseClient {
                 .volumeMounts(volumeMounts)
                 .imagePullPolicy("IfNotPresent");
 
+        // Apply runtime configuration to container
+        if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
+            logger.info("Applying runtime configuration to Kubernetes container: " + runtimeConfig);
+            container = applyRuntimeConfigToContainer(container, runtimeConfig);
+        }
+
         // Pod specification
         V1PodSpec podSpec = new V1PodSpec()
                 .containers(Arrays.asList(container));
@@ -393,8 +403,14 @@ public class KubernetesClient extends BaseClient {
             podSpec.volumes(volumes);
         }
 
+        // Apply runtime configuration to Pod spec
+        if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
+            podSpec = applyRuntimeConfigToPodSpec(podSpec, runtimeConfig);
+        }
+
         // Note: No longer automatically enable hostNetwork!
-        // If hostNetwork is really needed (such as performance-sensitive scenarios), it should be explicitly enabled through runtimeConfig
+        // If hostNetwork is really needed (such as performance-sensitive scenarios), it
+        // should be explicitly enabled through runtimeConfig
 
         // Pod template
         V1PodTemplateSpec podTemplate = new V1PodTemplateSpec()
@@ -414,7 +430,6 @@ public class KubernetesClient extends BaseClient {
                 .metadata(new V1ObjectMeta().name(deploymentName))
                 .spec(deploymentSpec);
     }
-
 
     @Override
     public void startContainer(String containerId) {
@@ -612,6 +627,250 @@ public class KubernetesClient extends BaseClient {
     }
 
     /**
+     * Apply runtime configuration to container
+     *
+     * @param container     V1Container to apply configuration to
+     * @param runtimeConfig runtime configuration map
+     * @return updated V1Container
+     */
+    private V1Container applyRuntimeConfigToContainer(V1Container container, Map<String, Object> runtimeConfig) {
+        if (runtimeConfig == null || runtimeConfig.isEmpty()) {
+            return container;
+        }
+
+        // Create or get existing ResourceRequirements
+        V1ResourceRequirements resources = container.getResources();
+        if (resources == null) {
+            resources = new V1ResourceRequirements();
+        }
+
+        Map<String, io.kubernetes.client.custom.Quantity> limits = resources.getLimits();
+        Map<String, io.kubernetes.client.custom.Quantity> requests = resources.getRequests();
+
+        if (limits == null) {
+            limits = new HashMap<>();
+        }
+        if (requests == null) {
+            requests = new HashMap<>();
+        }
+
+        // Handle memory limit (mem_limit)
+        if (runtimeConfig.containsKey("mem_limit")) {
+            Object memLimitObj = runtimeConfig.get("mem_limit");
+            Long memoryBytes = parseMemoryLimit(memLimitObj);
+            if (memoryBytes != null) {
+                io.kubernetes.client.custom.Quantity memoryQuantity = new io.kubernetes.client.custom.Quantity(
+                        String.valueOf(memoryBytes));
+                limits.put("memory", memoryQuantity);
+                // Set request to same as limit for guaranteed QoS
+                requests.put("memory", memoryQuantity);
+                logger.info("Applied memory limit: " + memoryBytes + " bytes");
+            }
+        }
+
+        // Handle CPU limit (nano_cpus)
+        // In Kubernetes, CPU is measured in "cores". 1 core = 1,000,000,000 nanocores
+        if (runtimeConfig.containsKey("nano_cpus")) {
+            Object nanoCpusObj = runtimeConfig.get("nano_cpus");
+            Long nanoCpus = parseNanoCpus(nanoCpusObj);
+            if (nanoCpus != null) {
+                // Convert nanocpus to millicores: 1,000,000,000 nano = 1 core = 1000m
+                long milliCpus = nanoCpus / 1_000_000;
+                io.kubernetes.client.custom.Quantity cpuQuantity = new io.kubernetes.client.custom.Quantity(
+                        milliCpus + "m");
+                limits.put("cpu", cpuQuantity);
+                // Set request to same as limit for guaranteed QoS
+                requests.put("cpu", cpuQuantity);
+                logger.info("Applied CPU limit: " + nanoCpus + " nanocpus (" + milliCpus + " millicores)");
+            }
+        }
+
+        // Handle GPU support (enable_gpu)
+        if (runtimeConfig.containsKey("enable_gpu")) {
+            Object enableGpuObj = runtimeConfig.get("enable_gpu");
+            boolean enableGpu = parseBoolean(enableGpuObj);
+            if (enableGpu) {
+                // Request GPU resources (nvidia.com/gpu)
+                io.kubernetes.client.custom.Quantity gpuQuantity = new io.kubernetes.client.custom.Quantity("1");
+                limits.put("nvidia.com/gpu", gpuQuantity);
+                requests.put("nvidia.com/gpu", gpuQuantity);
+                logger.info("Applied GPU support: enabled (1 GPU requested)");
+            }
+        }
+
+        // Handle max connections (max_connections)
+        // Note: Kubernetes doesn't directly support ulimits in the same way Docker does
+        // This would typically be handled at the OS/node level or via init containers
+        if (runtimeConfig.containsKey("max_connections")) {
+            Object maxConnectionsObj = runtimeConfig.get("max_connections");
+            Integer maxConnections = parseInteger(maxConnectionsObj);
+            if (maxConnections != null) {
+                logger.info("Max connections configuration noted: " + maxConnections +
+                        " (Note: Kubernetes doesn't directly support ulimits, consider using init containers or node-level configuration)");
+            }
+        }
+
+        // Apply resource requirements to container
+        resources.setLimits(limits);
+        resources.setRequests(requests);
+        container.setResources(resources);
+
+        return container;
+    }
+
+    /**
+     * Apply runtime configuration to Pod spec
+     *
+     * @param podSpec       V1PodSpec to apply configuration to
+     * @param runtimeConfig runtime configuration map
+     * @return updated V1PodSpec
+     */
+    private V1PodSpec applyRuntimeConfigToPodSpec(V1PodSpec podSpec, Map<String, Object> runtimeConfig) {
+        if (runtimeConfig == null || runtimeConfig.isEmpty()) {
+            return podSpec;
+        }
+
+        // Handle GPU support - add node selector
+        if (runtimeConfig.containsKey("enable_gpu")) {
+            Object enableGpuObj = runtimeConfig.get("enable_gpu");
+            boolean enableGpu = parseBoolean(enableGpuObj);
+            if (enableGpu) {
+                // Add node selector for GPU nodes (if applicable)
+                Map<String, String> nodeSelector = podSpec.getNodeSelector();
+                if (nodeSelector == null) {
+                    nodeSelector = new HashMap<>();
+                }
+                // Common label for GPU-enabled nodes
+                nodeSelector.put("accelerator", "nvidia-gpu");
+                podSpec.setNodeSelector(nodeSelector);
+                logger.info("Added node selector for GPU-enabled nodes");
+            }
+        }
+
+        return podSpec;
+    }
+
+    /**
+     * Parse memory limit from various formats
+     * Supports: "4g", "4G", "512m", "512M", 4294967296 (bytes as number)
+     *
+     * @param memLimitObj memory limit object
+     * @return memory limit in bytes, or null if invalid
+     */
+    private Long parseMemoryLimit(Object memLimitObj) {
+        if (memLimitObj == null) {
+            return null;
+        }
+
+        if (memLimitObj instanceof Number) {
+            return ((Number) memLimitObj).longValue();
+        }
+
+        String memLimitStr = memLimitObj.toString().trim().toLowerCase();
+        if (memLimitStr.isEmpty()) {
+            return null;
+        }
+
+        try {
+            // Extract number and unit
+            String numberPart = memLimitStr.replaceAll("[^0-9.]", "");
+            String unitPart = memLimitStr.replaceAll("[0-9.]", "");
+
+            double value = Double.parseDouble(numberPart);
+
+            // Convert to bytes based on unit
+            switch (unitPart) {
+                case "k":
+                case "kb":
+                    return (long) (value * 1024);
+                case "m":
+                case "mb":
+                    return (long) (value * 1024 * 1024);
+                case "g":
+                case "gb":
+                    return (long) (value * 1024 * 1024 * 1024);
+                case "t":
+                case "tb":
+                    return (long) (value * 1024 * 1024 * 1024 * 1024);
+                case "":
+                    // No unit, assume bytes
+                    return (long) value;
+                default:
+                    logger.warning("Unknown memory unit: " + unitPart);
+                    return null;
+            }
+        } catch (NumberFormatException e) {
+            logger.warning("Failed to parse memory limit: " + memLimitStr);
+            return null;
+        }
+    }
+
+    /**
+     * Parse nano CPUs from various formats
+     *
+     * @param nanoCpusObj nano CPUs object
+     * @return nano CPUs value, or null if invalid
+     */
+    private Long parseNanoCpus(Object nanoCpusObj) {
+        if (nanoCpusObj == null) {
+            return null;
+        }
+
+        if (nanoCpusObj instanceof Number) {
+            return ((Number) nanoCpusObj).longValue();
+        }
+
+        try {
+            return Long.parseLong(nanoCpusObj.toString());
+        } catch (NumberFormatException e) {
+            logger.warning("Failed to parse nano CPUs: " + nanoCpusObj);
+            return null;
+        }
+    }
+
+    /**
+     * Parse integer from various formats
+     *
+     * @param obj object to parse
+     * @return integer value, or null if invalid
+     */
+    private Integer parseInteger(Object obj) {
+        if (obj == null) {
+            return null;
+        }
+
+        if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        }
+
+        try {
+            return Integer.parseInt(obj.toString());
+        } catch (NumberFormatException e) {
+            logger.warning("Failed to parse integer: " + obj);
+            return null;
+        }
+    }
+
+    /**
+     * Parse boolean from various formats
+     *
+     * @param obj object to parse
+     * @return boolean value
+     */
+    private boolean parseBoolean(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+
+        if (obj instanceof Boolean) {
+            return (Boolean) obj;
+        }
+
+        String str = obj.toString().toLowerCase();
+        return "true".equals(str) || "1".equals(str) || "yes".equals(str);
+    }
+
+    /**
      * Delete Service associated with container (if exists)
      *
      * @param containerId container ID (Deployment name)
@@ -649,7 +908,7 @@ public class KubernetesClient extends BaseClient {
         }
         return true;
     }
-    
+
     @Override
     public boolean inspectContainer(String containerIdOrName) {
         if (!isConnected()) {

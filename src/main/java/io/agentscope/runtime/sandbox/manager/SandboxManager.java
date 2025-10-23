@@ -26,7 +26,7 @@ import io.agentscope.runtime.sandbox.manager.collections.RedisContainerMapping;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.*;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
-import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistry;
+import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryService;
 import io.agentscope.runtime.sandbox.manager.util.PortManager;
 import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
 import io.agentscope.runtime.sandbox.manager.util.RedisClientWrapper;
@@ -254,7 +254,7 @@ public class SandboxManager implements AutoCloseable {
                 logger.info("Retrieved container from pool: " + containerModel.getContainerName());
 
                 // Verify the container version matches the current registered image
-                String currentImage = SandboxRegistry.getImageByType(defaultType).orElse(containerModel.getVersion());
+                String currentImage = SandboxRegistryService.getImageByType(defaultType).orElse(containerModel.getVersion());
 
                 if (!currentImage.equals(containerModel.getVersion())) {
                     logger.warning("Container " + containerModel.getContainerName() + " is outdated (has: " + containerModel.getVersion() + ", current: " + currentImage + "), releasing and trying next");
@@ -374,10 +374,10 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Port mapping: " + portMapping);
 
         // Get image name and configuration from registry
-        String imageName = SandboxRegistry.getImageByType(sandboxType).orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
+        String imageName = SandboxRegistryService.getImageByType(sandboxType).orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
 
         // Get sandbox configuration if available
-        SandboxConfig sandboxConfig = SandboxRegistry.getConfigByType(sandboxType).orElse(null);
+        SandboxConfig sandboxConfig = SandboxRegistryService.getConfigByType(sandboxType).orElse(null);
         if (sandboxConfig != null) {
             logger.info("Using registered sandbox configuration: " + sandboxConfig.getDescription());
             // Merge environment variables from config
@@ -463,8 +463,24 @@ public class SandboxManager implements AutoCloseable {
             }
         }
 
-        String runtimeConfig = "runc"; // or "nvidia" etc.
-        String containerName = this.managerConfig.getContainerPrefixKey() + sessionId.toLowerCase();
+        Map<String, Object> runtimeConfig = Map.of();
+        if (sandboxConfig != null) {
+            runtimeConfig = sandboxConfig.getRuntimeConfig();
+        }
+
+        logger.info("Runtime config: " + runtimeConfig);
+
+        String containerName;
+
+        String prefix = managerConfig.getContainerPrefixKey();
+        if (prefix == null || prefix.isEmpty()) {
+            prefix = "sandbox";
+        }
+        if (containerManagerType == ContainerManagerType.DOCKER) {
+            containerName = prefix + sessionId.toLowerCase();
+        } else {
+            containerName = prefix.replace('_', '-') + sessionId.toLowerCase();
+        }
 
         // TODO: Need to check container name uniqueness?
 
@@ -832,10 +848,8 @@ public class SandboxManager implements AutoCloseable {
             }
         }
 
-        // 4. Try as prefixed session ID (container_prefix + sessionId)
-        String prefixedName = managerConfig.getContainerPrefixKey() + identity.toLowerCase();
         for (ContainerModel model : sandboxMap.values()) {
-            if (prefixedName.equals(model.getContainerName())) {
+            if (identity.equals(model.getContainerName())) {
                 logger.fine("Found container by prefixed session ID: " + identity);
                 return model;
             }
@@ -856,7 +870,7 @@ public class SandboxManager implements AutoCloseable {
             // Get container info
             ContainerModel containerModel = getInfo(identity);
 
-            logger.info("Releasing container with identity: " + identity + " (container: " + containerModel.getContainerName() + ")");
+            logger.info("Releasing container with identity: " + identity);
 
             // Remove from sandboxMap first
             SandboxKey keyToRemove = null;
@@ -870,7 +884,7 @@ public class SandboxManager implements AutoCloseable {
             if (keyToRemove != null) {
                 sandboxMap.remove(keyToRemove);
                 logger.info("Removed container from sandbox map: " + keyToRemove);
-                
+
                 // Remove from Redis if enabled
                 if (redisEnabled && redisContainerMapping != null) {
                     redisContainerMapping.remove(keyToRemove);
@@ -1148,16 +1162,11 @@ public class SandboxManager implements AutoCloseable {
         return "";
     }
 
-    // ==================== Tool Call Methods (Python版本对齐) ====================
+    // ==================== Tool Call Methods ====================
     
     /**
-     * 建立与沙箱的HTTP连接
-     * 对应Python版本的_establish_connection
-     * 
-     * @param sandboxId 沙箱ID
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     * @return SandboxHttpClient实例
+     * Establish HTTP connection to sandbox
+     * Corresponds to Python's _establish_connection
      */
     private SandboxHttpClient establishConnection(
             String sandboxId, String userId, String sessionId) {
@@ -1175,21 +1184,14 @@ public class SandboxManager implements AutoCloseable {
     }
     
     /**
-     * 获取沙箱信息
-     * 对应Python版本的get_info
-     * 
-     * @param sandboxId 沙箱ID (可以是容器名称或ID)
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     * @return 容器信息Map
+     * Get sandbox information
+     * Corresponds to Python's get_info
      */
     public ContainerModel getInfo(String sandboxId, String userId, String sessionId) {
-        // 尝试通过不同的沙箱类型查找
         for (SandboxType type : SandboxType.values()) {
             SandboxKey key = new SandboxKey(userId, sessionId, type);
             ContainerModel model = sandboxMap.get(key);
             
-            // 如果本地缓存没有，尝试从Redis获取
             if (model == null && redisEnabled && redisContainerMapping != null) {
                 model = redisContainerMapping.get(key);
                 if (model != null) {
@@ -1197,24 +1199,16 @@ public class SandboxManager implements AutoCloseable {
                 }
             }
             
-            // 如果找到了就返回
             if (model != null) {
                 return model;
             }
         }
-        
-        throw new RuntimeException("No container found with id: " + sandboxId);
+        return null;
     }
     
     /**
-     * 列出沙箱中可用的工具
-     * 对应Python版本的list_tools
-     * 
-     * @param sandboxId 沙箱ID
-     * @param userId 用户ID  
-     * @param sessionId 会话ID
-     * @param toolType 工具类型（可选）
-     * @return 工具列表Map
+     * List available tools in sandbox
+     * Corresponds to Python's list_tools
      */
     public Map<String, Object> listTools(String sandboxId, String userId, String sessionId, String toolType) {
         try (SandboxHttpClient client = establishConnection(sandboxId, userId, sessionId)) {
@@ -1226,15 +1220,8 @@ public class SandboxManager implements AutoCloseable {
     }
     
     /**
-     * 调用沙箱工具
-     * 对应Python版本的call_tool
-     * 
-     * @param sandboxId 沙箱ID
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     * @param toolName 工具名称
-     * @param arguments 工具参数
-     * @return 执行结果JSON字符串
+     * Call sandbox tool
+     * Corresponds to Python's call_tool
      */
     public String callTool(String sandboxId, String userId, String sessionId, 
                           String toolName, Map<String, Object> arguments) {
@@ -1249,13 +1236,8 @@ public class SandboxManager implements AutoCloseable {
     }
     
     /**
-     * 释放沙箱资源
-     * 对应Python版本的release
-     * 
-     * @param sandboxType 沙箱类型
-     * @param userId 用户ID
-     * @param sessionId 会话ID
-     * @return 是否成功
+     * Release sandbox resources
+     * Corresponds to Python's release
      */
     public boolean releaseSandbox(SandboxType sandboxType, String userId, String sessionId) {
         try {

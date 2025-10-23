@@ -185,10 +185,9 @@
             <version>2.1.6</version>
         </dependency>
 
-        <!-- HTTP client dependency - using OkHttp -->
         <dependency>
             <groupId>com.github.docker-java</groupId>
-            <artifactId>docker-java-transport-okhttp</artifactId>
+            <artifactId>docker-java-transport-zerodep</artifactId>
             <version>3.4.0</version>
         </dependency>
 
