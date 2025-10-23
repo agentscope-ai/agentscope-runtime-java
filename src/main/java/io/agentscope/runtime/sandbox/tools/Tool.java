@@ -17,15 +17,6 @@ package io.agentscope.runtime.sandbox.tools;
 
 import org.springframework.ai.tool.ToolCallback;
 
-/**
- * Abstract base class that defines common interfaces for all tools
- * Similar to Python's Tool base class
- * 
- * Main responsibilities:
- * - Define standard tool interfaces
- * - Ensure consistent behavior across different tool types
- * - Provide common functionality
- */
 public abstract class Tool {
     
     protected String name;
@@ -33,14 +24,7 @@ public abstract class Tool {
     protected String toolType;
     
     protected String description;
-    
-    /**
-     * Constructor
-     * 
-     * @param name Tool name
-     * @param toolType Tool type
-     * @param description Tool description
-     */
+
     protected Tool(String name, String toolType, String description) {
         this.name = name;
         this.toolType = toolType;
@@ -58,13 +42,7 @@ public abstract class Tool {
     public String getDescription() {
         return description;
     }
-    
-    /**
-     * Build ToolCallback
-     * Each concrete tool must implement this method to create its corresponding ToolCallback
-     * 
-     * @return ToolCallback instance
-     */
+
     public abstract ToolCallback buildTool();
     
     @Override

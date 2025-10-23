@@ -19,14 +19,6 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
-/**
- * WebShop Sandbox implementation
- * Corresponds to Python's WebShopSandbox
- * Training Sandbox class for managing and executing webshop training-related tasks
- * 
- * <p>This class provides methods to create, manage, and interact with
- * webshop training environment instances using specialized tool calls.
- */
 @RegisterSandbox(
     imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-webshop:latest",
     sandboxType = SandboxType.WEBSHOP,

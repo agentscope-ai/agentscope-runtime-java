@@ -33,10 +33,8 @@ import java.util.logging.Logger;
 public class PortManager {
     private static final Logger logger = Logger.getLogger(PortManager.class.getName());
     
-    // Set of allocated ports (thread-safe)
     private final Set<Integer> allocatedPorts = ConcurrentHashMap.newKeySet();
     
-    // Mapping of container names to their allocated ports (for cleanup)
     private final ConcurrentHashMap<String, Set<Integer>> containerPorts = new ConcurrentHashMap<>();
     
     private final PortRange portRange;
@@ -57,14 +55,11 @@ public class PortManager {
         int startPort = portRange.getStart();
         int endPort = portRange.getEnd();
         
-        // Try to find an available port
         for (int port = startPort; port <= endPort; port++) {
-            // Skip if already allocated
             if (allocatedPorts.contains(port)) {
                 continue;
             }
             
-            // Check if port is actually available on the system
             if (isPortAvailable(port)) {
                 allocatedPorts.add(port);
                 logger.fine("Allocated port: " + port);
@@ -90,7 +85,6 @@ public class PortManager {
             for (int i = 0; i < count; i++) {
                 int port = allocatePort();
                 if (port == -1) {
-                    // Failed to allocate, rollback
                     for (int allocated : tempAllocated) {
                         allocatedPorts.remove(allocated);
                     }
@@ -101,7 +95,6 @@ public class PortManager {
             }
             return ports;
         } catch (Exception e) {
-            // Rollback on error
             for (int allocated : tempAllocated) {
                 allocatedPorts.remove(allocated);
             }
@@ -171,7 +164,6 @@ public class PortManager {
      * @return true if available, false otherwise
      */
     private boolean isPortAvailable(int port) {
-        // Try binding to multiple addresses to ensure port is truly available
         String[] addressesToTest = {"0.0.0.0", "127.0.0.1", "localhost"};
         
         for (String addr : addressesToTest) {
@@ -179,7 +171,6 @@ public class PortManager {
                 socket.setReuseAddress(false);
                 socket.bind(new InetSocketAddress(addr, port), 1);
             } catch (IOException e) {
-                // Port is in use or cannot bind to this address
                 return false;
             }
         }

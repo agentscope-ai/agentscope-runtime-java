@@ -33,33 +33,33 @@ import java.util.logging.Logger;
  * Corresponds to Python's SandboxHttpClient
  * Used for HTTP communication with sandbox containers and calling tools within the sandbox
  */
-public class SandboxHttpClient extends SandboxClient{
+public class SandboxHttpClient extends SandboxClient {
     private static final Logger logger = Logger.getLogger(SandboxHttpClient.class.getName());
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     private final String sessionId;
     private final String baseUrl;
     private final String secret;
     private final HttpClient httpClient;
     private final int timeout;
-    
+
     public SandboxHttpClient(ContainerModel containerModel, int timeout) {
         this.sessionId = containerModel.getSessionId();
         this.baseUrl = containerModel.getBaseUrl();
         this.secret = containerModel.getAuthToken();
         this.timeout = timeout;
-        
+
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
-        
+
         waitUntilHealthy();
     }
-    
+
     public boolean checkHealth() {
         try {
             String endpoint = baseUrl + "/healthz";
-            
+
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
                     .header("Authorization", "Bearer " + secret)
@@ -67,26 +67,26 @@ public class SandboxHttpClient extends SandboxClient{
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
-            
-            HttpResponse<String> response = httpClient.send(request, 
+
+            HttpResponse<String> response = httpClient.send(request,
                     HttpResponse.BodyHandlers.ofString());
-            
+
             return response.statusCode() == 200;
         } catch (Exception e) {
             return false;
         }
     }
-    
+
     public void waitUntilHealthy() {
         long startTime = System.currentTimeMillis();
         long timeoutMillis = timeout * 1000L;
-        
+
         while (System.currentTimeMillis() - startTime < timeoutMillis) {
             if (checkHealth()) {
                 logger.info("Sandbox service is healthy: " + baseUrl);
                 return;
             }
-            
+
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -94,7 +94,7 @@ public class SandboxHttpClient extends SandboxClient{
                 throw new RuntimeException("Interrupted while waiting for sandbox health", e);
             }
         }
-        
+
         throw new RuntimeException("Sandbox service did not start within timeout: " + timeout + "s");
     }
 
@@ -137,25 +137,25 @@ public class SandboxHttpClient extends SandboxClient{
             return new HashMap<>();
         }
     }
-    
+
     public String callTool(String toolName, Map<String, Object> arguments) {
         if (arguments == null) {
             arguments = new HashMap<>();
         }
-        
+
         try {
             if (isGenericTool(toolName)) {
                 return callGenericTool(toolName, arguments);
             }
-            
+
             String endpoint = baseUrl + "/mcp/call_tool";
-            
+
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("tool_name", toolName);
             requestBody.put("arguments", arguments);
-            
+
             String jsonBody = objectMapper.writeValueAsString(requestBody);
-            
+
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
                     .header("Authorization", "Bearer " + secret)
@@ -164,14 +164,14 @@ public class SandboxHttpClient extends SandboxClient{
                     .timeout(Duration.ofSeconds(timeout))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
-            
+
             HttpResponse<String> response = httpClient.send(request,
                     HttpResponse.BodyHandlers.ofString());
-            
+
             if (response.statusCode() != 200) {
                 return createErrorResponse("HTTP " + response.statusCode() + ": " + response.body());
             }
-            
+
             return response.body();
         } catch (Exception e) {
             logger.severe("Error calling tool " + toolName + ": " + e.getMessage());
@@ -215,13 +215,13 @@ public class SandboxHttpClient extends SandboxClient{
             return new HashMap<>();
         }
     }
-    
+
     private String callGenericTool(String toolName, Map<String, Object> arguments) {
         try {
             String endpoint = baseUrl + "/tools/" + toolName;
-            
+
             String jsonBody = objectMapper.writeValueAsString(arguments);
-            
+
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
                     .header("Authorization", "Bearer " + secret)
@@ -230,25 +230,25 @@ public class SandboxHttpClient extends SandboxClient{
                     .timeout(Duration.ofSeconds(timeout))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
-            
+
             HttpResponse<String> response = httpClient.send(request,
                     HttpResponse.BodyHandlers.ofString());
-            
+
             if (response.statusCode() != 200) {
                 return createErrorResponse("HTTP " + response.statusCode() + ": " + response.body());
             }
-            
+
             return response.body();
         } catch (Exception e) {
             logger.severe("Error calling generic tool " + toolName + ": " + e.getMessage());
             return createErrorResponse("Error calling generic tool: " + e.getMessage());
         }
     }
-    
+
     private boolean isGenericTool(String toolName) {
         return "run_ipython_cell".equals(toolName) || "run_shell_command".equals(toolName);
     }
-    
+
     private String createErrorResponse(String errorMessage) {
         try {
             Map<String, Object> error = new HashMap<>();
@@ -262,10 +262,10 @@ public class SandboxHttpClient extends SandboxClient{
             return "{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"" + errorMessage + "\"}]}";
         }
     }
-    
+
     private Map<String, Object> getGenericToolsSchema() {
         Map<String, Object> tools = new HashMap<>();
-        
+
         // run_ipython_cell
         Map<String, Object> ipythonTool = new HashMap<>();
         ipythonTool.put("name", "run_ipython_cell");
@@ -287,7 +287,7 @@ public class SandboxHttpClient extends SandboxClient{
         ipythonSchema.put("function", ipythonFunction);
         ipythonTool.put("json_schema", ipythonSchema);
         tools.put("run_ipython_cell", ipythonTool);
-        
+
         // run_shell_command
         Map<String, Object> shellTool = new HashMap<>();
         shellTool.put("name", "run_shell_command");
@@ -309,13 +309,12 @@ public class SandboxHttpClient extends SandboxClient{
         shellSchema.put("function", shellFunction);
         shellTool.put("json_schema", shellSchema);
         tools.put("run_shell_command", shellTool);
-        
+
         return tools;
     }
-    
+
     @Override
     public void close() throws IOException {
-        // HttpClient doesn't need explicit closing
     }
 }
 

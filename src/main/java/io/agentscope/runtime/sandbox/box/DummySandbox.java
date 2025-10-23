@@ -22,14 +22,6 @@ import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import java.util.Map;
 import java.util.logging.Logger;
 
-/**
- * Dummy Sandbox implementation
- * Corresponds to Python's DummySandbox
- * A lightweight sandbox for testing purposes with minimal functionality
- * 
- * <p>This is a special implementation that doesn't create real containers,
- * suitable for testing and development purposes.
- */
 public class DummySandbox implements AutoCloseable {
     private static final Logger logger = Logger.getLogger(DummySandbox.class.getName());
     

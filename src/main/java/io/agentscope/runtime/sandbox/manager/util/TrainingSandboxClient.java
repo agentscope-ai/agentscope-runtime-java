@@ -30,15 +30,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * Training Sandbox HTTP Client
- * Corresponds to Python's TrainingSandboxClient
- * Used for HTTP communication with training sandbox containers
- *
- * <p>This client is specifically designed for training environments and provides
- * methods for creating instances, stepping through tasks, evaluating performance,
- * and managing training environment lifecycles.
- */
 public class TrainingSandboxClient extends SandboxClient {
     private static final Logger logger = Logger.getLogger(TrainingSandboxClient.class.getName());
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -88,11 +79,6 @@ public class TrainingSandboxClient extends SandboxClient {
     }
 
 
-    /**
-     * Check if the training sandbox service is healthy
-     *
-     * @return true if healthy, false otherwise
-     */
     public boolean checkHealth() {
         try {
             String endpoint = baseUrl + "/healthz";
@@ -115,9 +101,6 @@ public class TrainingSandboxClient extends SandboxClient {
         }
     }
 
-    /**
-     * Wait until the service is healthy
-     */
     public void waitUntilHealthy() {
         long startTime = System.currentTimeMillis();
         long timeoutMillis = timeout * 1000L;
@@ -452,7 +435,6 @@ public class TrainingSandboxClient extends SandboxClient {
 
     @Override
     public void close() throws IOException {
-        // HttpClient doesn't need explicit closing
     }
 }
 

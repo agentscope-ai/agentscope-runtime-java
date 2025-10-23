@@ -22,36 +22,6 @@ import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import java.util.Map;
 import java.util.logging.Logger;
 
-/**
- * Sandbox base class
- * Corresponds to Python's Sandbox class
- * Routes all tool calls through SandboxManager to achieve sandbox isolation
- * 
- * <p>Usage patterns:
- * <ul>
- *   <li>Long-lived mode (recommended for Agents): Manual lifecycle management, requires explicit close()
- *   <li>Short-lived mode: Use try-with-resources for automatic cleanup
- * </ul>
- * 
- * <p>Example 1 - Long-lived (Agent scenario):
- * <pre>{@code
- * // Create in Agent constructor
- * Sandbox sandbox = new FilesystemSandbox(manager, userId, sessionId);
- * 
- * // Use in Agent's tool callbacks
- * String result = sandbox.callTool("read_file", args);
- * 
- * // Release when Agent is destroyed
- * sandbox.close();
- * }</pre>
- * 
- * <p>Example 2 - Short-lived:
- * <pre>{@code
- * try (Sandbox sandbox = new FilesystemSandbox(manager, userId, sessionId)) {
- *     String result = sandbox.callTool("read_file", args);
- * } // Auto-released
- * }</pre>
- */
 public abstract class Sandbox implements AutoCloseable {
     private static final Logger logger = Logger.getLogger(Sandbox.class.getName());
     
@@ -63,10 +33,7 @@ public abstract class Sandbox implements AutoCloseable {
     protected final int timeout;
     protected final boolean autoRelease;
     private boolean closed = false;
-    
-    /**
-     * Constructor (default: no auto-release, suitable for long-lived instances)
-     */
+
     public Sandbox(
             SandboxManager managerApi,
             String userId,
@@ -75,10 +42,7 @@ public abstract class Sandbox implements AutoCloseable {
             int timeout) {
         this(managerApi, userId, sessionId, sandboxType, timeout, false);
     }
-    
-    /**
-     * Constructor (can specify auto-release)
-     */
+
     public Sandbox(
             SandboxManager managerApi,
             String userId,
@@ -145,12 +109,7 @@ public abstract class Sandbox implements AutoCloseable {
     public Map<String, Object> addMcpServers(Map<String, Object> serverConfigs, boolean overwrite){
         return managerApi.addMcpServers(sandboxId, userId, sessionId, serverConfigs, overwrite);
     }
-    
-    /**
-     * Close sandbox
-     * If autoRelease=true, releases underlying container resources
-     * If autoRelease=false, only marks as closed, sandbox remains available for reuse
-     */
+
     @Override
     public void close() {
         if (closed) {

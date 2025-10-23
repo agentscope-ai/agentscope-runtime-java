@@ -21,8 +21,8 @@ import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.collections.ContainerQueue;
 import io.agentscope.runtime.sandbox.manager.collections.InMemoryContainerQueue;
-import io.agentscope.runtime.sandbox.manager.collections.RedisContainerQueue;
 import io.agentscope.runtime.sandbox.manager.collections.RedisContainerMapping;
+import io.agentscope.runtime.sandbox.manager.collections.RedisContainerQueue;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.*;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
@@ -32,19 +32,12 @@ import io.agentscope.runtime.sandbox.manager.util.*;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
  * Sandbox Manager for managing container lifecycle
- * Implements AutoCloseable for automatic resource cleanup
- * Corresponds to Python's SandboxManager class
  */
 public class SandboxManager implements AutoCloseable {
     private final Map<SandboxKey, ContainerModel> sandboxMap = new HashMap<>();
@@ -55,16 +48,10 @@ public class SandboxManager implements AutoCloseable {
     private final ManagerConfig managerConfig;
     private BaseClient containerClient;
     private final StorageManager storageManager;
-
-    // Container pool management
     private final int poolSize;
     private final ContainerQueue poolQueue;
     private final SandboxType defaultType;
-
-    // Port management (thread-safe)
     private final PortManager portManager;
-    
-    // Redis management (optional)
     private RedisClientWrapper redisClient;
     private RedisContainerMapping redisContainerMapping;
     private final boolean redisEnabled;
@@ -89,11 +76,6 @@ public class SandboxManager implements AutoCloseable {
         this(managerConfig, baseUrl, bearerToken, SandboxType.BASE);
     }
 
-    /**
-     * Constructor supporting Kubernetes configuration
-     *
-     * @param managerConfig manager configuration
-     */
     public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken, SandboxType defaultType) {
         // TODO: Support for remote HTTP session needs to be added, currently ignored
         this.managerConfig = managerConfig;
@@ -107,22 +89,18 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Initializing SandboxManager with container manager: " + this.containerManagerType);
         logger.info("Container pool size: " + this.poolSize);
         logger.info("Redis enabled: " + this.redisEnabled);
-        
-        // Initialize Redis if enabled
+
         if (this.redisEnabled) {
             try {
                 RedisManagerConfig redisConfig = managerConfig.getRedisConfig();
                 this.redisClient = new RedisClientWrapper(redisConfig);
-                
-                // Test Redis connection
+
                 String pong = this.redisClient.ping();
                 logger.info("Redis connection test: " + pong);
-                
-                // Initialize Redis container mapping with prefix
+
                 String mappingPrefix = managerConfig.getContainerPrefixKey() + "mapping";
                 this.redisContainerMapping = new RedisContainerMapping(this.redisClient, mappingPrefix);
-                
-                // Initialize Redis queue for pool if pool size > 0
+
                 if (this.poolSize > 0) {
                     String queueName = redisConfig.getRedisContainerPoolKey();
                     this.poolQueue = new RedisContainerQueue(this.redisClient, queueName);
@@ -130,7 +108,7 @@ public class SandboxManager implements AutoCloseable {
                 } else {
                     this.poolQueue = new InMemoryContainerQueue();
                 }
-                
+
                 logger.info("Redis client initialized successfully for container management");
             } catch (Exception e) {
                 logger.severe("Failed to initialize Redis client: " + e.getMessage());
@@ -159,7 +137,7 @@ public class SandboxManager implements AutoCloseable {
                 }
                 this.containerClient = kubernetesClient;
                 kubernetesClient.connect();
-                this.client = null; // Kubernetes does not need Docker client
+                this.client = null;
                 break;
             case AGENTRUN:
                 break;
@@ -169,31 +147,23 @@ public class SandboxManager implements AutoCloseable {
                 throw new IllegalArgumentException("Unsupported container manager type: " + this.containerManagerType);
         }
 
-        // Initialize container pool if pool size > 0
         if (this.poolSize > 0) {
             initContainerPool();
         }
     }
 
-    /**
-     * Initialize container pool
-     * Corresponds to Python's _init_container_pool()
-     */
     private void initContainerPool() {
         logger.info("Initializing container pool with size: " + poolSize);
 
         while (poolQueue.size() < poolSize) {
             try {
-                // Create a container for the pool using default pool type
                 ContainerModel containerModel = createContainer(defaultType, null, null, null);
 
                 if (containerModel != null) {
-                    // Check pool size again to avoid race condition
                     if (poolQueue.size() < poolSize) {
                         poolQueue.enqueue(containerModel);
                         logger.info("Added container to pool: " + containerModel.getContainerName() + " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
                     } else {
-                        // Pool size reached, release this container
                         logger.info("Pool size limit reached, releasing container: " + containerModel.getContainerName());
                         releaseContainer(containerModel);
                         break;
@@ -208,19 +178,10 @@ public class SandboxManager implements AutoCloseable {
                 break;
             }
         }
-
         logger.info("Container pool initialization complete. Pool size: " + poolQueue.size());
     }
 
-    /**
-     * Create a container from the pool
-     * Corresponds to Python's create_from_pool()
-     *
-     * @param sandboxType The type of sandbox to create
-     * @return The container name, or null if failed
-     */
     public ContainerModel createFromPool(SandboxType sandboxType) {
-        // If requested type is not the default pool type, create directly
         if (sandboxType != defaultType) {
             logger.info("Requested type " + sandboxType + " differs from pool type " + defaultType + ", creating directly");
             return createContainer(sandboxType, null, null, null);
@@ -233,13 +194,11 @@ public class SandboxManager implements AutoCloseable {
             attempts++;
 
             try {
-                // Create a new container to add to the pool first
                 ContainerModel newContainer = createContainer(defaultType, null, null, null);
                 if (newContainer != null) {
                     poolQueue.enqueue(newContainer);
                 }
 
-                // Dequeue a container from the pool
                 ContainerModel containerModel = poolQueue.dequeue();
 
                 if (containerModel == null) {
@@ -249,7 +208,6 @@ public class SandboxManager implements AutoCloseable {
 
                 logger.info("Retrieved container from pool: " + containerModel.getContainerName());
 
-                // Verify the container version matches the current registered image
                 String currentImage = SandboxRegistryService.getImageByType(defaultType).orElse(containerModel.getVersion());
 
                 if (!currentImage.equals(containerModel.getVersion())) {
@@ -258,14 +216,11 @@ public class SandboxManager implements AutoCloseable {
                     continue;
                 }
 
-                // Verify container still exists
                 if (!containerClient.inspectContainer(containerModel.getContainerId())) {
                     logger.warning("Container " + containerModel.getContainerId() + " not found or has been removed externally, trying next");
-                    // Container doesn't exist, just continue to next one
                     continue;
                 }
 
-                // Verify container is still running
                 String status = containerClient.getContainerStatus(containerModel.getContainerId());
                 if (!"running".equals(status)) {
                     logger.warning("Container " + containerModel.getContainerId() + " is not running (status: " + status + "), trying next");
@@ -282,43 +237,28 @@ public class SandboxManager implements AutoCloseable {
             }
         }
 
-        // Failed to get from pool, create a new one
         logger.warning("Failed to get container from pool after " + maxAttempts + " attempts, creating new container");
         return createContainer(sandboxType, null, null, null);
     }
 
-    /**
-     * Create a container from the pool and add it to the sandbox map for management
-     * This allows the container to be released using release(sessionId)
-     *
-     * @param sandboxType The type of sandbox to create
-     * @param userID      The user ID
-     * @param sessionID   The session ID
-     * @return The container model, or null if failed
-     */
     public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID) {
-        // First check if container already exists for this user/session/type
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel existingContainer = sandboxMap.get(key);
-        
-        // If found in memory, return it
+
         if (existingContainer != null) {
             logger.info("Reusing existing container: " + existingContainer.getContainerName() + " (userID: " + userID + ", sessionID: " + sessionID + ")");
             return existingContainer;
         }
-        
-        // If not in memory but Redis is enabled, check Redis
+
         if (redisEnabled && redisContainerMapping != null) {
             existingContainer = redisContainerMapping.get(key);
             if (existingContainer != null) {
-                // Add to local cache
                 sandboxMap.put(key, existingContainer);
                 logger.info("Retrieved container from Redis: " + existingContainer.getContainerName() + " (userID: " + userID + ", sessionID: " + sessionID + ")");
                 return existingContainer;
             }
         }
-        
-        // No existing container found, create new one from pool
+
         ContainerModel containerModel = createFromPool(sandboxType);
 
         if (containerModel == null) {
@@ -326,11 +266,8 @@ public class SandboxManager implements AutoCloseable {
             return null;
         }
 
-        // Add to sandbox map for unified management using the provided sessionID as the key
-        // but keep the container's original random sessionId
         sandboxMap.put(key, containerModel);
-        
-        // Store in Redis if enabled
+
         if (redisEnabled && redisContainerMapping != null) {
             redisContainerMapping.put(key, containerModel);
             logger.info("Stored pool container in Redis");
@@ -341,17 +278,11 @@ public class SandboxManager implements AutoCloseable {
         return containerModel;
     }
 
-    /**
-     * Helper method to create a container (internal use)
-     * This is separated from getSandbox for pool management
-     */
     private ContainerModel createContainer(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment) {
-        // Initialize environment if null
         if (environment == null) {
             environment = new HashMap<>();
         }
 
-        // Validate environment values
         for (Map.Entry<String, String> entry : environment.entrySet()) {
             String value = entry.getValue();
             if (value == null) {
@@ -359,24 +290,16 @@ public class SandboxManager implements AutoCloseable {
                 return null;
             }
         }
-
         String workdir = "/workspace";
         String default_mount_dir = managerConfig.getFileSystemConfig().getMountDir();
         String[] portsArray = {"80/tcp"};
         List<String> ports = Arrays.asList(portsArray);
-
-        // Create port mapping
         Map<String, Integer> portMapping = createPortMapping(ports);
         logger.info("Port mapping: " + portMapping);
-
-        // Get image name and configuration from registry
         String imageName = SandboxRegistryService.getImageByType(sandboxType).orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
-
-        // Get sandbox configuration if available
         SandboxConfig sandboxConfig = SandboxRegistryService.getConfigByType(sandboxType).orElse(null);
         if (sandboxConfig != null) {
             logger.info("Using registered sandbox configuration: " + sandboxConfig.getDescription());
-            // Merge environment variables from config
             if (sandboxConfig.getEnvironment() != null && !sandboxConfig.getEnvironment().isEmpty()) {
                 Map<String, String> mergedEnv = new HashMap<>(sandboxConfig.getEnvironment());
                 mergedEnv.putAll(environment);
@@ -394,29 +317,22 @@ public class SandboxManager implements AutoCloseable {
         } else if (containerManagerType == ContainerManagerType.KUBERNETES) {
             logger.info("Kubernetes image is ready: " + imageName);
         }
-
         String sessionId = RandomStringGenerator.generateRandomString(22);
         String currentDir = System.getProperty("user.dir");
-
         if (mountDir == null || mountDir.isEmpty()) {
             mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
         }
-
         if (this.managerConfig.getClientConfig().getClientType() == ContainerManagerType.AGENTRUN) {
             mountDir = Paths.get(mountDir).toAbsolutePath().toString();
         }
-
         java.io.File file = new java.io.File(mountDir);
         if (!file.exists()) {
             file.mkdirs();
         }
-
         // Todo：Currently using global storage path if not provided, still need to wait for next movement of python version
         if (storagePath == null) {
             storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath();
         }
-
-        // If storage path is configured and not AgentRun deployment, download files from storage to mount directory
         if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN) {
             logger.info("Downloading from storage path: " + storagePath + " to mount dir: " + mountDir);
             boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
@@ -426,48 +342,35 @@ public class SandboxManager implements AutoCloseable {
                 logger.warning("Failed to download files from storage, continuing with empty mount dir");
             }
         }
-
         String runtimeToken = RandomStringGenerator.generateRandomString(32);
         environment.put("SECRET_TOKEN", runtimeToken);
-
         List<VolumeBinding> volumeBindings = new ArrayList<>();
         volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
-
-        // Add read-only mounts
         Map<String, String> readonlyMounts = managerConfig.getFileSystemConfig().getReadonlyMounts();
         if (readonlyMounts != null && !readonlyMounts.isEmpty()) {
             logger.info("Adding readonly mounts: " + readonlyMounts.size() + " mount(s)");
             for (Map.Entry<String, String> entry : readonlyMounts.entrySet()) {
                 String hostPath = entry.getKey();
                 String containerPath = entry.getValue();
-
-                // Ensure host path is absolute path
                 if (!java.nio.file.Paths.get(hostPath).isAbsolute()) {
                     hostPath = java.nio.file.Paths.get(hostPath).toAbsolutePath().toString();
                     logger.info("Converting relative path to absolute: " + hostPath);
                 }
-
-                // Check if host path exists
                 java.io.File hostFile = new java.io.File(hostPath);
                 if (!hostFile.exists()) {
                     logger.warning("Readonly mount host path does not exist: " + hostPath + ", skipping");
                     continue;
                 }
-
                 volumeBindings.add(new VolumeBinding(hostPath, containerPath, "ro"));
                 logger.info("Added readonly mount: " + hostPath + " -> " + containerPath);
             }
         }
-
         Map<String, Object> runtimeConfig = Map.of();
         if (sandboxConfig != null) {
             runtimeConfig = sandboxConfig.getRuntimeConfig();
         }
-
         logger.info("Runtime config: " + runtimeConfig);
-
         String containerName;
-
         String prefix = managerConfig.getContainerPrefixKey();
         if (prefix == null || prefix.isEmpty()) {
             prefix = "sandbox";
@@ -477,23 +380,13 @@ public class SandboxManager implements AutoCloseable {
         } else {
             containerName = prefix.replace('_', '-') + sessionId.toLowerCase();
         }
-
         // TODO: Need to check container name uniqueness?
-
-        // Use unified BaseClient interface to create container
         String containerId = containerClient.createContainer(containerName, imageName, ports, portMapping, volumeBindings, environment, runtimeConfig);
-
-        // Convert mapped host ports to string array
         String[] mappedPorts = portMapping.values().stream().map(String::valueOf).toArray(String[]::new);
-
-        // Determine correct access URL based on container manager type
         String baseHost;
         String accessPort;
-
         if (containerManagerType == ContainerManagerType.KUBERNETES) {
-            // In Kubernetes environment, use LoadBalancer's External IP
             try {
-                // Wait for LoadBalancer to assign External IP (max 60 seconds)
                 String externalIP = ((KubernetesClient) containerClient).waitForLoadBalancerExternalIP(containerName, 60);
                 if (externalIP != null && !externalIP.isEmpty()) {
                     baseHost = externalIP;
@@ -510,53 +403,23 @@ public class SandboxManager implements AutoCloseable {
                 accessPort = mappedPorts[0];
             }
         } else {
-            // Docker environment uses mapped ports
             baseHost = "localhost";
             accessPort = mappedPorts[0];
         }
-
-        ContainerModel containerModel = ContainerModel
-                .builder()
-                .sessionId(sessionId)
-                .containerId(containerId)
-                .containerName(containerName)
-                .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
-                .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken))
-                .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
-                .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
-                .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
-                .ports(mappedPorts)
-                .mountDir(mountDir)
-                .storagePath(storagePath)
-                .runtimeToken(runtimeToken)
-                .authToken(runtimeToken)
-                .version(imageName)
-                .build();
-
+        ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(mountDir).storagePath(storagePath).runtimeToken(runtimeToken).authToken(runtimeToken).version(imageName).build();
         containerClient.startContainer(containerId);
-
         return containerModel;
     }
 
-    /**
-     * Release a container (stop and remove)
-     */
     private void releaseContainer(ContainerModel containerModel) {
         if (containerModel == null) {
             return;
         }
-
         try {
             logger.info("Releasing container: " + containerModel.getContainerName());
-
-            // Release ports first
             portManager.releaseContainerPorts(containerModel.getContainerName());
-
-            // Stop and remove container
             containerClient.stopContainer(containerModel.getContainerId());
             containerClient.removeContainer(containerModel.getContainerId());
-
-            // Upload to storage if configured
             if (containerModel.getMountDir() != null && containerModel.getStoragePath() != null) {
                 storageManager.uploadFolder(containerModel.getMountDir(), containerModel.getStoragePath());
             }
@@ -585,10 +448,8 @@ public class SandboxManager implements AutoCloseable {
     }
 
     public ContainerModel getSandbox(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID) {
-        // Use composite key userID + sessionID + sandboxType to uniquely identify container
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
-        
-        // Check Redis first if enabled
+
         if (redisEnabled && redisContainerMapping != null) {
             ContainerModel existingModel = redisContainerMapping.get(key);
             if (existingModel != null) {
@@ -598,102 +459,73 @@ public class SandboxManager implements AutoCloseable {
                 return existingModel;
             }
         }
-        
-        // Check local cache
+
         if (sandboxMap.containsKey(key)) {
             return sandboxMap.get(key);
         } else {
             ContainerModel containerModel = createContainer(sandboxType, mountDir, storagePath, environment);
             sandboxMap.put(key, containerModel);
-            
-            // Store in Redis if enabled
+
             if (redisEnabled && redisContainerMapping != null) {
                 redisContainerMapping.put(key, containerModel);
                 logger.info("Stored container in Redis: " + containerModel.getContainerName());
             }
-            
+
             startSandbox(sandboxType, userID, sessionID);
             return containerModel;
         }
     }
 
-    /**
-     * Start sandbox container
-     *
-     * @param sandboxType sandbox type
-     * @param userID      user ID
-     * @param sessionID   session ID
-     */
     public void startSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
-        
-        // Try Redis if not in local cache
+
         if (containerModel == null && redisEnabled && redisContainerMapping != null) {
             containerModel = redisContainerMapping.get(key);
         }
-        
+
         if (containerModel != null) {
             containerClient.startContainer(containerModel.getContainerId());
             logger.info("Container status updated to: running");
             sandboxMap.put(key, containerModel);
-            
-            // Update Redis if enabled
+
             if (redisEnabled && redisContainerMapping != null) {
                 redisContainerMapping.put(key, containerModel);
             }
         }
     }
 
-    /**
-     * Stop sandbox container
-     *
-     * @param sandboxType sandbox type
-     * @param userID      user ID
-     * @param sessionID   session ID
-     */
     public void stopSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
-        
-        // Try Redis if not in local cache
+
         if (containerModel == null && redisEnabled && redisContainerMapping != null) {
             containerModel = redisContainerMapping.get(key);
         }
-        
+
         if (containerModel != null) {
             containerClient.stopContainer(containerModel.getContainerId());
             logger.info("Container status updated to: stopped");
             sandboxMap.put(key, containerModel);
-            
-            // Update Redis if enabled
+
             if (redisEnabled && redisContainerMapping != null) {
                 redisContainerMapping.put(key, containerModel);
             }
         }
     }
 
-    /**
-     * Remove sandbox container
-     *
-     * @param sandboxType sandbox type
-     * @param userID      user ID
-     * @param sessionID   session ID
-     */
     public void removeSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
-        
-        // Try Redis if not in local cache
+
         if (containerModel == null && redisEnabled && redisContainerMapping != null) {
             containerModel = redisContainerMapping.get(key);
         }
-        
+
         if (containerModel != null) {
             containerClient.removeContainer(containerModel.getContainerId());
             sandboxMap.remove(key);
-            
-            // Remove from Redis if enabled
+
             if (redisEnabled && redisContainerMapping != null) {
                 redisContainerMapping.remove(key);
                 logger.info("Removed container from Redis");
@@ -704,44 +536,29 @@ public class SandboxManager implements AutoCloseable {
     public void stopAndRemoveSandbox(SandboxType sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
-        
-        // Try Redis if not in local cache
+
         if (containerModel == null && redisEnabled && redisContainerMapping != null) {
             containerModel = redisContainerMapping.get(key);
         }
-        
+
         if (containerModel != null) {
             try {
                 String containerId = containerModel.getContainerId();
                 String containerName = containerModel.getContainerName();
-
                 logger.info("Stopping and removing " + sandboxType + " sandbox (Container ID: " + containerId + ", Name: " + containerName + ")");
-
-                // Release ports
                 portManager.releaseContainerPorts(containerName);
-
                 containerClient.stopContainer(containerId);
-
                 Thread.sleep(1000);
-
-                // Force remove the container
                 containerClient.removeContainer(containerId);
-
-                // Remove from mapping
                 sandboxMap.remove(key);
-                
-                // Remove from Redis if enabled
                 if (redisEnabled && redisContainerMapping != null) {
                     redisContainerMapping.remove(key);
                     logger.info("Removed container from Redis");
                 }
-
                 logger.info(sandboxType + " sandbox has been successfully removed");
             } catch (Exception e) {
                 logger.severe("Error removing " + sandboxType + " sandbox: " + e.getMessage());
                 sandboxMap.remove(key);
-                
-                // Try to remove from Redis even if error occurred
                 if (redisEnabled && redisContainerMapping != null) {
                     redisContainerMapping.remove(key);
                 }
@@ -751,48 +568,31 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
-    /**
-     * Get sandbox status
-     *
-     * @param sandboxType sandbox type
-     * @return sandbox status
-     */
     public String getSandboxStatus(SandboxType sandboxType, String userID, String sessionID) {
-        // Use composite key to find container status
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
-        
-        // Try Redis if not in local cache
+
         if (containerModel == null && redisEnabled && redisContainerMapping != null) {
             containerModel = redisContainerMapping.get(key);
-            // Update local cache if found in Redis
             if (containerModel != null) {
                 sandboxMap.put(key, containerModel);
             }
         }
-        
+
         if (containerModel != null) {
             return containerClient.getContainerStatus(containerModel.getContainerId());
         }
         return "not_found";
     }
 
-    /**
-     * Get all sandbox information
-     * If Redis is enabled, merges data from both local cache and Redis
-     *
-     * @return sandbox mapping
-     */
     public Map<SandboxKey, ContainerModel> getAllSandboxes() {
         Map<SandboxKey, ContainerModel> allSandboxes = new HashMap<>(sandboxMap);
-        
-        // Merge with Redis data if enabled
+
         if (redisEnabled && redisContainerMapping != null) {
             try {
                 Map<SandboxKey, ContainerModel> redisData = redisContainerMapping.getAll();
                 logger.info("Retrieved " + redisData.size() + " containers from Redis");
-                
-                // Merge Redis data into result (Redis data takes precedence for conflicts)
+
                 for (Map.Entry<SandboxKey, ContainerModel> entry : redisData.entrySet()) {
                     allSandboxes.put(entry.getKey(), entry.getValue());
                 }
@@ -800,27 +600,15 @@ public class SandboxManager implements AutoCloseable {
                 logger.warning("Failed to retrieve containers from Redis: " + e.getMessage());
             }
         }
-        
+
         return allSandboxes;
     }
 
-    /**
-     * Get container information by identity
-     * Corresponds to Python's get_info(identity) method
-     *
-     * @param identity Container identifier - can be:
-     *                 - containerName (e.g., "runtime_sandbox_container_abc123")
-     *                 - sessionId (e.g., "abc123")
-     *                 - containerId (Docker container ID)
-     * @return ContainerModel if found
-     * @throws RuntimeException if no container found with the given identity
-     */
     public ContainerModel getInfo(String identity) {
         if (identity == null || identity.isEmpty()) {
             throw new IllegalArgumentException("Identity cannot be null or empty");
         }
 
-        // 1. Try to find by container name directly
         for (ContainerModel model : sandboxMap.values()) {
             if (identity.equals(model.getContainerName())) {
                 logger.fine("Found container by name: " + identity);
@@ -828,7 +616,6 @@ public class SandboxManager implements AutoCloseable {
             }
         }
 
-        // 2. Try to find by session ID
         for (ContainerModel model : sandboxMap.values()) {
             if (identity.equals(model.getSessionId())) {
                 logger.fine("Found container by session ID: " + identity);
@@ -836,7 +623,6 @@ public class SandboxManager implements AutoCloseable {
             }
         }
 
-        // 3. Try to find by container ID
         for (ContainerModel model : sandboxMap.values()) {
             if (identity.equals(model.getContainerId())) {
                 logger.fine("Found container by container ID: " + identity);
@@ -855,23 +641,12 @@ public class SandboxManager implements AutoCloseable {
     }
 
 
-
-    /**
-     * Release (destroy) a container by identity
-     * Corresponds to Python's release(identity) method
-     *
-     * @param identity Container identifier (containerName, sessionId, or containerId)
-     * @return true if successfully released, false otherwise
-     */
     public boolean release(String identity) {
         try {
-            // Get container info
             ContainerModel containerModel = getInfo(identity);
-
             logger.info("Releasing container with identity: " + identity);
-
-            // Remove from sandboxMap first
             SandboxKey keyToRemove = null;
+
             for (Map.Entry<SandboxKey, ContainerModel> entry : sandboxMap.entrySet()) {
                 if (entry.getValue().getContainerName().equals(containerModel.getContainerName())) {
                     keyToRemove = entry.getKey();
@@ -883,23 +658,16 @@ public class SandboxManager implements AutoCloseable {
                 sandboxMap.remove(keyToRemove);
                 logger.info("Removed container from sandbox map: " + keyToRemove);
 
-                // Remove from Redis if enabled
                 if (redisEnabled && redisContainerMapping != null) {
                     redisContainerMapping.remove(keyToRemove);
                     logger.info("Removed container from Redis");
                 }
             }
 
-            // Release ports
             portManager.releaseContainerPorts(containerModel.getContainerName());
-
-            // Stop and remove container
             containerClient.stopContainer(containerModel.getContainerId());
             containerClient.removeContainer(containerModel.getContainerId());
-
             logger.info("Container destroyed: " + containerModel.getContainerName());
-
-            // Upload to storage if configured
             if (containerModel.getMountDir() != null && containerModel.getStoragePath() != null) {
                 try {
                     logger.info("Uploading container data to storage: " + containerModel.getStoragePath());
@@ -926,46 +694,22 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
-    /**
-     * Get container manager type
-     *
-     * @return container manager type
-     */
     public ContainerManagerType getContainerManagerType() {
         return containerManagerType;
     }
 
-    /**
-     * Get manager configuration
-     *
-     * @return manager configuration
-     */
     public ManagerConfig getManagerConfig() {
         return managerConfig;
     }
 
-    /**
-     * Get container client
-     *
-     * @return container client
-     */
     public BaseClient getContainerClient() {
         return containerClient;
     }
 
-    /**
-     * Get storage manager
-     *
-     * @return storage manager
-     */
     public StorageManager getStorageManager() {
         return storageManager;
     }
 
-    /**
-     * Clean up all sandbox containers including the pool
-     * Corresponds to Python's cleanup() method
-     */
     public void cleanupAllSandboxes() {
         logger.info("Starting cleanup of all sandbox containers...");
 
@@ -985,7 +729,6 @@ public class SandboxManager implements AutoCloseable {
             e.printStackTrace();
         }
 
-        // Clean up rest of containers in sandboxMap
         if (sandboxMap.isEmpty()) {
             logger.info("No additional sandbox containers to clean up");
         } else {
@@ -1008,29 +751,20 @@ public class SandboxManager implements AutoCloseable {
         logger.info("All sandbox containers have been cleaned up!");
     }
 
-    /**
-     * Close resources including storage manager and port manager
-     * Implements AutoCloseable for try-with-resources support
-     * Corresponds to Python's __exit__() method
-     */
     @Override
     public void close() {
         logger.info("Closing SandboxManager and cleaning up all resources");
 
-        // Cleanup all containers first
         cleanupAllSandboxes();
 
-        // Close storage manager
         if (storageManager != null) {
             storageManager.close();
         }
 
-        // Clear port manager
         if (portManager != null) {
             portManager.clear();
         }
-        
-        // Close Redis connection if enabled
+
         if (redisEnabled && redisClient != null) {
             try {
                 redisClient.close();
@@ -1043,89 +777,6 @@ public class SandboxManager implements AutoCloseable {
         logger.info("SandboxManager closed successfully");
     }
 
-    /**
-     * Find available ports
-     *
-     * @param count number of ports to find
-     * @return list of available ports
-     */
-    private List<Integer> findFreePorts(int count) {
-        List<Integer> freePorts = new ArrayList<>();
-        int startPort = managerConfig.getPortRange().getStart();
-        int endPort = managerConfig.getPortRange().getEnd();
-        for (int i = 0; i < count && freePorts.size() < count; i++) {
-            for (int port = startPort + i; port < endPort; port++) {
-                if (isPortAvailable(port)) {
-                    freePorts.add(port);
-                    break;
-                }
-            }
-        }
-        return freePorts;
-    }
-
-    /**
-     * Check if a port is available
-     *
-     * @param port port number
-     * @return whether the port is available
-     */
-    public boolean isPortAvailable(int port) {
-        boolean canConnect = testConnectionWithRetries("localhost", port, 2);
-        if (canConnect) {
-            return false;
-        }
-        return canBindPort(port);
-    }
-
-    private boolean testConnectionWithRetries(String host, int port, int retries) {
-        ExecutorService executor = Executors.newFixedThreadPool(3);
-        try {
-            List<Future<Boolean>> futures = new ArrayList<>();
-
-            for (int i = 0; i < retries; i++) {
-                futures.add(executor.submit(() -> {
-                    try (Socket socket = new Socket()) {
-                        socket.connect(new InetSocketAddress(host, port), 2000);
-                        return true;
-                    } catch (IOException e) {
-                        return false;
-                    }
-                }));
-            }
-
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(2000L * retries, TimeUnit.MILLISECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-            }
-
-            for (Future<Boolean> future : futures) {
-                try {
-                    if (future.get()) {
-                        return true;
-                    }
-                } catch (Exception e) {
-                    // ignore exceptions from individual tasks
-                }
-            }
-            return false;
-        } finally {
-            if (!executor.isShutdown()) {
-                executor.shutdownNow();
-            }
-        }
-    }
-
-    /**
-     * Create port mapping using thread-safe port manager
-     *
-     * @param containerPorts list of container ports
-     * @return port mapping Map
-     */
     private Map<String, Integer> createPortMapping(List<String> containerPorts) {
         Map<String, Integer> portMapping = new HashMap<>();
 
@@ -1155,19 +806,14 @@ public class SandboxManager implements AutoCloseable {
         return portMapping;
     }
 
-    public String listTools(String identity, String toolType){
+    public String listTools(String identity, String toolType) {
         return "";
     }
 
-    /**
-     * Establish HTTP connection to sandbox
-     * Corresponds to Python's _establish_connection
-     */
-    private SandboxClient establishConnection(
-            String sandboxId, String userId, String sessionId) {
+    private SandboxClient establishConnection(String sandboxId, String userId, String sessionId) {
         try {
             ContainerModel containerInfo = getInfo(sandboxId, userId, sessionId);
-            if(containerInfo.getVersion().contains("sandbox-appworld")|| containerInfo.getVersion().contains("sandbox-bfclient")){
+            if (containerInfo.getVersion().contains("sandbox-appworld") || containerInfo.getVersion().contains("sandbox-bfclient")) {
                 return new TrainingSandboxClient(containerInfo, 60);
             }
             return new SandboxHttpClient(containerInfo, 60);
@@ -1176,34 +822,26 @@ public class SandboxManager implements AutoCloseable {
             throw new RuntimeException("Failed to establish connection", e);
         }
     }
-    
-    /**
-     * Get sandbox information
-     * Corresponds to Python's get_info
-     */
+
     public ContainerModel getInfo(String sandboxId, String userId, String sessionId) {
         for (SandboxType type : SandboxType.values()) {
             SandboxKey key = new SandboxKey(userId, sessionId, type);
             ContainerModel model = sandboxMap.get(key);
-            
+
             if (model == null && redisEnabled && redisContainerMapping != null) {
                 model = redisContainerMapping.get(key);
                 if (model != null) {
                     sandboxMap.put(key, model);
                 }
             }
-            
+
             if (model != null) {
                 return model;
             }
         }
         return null;
     }
-    
-    /**
-     * List available tools in sandbox
-     * Corresponds to Python's list_tools
-     */
+
     public Map<String, Object> listTools(String sandboxId, String userId, String sessionId, String toolType) {
         try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
             return client.listTools(toolType, Map.of());
@@ -1212,24 +850,18 @@ public class SandboxManager implements AutoCloseable {
             return new HashMap<>();
         }
     }
-    
-    /**
-     * Call sandbox tool
-     * Corresponds to Python's call_tool
-     */
-    public String callTool(String sandboxId, String userId, String sessionId, 
-                          String toolName, Map<String, Object> arguments) {
+
+    public String callTool(String sandboxId, String userId, String sessionId, String toolName, Map<String, Object> arguments) {
         try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
             return client.callTool(toolName, arguments);
         } catch (Exception e) {
             logger.severe("Error calling tool " + toolName + ": " + e.getMessage());
             e.printStackTrace();
-            return "{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"Error calling tool: " + 
-                   e.getMessage() + "\"}]}";
+            return "{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"Error calling tool: " + e.getMessage() + "\"}]}";
         }
     }
 
-    public Map<String, Object> addMcpServers(String sandboxId, String userId, String sessionId, Map<String, Object> serverConfigs, boolean overwrite){
+    public Map<String, Object> addMcpServers(String sandboxId, String userId, String sessionId, Map<String, Object> serverConfigs, boolean overwrite) {
         try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
             return client.addMcpServers(serverConfigs, overwrite);
         } catch (Exception e) {
@@ -1237,16 +869,11 @@ public class SandboxManager implements AutoCloseable {
             return new HashMap<>();
         }
     }
-    
-    /**
-     * Release sandbox resources
-     * Corresponds to Python's release
-     */
+
     public boolean releaseSandbox(SandboxType sandboxType, String userId, String sessionId) {
         try {
             stopAndRemoveSandbox(sandboxType, userId, sessionId);
-            logger.info("Released sandbox: type=" + sandboxType + ", user=" + userId + 
-                       ", session=" + sessionId);
+            logger.info("Released sandbox: type=" + sandboxType + ", user=" + userId + ", session=" + sessionId);
             return true;
         } catch (Exception e) {
             logger.severe("Failed to release sandbox: " + e.getMessage());

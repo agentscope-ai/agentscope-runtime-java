@@ -15,9 +15,6 @@
  */
 package io.agentscope.runtime.sandbox.manager.model.fs;
 
-/**
- * OSS File System Configuration Class
- */
 public class OssConfig extends FileSystemConfig {
     private String ossEndpoint;
     private String ossAccessKeyId;
@@ -32,7 +29,6 @@ public class OssConfig extends FileSystemConfig {
         this.ossBucketName = builder.ossBucketName;
     }
 
-    // Getters
     public String getOssEndpoint() {
         return ossEndpoint;
     }
@@ -53,9 +49,6 @@ public class OssConfig extends FileSystemConfig {
         return new Builder();
     }
 
-    /**
-     * Builder class for constructing OssConfig instances
-     */
     public static class Builder extends FileSystemConfig.Builder<Builder> {
         private String ossEndpoint = "http://oss-cn-hangzhou.aliyuncs.com";
         private String ossAccessKeyId;

@@ -15,9 +15,6 @@
  */
 package io.agentscope.runtime.sandbox.manager.model.fs;
 
-/**
- * Local File System Configuration Class
- */
 public class LocalFileSystemConfig extends FileSystemConfig {
 
     private LocalFileSystemConfig(Builder builder) {
@@ -28,9 +25,6 @@ public class LocalFileSystemConfig extends FileSystemConfig {
         return new Builder();
     }
 
-    /**
-     * Builder class for constructing LocalFileSystemConfig instances
-     */
     public static class Builder extends FileSystemConfig.Builder<Builder> {
 
         public Builder() {

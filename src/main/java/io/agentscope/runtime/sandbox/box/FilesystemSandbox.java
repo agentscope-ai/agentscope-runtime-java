@@ -23,11 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Filesystem Sandbox implementation
- * Corresponds to Python's FilesystemSandbox
- * Provides filesystem operation capabilities (read/write files, directory operations, etc.)
- */
 @RegisterSandbox(
     imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem:latest",
     sandboxType = SandboxType.FILESYSTEM,

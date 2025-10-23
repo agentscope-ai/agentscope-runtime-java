@@ -19,14 +19,7 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
-/**
- * APPWorld Sandbox implementation
- * Corresponds to Python's APPWorldSandbox
- * Training Sandbox class for managing and executing appworld training-related tasks
- * 
- * <p>This class provides methods to create, manage, and interact with
- * appworld training environment instances using specialized tool calls.
- */
+
 @RegisterSandbox(
     imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-appworld:latest",
     sandboxType = SandboxType.APPWORLD,

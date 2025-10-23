@@ -17,10 +17,6 @@ package io.agentscope.runtime.sandbox.manager.model.container;
 
 import java.util.Objects;
 
-/**
- * Composite key for sandbox identification
- * Combines userID, sessionID, and sandboxType to uniquely identify a sandbox
- */
 public class SandboxKey {
     private final String userID;
     private final String sessionID;
@@ -49,9 +45,7 @@ public class SandboxKey {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SandboxKey that = (SandboxKey) o;
-        return Objects.equals(userID, that.userID) &&
-               Objects.equals(sessionID, that.sessionID) &&
-               sandboxType == that.sandboxType;
+        return Objects.equals(userID, that.userID) && Objects.equals(sessionID, that.sessionID) && sandboxType == that.sandboxType;
     }
 
     @Override
@@ -61,10 +55,6 @@ public class SandboxKey {
 
     @Override
     public String toString() {
-        return "SandboxKey{" +
-                "userID='" + userID + '\'' +
-                ", sessionID='" + sessionID + '\'' +
-                ", sandboxType=" + sandboxType +
-                '}';
+        return "SandboxKey{" + "userID='" + userID + '\'' + ", sessionID='" + sessionID + '\'' + ", sandboxType=" + sandboxType + '}';
     }
 }

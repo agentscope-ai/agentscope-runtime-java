@@ -18,9 +18,6 @@ package io.agentscope.runtime.sandbox.manager.model.fs;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * File System Configuration Base Class
- */
 public class FileSystemConfig {
     private FileSystemType fileSystemType;
     private Map<String, String> readonlyMounts;
@@ -38,7 +35,6 @@ public class FileSystemConfig {
         this.mountDir = builder.mountDir;
     }
 
-    // Getters
     public FileSystemType getFileSystemType() {
         return fileSystemType;
     }
@@ -55,9 +51,7 @@ public class FileSystemConfig {
         return mountDir;
     }
 
-    /**
-     * Builder Base Class
-     */
+
     public static abstract class Builder<T extends Builder<T>> {
         protected FileSystemType fileSystemType;
         protected Map<String, String> readonlyMounts;

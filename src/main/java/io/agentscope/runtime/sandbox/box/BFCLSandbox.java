@@ -19,28 +19,6 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
-/**
- * BFCL Sandbox implementation
- * Corresponds to Python's BFCLSandbox
- * Training Sandbox class for managing and executing BFCL training-related tasks
- * 
- * <p>This class provides methods to create, manage, and interact with
- * BFCL training environment instances using specialized tool calls.
- * 
- * <p>BFCL supports multiple dataset types:
- * all, all_scoring, multi_turn, single_turn, live, non_live, non_python, python
- * 
- * <p>The dataset subtype can be configured via the DATASET_SUB_TYPE environment variable.
- * Default: multi_turn
- * 
- * <p>Environment variables:
- * <ul>
- *   <li>DATASET_SUB_TYPE: Dataset subtype (default: multi_turn)</li>
- *   <li>OPENAI_API_KEY: OpenAI API key (optional)</li>
- *   <li>BFCL_DATA_PATH: Path to BFCL data file (auto-configured based on DATASET_SUB_TYPE)</li>
- *   <li>BFCL_SPLID_ID_PATH: Path to BFCL split IDs file (auto-configured based on DATASET_SUB_TYPE)</li>
- * </ul>
- */
 @RegisterSandbox(
     imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-bfcl:latest",
     sandboxType = SandboxType.BFCL,

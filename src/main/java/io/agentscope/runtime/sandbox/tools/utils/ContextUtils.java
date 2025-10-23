@@ -19,20 +19,8 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import org.springframework.ai.chat.model.ToolContext;
 import java.util.UUID;
 
-/**
- * Utility class for extracting userID and sessionID from ToolContext
- *
- * @author xuehuitian45
- * @since 2025/1/15
- */
 public class ContextUtils {
 
-    /**
-     * Extract userID from ToolContext
-     *
-     * @param toolContext tool context
-     * @return userID, returns a random UUID if not found
-     */
     public static String extractUserID(ToolContext toolContext) {
         RunnableConfig runnableConfig = (RunnableConfig) toolContext.getContext().get("config");
         if (runnableConfig != null && runnableConfig.metadata("user_id").isPresent()) {
@@ -41,12 +29,6 @@ public class ContextUtils {
         return UUID.randomUUID().toString();
     }
 
-    /**
-     * Extract sessionID from ToolContext
-     *
-     * @param toolContext tool context
-     * @return sessionID, returns a random UUID if not found
-     */
     public static String extractSessionID(ToolContext toolContext) {
         RunnableConfig runnableConfig = (RunnableConfig) toolContext.getContext().get("config");
         if (runnableConfig != null && runnableConfig.metadata("session_id").isPresent()) {
@@ -55,12 +37,6 @@ public class ContextUtils {
         return UUID.randomUUID().toString();
     }
 
-    /**
-     * Extract both userID and sessionID from ToolContext
-     *
-     * @param toolContext tool context
-     * @return array containing userID and sessionID [userID, sessionID]
-     */
     public static String[] extractUserAndSessionID(ToolContext toolContext) {
         return new String[]{extractUserID(toolContext), extractSessionID(toolContext)};
     }

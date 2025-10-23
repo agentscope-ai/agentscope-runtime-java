@@ -22,11 +22,6 @@ import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Browser Sandbox implementation
- * Corresponds to Python's BrowserSandbox
- * Provides browser automation capabilities (navigate, click, screenshot, etc.)
- */
 @RegisterSandbox(
     imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest",
     sandboxType = SandboxType.BROWSER,

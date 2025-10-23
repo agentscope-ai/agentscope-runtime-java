@@ -37,7 +37,6 @@ public class RedisManagerConfig {
         this.redisContainerPoolKey = builder.redisContainerPoolKey;
     }
 
-    // Getters
     public String getRedisServer() {
         return redisServer;
     }
@@ -70,9 +69,6 @@ public class RedisManagerConfig {
         return new Builder();
     }
 
-    /**
-     * Builder class for constructing RedisManagerConfig instances
-     */
     public static class Builder {
         private String redisServer = "localhost";
         private Integer redisPort = 6379;

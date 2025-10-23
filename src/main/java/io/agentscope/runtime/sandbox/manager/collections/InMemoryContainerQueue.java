@@ -22,7 +22,6 @@ import java.util.Queue;
 
 /**
  * In-memory implementation of ContainerQueue
- * Corresponds to Python's InMemoryQueue class
  */
 public class InMemoryContainerQueue implements ContainerQueue {
     

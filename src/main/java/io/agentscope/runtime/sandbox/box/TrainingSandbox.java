@@ -22,14 +22,6 @@ import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Training Sandbox base class
- * Corresponds to Python's TrainingSandbox
- * Provides a sandbox environment for training tasks with specific configuration and tool calling methods
- * 
- * <p>This class provides methods to create, manage, and interact with
- * training environment instances using specialized tool calls.
- */
 public class TrainingSandbox extends Sandbox {
     
     public TrainingSandbox(

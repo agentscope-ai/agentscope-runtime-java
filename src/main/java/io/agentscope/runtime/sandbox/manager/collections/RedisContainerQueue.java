@@ -32,13 +32,7 @@ public class RedisContainerQueue implements ContainerQueue {
     private final RedisClientWrapper redisClient;
     private final String queueName;
     private final ObjectMapper objectMapper;
-    
-    /**
-     * Constructor
-     * 
-     * @param redisClient Redis client wrapper
-     * @param queueName the name of the Redis queue
-     */
+
     public RedisContainerQueue(RedisClientWrapper redisClient, String queueName) {
         this.redisClient = redisClient;
         this.queueName = queueName;

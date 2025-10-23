@@ -35,11 +35,7 @@ public class ContainerModel {
         return new Builder();
     }
 
-    /**
-     * Default constructor for Jackson deserialization
-     */
     public ContainerModel() {
-        // Default constructor for JSON deserialization
     }
 
     private ContainerModel(Builder builder) {
@@ -59,7 +55,6 @@ public class ContainerModel {
         this.authToken = builder.authToken;
     }
 
-    // Getters
     public String getSessionId() {
         return sessionId;
     }
@@ -112,7 +107,6 @@ public class ContainerModel {
         return version;
     }
 
-    // Setters
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
     }
@@ -174,22 +168,7 @@ public class ContainerModel {
     }
 
     public String toString() {
-        return "manager.ContainerModel{" +
-                "sessionId='" + sessionId + '\'' +
-                ", containerId='" + containerId + '\'' +
-                ", containerName='" + containerName + '\'' +
-                ", baseUrl='" + baseUrl + '\'' +
-                ", browserUrl='" + browserUrl + '\'' +
-                ", frontBrowserWS='" + frontBrowserWS + '\'' +
-                ", clientBrowserWS='" + clientBrowserWS + '\'' +
-                ", artifactsSIO='" + artifactsSIO + '\'' +
-                ", ports=" + String.join(",", ports) +
-                ", mountDir='" + mountDir + '\'' +
-                ", storagePath='" + storagePath + '\'' +
-                ", runtimeToken='" + runtimeToken + '\'' +
-                ", version='" + version + '\'' +
-                ", authToken='" + authToken + '\'' +
-                '}';
+        return "manager.ContainerModel{" + "sessionId='" + sessionId + '\'' + ", containerId='" + containerId + '\'' + ", containerName='" + containerName + '\'' + ", baseUrl='" + baseUrl + '\'' + ", browserUrl='" + browserUrl + '\'' + ", frontBrowserWS='" + frontBrowserWS + '\'' + ", clientBrowserWS='" + clientBrowserWS + '\'' + ", artifactsSIO='" + artifactsSIO + '\'' + ", ports=" + String.join(",", ports) + ", mountDir='" + mountDir + '\'' + ", storagePath='" + storagePath + '\'' + ", runtimeToken='" + runtimeToken + '\'' + ", version='" + version + '\'' + ", authToken='" + authToken + '\'' + '}';
     }
 
     public static class Builder {

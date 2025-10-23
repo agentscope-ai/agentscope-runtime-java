@@ -41,7 +41,6 @@ public class DockerProp {
         this.containerName = containerName;
     }
 
-    // Getters and Setters
     public String getImageName() {
         return imageName;
     }
@@ -90,7 +89,6 @@ public class DockerProp {
         this.runtimeConfig = runtimeConfig;
     }
 
-    // Convenience methods
     public DockerProp addPortMapping(Integer containerPort, Integer hostPort) {
         this.portMap.put(containerPort, hostPort);
         return this;

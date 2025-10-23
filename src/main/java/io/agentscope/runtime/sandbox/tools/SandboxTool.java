@@ -21,12 +21,6 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 
 import java.util.Map;
 
-/**
- * Abstract class for Sandbox tools
- * Similar to Python's SandboxTool class
- * <p>
- * Extends Tool and adds sandbox-related functionality
- */
 public abstract class SandboxTool extends Tool {
 
     protected SandboxManager sandboxManager;
@@ -35,26 +29,11 @@ public abstract class SandboxTool extends Tool {
 
     protected Map<String, Object> schema;
 
-    /**
-     * Constructor
-     *
-     * @param name        Tool name
-     * @param toolType    Tool type
-     * @param description Tool description
-     */
     protected SandboxTool(String name, String toolType, String description) {
         super(name, toolType, description);
         this.sandboxManager = Runner.getSandboxManager();
     }
 
-    /**
-     * Constructor with custom SandboxManager
-     *
-     * @param name           Tool name
-     * @param toolType       Tool type
-     * @param description    Tool description
-     * @param sandboxManager Sandbox manager
-     */
     protected SandboxTool(String name, String toolType, String description,
                           SandboxManager sandboxManager) {
         super(name, toolType, description);
@@ -81,13 +60,5 @@ public abstract class SandboxTool extends Tool {
         this.schema = schema;
     }
 
-
-    /**
-     * Bind sandbox to this tool
-     * Returns a new tool instance bound to a specific sandbox
-     *
-     * @param sandbox The sandbox to bind
-     * @return New bound tool instance
-     */
     public abstract SandboxTool bind(Sandbox sandbox);
 }

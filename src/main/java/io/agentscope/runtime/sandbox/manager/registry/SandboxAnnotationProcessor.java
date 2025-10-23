@@ -23,16 +23,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-/**
- * Annotation processor for scanning and registering Sandbox classes with @RegisterSandbox annotation
- * Corresponds to Python's decorator registration mechanism
- */
 public class SandboxAnnotationProcessor {
     private static final Logger logger = Logger.getLogger(SandboxAnnotationProcessor.class.getName());
-    
+
     /**
      * Process a single class with @RegisterSandbox annotation
-     * 
+     *
      * @param clazz Class to process
      */
     public static void processClass(Class<?> clazz) {
@@ -189,7 +185,6 @@ public class SandboxAnnotationProcessor {
             if (equalIndex > 0) {
                 String key = item.substring(0, equalIndex).trim();
                 String value = item.substring(equalIndex + 1).trim();
-                // Resolve environment variables in value
                 value = resolveEnvironmentVariables(value);
                 result.put(key, value);
             } else {
@@ -218,27 +213,22 @@ public class SandboxAnnotationProcessor {
         while (startIndex < value.length()) {
             int placeholderStart = value.indexOf("${", startIndex);
             if (placeholderStart == -1) {
-                // No more placeholders, append remaining string
                 result.append(value.substring(startIndex));
                 break;
             }
             
             int placeholderEnd = value.indexOf("}", placeholderStart);
             if (placeholderEnd == -1) {
-                // Malformed placeholder, append as is
                 result.append(value.substring(startIndex));
                 break;
             }
             
-            // Append text before placeholder
             result.append(value.substring(startIndex, placeholderStart));
             
-            // Extract placeholder content
             String placeholder = value.substring(placeholderStart + 2, placeholderEnd);
             String envVarName;
             String defaultValue = "";
             
-            // Check if default value is specified
             int colonIndex = placeholder.indexOf(':');
             if (colonIndex > 0) {
                 envVarName = placeholder.substring(0, colonIndex).trim();
@@ -247,7 +237,6 @@ public class SandboxAnnotationProcessor {
                 envVarName = placeholder.trim();
             }
             
-            // Get environment variable value
             String envValue = System.getenv(envVarName);
             if (envValue != null) {
                 result.append(envValue);

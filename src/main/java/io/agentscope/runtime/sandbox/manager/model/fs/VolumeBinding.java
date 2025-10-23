@@ -15,10 +15,6 @@
  */
 package io.agentscope.runtime.sandbox.manager.model.fs;
 
-/**
- * Volume binding configuration class
- * Used to represent Docker container volume mount configuration
- */
 public class VolumeBinding {
     private String hostPath;
     private String containerPath;

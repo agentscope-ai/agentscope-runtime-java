@@ -30,16 +30,13 @@ import java.io.File;
 
 /**
  * Sandbox Manager Environment Configuration Class
- * Corresponds to Python's SandboxManagerEnvConfig
  */
 public class ManagerConfig {
 
     private static final int UUID_LENGTH = 25;
 
-    // Container related configuration
     private String containerPrefixKey;
 
-    // Redis configuration
     private Boolean redisEnabled = false;
 
 
@@ -60,15 +57,10 @@ public class ManagerConfig {
         this.portRange = builder.portRange;
         this.poolSize = builder.poolSize;
 
-        // Execute validation
         validate();
     }
 
-    /**
-     * Validate configuration validity
-     */
     private void validate() {
-        // Create defaultMountDir directory (if specified)
         if (fileSystemConfig.getFileSystemType() == FileSystemType.LOCAL && fileSystemConfig instanceof LocalFileSystemConfig localFileSystemConfig) {
             File dir = new File(localFileSystemConfig.getMountDir());
             if (!dir.exists()) {
@@ -76,7 +68,6 @@ public class ManagerConfig {
             }
         }
 
-        // Validate OSS configuration
         if (fileSystemConfig.getFileSystemType() == FileSystemType.OSS && fileSystemConfig instanceof OssConfig ossConfig) {
             validateRequired("ossEndpoint", ossConfig.getOssEndpoint(), "file_system is 'oss'");
             validateRequired("ossAccessKeyId", ossConfig.getOssAccessKeyId(), "file_system is 'oss'");
@@ -84,7 +75,6 @@ public class ManagerConfig {
             validateRequired("ossBucketName", ossConfig.getOssBucketName(), "file_system is 'oss'");
         }
 
-        // Validate Redis configuration
         if (redisEnabled) {
             validateRequired("redisServer", redisConfig.getRedisServer(), "redis is enabled");
             validateRequired("redisPort", redisConfig.getRedisPort(), "redis is enabled");
@@ -93,7 +83,6 @@ public class ManagerConfig {
             validateRequired("redisContainerPoolKey", redisConfig.getRedisContainerPoolKey(), "redis is enabled");
         }
 
-        // Validate AgentRun configuration
         if (clientConfig.getClientType() == ContainerManagerType.AGENTRUN && clientConfig instanceof AgentRunClientConfig agentRunClientConfig) {
             validateRequired("agentRunAccessKeyId", agentRunClientConfig.getAgentRunAccessKeyId(), "container_deployment is 'agentrun'");
             validateRequired("agentRunAccessKeySecret", agentRunClientConfig.getAgentRunAccessKeySecret(), "container_deployment is 'agentrun'");
@@ -107,7 +96,6 @@ public class ManagerConfig {
         }
     }
 
-    // Getters
     public String getContainerPrefixKey() {
         return containerPrefixKey;
     }
@@ -140,9 +128,6 @@ public class ManagerConfig {
         return new Builder();
     }
 
-    /**
-     * Builder class for constructing ManagerConfig instances
-     */
     public static class Builder {
         private String containerPrefixKey = "runtime_sandbox_container_";
         private Boolean redisEnabled = false;

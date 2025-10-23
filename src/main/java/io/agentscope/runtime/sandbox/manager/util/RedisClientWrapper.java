@@ -45,13 +45,11 @@ public class RedisClientWrapper implements AutoCloseable {
     public RedisClientWrapper(RedisManagerConfig config) {
         logger.info("Initializing Redis client with server: " + config.getRedisServer() + ":" + config.getRedisPort());
         
-        // Build Redis URI
         RedisURI.Builder uriBuilder = RedisURI.builder()
                 .withHost(config.getRedisServer())
                 .withPort(config.getRedisPort())
                 .withDatabase(config.getRedisDb());
         
-        // Add authentication if provided
         if (config.getRedisPassword() != null && !config.getRedisPassword().isEmpty()) {
             uriBuilder.withPassword(config.getRedisPassword().toCharArray());
         }
@@ -62,7 +60,6 @@ public class RedisClientWrapper implements AutoCloseable {
         
         RedisURI redisUri = uriBuilder.build();
         
-        // Create Redis client and connection
         this.redisClient = RedisClient.create(redisUri);
         this.connection = redisClient.connect();
         this.syncCommands = connection.sync();

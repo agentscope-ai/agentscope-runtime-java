@@ -19,10 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Sandbox configuration information
- * Corresponds to Python's SandboxConfig dataclass
- */
 public class SandboxConfig {
     private final String imageName;
     private final SandboxType sandboxType;
@@ -36,24 +32,18 @@ public class SandboxConfig {
     private SandboxConfig(Builder builder) {
         this.imageName = builder.imageName;
         this.sandboxType = builder.sandboxType;
-        this.resourceLimits = builder.resourceLimits != null ? 
-            new HashMap<>(builder.resourceLimits) : new HashMap<>();
+        this.resourceLimits = builder.resourceLimits != null ? new HashMap<>(builder.resourceLimits) : new HashMap<>();
         this.securityLevel = builder.securityLevel;
         this.timeout = builder.timeout;
         this.description = builder.description;
-        this.environment = builder.environment != null ? 
-            new HashMap<>(builder.environment) : new HashMap<>();
-        
-        // Process runtime_config similar to Python's __post_init__
-        this.runtimeConfig = builder.runtimeConfig != null ? 
-            new HashMap<>(builder.runtimeConfig) : new HashMap<>();
-        
-        // Convert resource_limits to runtime_config
+        this.environment = builder.environment != null ? new HashMap<>(builder.environment) : new HashMap<>();
+
+        this.runtimeConfig = builder.runtimeConfig != null ? new HashMap<>(builder.runtimeConfig) : new HashMap<>();
+
         if (this.resourceLimits.containsKey("memory")) {
             this.runtimeConfig.put("mem_limit", this.resourceLimits.get("memory"));
         }
         if (this.resourceLimits.containsKey("cpu")) {
-            // Convert CPU to nano_cpus (similar to Python: int(float(cpu) * 1e9))
             Object cpuValue = this.resourceLimits.get("cpu");
             long nanoCpus;
             if (cpuValue instanceof Number) {
@@ -102,10 +92,7 @@ public class SandboxConfig {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SandboxConfig that = (SandboxConfig) o;
-        return timeout == that.timeout &&
-                Objects.equals(imageName, that.imageName) &&
-                sandboxType == that.sandboxType &&
-                Objects.equals(securityLevel, that.securityLevel);
+        return timeout == that.timeout && Objects.equals(imageName, that.imageName) && sandboxType == that.sandboxType && Objects.equals(securityLevel, that.securityLevel);
     }
 
     @Override
@@ -115,16 +102,7 @@ public class SandboxConfig {
 
     @Override
     public String toString() {
-        return "SandboxConfig{" +
-                "imageName='" + imageName + '\'' +
-                ", sandboxType=" + sandboxType +
-                ", resourceLimits=" + resourceLimits +
-                ", securityLevel='" + securityLevel + '\'' +
-                ", timeout=" + timeout +
-                ", description='" + description + '\'' +
-                ", environment=" + environment +
-                ", runtimeConfig=" + runtimeConfig +
-                '}';
+        return "SandboxConfig{" + "imageName='" + imageName + '\'' + ", sandboxType=" + sandboxType + ", resourceLimits=" + resourceLimits + ", securityLevel='" + securityLevel + '\'' + ", timeout=" + timeout + ", description='" + description + '\'' + ", environment=" + environment + ", runtimeConfig=" + runtimeConfig + '}';
     }
 
     /**
@@ -135,7 +113,7 @@ public class SandboxConfig {
         private SandboxType sandboxType;
         private Map<String, Object> resourceLimits;
         private String securityLevel = "medium";
-        private int timeout = 300; // Default timeout of 300 seconds (5 minutes)
+        private int timeout = 300;
         private String description = "";
         private Map<String, String> environment;
         private Map<String, Object> runtimeConfig;

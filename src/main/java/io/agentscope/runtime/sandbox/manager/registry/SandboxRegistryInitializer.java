@@ -19,35 +19,14 @@ import io.agentscope.runtime.sandbox.box.*;
 
 import java.util.logging.Logger;
 
-/**
- * Sandbox registry initializer
- * Automatically registers all Sandbox classes with @RegisterSandbox annotation at application startup
- * 
- * <p>Usage:
- * <pre>{@code
- * // Call at application startup
- * SandboxRegistryInitializer.initialize();
- * }</pre>
- * 
- * <p>Or use Spring Boot's @PostConstruct annotation:
- * <pre>{@code
- * @Configuration
- * public class SandboxConfig {
- *     @PostConstruct
- *     public void init() {
- *         SandboxRegistryInitializer.initialize();
- *     }
- * }
- * }</pre>
- */
 public class SandboxRegistryInitializer {
     private static final Logger logger = Logger.getLogger(SandboxRegistryInitializer.class.getName());
     private static boolean initialized = false;
 
-    static{
+    static {
         initialize();
     }
-    
+
     /**
      * Initialize sandbox registry
      * Scan and register all classes with @RegisterSandbox annotation
@@ -57,20 +36,19 @@ public class SandboxRegistryInitializer {
             logger.info("SandboxRegistryService already initialized, skipping");
             return;
         }
-        
+
         logger.info("Initializing SandboxRegistryService with annotated classes...");
-        
+
         try {
             registerBuiltInSandboxes();
             initialized = true;
             logger.info("SandboxRegistryService initialization completed successfully");
-            logRegistrationStats();
         } catch (Exception e) {
             logger.severe("Failed to initialize SandboxRegistryService: " + e.getMessage());
             throw new RuntimeException("Failed to initialize SandboxRegistryService", e);
         }
     }
-    
+
     /**
      * Register built-in Sandbox classes
      */
@@ -84,10 +62,10 @@ public class SandboxRegistryInitializer {
         tryRegisterClass(APPWorldSandbox.class.getName());
         logger.info("Built-in sandbox classes registered");
     }
-    
+
     /**
      * Try to register the specified class
-     * 
+     *
      * @param className Fully qualified class name
      */
     private static void tryRegisterClass(String className) {
@@ -100,36 +78,8 @@ public class SandboxRegistryInitializer {
             logger.warning("Failed to register sandbox class " + className + ": " + e.getMessage());
         }
     }
-    
-    /**
-     * Log registration statistics
-     */
-    private static void logRegistrationStats() {
-        int standardCount = SandboxRegistryService.listAllSandboxesByType().size();
-        int customCount = SandboxRegistryService.listAllCustomTypes().size();
-        int totalCount = standardCount + customCount;
-        
-        logger.info("===== Sandbox Registration Statistics =====");
-        logger.info("Standard sandbox types: " + standardCount);
-        logger.info("Custom sandbox types: " + customCount);
-        logger.info("Total registered sandboxes: " + totalCount);
-        logger.info("==========================================");
-        
-        if (standardCount > 0) {
-            logger.info("Registered standard sandboxes:");
-            SandboxRegistryService.listAllSandboxesByType().forEach((type, config) -> {
-                logger.info("  - " + type.getTypeName() + ": " + config.getImageName());
-            });
-        }
-        
-        if (customCount > 0) {
-            logger.info("Registered custom sandboxes:");
-            SandboxRegistryService.listAllCustomTypes().forEach((name, config) -> {
-                logger.info("  - " + name + ": " + config.getImageName());
-            });
-        }
-    }
-    
+
+
     /**
      * Reset initialization state (mainly for testing)
      */
@@ -137,10 +87,10 @@ public class SandboxRegistryInitializer {
         initialized = false;
         logger.info("SandboxRegistryService initialization state reset");
     }
-    
+
     /**
      * Check if already initialized
-     * 
+     *
      * @return true if initialized, false otherwise
      */
     public static boolean isInitialized() {

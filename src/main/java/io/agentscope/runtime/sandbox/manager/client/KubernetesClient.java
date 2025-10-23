@@ -32,7 +32,6 @@ import java.util.logging.Logger;
 
 /**
  * Kubernetes container management client implementation
- * Implements container management functionality based on Kubernetes Java client
  */
 public class KubernetesClient extends BaseClient {
 
@@ -47,28 +46,14 @@ public class KubernetesClient extends BaseClient {
     private KubernetesClientConfig config;
     private String namespace;
 
-    /**
-     * Default constructor
-     */
     public KubernetesClient() {
-        // Use default configuration
     }
 
-    /**
-     * Constructor specifying kubeconfig file path
-     *
-     * @param kubeconfigPath kubeconfig file path
-     */
     public KubernetesClient(String kubeconfigPath) {
         this.kubeconfigPath = kubeconfigPath;
         this.namespace = DEFAULT_NAMESPACE;
     }
 
-    /**
-     * Constructor using KubernetesClientConfig configuration
-     *
-     * @param config Kubernetes client configuration
-     */
     public KubernetesClient(KubernetesClientConfig config) {
         this.config = config;
         this.kubeconfigPath = config.getKubeConfigPath();
@@ -78,12 +63,9 @@ public class KubernetesClient extends BaseClient {
     @Override
     public boolean connect() {
         try {
-            // Validate configuration
             validateConfig();
 
-            // Choose connection method based on whether kubeconfig file path is specified
             if (kubeconfigPath != null && !kubeconfigPath.trim().isEmpty()) {
-                // Load configuration from specified kubeconfig file
                 File kubeconfigFile = new File(kubeconfigPath);
                 if (!kubeconfigFile.exists()) {
                     throw new RuntimeException("Kubeconfig file not found: " + kubeconfigPath);
@@ -91,13 +73,11 @@ public class KubernetesClient extends BaseClient {
                 logger.info("Loading Kubernetes configuration from file: " + kubeconfigPath);
                 this.apiClient = Config.fromConfig(kubeconfigPath);
             } else {
-                // Use default configuration to connect to Kubernetes cluster
                 logger.info("Using default Kubernetes configuration");
                 this.apiClient = Config.defaultClient();
             }
             Configuration.setDefaultApiClient(this.apiClient);
 
-            // Initialize API clients
             this.coreApi = new CoreV1Api();
             this.appsApi = new AppsV1Api();
 
@@ -109,7 +89,6 @@ public class KubernetesClient extends BaseClient {
             } catch (Exception e) {
                 logger.warning("API resources check failed, trying alternative connection test: " + e.getMessage());
 
-                // Use kubectl command for connection test
                 ProcessBuilder processBuilder = new ProcessBuilder("kubectl", "cluster-info");
                 Process process = processBuilder.start();
                 int exitCode = process.waitFor();
@@ -130,7 +109,7 @@ public class KubernetesClient extends BaseClient {
     }
 
     /**
-     * Connect using specified kubeconfig file path
+     * Connect using kubeconfig file path
      *
      * @param kubeconfigPath kubeconfig file path
      * @return whether connection is successful
@@ -145,26 +124,16 @@ public class KubernetesClient extends BaseClient {
         return connected && apiClient != null;
     }
 
-    /**
-     * Get the currently used kubeconfig file path
-     *
-     * @return kubeconfig file path, returns null if using default configuration
-     */
     public String getKubeconfigPath() {
         return kubeconfigPath;
     }
 
-    /**
-     * Validate configuration
-     */
     private void validateConfig() {
         if (config != null) {
-            // Validate namespace
             if (config.getNamespace() != null && config.getNamespace().trim().isEmpty()) {
                 throw new IllegalArgumentException("Namespace cannot be empty");
             }
 
-            // Validate kubeconfig path
             if (config.getKubeConfigPath() != null && !config.getKubeConfigPath().trim().isEmpty()) {
                 File kubeconfigFile = new File(config.getKubeConfigPath());
                 if (!kubeconfigFile.exists()) {
@@ -187,9 +156,9 @@ public class KubernetesClient extends BaseClient {
 
     @Override
     public String createContainer(String containerName, String imageName,
-            List<String> ports, Map<String, Integer> portMapping,
-            List<VolumeBinding> volumeBindings,
-            Map<String, String> environment, Map<String, Object> runtimeConfig) {
+                                  List<String> ports, Map<String, Integer> portMapping,
+                                  List<VolumeBinding> volumeBindings,
+                                  Map<String, String> environment, Map<String, Object> runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
@@ -198,23 +167,21 @@ public class KubernetesClient extends BaseClient {
         String serviceName = containerName + "-svc"; // Service name
 
         try {
-            // Step 1: Create Deployment
             V1Deployment deployment = createDeploymentObject(deploymentName, imageName,
                     ports, portMapping, volumeBindings, environment, runtimeConfig);
             V1Deployment createdDeployment = appsApi.createNamespacedDeployment(namespace, deployment).execute();
             logger.info("Deployment created: " + createdDeployment.getMetadata().getName());
 
-            // Step 2: If there is portMapping, create LoadBalancer Service
             if (portMapping != null && !portMapping.isEmpty()) {
                 V1Service service = createLoadBalancerServiceObject(serviceName, deploymentName, portMapping);
                 V1Service createdService = coreApi.createNamespacedService(namespace, service).execute();
                 logger.info("LoadBalancer Service created: " + createdService.getMetadata().getName() +
                         ", ports: " + createdService.getSpec().getPorts().stream()
-                                .map(p -> p.getPort() + "->" + p.getTargetPort())
-                                .toList());
+                        .map(p -> p.getPort() + "->" + p.getTargetPort())
+                        .toList());
             }
 
-            return deploymentName; // Return Deployment name as container ID
+            return deploymentName;
 
         } catch (ApiException e) {
             logger.severe("Failed to create container (Deployment/Service): " + e.getMessage());
@@ -229,13 +196,10 @@ public class KubernetesClient extends BaseClient {
         }
     }
 
-    /**
-     * Create Deployment (more advanced controller)
-     */
     public String createDeployment(String deploymentName, String imageName,
-            List<String> ports, Map<String, Integer> portMapping,
-            List<VolumeBinding> volumeBindings,
-            Map<String, String> environment, Map<String, Object> runtimeConfig) {
+                                   List<String> ports, Map<String, Integer> portMapping,
+                                   List<VolumeBinding> volumeBindings,
+                                   Map<String, String> environment, Map<String, Object> runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
@@ -255,18 +219,14 @@ public class KubernetesClient extends BaseClient {
         }
     }
 
-    /**
-     * Create LoadBalancer type Service object for exposing container ports to
-     * external
-     */
     private V1Service createLoadBalancerServiceObject(String serviceName, String appName,
-            Map<String, Integer> portMapping) {
+                                                      Map<String, Integer> portMapping) {
         List<V1ServicePort> servicePorts = new ArrayList<>();
         int index = 1;
 
         for (Map.Entry<String, Integer> entry : portMapping.entrySet()) {
-            String containerPortSpec = entry.getKey(); // e.g., "80/tcp"
-            Integer servicePort = entry.getValue(); // e.g., 80
+            String containerPortSpec = entry.getKey();
+            Integer servicePort = entry.getValue();
 
             String[] parts = containerPortSpec.split("/");
             int containerPort = Integer.parseInt(parts[0]);
@@ -285,7 +245,6 @@ public class KubernetesClient extends BaseClient {
             servicePorts.add(servicePortObj);
         }
 
-        // Service selector needs to match Deployment's Pod labels
         Map<String, String> selector = Collections.singletonMap("app", appName);
 
         return new V1Service()
@@ -298,23 +257,16 @@ public class KubernetesClient extends BaseClient {
                         .ports(servicePorts));
     }
 
-    /**
-     * Create Deployment object
-     */
     private V1Deployment createDeploymentObject(String deploymentName, String imageName,
-            List<String> ports, Map<String, Integer> portMapping,
-            List<VolumeBinding> volumeBindings,
-            Map<String, String> environment, Map<String, Object> runtimeConfig) {
+                                                List<String> ports, Map<String, Integer> portMapping,
+                                                List<VolumeBinding> volumeBindings,
+                                                Map<String, String> environment, Map<String, Object> runtimeConfig) {
 
-        // Labels for selector and associated resources
         Map<String, String> labels = Collections.singletonMap("app", deploymentName);
 
-        // Collect all container ports that need to be exposed
         Set<Integer> containerPortNumbers = new HashSet<>();
         List<V1ContainerPort> containerPorts = new ArrayList<>();
 
-        // 1. Extract container ports from portMapping (value is host port, but we only
-        // care about container port)
         if (portMapping != null && !portMapping.isEmpty()) {
             for (String containerPortStr : portMapping.keySet()) {
                 String[] parts = containerPortStr.split("/");
@@ -329,7 +281,6 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // 2. Supplement other ports from ports list
         if (ports != null) {
             for (String portStr : ports) {
                 String[] parts = portStr.split("/");
@@ -344,7 +295,6 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // Environment variables
         List<V1EnvVar> envVars = new ArrayList<>();
         if (environment != null) {
             for (Map.Entry<String, String> entry : environment.entrySet()) {
@@ -352,13 +302,11 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // Volume mounts
         List<V1VolumeMount> volumeMounts = new ArrayList<>();
         List<V1Volume> volumes = new ArrayList<>();
 
         volumeBindings = null;
 
-        // Enable file mounting in Kubernetes using hostPath volumes
         if (volumeBindings != null) {
             for (int i = 0; i < volumeBindings.size(); i++) {
                 VolumeBinding binding = volumeBindings.get(i);
@@ -369,7 +317,6 @@ public class KubernetesClient extends BaseClient {
                         .mountPath(binding.getContainerPath())
                         .readOnly("ro".equals(binding.getMode())));
 
-                // Use hostPath (note: production environment recommends using PVC)
                 V1HostPathVolumeSource hostPath = new V1HostPathVolumeSource()
                         .path(binding.getHostPath())
                         .type("DirectoryOrCreate");
@@ -380,7 +327,6 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // Container definition
         V1Container container = new V1Container()
                 .name(deploymentName)
                 .image(imageName)
@@ -389,13 +335,11 @@ public class KubernetesClient extends BaseClient {
                 .volumeMounts(volumeMounts)
                 .imagePullPolicy("IfNotPresent");
 
-        // Apply runtime configuration to container
         if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
             logger.info("Applying runtime configuration to Kubernetes container: " + runtimeConfig);
             container = applyRuntimeConfigToContainer(container, runtimeConfig);
         }
 
-        // Pod specification
         V1PodSpec podSpec = new V1PodSpec()
                 .containers(Arrays.asList(container));
 
@@ -403,27 +347,19 @@ public class KubernetesClient extends BaseClient {
             podSpec.volumes(volumes);
         }
 
-        // Apply runtime configuration to Pod spec
         if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
             podSpec = applyRuntimeConfigToPodSpec(podSpec, runtimeConfig);
         }
 
-        // Note: No longer automatically enable hostNetwork!
-        // If hostNetwork is really needed (such as performance-sensitive scenarios), it
-        // should be explicitly enabled through runtimeConfig
-
-        // Pod template
         V1PodTemplateSpec podTemplate = new V1PodTemplateSpec()
                 .metadata(new V1ObjectMeta().labels(labels))
                 .spec(podSpec);
 
-        // Deployment specification
         V1DeploymentSpec deploymentSpec = new V1DeploymentSpec()
                 .replicas(1)
                 .selector(new V1LabelSelector().matchLabels(labels))
                 .template(podTemplate);
 
-        // Final Deployment object
         return new V1Deployment()
                 .apiVersion("apps/v1")
                 .kind("Deployment")
@@ -453,15 +389,10 @@ public class KubernetesClient extends BaseClient {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
-
         try {
-            // Delete Deployment
             appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
             logger.info("Deployment " + containerId + " deleted successfully");
-
-            // Also delete corresponding Service
             deleteServiceIfExists(containerId);
-
         } catch (ApiException e) {
             logger.severe("Failed to stop container: " + e.getMessage());
             throw new RuntimeException("Failed to stop container", e);
@@ -476,11 +407,9 @@ public class KubernetesClient extends BaseClient {
         }
 
         try {
-            // Delete Deployment
             appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
             logger.info("Deployment " + containerId + " deleted successfully");
 
-            // Also delete corresponding Service
             deleteServiceIfExists(containerId);
 
         } catch (ApiException e) {
@@ -500,7 +429,6 @@ public class KubernetesClient extends BaseClient {
         }
 
         try {
-            // Get Deployment status
             V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, namespace).execute();
             Integer replicas = deployment.getStatus().getReplicas();
             Integer readyReplicas = deployment.getStatus().getReadyReplicas();
@@ -517,9 +445,6 @@ public class KubernetesClient extends BaseClient {
         }
     }
 
-    /**
-     * Get all Pod list
-     */
     public List<V1Pod> listPods() {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
@@ -536,9 +461,6 @@ public class KubernetesClient extends BaseClient {
         }
     }
 
-    /**
-     * Get all Deployment list
-     */
     public List<V1Deployment> listDeployments() {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
@@ -553,12 +475,6 @@ public class KubernetesClient extends BaseClient {
         }
     }
 
-    /**
-     * Get LoadBalancer Service's External IP
-     *
-     * @param containerId container ID (Deployment name)
-     * @return External IP address, returns null if not assigned
-     */
     public String getLoadBalancerExternalIP(String containerId) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
@@ -597,13 +513,6 @@ public class KubernetesClient extends BaseClient {
         }
     }
 
-    /**
-     * Wait for LoadBalancer Service's External IP assignment
-     *
-     * @param containerId    container ID (Deployment name)
-     * @param timeoutSeconds timeout time (seconds)
-     * @return External IP address, returns null if timeout
-     */
     public String waitForLoadBalancerExternalIP(String containerId, int timeoutSeconds) {
         long startTime = System.currentTimeMillis();
         long timeoutMs = timeoutSeconds * 1000L;
@@ -615,7 +524,7 @@ public class KubernetesClient extends BaseClient {
             }
 
             try {
-                Thread.sleep(2000); // Wait 2 seconds before retry
+                Thread.sleep(2000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -626,19 +535,11 @@ public class KubernetesClient extends BaseClient {
         return null;
     }
 
-    /**
-     * Apply runtime configuration to container
-     *
-     * @param container     V1Container to apply configuration to
-     * @param runtimeConfig runtime configuration map
-     * @return updated V1Container
-     */
     private V1Container applyRuntimeConfigToContainer(V1Container container, Map<String, Object> runtimeConfig) {
         if (runtimeConfig == null || runtimeConfig.isEmpty()) {
             return container;
         }
 
-        // Create or get existing ResourceRequirements
         V1ResourceRequirements resources = container.getResources();
         if (resources == null) {
             resources = new V1ResourceRequirements();
@@ -654,7 +555,6 @@ public class KubernetesClient extends BaseClient {
             requests = new HashMap<>();
         }
 
-        // Handle memory limit (mem_limit)
         if (runtimeConfig.containsKey("mem_limit")) {
             Object memLimitObj = runtimeConfig.get("mem_limit");
             Long memoryBytes = parseMemoryLimit(memLimitObj);
@@ -662,14 +562,11 @@ public class KubernetesClient extends BaseClient {
                 io.kubernetes.client.custom.Quantity memoryQuantity = new io.kubernetes.client.custom.Quantity(
                         String.valueOf(memoryBytes));
                 limits.put("memory", memoryQuantity);
-                // Set request to same as limit for guaranteed QoS
                 requests.put("memory", memoryQuantity);
                 logger.info("Applied memory limit: " + memoryBytes + " bytes");
             }
         }
 
-        // Handle CPU limit (nano_cpus)
-        // In Kubernetes, CPU is measured in "cores". 1 core = 1,000,000,000 nanocores
         if (runtimeConfig.containsKey("nano_cpus")) {
             Object nanoCpusObj = runtimeConfig.get("nano_cpus");
             Long nanoCpus = parseNanoCpus(nanoCpusObj);
@@ -679,18 +576,15 @@ public class KubernetesClient extends BaseClient {
                 io.kubernetes.client.custom.Quantity cpuQuantity = new io.kubernetes.client.custom.Quantity(
                         milliCpus + "m");
                 limits.put("cpu", cpuQuantity);
-                // Set request to same as limit for guaranteed QoS
                 requests.put("cpu", cpuQuantity);
                 logger.info("Applied CPU limit: " + nanoCpus + " nanocpus (" + milliCpus + " millicores)");
             }
         }
 
-        // Handle GPU support (enable_gpu)
         if (runtimeConfig.containsKey("enable_gpu")) {
             Object enableGpuObj = runtimeConfig.get("enable_gpu");
             boolean enableGpu = parseBoolean(enableGpuObj);
             if (enableGpu) {
-                // Request GPU resources (nvidia.com/gpu)
                 io.kubernetes.client.custom.Quantity gpuQuantity = new io.kubernetes.client.custom.Quantity("1");
                 limits.put("nvidia.com/gpu", gpuQuantity);
                 requests.put("nvidia.com/gpu", gpuQuantity);
@@ -698,9 +592,6 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // Handle max connections (max_connections)
-        // Note: Kubernetes doesn't directly support ulimits in the same way Docker does
-        // This would typically be handled at the OS/node level or via init containers
         if (runtimeConfig.containsKey("max_connections")) {
             Object maxConnectionsObj = runtimeConfig.get("max_connections");
             Integer maxConnections = parseInteger(maxConnectionsObj);
@@ -710,7 +601,6 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        // Apply resource requirements to container
         resources.setLimits(limits);
         resources.setRequests(requests);
         container.setResources(resources);
@@ -730,17 +620,14 @@ public class KubernetesClient extends BaseClient {
             return podSpec;
         }
 
-        // Handle GPU support - add node selector
         if (runtimeConfig.containsKey("enable_gpu")) {
             Object enableGpuObj = runtimeConfig.get("enable_gpu");
             boolean enableGpu = parseBoolean(enableGpuObj);
             if (enableGpu) {
-                // Add node selector for GPU nodes (if applicable)
                 Map<String, String> nodeSelector = podSpec.getNodeSelector();
                 if (nodeSelector == null) {
                     nodeSelector = new HashMap<>();
                 }
-                // Common label for GPU-enabled nodes
                 nodeSelector.put("accelerator", "nvidia-gpu");
                 podSpec.setNodeSelector(nodeSelector);
                 logger.info("Added node selector for GPU-enabled nodes");
@@ -772,7 +659,6 @@ public class KubernetesClient extends BaseClient {
         }
 
         try {
-            // Extract number and unit
             String numberPart = memLimitStr.replaceAll("[^0-9.]", "");
             String unitPart = memLimitStr.replaceAll("[0-9.]", "");
 
@@ -879,7 +765,6 @@ public class KubernetesClient extends BaseClient {
         String serviceName = containerId + "-svc";
 
         try {
-            // Try to delete Service
             coreApi.deleteNamespacedService(serviceName, namespace).execute();
             logger.info("Service " + serviceName + " deleted successfully");
         } catch (ApiException e) {
@@ -915,18 +800,14 @@ public class KubernetesClient extends BaseClient {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
         try {
-            // Try to read the Deployment to check if it exists
             appsApi.readNamespacedDeployment(containerIdOrName, namespace).execute();
             return true;
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                // Deployment does not exist
                 return false;
             }
-            // Other errors, assume it exists
             logger.warning("Error inspecting container " + containerIdOrName + ": " + e.getMessage());
             return false;
         }
     }
-
 }

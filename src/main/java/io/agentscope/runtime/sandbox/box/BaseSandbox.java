@@ -22,11 +22,7 @@ import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Base Sandbox implementation
- * Corresponds to Python's BaseSandbox
- * Provides basic IPython and shell command execution capabilities
- */
+
 @RegisterSandbox(
         imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest",
         sandboxType = SandboxType.BASE,

@@ -25,7 +25,10 @@ import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 import io.agentscope.runtime.sandbox.manager.model.fs.OssConfig;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,19 +40,19 @@ import java.util.logging.Logger;
  */
 public class StorageManager {
     private static final Logger logger = Logger.getLogger(StorageManager.class.getName());
-    
+
     private final FileSystemConfig fileSystemConfig;
     private OSS ossClient;
 
     public StorageManager(FileSystemConfig fileSystemConfig) {
         this.fileSystemConfig = fileSystemConfig;
-        
+
         // If OSS storage, initialize OSS client
         if (fileSystemConfig.getFileSystemType() == FileSystemType.OSS && fileSystemConfig instanceof OssConfig ossConfig) {
             this.ossClient = new OSSClientBuilder().build(
-                ossConfig.getOssEndpoint(),
-                ossConfig.getOssAccessKeyId(),
-                ossConfig.getOssAccessKeySecret()
+                    ossConfig.getOssEndpoint(),
+                    ossConfig.getOssAccessKeyId(),
+                    ossConfig.getOssAccessKeySecret()
             );
             logger.info("OSS client initialized with endpoint: " + ossConfig.getOssEndpoint());
         }
@@ -65,12 +68,12 @@ public class StorageManager {
         if (parts == null || parts.length == 0) {
             return "";
         }
-        
+
         Path path = Paths.get(parts[0]);
         for (int i = 1; i < parts.length; i++) {
             path = path.resolve(parts[i]);
         }
-        
+
         return path.toString();
     }
 
@@ -108,8 +111,8 @@ public class StorageManager {
     /**
      * Download folder from OSS
      *
-     * @param ossPrefix  OSS object prefix
-     * @param localDir   local target directory
+     * @param ossPrefix OSS object prefix
+     * @param localDir  local target directory
      * @return whether download succeeded
      */
     private boolean downloadFromOss(String ossPrefix, String localDir) {
@@ -126,41 +129,41 @@ public class StorageManager {
             }
 
             String bucketName = ossConfig.getOssBucketName();
-            
+
             // Ensure prefix ends with /
             String prefix = ossPrefix.endsWith("/") ? ossPrefix : ossPrefix + "/";
-            
+
             logger.info("Downloading from OSS bucket: " + bucketName + ", prefix: " + prefix + " to " + localDir);
 
             // List all objects
             ListObjectsRequest listObjectsRequest = new ListObjectsRequest(bucketName)
-                .withPrefix(prefix)
-                .withMaxKeys(1000);
+                    .withPrefix(prefix)
+                    .withMaxKeys(1000);
 
             ObjectListing objectListing;
             int downloadedCount = 0;
 
             do {
                 objectListing = ossClient.listObjects(listObjectsRequest);
-                
+
                 for (OSSObjectSummary objectSummary : objectListing.getObjectSummaries()) {
                     String objectKey = objectSummary.getKey();
-                    
+
                     // Skip directory marker objects
                     if (objectKey.endsWith("/")) {
                         continue;
                     }
-                    
+
                     // Calculate relative path
                     String relativePath = objectKey.substring(prefix.length());
                     File localFile = new File(localDir, relativePath);
-                    
+
                     // Ensure parent directory exists
                     File parentDir = localFile.getParentFile();
                     if (parentDir != null && !parentDir.exists()) {
                         parentDir.mkdirs();
                     }
-                    
+
                     // Download file
                     try {
                         OSSObject ossObject = ossClient.getObject(bucketName, objectKey);
@@ -178,7 +181,7 @@ public class StorageManager {
                         logger.warning("Failed to download " + objectKey + ": " + e.getMessage());
                     }
                 }
-                
+
                 listObjectsRequest.setMarker(objectListing.getNextMarker());
             } while (objectListing.isTruncated());
 
@@ -217,20 +220,20 @@ public class StorageManager {
             // If source is directory, copy recursively
             if (Files.isDirectory(source)) {
                 Files.walk(source)
-                    .forEach(srcPath -> {
-                        try {
-                            Path destPath = target.resolve(source.relativize(srcPath));
-                            if (Files.isDirectory(srcPath)) {
-                                if (!Files.exists(destPath)) {
-                                    Files.createDirectories(destPath);
+                        .forEach(srcPath -> {
+                            try {
+                                Path destPath = target.resolve(source.relativize(srcPath));
+                                if (Files.isDirectory(srcPath)) {
+                                    if (!Files.exists(destPath)) {
+                                        Files.createDirectories(destPath);
+                                    }
+                                } else {
+                                    Files.copy(srcPath, destPath, StandardCopyOption.REPLACE_EXISTING);
                                 }
-                            } else {
-                                Files.copy(srcPath, destPath, StandardCopyOption.REPLACE_EXISTING);
+                            } catch (IOException e) {
+                                logger.warning("Failed to copy " + srcPath + ": " + e.getMessage());
                             }
-                        } catch (IOException e) {
-                            logger.warning("Failed to copy " + srcPath + ": " + e.getMessage());
-                        }
-                    });
+                        });
             } else {
                 // If source is file, copy directly
                 Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
@@ -287,8 +290,8 @@ public class StorageManager {
     /**
      * Upload local folder to OSS
      *
-     * @param localDir   local source directory
-     * @param ossPrefix  OSS object prefix
+     * @param localDir  local source directory
+     * @param ossPrefix OSS object prefix
      * @return whether upload succeeded
      */
     private boolean uploadToOss(String localDir, String ossPrefix) {
@@ -305,10 +308,10 @@ public class StorageManager {
             }
 
             String bucketName = ossConfig.getOssBucketName();
-            
+
             // Ensure prefix ends with /
             String prefix = ossPrefix.endsWith("/") ? ossPrefix : ossPrefix + "/";
-            
+
             logger.info("Uploading to OSS bucket: " + bucketName + ", prefix: " + prefix + " from " + localDir);
 
             int uploadedCount = 0;
@@ -350,7 +353,7 @@ public class StorageManager {
             } else {
                 // Upload file
                 String objectKey = basePrefix + currentRelativePath;
-                
+
                 try {
                     // Upload file to OSS
                     ossClient.putObject(bucketName, objectKey, file);

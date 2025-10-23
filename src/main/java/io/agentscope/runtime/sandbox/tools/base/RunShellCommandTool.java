@@ -35,12 +35,6 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-/**
- * Call sandbox to run shell commands
- *
- * @author xuehuitian45
- * @since 2025/9/8
- */
 public class RunShellCommandTool extends SandboxTool {
     
     public RunShellCommandTool() {
