@@ -15,6 +15,7 @@
  */
 package io.agentscope.runtime.sandbox.manager.registry;
 
+import io.agentscope.runtime.sandbox.box.*;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 
@@ -117,24 +118,52 @@ public class SandboxAnnotationProcessor {
         logger.info("Registering all known sandbox classes with @RegisterSandbox annotation");
         
         try {
-            Class<?> baseSandboxClass = Class.forName("io.agentscope.runtime.sandbox.box.BaseSandbox");
+            Class<?> baseSandboxClass = Class.forName(BaseSandbox.class.getName());
             processClass(baseSandboxClass);
         } catch (ClassNotFoundException e) {
             logger.fine("BaseSandbox class not found, skipping: " + e.getMessage());
         }
         
         try {
-            Class<?> filesystemSandboxClass = Class.forName("io.agentscope.runtime.sandbox.box.FilesystemSandbox");
+            Class<?> filesystemSandboxClass = Class.forName(FilesystemSandbox.class.getName());
             processClass(filesystemSandboxClass);
         } catch (ClassNotFoundException e) {
             logger.fine("FilesystemSandbox class not found, skipping: " + e.getMessage());
         }
         
         try {
-            Class<?> browserSandboxClass = Class.forName("io.agentscope.runtime.sandbox.box.BrowserSandbox");
+            Class<?> browserSandboxClass = Class.forName(BrowserSandbox.class.getName());
             processClass(browserSandboxClass);
         } catch (ClassNotFoundException e) {
             logger.fine("BrowserSandbox class not found, skipping: " + e.getMessage());
+        }
+        
+        try {
+            Class<?> dummySandboxClass = Class.forName(DummySandbox.class.getName());
+            processClass(dummySandboxClass);
+        } catch (ClassNotFoundException e) {
+            logger.fine("DummySandbox class not found, skipping: " + e.getMessage());
+        }
+        
+        try {
+            Class<?> bfclSandboxClass = Class.forName(BFCLSandbox.class.getName());
+            processClass(bfclSandboxClass);
+        } catch (ClassNotFoundException e) {
+            logger.fine("BFCLSandbox class not found, skipping: " + e.getMessage());
+        }
+        
+        try {
+            Class<?> appworldSandboxClass = Class.forName(APPWorldSandbox.class.getName());
+            processClass(appworldSandboxClass);
+        } catch (ClassNotFoundException e) {
+            logger.fine("APPWorldSandbox class not found, skipping: " + e.getMessage());
+        }
+        
+        try {
+            Class<?> webshopSandboxClass = Class.forName(WebShopSandbox.class.getName());
+            processClass(webshopSandboxClass);
+        } catch (ClassNotFoundException e) {
+            logger.fine("WebShopSandbox class not found, skipping: " + e.getMessage());
         }
         
         logger.info("Finished registering sandbox classes");
@@ -143,6 +172,7 @@ public class SandboxAnnotationProcessor {
     /**
      * Parse key-value array to Map<String, String>
      * Format: "key1=value1", "key2=value2"
+     * Supports environment variable placeholders: ${VAR_NAME} or ${VAR_NAME:default_value}
      */
     private static Map<String, String> parseKeyValueArray(String[] array) {
         Map<String, String> result = new HashMap<>();
@@ -159,6 +189,8 @@ public class SandboxAnnotationProcessor {
             if (equalIndex > 0) {
                 String key = item.substring(0, equalIndex).trim();
                 String value = item.substring(equalIndex + 1).trim();
+                // Resolve environment variables in value
+                value = resolveEnvironmentVariables(value);
                 result.put(key, value);
             } else {
                 logger.warning("Invalid key-value pair format: " + item);
@@ -166,6 +198,68 @@ public class SandboxAnnotationProcessor {
         }
         
         return result;
+    }
+    
+    /**
+     * Resolve environment variable placeholders in a string
+     * Supports syntax: ${VAR_NAME} or ${VAR_NAME:default_value}
+     * 
+     * @param value String that may contain placeholders
+     * @return String with placeholders replaced by actual environment variable values
+     */
+    private static String resolveEnvironmentVariables(String value) {
+        if (value == null || !value.contains("${")) {
+            return value;
+        }
+        
+        StringBuilder result = new StringBuilder();
+        int startIndex = 0;
+        
+        while (startIndex < value.length()) {
+            int placeholderStart = value.indexOf("${", startIndex);
+            if (placeholderStart == -1) {
+                // No more placeholders, append remaining string
+                result.append(value.substring(startIndex));
+                break;
+            }
+            
+            int placeholderEnd = value.indexOf("}", placeholderStart);
+            if (placeholderEnd == -1) {
+                // Malformed placeholder, append as is
+                result.append(value.substring(startIndex));
+                break;
+            }
+            
+            // Append text before placeholder
+            result.append(value.substring(startIndex, placeholderStart));
+            
+            // Extract placeholder content
+            String placeholder = value.substring(placeholderStart + 2, placeholderEnd);
+            String envVarName;
+            String defaultValue = "";
+            
+            // Check if default value is specified
+            int colonIndex = placeholder.indexOf(':');
+            if (colonIndex > 0) {
+                envVarName = placeholder.substring(0, colonIndex).trim();
+                defaultValue = placeholder.substring(colonIndex + 1).trim();
+            } else {
+                envVarName = placeholder.trim();
+            }
+            
+            // Get environment variable value
+            String envValue = System.getenv(envVarName);
+            if (envValue != null) {
+                result.append(envValue);
+            } else {
+                result.append(defaultValue);
+                logger.fine("Environment variable '" + envVarName + "' not found, using default: '" + defaultValue + "'");
+            }
+            
+            startIndex = placeholderEnd + 1;
+        }
+        
+        return result.toString();
     }
     
     /**

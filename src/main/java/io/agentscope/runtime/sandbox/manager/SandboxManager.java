@@ -27,11 +27,7 @@ import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.*;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryService;
-import io.agentscope.runtime.sandbox.manager.util.PortManager;
-import io.agentscope.runtime.sandbox.manager.util.RandomStringGenerator;
-import io.agentscope.runtime.sandbox.manager.util.RedisClientWrapper;
-import io.agentscope.runtime.sandbox.manager.util.StorageManager;
-import io.agentscope.runtime.sandbox.manager.util.SandboxHttpClient;
+import io.agentscope.runtime.sandbox.manager.util.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -905,7 +901,6 @@ public class SandboxManager implements AutoCloseable {
             if (containerModel.getMountDir() != null && containerModel.getStoragePath() != null) {
                 try {
                     logger.info("Uploading container data to storage: " + containerModel.getStoragePath());
-                    System.out.println("Uploading from " + containerModel.getMountDir() + " to " + containerModel.getStoragePath());
                     boolean uploaded = storageManager.uploadFolder(containerModel.getMountDir(), containerModel.getStoragePath());
                     if (uploaded) {
                         logger.info("Successfully uploaded container data to storage");
@@ -1168,14 +1163,13 @@ public class SandboxManager implements AutoCloseable {
      * Establish HTTP connection to sandbox
      * Corresponds to Python's _establish_connection
      */
-    private SandboxHttpClient establishConnection(
+    private SandboxClient establishConnection(
             String sandboxId, String userId, String sessionId) {
         try {
             ContainerModel containerInfo = getInfo(sandboxId, userId, sessionId);
-            if (containerInfo == null) {
-                throw new RuntimeException("Container not found: " + sandboxId);
+            if(containerInfo.getVersion().contains("sandbox-appworld")|| containerInfo.getVersion().contains("sandbox-bfclient")){
+                return new TrainingSandboxClient(containerInfo, 60);
             }
-            
             return new SandboxHttpClient(containerInfo, 60);
         } catch (Exception e) {
             logger.severe("Failed to establish connection to sandbox: " + e.getMessage());
@@ -1211,7 +1205,7 @@ public class SandboxManager implements AutoCloseable {
      * Corresponds to Python's list_tools
      */
     public Map<String, Object> listTools(String sandboxId, String userId, String sessionId, String toolType) {
-        try (SandboxHttpClient client = establishConnection(sandboxId, userId, sessionId)) {
+        try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
             return client.listTools(toolType);
         } catch (Exception e) {
             logger.severe("Error listing tools: " + e.getMessage());
@@ -1225,7 +1219,7 @@ public class SandboxManager implements AutoCloseable {
      */
     public String callTool(String sandboxId, String userId, String sessionId, 
                           String toolName, Map<String, Object> arguments) {
-        try (SandboxHttpClient client = establishConnection(sandboxId, userId, sessionId)) {
+        try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
             return client.callTool(toolName, arguments);
         } catch (Exception e) {
             logger.severe("Error calling tool " + toolName + ": " + e.getMessage());

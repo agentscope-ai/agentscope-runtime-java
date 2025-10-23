@@ -1,15 +1,16 @@
 package runtime.domain.tools.service.sandbox.training;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BFCLSandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.tools.TrainingSandboxTools;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.util.List;
@@ -21,10 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class BfclSandboxTest {
 
     private SandboxManager sandboxManager;
-    private TrainingSandboxTools tools;
 
     // Test data constants corresponding to Python ASSISTANT_MESSAGES
-    private static final List<Map<String, String>> ASSISTANT_MESSAGES = List.of(
+    private static final List<Map<String, Object>> ASSISTANT_MESSAGES = List.of(
         // Turn-1
         Map.of("role", "assistant", "content",
                 """
@@ -83,7 +83,6 @@ public class BfclSandboxTest {
                     .containerDeployment(clientConfig)
                     .build();
             sandboxManager = new SandboxManager(config);
-            tools = new TrainingSandboxTools(sandboxManager);
             System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {
             System.err.println("Failed to initialize SandboxManager: " + e.getMessage());
@@ -104,58 +103,59 @@ public class BfclSandboxTest {
         }
     }
 
+    @Test
     public void testBfclSandbox() throws JsonProcessingException {
-        // Get environment profiles
-        String envProfiles = tools.getEnvProfiles(SandboxType.BFCL, "bfcl", "train", null, "", "");
-        System.out.println("Environment profiles: " + envProfiles);
-        assertNotNull(envProfiles);
+        try(BFCLSandbox bfclSandbox = new BFCLSandbox(sandboxManager, "test-user", "test-session")) {
+            String envProfiles = bfclSandbox.getEnvProfile("bfcl", "train", null);
+            System.out.println("BFCLSandbox env profiles: " + envProfiles);
+            assertNotNull(envProfiles);
 
-        // Parse profiles to get task ID (assuming it's the second one like in Python)
-        ObjectMapper mapper = new ObjectMapper();
-        List<?> profileList = mapper.readValue(envProfiles, List.class);
-        String taskId = profileList.get(1).toString();
+            ObjectMapper mapper = new ObjectMapper();
+            List<String> profileList = mapper.readValue(envProfiles, new TypeReference<List<String>>() {});
 
-        // Create instance
-        String initResponse = tools.createInstance("bfcl", taskId, null, Map.of("model_name", "gt-script"), "", "");
-        System.out.println("Init state: " + initResponse);
-        assertNotNull(initResponse);
+            String initResponse = bfclSandbox.createInstance("bfcl", profileList.get(0), null, Map.of("model_name", "gt-script"));
+            System.out.println("Init state: " + initResponse);
+            assertNotNull(initResponse);
 
-        // Parse instance ID and query from response
-        @SuppressWarnings("unchecked")
-        Map<String, Object> responseMap = mapper.readValue(initResponse, Map.class);
-        String instanceId = extractInstanceId(initResponse);
-        String query = responseMap.get("state").toString();
-
-        System.out.println("Created instance " + instanceId + " with query: " + query);
-        assertNotNull(instanceId);
-        assertNotNull(query);
-
-        // Execute steps (turns)
-        for (int turnNo = 0; turnNo < ASSISTANT_MESSAGES.size(); turnNo++) {
-            Map<String, String> message = ASSISTANT_MESSAGES.get(turnNo);
-            String result = tools.step(instanceId, message, null, "", "");
-            System.out.println("\n[TURN " + (turnNo + 1) + "] Step result: " + result);
-            assertNotNull(result);
-
-            // Parse result to check if terminated
+            // Parse instance ID and query from response
             @SuppressWarnings("unchecked")
-            Map<String, Object> stepResult = mapper.readValue(result, Map.class);
-            Boolean isTerminated = (Boolean) stepResult.get("is_terminated");
-            if (isTerminated != null && isTerminated) {
-                System.out.println("Terminated at turn " + (turnNo + 1));
-                break;
+            Map<String, Object> responseMap = mapper.readValue(initResponse, Map.class);
+            String instanceId = extractInstanceId(initResponse);
+            String query = responseMap.get("state").toString();
+
+            System.out.println("Created instance " + instanceId + " with query: " + query);
+            assertNotNull(instanceId);
+            assertNotNull(query);
+
+            // Execute steps (turns)
+            for (int turnNo = 0; turnNo < ASSISTANT_MESSAGES.size(); turnNo++) {
+                Map<String, Object> message = ASSISTANT_MESSAGES.get(turnNo);
+                String result = bfclSandbox.step(instanceId, message, null);
+                System.out.println("\n[TURN " + (turnNo + 1) + "] Step result: " + result);
+                assertNotNull(result);
+
+                // Parse result to check if terminated
+                @SuppressWarnings("unchecked")
+                Map<String, Object> stepResult = mapper.readValue(result, Map.class);
+                Boolean isTerminated = (Boolean) stepResult.get("is_terminated");
+                if (isTerminated != null && isTerminated) {
+                    System.out.println("Terminated at turn " + (turnNo + 1));
+                    break;
+                }
             }
+
+            // Evaluate
+            String score = bfclSandbox.evaluate(instanceId, Map.of(), Map.of("sparse", false));
+            System.out.println("\n[RESULT] sparse_score = " + score);
+            assertNotNull(score);
+
+            // Release instance
+            String releaseResult = bfclSandbox.releaseInstance(instanceId);
+            System.out.println("[DONE] released instance: " + releaseResult);
+            assertNotNull(releaseResult);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-        // Evaluate
-        String score = tools.evaluate(instanceId, Map.of(), Map.of("sparse", false), "", "");
-        System.out.println("\n[RESULT] sparse_score = " + score);
-        assertNotNull(score);
-
-        // Release instance
-        String releaseResult = tools.releaseInstance(instanceId, "", "");
-        System.out.println("[DONE] released instance: " + releaseResult);
-        assertNotNull(releaseResult);
     }
 
     private String extractInstanceId(String response) {

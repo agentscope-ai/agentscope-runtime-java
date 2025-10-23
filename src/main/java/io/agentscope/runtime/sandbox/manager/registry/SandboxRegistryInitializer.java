@@ -15,9 +15,7 @@
  */
 package io.agentscope.runtime.sandbox.manager.registry;
 
-import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.BrowserSandbox;
-import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
+import io.agentscope.runtime.sandbox.box.*;
 
 import java.util.logging.Logger;
 
@@ -81,6 +79,9 @@ public class SandboxRegistryInitializer {
         tryRegisterClass(BaseSandbox.class.getName());
         tryRegisterClass(FilesystemSandbox.class.getName());
         tryRegisterClass(BrowserSandbox.class.getName());
+        tryRegisterClass(BFCLSandbox.class.getName());
+        tryRegisterClass(WebShopSandbox.class.getName());
+        tryRegisterClass(APPWorldSandbox.class.getName());
         logger.info("Built-in sandbox classes registered");
     }
     

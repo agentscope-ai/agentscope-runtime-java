@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  * Corresponds to Python's SandboxHttpClient
  * Used for HTTP communication with sandbox containers and calling tools within the sandbox
  */
-public class SandboxHttpClient implements AutoCloseable {
+public class SandboxHttpClient extends SandboxClient{
     private static final Logger logger = Logger.getLogger(SandboxHttpClient.class.getName());
     private static final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -97,11 +97,11 @@ public class SandboxHttpClient implements AutoCloseable {
         
         throw new RuntimeException("Sandbox service did not start within timeout: " + timeout + "s");
     }
-    
+
     public Map<String, Object> listTools(String toolType) {
         try {
             String endpoint = baseUrl + "/mcp/list_tools";
-            
+
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
                     .header("Authorization", "Bearer " + secret)
@@ -110,27 +110,27 @@ public class SandboxHttpClient implements AutoCloseable {
                     .timeout(Duration.ofSeconds(timeout))
                     .GET()
                     .build();
-            
+
             HttpResponse<String> response = httpClient.send(request,
                     HttpResponse.BodyHandlers.ofString());
-            
+
             if (response.statusCode() != 200) {
                 logger.warning("Failed to list tools: HTTP " + response.statusCode());
                 return new HashMap<>();
             }
-            
+
             @SuppressWarnings("unchecked")
             Map<String, Object> tools = objectMapper.readValue(response.body(), Map.class);
-            
+
             Map<String, Object> genericTools = getGenericToolsSchema();
             tools.put("generic", genericTools);
-            
+
             if (toolType != null && !toolType.isEmpty()) {
                 Map<String, Object> filtered = new HashMap<>();
                 filtered.put(toolType, tools.getOrDefault(toolType, new HashMap<>()));
                 return filtered;
             }
-            
+
             return tools;
         } catch (Exception e) {
             logger.severe("Error listing tools: " + e.getMessage());
