@@ -98,7 +98,7 @@ public class SandboxHttpClient extends SandboxClient{
         throw new RuntimeException("Sandbox service did not start within timeout: " + timeout + "s");
     }
 
-    public Map<String, Object> listTools(String toolType) {
+    public Map<String, Object> listTools(String toolType, Map<String, Object> arguments) {
         try {
             String endpoint = baseUrl + "/mcp/list_tools";
 
