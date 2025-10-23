@@ -71,10 +71,6 @@ public class TabListTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理标签页列表的工具
-     */
     class TabLister implements BiFunction<TabLister.Request, ToolContext, TabLister.Response> {
 
         Logger logger = Logger.getLogger(TabLister.class.getName());

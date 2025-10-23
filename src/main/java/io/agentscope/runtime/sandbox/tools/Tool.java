@@ -18,37 +18,28 @@ package io.agentscope.runtime.sandbox.tools;
 import org.springframework.ai.tool.ToolCallback;
 
 /**
- * 抽象基类，定义所有工具的通用接口
- * 类似于 Python 的 Tool 基类
+ * Abstract base class that defines common interfaces for all tools
+ * Similar to Python's Tool base class
  * 
- * 主要职责：
- * - 定义标准的工具接口
- * - 确保不同工具类型之间的一致性行为
- * - 提供通用功能
+ * Main responsibilities:
+ * - Define standard tool interfaces
+ * - Ensure consistent behavior across different tool types
+ * - Provide common functionality
  */
 public abstract class Tool {
     
-    /**
-     * 工具名称
-     */
     protected String name;
     
-    /**
-     * 工具类型标识符
-     */
     protected String toolType;
     
-    /**
-     * 工具描述
-     */
     protected String description;
     
     /**
-     * 构造函数
+     * Constructor
      * 
-     * @param name 工具名称
-     * @param toolType 工具类型
-     * @param description 工具描述
+     * @param name Tool name
+     * @param toolType Tool type
+     * @param description Tool description
      */
     protected Tool(String name, String toolType, String description) {
         this.name = name;
@@ -56,38 +47,23 @@ public abstract class Tool {
         this.description = description;
     }
     
-    /**
-     * 获取工具名称
-     * 
-     * @return 工具名称
-     */
     public String getName() {
         return name;
     }
     
-    /**
-     * 获取工具类型
-     * 
-     * @return 工具类型
-     */
     public String getToolType() {
         return toolType;
     }
     
-    /**
-     * 获取工具描述
-     * 
-     * @return 工具描述
-     */
     public String getDescription() {
         return description;
     }
     
     /**
-     * 构建 ToolCallback
-     * 每个具体工具必须实现此方法来创建其对应的 ToolCallback
+     * Build ToolCallback
+     * Each concrete tool must implement this method to create its corresponding ToolCallback
      * 
-     * @return ToolCallback 实例
+     * @return ToolCallback instance
      */
     public abstract ToolCallback buildTool();
     

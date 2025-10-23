@@ -83,10 +83,6 @@ public class NavigateTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理浏览器导航的工具
-     */
     class Navigator implements BiFunction<Navigator.Request, ToolContext, Navigator.Response> {
 
         Logger logger = Logger.getLogger(Navigator.class.getName());

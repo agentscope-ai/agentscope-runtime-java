@@ -80,10 +80,6 @@ public class PdfSaveTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理PDF保存的工具
-     */
     class PdfSaver implements BiFunction<PdfSaver.Request, ToolContext, PdfSaver.Response> {
 
         java.util.logging.Logger logger = java.util.logging.Logger.getLogger(PdfSaver.class.getName());

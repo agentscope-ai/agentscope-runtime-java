@@ -88,10 +88,6 @@ public class WriteFileTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理文件写入的工具
-     */
     class FileWriter implements BiFunction<FileWriter.Request, ToolContext, FileWriter.Response> {
 
         Logger logger = Logger.getLogger(FileWriter.class.getName());

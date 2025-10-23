@@ -88,10 +88,6 @@ public class EditFileTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理文件编辑的工具
-     */
     class FileEditor implements BiFunction<FileEditor.Request, ToolContext, FileEditor.Response> {
 
         Logger logger = Logger.getLogger(FileEditor.class.getName());

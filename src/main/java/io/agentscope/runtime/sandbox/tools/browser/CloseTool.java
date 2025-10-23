@@ -68,10 +68,6 @@ public class CloseTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理浏览器关闭的工具
-     */
     class BrowserCloser implements BiFunction<BrowserCloser.Request, ToolContext, BrowserCloser.Response> {
 
         Logger logger = Logger.getLogger(BrowserCloser.class.getName());

@@ -67,9 +67,6 @@ public class RunPythonTool extends SandboxTool {
                 .build();
     }
 
-    /**
-     * 内部类：处理Python代码执行的工具
-     */
     class PythonExecutor implements BiFunction<PythonExecutor.RunPythonToolRequest, ToolContext, PythonExecutor.RunPythonToolResponse> {
 
         Logger logger = Logger.getLogger(PythonExecutor.class.getName());
@@ -105,7 +102,6 @@ public class RunPythonTool extends SandboxTool {
             return result;
         }
 
-        // Request type definition
         public record RunPythonToolRequest(
                 @JsonProperty(required = true, value = "code")
                 @JsonPropertyDescription("Python code to be executed")
@@ -116,7 +112,6 @@ public class RunPythonTool extends SandboxTool {
             }
         }
 
-        // Response type definition
         public record RunPythonToolResponse(@JsonProperty("Response") Response output) {
             public RunPythonToolResponse(Response output) {
                 this.output = output;

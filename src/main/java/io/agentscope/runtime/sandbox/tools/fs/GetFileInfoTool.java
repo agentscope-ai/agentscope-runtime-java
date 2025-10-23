@@ -82,10 +82,6 @@ public class GetFileInfoTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理文件信息获取的工具
-     */
     class FileInfoExecutor implements BiFunction<FileInfoExecutor.Request, ToolContext, FileInfoExecutor.Response> {
 
         Logger logger = Logger.getLogger(FileInfoExecutor.class.getName());

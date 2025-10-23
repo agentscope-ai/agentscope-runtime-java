@@ -82,10 +82,6 @@ public class DirectoryTreeTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理目录树获取的工具
-     */
     class TreeBuilder implements BiFunction<TreeBuilder.Request, ToolContext, TreeBuilder.Response> {
 
         Logger logger = Logger.getLogger(TreeBuilder.class.getName());

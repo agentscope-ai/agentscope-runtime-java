@@ -103,10 +103,6 @@ public class TypeTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理浏览器文本输入的工具
-     */
     class TypeExecutor implements BiFunction<TypeExecutor.Request, ToolContext, TypeExecutor.Response> {
 
         Logger logger = Logger.getLogger(TypeExecutor.class.getName());

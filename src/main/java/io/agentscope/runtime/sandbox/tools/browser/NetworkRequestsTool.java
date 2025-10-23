@@ -71,10 +71,6 @@ public class NetworkRequestsTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理网络请求获取的工具
-     */
     class NetworkRequestsRetriever implements BiFunction<NetworkRequestsRetriever.Request, ToolContext, NetworkRequestsRetriever.Response> {
 
         Logger logger = Logger.getLogger(NetworkRequestsRetriever.class.getName());

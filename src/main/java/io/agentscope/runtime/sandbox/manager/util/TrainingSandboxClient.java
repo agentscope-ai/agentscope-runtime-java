@@ -270,7 +270,6 @@ public class TrainingSandboxClient extends SandboxClient {
             Object data = response.get("data");
             try {
                 if (data instanceof String) {
-                    // 反序列化 JSON 字符串为 Map
                     return objectMapper.readValue((String) data, new TypeReference<Map<String, Object>>() {});
                 } else if (data instanceof Map) {
                     @SuppressWarnings("unchecked")

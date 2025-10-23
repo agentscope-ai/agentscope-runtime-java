@@ -83,10 +83,6 @@ public class TabSelectTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理标签页选择的工具
-     */
     class TabSelector implements BiFunction<TabSelector.Request, ToolContext, TabSelector.Response> {
 
         Logger logger = Logger.getLogger(TabSelector.class.getName());

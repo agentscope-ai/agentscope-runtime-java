@@ -78,10 +78,6 @@ public class TabNewTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理新标签页创建的工具
-     */
     class TabCreator implements BiFunction<TabCreator.Request, ToolContext, TabCreator.Response> {
 
         Logger logger = Logger.getLogger(TabCreator.class.getName());

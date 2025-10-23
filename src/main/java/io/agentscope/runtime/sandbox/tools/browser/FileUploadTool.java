@@ -85,10 +85,6 @@ public class FileUploadTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理文件上传的工具
-     */
     class FileUploader implements BiFunction<FileUploader.Request, ToolContext, FileUploader.Response> {
 
         java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FileUploader.class.getName());

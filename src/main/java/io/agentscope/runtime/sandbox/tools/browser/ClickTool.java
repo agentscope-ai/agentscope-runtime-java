@@ -88,10 +88,6 @@ public class ClickTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理浏览器点击的工具
-     */
     class ClickExecutor implements BiFunction<ClickExecutor.Request, ToolContext, ClickExecutor.Response> {
 
         Logger logger = Logger.getLogger(ClickExecutor.class.getName());

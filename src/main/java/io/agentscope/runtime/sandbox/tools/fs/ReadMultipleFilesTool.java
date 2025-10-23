@@ -83,10 +83,6 @@ public class ReadMultipleFilesTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理多文件读取的工具
-     */
     class MultiFileReader implements BiFunction<MultiFileReader.Request, ToolContext, MultiFileReader.Response> {
 
         Logger logger = Logger.getLogger(MultiFileReader.class.getName());

@@ -101,10 +101,6 @@ public class DragTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理浏览器拖拽的工具
-     */
     class DragExecutor implements BiFunction<DragExecutor.Request, ToolContext, DragExecutor.Response> {
 
         Logger logger = Logger.getLogger(DragExecutor.class.getName());

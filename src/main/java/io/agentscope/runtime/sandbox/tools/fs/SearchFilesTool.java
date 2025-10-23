@@ -93,10 +93,6 @@ public class SearchFilesTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理文件搜索的工具
-     */
     class FileSearcher implements BiFunction<FileSearcher.Request, ToolContext, FileSearcher.Response> {
 
         Logger logger = Logger.getLogger(FileSearcher.class.getName());

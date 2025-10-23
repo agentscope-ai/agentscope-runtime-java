@@ -88,10 +88,6 @@ public class MoveFileTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理文件移动的工具
-     */
     class FileMover implements BiFunction<FileMover.Request, ToolContext, FileMover.Response> {
 
         Logger logger = Logger.getLogger(FileMover.class.getName());

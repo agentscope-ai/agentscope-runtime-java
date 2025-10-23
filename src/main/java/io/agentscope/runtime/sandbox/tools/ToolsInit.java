@@ -112,7 +112,6 @@ public class ToolsInit {
             return null;
         }
 
-        // BaseSandboxTool name mapping table
         return switch (toolName.toLowerCase().trim()) {
             // Base tools
             case "runpython", "run_python", "python" -> RunPythonCodeTool();

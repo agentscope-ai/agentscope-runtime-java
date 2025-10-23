@@ -73,10 +73,6 @@ public class ListAllowedDirectoriesTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理允许目录列表获取的工具
-     */
     class AllowedDirectoriesLister implements BiFunction<AllowedDirectoriesLister.Request, ToolContext, AllowedDirectoriesLister.Response> {
 
         Logger logger = Logger.getLogger(AllowedDirectoriesLister.class.getName());

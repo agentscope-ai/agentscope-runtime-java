@@ -88,10 +88,6 @@ public class ResizeTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理浏览器窗口调整的工具
-     */
     class WindowResizer implements BiFunction<WindowResizer.Request, ToolContext, WindowResizer.Response> {
 
         Logger logger = Logger.getLogger(WindowResizer.class.getName());

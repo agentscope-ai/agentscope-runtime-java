@@ -86,10 +86,6 @@ public class PressKeyTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理按键的工具
-     */
     class KeyPresser implements BiFunction<KeyPresser.Request, ToolContext, KeyPresser.Response> {
 
         Logger logger = Logger.getLogger(KeyPresser.class.getName());

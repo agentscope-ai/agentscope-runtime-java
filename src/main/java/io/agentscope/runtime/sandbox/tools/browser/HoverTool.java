@@ -91,10 +91,6 @@ public class HoverTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理浏览器悬停的工具
-     */
     class HoverExecutor implements BiFunction<HoverExecutor.Request, ToolContext, HoverExecutor.Response> {
 
         Logger logger = Logger.getLogger(HoverExecutor.class.getName());

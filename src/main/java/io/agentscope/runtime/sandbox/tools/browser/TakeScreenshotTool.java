@@ -93,10 +93,6 @@ public class TakeScreenshotTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理浏览器截图的工具
-     */
     class ScreenshotTaker implements BiFunction<ScreenshotTaker.Request, ToolContext, ScreenshotTaker.Response> {
 
         Logger logger = Logger.getLogger(ScreenshotTaker.class.getName());

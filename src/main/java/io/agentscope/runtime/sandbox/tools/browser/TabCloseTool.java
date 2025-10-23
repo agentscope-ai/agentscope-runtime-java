@@ -78,10 +78,6 @@ public class TabCloseTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理标签页关闭的工具
-     */
     class TabCloser implements BiFunction<TabCloser.Request, ToolContext, TabCloser.Response> {
 
         Logger logger = Logger.getLogger(TabCloser.class.getName());

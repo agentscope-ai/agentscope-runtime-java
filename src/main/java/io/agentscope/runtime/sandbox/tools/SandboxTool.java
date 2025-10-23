@@ -22,34 +22,25 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import java.util.Map;
 
 /**
- * Sandbox工具抽象类
- * 类似于 Python 的 SandboxTool 类
+ * Abstract class for Sandbox tools
+ * Similar to Python's SandboxTool class
  * <p>
- * 继承自 Tool，添加了 sandbox 相关的功能
+ * Extends Tool and adds sandbox-related functionality
  */
 public abstract class SandboxTool extends Tool {
 
-    /**
-     * Sandbox管理器
-     */
     protected SandboxManager sandboxManager;
 
-    /**
-     * Sandbox实例
-     */
     protected Sandbox sandbox;
 
-    /**
-     * 工具的 JSON Schema（OpenAI function calling 格式）
-     */
     protected Map<String, Object> schema;
 
     /**
-     * 构造函数
+     * Constructor
      *
-     * @param name        工具名称
-     * @param toolType    工具类型
-     * @param description 工具描述
+     * @param name        Tool name
+     * @param toolType    Tool type
+     * @param description Tool description
      */
     protected SandboxTool(String name, String toolType, String description) {
         super(name, toolType, description);
@@ -57,12 +48,12 @@ public abstract class SandboxTool extends Tool {
     }
 
     /**
-     * 构造函数，允许指定 SandboxManager
+     * Constructor with custom SandboxManager
      *
-     * @param name           工具名称
-     * @param toolType       工具类型
-     * @param description    工具描述
-     * @param sandboxManager Sandbox管理器
+     * @param name           Tool name
+     * @param toolType       Tool type
+     * @param description    Tool description
+     * @param sandboxManager Sandbox manager
      */
     protected SandboxTool(String name, String toolType, String description,
                           SandboxManager sandboxManager) {
@@ -70,58 +61,33 @@ public abstract class SandboxTool extends Tool {
         this.sandboxManager = sandboxManager;
     }
 
-    /**
-     * 获取 Sandbox管理器
-     *
-     * @return SandboxManager 实例
-     */
     public SandboxManager getSandboxManager() {
         return sandboxManager;
     }
 
-    /**
-     * 获取 Sandbox实例
-     *
-     * @return Sandbox 实例（可能为 null）
-     */
     public Sandbox getSandbox() {
         return sandbox;
     }
 
-    /**
-     * 设置 Sandbox实例
-     *
-     * @param sandbox Sandbox 实例
-     */
     public void setSandbox(Sandbox sandbox) {
         this.sandbox = sandbox;
     }
 
-    /**
-     * 获取工具的 JSON Schema
-     *
-     * @return JSON Schema 字符串
-     */
     public Map<String, Object> getSchema() {
         return schema;
     }
 
-    /**
-     * 设置工具的 JSON Schema
-     *
-     * @param schema JSON Schema 字符串
-     */
     protected void setSchema(Map<String, Object> schema) {
         this.schema = schema;
     }
 
 
     /**
-     * 绑定 Sandbox
-     * 返回一个新的绑定了特定 sandbox 的工具实例
+     * Bind sandbox to this tool
+     * Returns a new tool instance bound to a specific sandbox
      *
-     * @param sandbox 要绑定的 Sandbox
-     * @return 绑定后的新工具实例
+     * @param sandbox The sandbox to bind
+     * @return New bound tool instance
      */
     public abstract SandboxTool bind(Sandbox sandbox);
 }

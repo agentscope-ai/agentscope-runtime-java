@@ -89,9 +89,6 @@ public class RunShellCommandTool extends SandboxTool {
                 .build();
     }
 
-    /**
-     * 内部类：处理Shell命令执行的工具
-     */
     class ShellExecutor implements BiFunction<ShellExecutor.RunShellCommandToolRequest, ToolContext, ShellExecutor.RunShellCommandToolResponse> {
         
         Logger logger = Logger.getLogger(ShellExecutor.class.getName());
@@ -142,7 +139,6 @@ public class RunShellCommandTool extends SandboxTool {
             }
         }
 
-        // Request type definition
         public record RunShellCommandToolRequest(
                 @JsonProperty(required = true, value = "command")
                 @JsonPropertyDescription("Shell command to be executed")
@@ -153,7 +149,6 @@ public class RunShellCommandTool extends SandboxTool {
             }
         }
 
-        // Response type definition
         public record RunShellCommandToolResponse(@JsonProperty("Response") Response output) {
             public RunShellCommandToolResponse(Response output) {
                 this.output = output;

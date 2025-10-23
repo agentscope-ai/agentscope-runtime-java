@@ -90,10 +90,6 @@ public class HandleDialogTool extends SandboxTool {
                 .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .build();
     }
-
-    /**
-     * 内部类：处理对话框的工具
-     */
     class DialogHandler implements BiFunction<DialogHandler.Request, ToolContext, DialogHandler.Response> {
 
         java.util.logging.Logger logger = java.util.logging.Logger.getLogger(DialogHandler.class.getName());
