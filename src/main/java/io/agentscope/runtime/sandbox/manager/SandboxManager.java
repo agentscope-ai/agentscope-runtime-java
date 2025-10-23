@@ -1206,7 +1206,7 @@ public class SandboxManager implements AutoCloseable {
      */
     public Map<String, Object> listTools(String sandboxId, String userId, String sessionId, String toolType) {
         try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
-            return client.listTools(toolType);
+            return client.listTools(toolType, Map.of());
         } catch (Exception e) {
             logger.severe("Error listing tools: " + e.getMessage());
             return new HashMap<>();
