@@ -133,9 +133,11 @@ public class SaaAgentMCPSandboxExample {
                                     .tools(toolCallbacks)
                                     .model(chatModel);
 
+                            ReactAgent reactAgent = builder.build();
+
                             // Create SaaAgent using the ReactAgent Builder
                             SaaAgent saaAgent = SaaAgent.builder()
-                                    .agentBuilder(builder.build())
+                                    .agentBuilder(reactAgent)
                                     .build();
 
                             // Create AgentRequest

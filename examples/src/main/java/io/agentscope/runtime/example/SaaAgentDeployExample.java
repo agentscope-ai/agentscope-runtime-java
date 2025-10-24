@@ -120,16 +120,6 @@ public class SaaAgentDeployExample {
             example.basicExample();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            // Clean up all sandbox containers before exiting
-            System.out.println("\n=== Cleaning up sandbox containers ===");
-            try {
-                Runner.getSandboxManager().cleanupAllSandboxes();
-                System.out.println("=== Sandbox cleanup completed ===");
-            } catch (Exception e) {
-                System.err.println("Error during sandbox cleanup: " + e.getMessage());
-                e.printStackTrace();
-            }
         }
     }
 }

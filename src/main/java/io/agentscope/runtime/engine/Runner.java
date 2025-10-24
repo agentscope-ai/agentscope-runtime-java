@@ -3,7 +3,6 @@ package io.agentscope.runtime.engine;
 import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.agents.Agent;
@@ -33,7 +32,7 @@ public class Runner implements AutoCloseable {
         return SHARED_SANDBOX_MANAGER;
     }
 
-    public void registerClientConfig(ManagerConfig managerConfig) {
+    public void registerManagerConfig(ManagerConfig managerConfig) {
         this.managerConfig = managerConfig;
         SHARED_SANDBOX_MANAGER= new SandboxManager(managerConfig);
     }
