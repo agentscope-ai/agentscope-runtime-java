@@ -15,6 +15,7 @@
  */
 package io.agentscope.runtime.sandbox.tools;
 
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 import io.agentscope.runtime.sandbox.box.Sandbox;
@@ -377,19 +378,19 @@ public class ToolsInit {
     }
 
     public static List<ToolCallback> getMcpTools(String serverConfigs,
-                                                Sandbox sandbox,
+                                                SandboxType sandboxType,
                                                 SandboxManager sandboxManager) {
-        return getMcpTools(serverConfigs, sandbox, sandboxManager, null, null);
+        return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
     }
 
     public static List<ToolCallback> getMcpTools(Map<String, Object> serverConfigs, 
-                                                Sandbox sandbox,
+                                                SandboxType sandboxType,
                                                 SandboxManager sandboxManager) {
-        return getMcpTools(serverConfigs, sandbox, sandboxManager, null, null);
+        return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
     }
 
     public static List<ToolCallback> getMcpTools(String serverConfigs,
-                                                Sandbox sandbox,
+                                                SandboxType sandboxType,
                                                 SandboxManager sandboxManager,
                                                 Set<String> whitelist,
                                                 Set<String> blacklist) {
@@ -398,13 +399,13 @@ public class ToolsInit {
             
             McpConfigConverter converter = McpConfigConverter.builder()
                     .serverConfigs(serverConfigs)
-                    .sandbox(sandbox)
+                    .sandboxType(sandboxType)
                     .sandboxManager(sandboxManager)
                     .whitelist(whitelist)
                     .blacklist(blacklist)
                     .build();
             
-            List<MCPTool> mcpTools = converter.toBuiltinTools(sandbox);
+            List<MCPTool> mcpTools = converter.toBuiltinTools();
             
             List<ToolCallback> toolCallbacks = mcpTools.stream()
                     .map(MCPTool::buildTool)
@@ -421,7 +422,7 @@ public class ToolsInit {
     }
 
     public static List<ToolCallback> getMcpTools(Map<String, Object> serverConfigs,
-                                                Sandbox sandbox,
+                                                SandboxType sandboxType,
                                                 SandboxManager sandboxManager,
                                                 Set<String> whitelist,
                                                 Set<String> blacklist) {
@@ -430,13 +431,13 @@ public class ToolsInit {
             
             McpConfigConverter converter = McpConfigConverter.builder()
                     .serverConfigs(serverConfigs)
-                    .sandbox(sandbox)
+                    .sandboxType(sandboxType)
                     .sandboxManager(sandboxManager)
                     .whitelist(whitelist)
                     .blacklist(blacklist)
                     .build();
             
-            List<MCPTool> mcpTools = converter.toBuiltinTools(sandbox);
+            List<MCPTool> mcpTools = converter.toBuiltinTools();
             
             List<ToolCallback> toolCallbacks = mcpTools.stream()
                     .map(MCPTool::buildTool)
@@ -463,13 +464,13 @@ public class ToolsInit {
     }
 
     public static List<ToolCallback> getAllToolsWithMcp(String mcpServerConfigs,
-                                                       Sandbox sandbox,
+                                                       SandboxType sandboxType,
                                                        SandboxManager sandboxManager) {
         List<ToolCallback> allTools = new ArrayList<>(getAllTools());
         
         if (mcpServerConfigs != null && !mcpServerConfigs.trim().isEmpty()) {
             try {
-                List<ToolCallback> mcpTools = getMcpTools(mcpServerConfigs, sandbox, sandboxManager);
+                List<ToolCallback> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
                 allTools.addAll(mcpTools);
                 logger.info(String.format("Added %d MCP tools to the tool list", mcpTools.size()));
             } catch (Exception e) {
@@ -481,13 +482,13 @@ public class ToolsInit {
     }
 
     public static List<ToolCallback> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
-                                                       Sandbox sandbox,
+                                                       SandboxType sandboxType,
                                                        SandboxManager sandboxManager) {
         List<ToolCallback> allTools = new ArrayList<>(getAllTools());
         
         if (mcpServerConfigs != null && !mcpServerConfigs.isEmpty()) {
             try {
-                List<ToolCallback> mcpTools = getMcpTools(mcpServerConfigs, sandbox, sandboxManager);
+                List<ToolCallback> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
                 allTools.addAll(mcpTools);
                 logger.info(String.format("Added %d MCP tools to the tool list", mcpTools.size()));
             } catch (Exception e) {
@@ -499,27 +500,27 @@ public class ToolsInit {
     }
 
     public static List<MCPTool> createMcpToolInstances(String serverConfigs,
-                                                       Sandbox sandbox,
+                                                       SandboxType sandboxType,
                                                        SandboxManager sandboxManager) {
         McpConfigConverter converter = McpConfigConverter.builder()
                 .serverConfigs(serverConfigs)
-                .sandbox(sandbox)
+                .sandboxType(sandboxType)
                 .sandboxManager(sandboxManager)
                 .build();
         
-        return converter.toBuiltinTools(sandbox);
+        return converter.toBuiltinTools();
     }
 
     public static List<MCPTool> createMcpToolInstances(Map<String, Object> serverConfigs,
-                                                       Sandbox sandbox,
+                                                       SandboxType sandboxType,
                                                        SandboxManager sandboxManager) {
         McpConfigConverter converter = McpConfigConverter.builder()
                 .serverConfigs(serverConfigs)
-                .sandbox(sandbox)
+                .sandboxType(sandboxType)
                 .sandboxManager(sandboxManager)
                 .build();
         
-        return converter.toBuiltinTools(sandbox);
+        return converter.toBuiltinTools();
     }
 
 }

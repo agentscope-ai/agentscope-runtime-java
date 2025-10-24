@@ -85,6 +85,8 @@ public class SaaAgentExample {
      */
     public CompletableFuture<Void> basicExample() {
         System.out.println("=== Basic SaaAgent Example ===");
+        // Create Runner with the SaaAgent
+        Runner runner = new Runner(contextManager);
 
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -120,8 +122,7 @@ public class SaaAgentExample {
                         .agentBuilder(llmRoutingAgent)
                         .build();
 
-                // Create Runner with the SaaAgent
-                Runner runner = new Runner(saaAgent, contextManager);
+                runner.registerAgent(saaAgent);
 
                 // Create AgentRequest
                 AgentRequest request = createAgentRequest("给我讲个笑话", null, null);

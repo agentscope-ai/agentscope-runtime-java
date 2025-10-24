@@ -43,15 +43,14 @@ public class Runner implements AutoCloseable {
     }
 
 
-    public Runner(Agent agent, ContextManager contextManager) {
-        this.agent = agent;
+    public Runner(ContextManager contextManager) {
         this.contextManager = contextManager;
         SHARED_SANDBOX_MANAGER = new SandboxManager();
         defaultRunner = this;
     }
 
     public Runner() {
-        this(null, null);
+        this(null);
     }
 
     public static Runner getRunner(){

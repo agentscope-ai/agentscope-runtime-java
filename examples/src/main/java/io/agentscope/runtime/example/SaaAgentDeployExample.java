@@ -78,6 +78,8 @@ public class SaaAgentDeployExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public void basicExample() {
+        Runner runner = new Runner();
+
         try {
             // Create ReactAgent Builder
             ReactAgent reactAgent = ReactAgent.builder()
@@ -90,9 +92,6 @@ public class SaaAgentDeployExample {
             SaaAgent saaAgent = SaaAgent.builder()
                     .agentBuilder(reactAgent)
                     .build();
-
-            // Create Runner with the SaaAgent
-            Runner runner = new Runner();
 
             runner.registerAgent(saaAgent);
             runner.registerContextManager(contextManager);
@@ -121,6 +120,16 @@ public class SaaAgentDeployExample {
             example.basicExample();
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            // Clean up all sandbox containers before exiting
+            System.out.println("\n=== Cleaning up sandbox containers ===");
+            try {
+                Runner.getSandboxManager().cleanupAllSandboxes();
+                System.out.println("=== Sandbox cleanup completed ===");
+            } catch (Exception e) {
+                System.err.println("Error during sandbox cleanup: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 }

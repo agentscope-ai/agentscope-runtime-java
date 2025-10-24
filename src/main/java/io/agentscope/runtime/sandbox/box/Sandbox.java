@@ -40,7 +40,7 @@ public abstract class Sandbox implements AutoCloseable {
             String sessionId,
             SandboxType sandboxType,
             int timeout) {
-        this(managerApi, userId, sessionId, sandboxType, timeout, false);
+        this(managerApi, userId, sessionId, sandboxType, timeout, true);
     }
 
     public Sandbox(
@@ -117,7 +117,7 @@ public abstract class Sandbox implements AutoCloseable {
         }
         
         closed = true;
-        
+
         try {
             if (autoRelease) {
                 logger.info("Auto-releasing sandbox: " + sandboxId);

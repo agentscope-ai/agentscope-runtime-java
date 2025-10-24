@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @EnabledIfEnvironmentVariable(named = "AI_DASHSCOPE_API_KEY", matches = ".+")
-public class ToolCallRunnerStreamTest {
+public class McpCallRunnerStreamTest {
     private DashScopeChatModel chatModel;
     private ContextManager contextManager;
     private SandboxManager sandboxManager;
@@ -75,8 +75,21 @@ public class ToolCallRunnerStreamTest {
     public void testToolCallStreamRunner() {
         System.out.println("=== Start BaseSandboxTool Call Stream Runner Test ===");
         Runner runner = new Runner(contextManager);
-
         try {
+            String mcpServerConfig = """
+                           {
+                    "mcpServers": {
+                        "time": {
+                            "command": "uvx",
+                            "args": [
+                                "mcp-server-time",
+                                "--local-timezone=America/New_York"
+                            ]
+                        }
+                    }
+                }
+                """;
+
             ReactAgent reactAgent = ReactAgent.builder()
                     .name("saa Agent")
                     .description("saa Agent")
