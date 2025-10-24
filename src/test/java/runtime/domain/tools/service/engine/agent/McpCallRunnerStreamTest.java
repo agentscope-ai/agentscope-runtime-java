@@ -16,10 +16,12 @@ import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.ToolsInit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -90,10 +92,15 @@ public class McpCallRunnerStreamTest {
                 }
                 """;
 
+            List<ToolCallback> mcpTools = ToolsInit.getMcpTools(
+                    mcpServerConfig,
+                    SandboxType.BASE,
+                    Runner.getSandboxManager());
+
             ReactAgent reactAgent = ReactAgent.builder()
                     .name("saa Agent")
                     .description("saa Agent")
-                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
+                    .tools(mcpTools)
                     .model(chatModel)
                     .build();
 
@@ -103,7 +110,7 @@ public class McpCallRunnerStreamTest {
 
             runner.registerAgent(saaAgent);
 
-            AgentRequest request = createAgentRequest("Calculate the 10th Fibonacci number using Python for me", null, null);
+            AgentRequest request = createAgentRequest("Tell me the time in New York", null, null);
 
             Flux<Event> eventStream = runner.streamQuery(request);
 
