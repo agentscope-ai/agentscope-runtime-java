@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.tools.mcp;
+package io.agentscope.runtime.sandbox.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BaseSandbox;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.tools.SandboxTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
@@ -188,10 +190,7 @@ public class MCPTool extends SandboxTool {
         
         private static Sandbox createBaseSandbox(SandboxManager manager, String userID, String sessionID) {
             try {
-                Class<?> cls = Class.forName("io.agentscope.runtime.sandbox.box.BaseSandbox");
-                return (Sandbox) cls
-                    .getConstructor(SandboxManager.class, String.class, String.class)
-                    .newInstance(manager, userID, sessionID);
+                return new BaseSandbox(manager, userID, sessionID);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to create BaseSandbox", e);
             }
@@ -199,10 +198,7 @@ public class MCPTool extends SandboxTool {
         
         private static Sandbox createBrowserSandbox(SandboxManager manager, String userID, String sessionID) {
             try {
-                Class<?> cls = Class.forName("io.agentscope.runtime.sandbox.box.BrowserSandbox");
-                return (Sandbox) cls
-                    .getConstructor(SandboxManager.class, String.class, String.class)
-                    .newInstance(manager, userID, sessionID);
+                return new BrowserSandbox(manager, userID, sessionID);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to create BrowserSandbox", e);
             }
@@ -210,10 +206,7 @@ public class MCPTool extends SandboxTool {
         
         private static Sandbox createFilesystemSandbox(SandboxManager manager, String userID, String sessionID) {
             try {
-                Class<?> cls = Class.forName("io.agentscope.runtime.sandbox.box.FilesystemSandbox");
-                return (Sandbox) cls
-                    .getConstructor(SandboxManager.class, String.class, String.class)
-                    .newInstance(manager, userID, sessionID);
+                return new FilesystemSandbox(manager, userID, sessionID);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to create FilesystemSandbox", e);
             }

@@ -3,7 +3,9 @@ package io.agentscope.runtime.sandbox.tools.utils;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.tools.mcp.MCPTool;
+import io.agentscope.runtime.sandbox.tools.MCPTool;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -11,6 +13,7 @@ import java.util.logging.Logger;
 public class McpConfigConverter {
     
     private static final Logger logger = Logger.getLogger(McpConfigConverter.class.getName());
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     
     private Map<String, Object> serverConfigs;
     private Sandbox sandbox;
@@ -185,6 +188,15 @@ public class McpConfigConverter {
         return toolsToAdd;
     }
 
+    private static Map<String, Object> parseServerConfig(String configStr) {
+        try {
+            return objectMapper.readValue(configStr, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            logger.severe("Failed to parse server config: " + e.getMessage());
+            throw new RuntimeException("Failed to parse server config string", e);
+        }
+    }
+
     public static McpConfigConverter fromDict(Map<String, Object> configDict,
                                               Set<String> whitelist,
                                               Set<String> blacklist) {
@@ -193,6 +205,17 @@ public class McpConfigConverter {
 
     public static McpConfigConverter fromDict(Map<String, Object> configDict) {
         return fromDict(configDict, null, null);
+    }
+
+    public static McpConfigConverter fromString(String configStr,
+                                                Set<String> whitelist,
+                                                Set<String> blacklist) {
+        Map<String, Object> configDict = parseServerConfig(configStr);
+        return new McpConfigConverter(configDict, null, whitelist, blacklist);
+    }
+
+    public static McpConfigConverter fromString(String configStr) {
+        return fromString(configStr, null, null);
     }
 
     public static Builder builder() {
@@ -208,6 +231,11 @@ public class McpConfigConverter {
 
         public Builder serverConfigs(Map<String, Object> serverConfigs) {
             this.serverConfigs = serverConfigs;
+            return this;
+        }
+
+        public Builder serverConfigs(String serverConfigsStr) {
+            this.serverConfigs = parseServerConfig(serverConfigsStr);
             return this;
         }
 

@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 public class RunPythonTool extends SandboxTool {
     public RunPythonTool() {
         super("run_ipython_cell", "generic", "Execute Python code snippets and return the output or errors.");
-        schema = Map.of();
+        schema = new HashMap<>();
         Map<String, Object> codeProperty = new HashMap<>();
         codeProperty.put("type", "string");
         codeProperty.put("description", "Python code to be executed");
