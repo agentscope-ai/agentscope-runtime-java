@@ -17,8 +17,12 @@ package io.agentscope.runtime.sandbox.tools;
 
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.base.RunPythonTool;
 import io.agentscope.runtime.sandbox.tools.base.RunShellCommandTool;
+import io.agentscope.runtime.sandbox.tools.mcp.MCPTool;
+import io.agentscope.runtime.sandbox.tools.utils.McpConfigConverter;
 import io.agentscope.runtime.sandbox.tools.browser.ClickTool;
 import io.agentscope.runtime.sandbox.tools.browser.CloseTool;
 import io.agentscope.runtime.sandbox.tools.browser.ConsoleMessagesTool;
@@ -54,8 +58,12 @@ import io.agentscope.runtime.sandbox.tools.fs.ReadMultipleFilesTool;
 import io.agentscope.runtime.sandbox.tools.fs.SearchFilesTool;
 import io.agentscope.runtime.sandbox.tools.fs.WriteFileTool;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 @Component
 public class ToolsInit {
@@ -367,6 +375,79 @@ public class ToolsInit {
 
     public static ToolCallback BrowserTabListTool() {
         return new TabListTool().buildTool();
+    }
+
+    public static List<ToolCallback> getMcpTools(Map<String, Object> serverConfigs, 
+                                                Sandbox sandbox,
+                                                SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, sandbox, sandboxManager, null, null);
+    }
+
+    public static List<ToolCallback> getMcpTools(Map<String, Object> serverConfigs,
+                                                Sandbox sandbox,
+                                                SandboxManager sandboxManager,
+                                                Set<String> whitelist,
+                                                Set<String> blacklist) {
+        try {
+            logger.info("Creating MCP tools from server configuration");
+            
+            McpConfigConverter converter = McpConfigConverter.builder()
+                    .serverConfigs(serverConfigs)
+                    .sandbox(sandbox)
+                    .sandboxManager(sandboxManager)
+                    .whitelist(whitelist)
+                    .blacklist(blacklist)
+                    .build();
+            
+            List<MCPTool> mcpTools = converter.toBuiltinTools(sandbox);
+            
+            List<ToolCallback> toolCallbacks = mcpTools.stream()
+                    .map(MCPTool::buildTool)
+                    .collect(Collectors.toList());
+            
+            logger.info(String.format("Created %d MCP tools", toolCallbacks.size()));
+            return toolCallbacks;
+            
+        } catch (Exception e) {
+            logger.severe("Failed to create MCP tools: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create MCP tools", e);
+        }
+    }
+
+    public static List<ToolCallback> getMcpTools(Map<String, Object> serverConfigs,
+                                                SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, null, sandboxManager, null, null);
+    }
+
+    public static List<ToolCallback> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
+                                                       Sandbox sandbox,
+                                                       SandboxManager sandboxManager) {
+        List<ToolCallback> allTools = new ArrayList<>(getAllTools());
+        
+        if (mcpServerConfigs != null && !mcpServerConfigs.isEmpty()) {
+            try {
+                List<ToolCallback> mcpTools = getMcpTools(mcpServerConfigs, sandbox, sandboxManager);
+                allTools.addAll(mcpTools);
+                logger.info(String.format("Added %d MCP tools to the tool list", mcpTools.size()));
+            } catch (Exception e) {
+                logger.warning("Failed to add MCP tools: " + e.getMessage());
+            }
+        }
+        
+        return allTools;
+    }
+
+    public static List<MCPTool> createMcpToolInstances(Map<String, Object> serverConfigs,
+                                                       Sandbox sandbox,
+                                                       SandboxManager sandboxManager) {
+        McpConfigConverter converter = McpConfigConverter.builder()
+                .serverConfigs(serverConfigs)
+                .sandbox(sandbox)
+                .sandboxManager(sandboxManager)
+                .build();
+        
+        return converter.toBuiltinTools(sandbox);
     }
 
 }
