@@ -18,7 +18,7 @@
         <a2a-sdk.version>0.2.5</a2a-sdk.version>
         <spring-boot.version>3.4.5</spring-boot.version>
         <spring-ai.version>1.0.0</spring-ai.version>
-        <spring-ai-alibaba.version>1.0.0.4-SNAPSHOT</spring-ai-alibaba.version>
+        <spring-ai-alibaba.version>1.1.0.0-SNAPSHOT</spring-ai-alibaba.version>
         <nacos-client.version>3.1.0-beta</nacos-client.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -105,7 +105,7 @@
         </dependency>
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-graph-core</artifactId>
+            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
         </dependency>
         
         <!-- Nacos Dependencies -->
@@ -236,6 +236,20 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- TableStore dependency -->
+        <dependency>
+            <groupId>com.aliyun.openservices.tablestore</groupId>
+            <artifactId>tablestore-for-agent-memory</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+
+        <!-- Apache HttpClient5 for Mem0 API -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.2.1</version>
         </dependency>
 
     </dependencies>
