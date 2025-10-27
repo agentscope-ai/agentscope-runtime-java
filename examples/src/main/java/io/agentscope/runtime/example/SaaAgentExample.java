@@ -148,12 +148,15 @@ public class SaaAgentExample {
                 return completionFuture;
             } catch (Exception e) {
                 e.printStackTrace();
-                throw new RuntimeException(e);
+                CompletableFuture<Void> failedFuture = new CompletableFuture<>();
+                failedFuture.completeExceptionally(e);
+                return failedFuture;
             }
         }).thenCompose(future -> future)
-          .orTimeout(30, TimeUnit.SECONDS)
+          .orTimeout(30, TimeUnit.MINUTES)  // Increase timeout to 5 minutes for LLM routing
           .exceptionally(throwable -> {
               System.err.println("Operation failed or timed out: " + throwable.getMessage());
+              throwable.printStackTrace();
               return null;
           });
     }

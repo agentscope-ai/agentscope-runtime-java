@@ -19,7 +19,7 @@ public class Runner implements AutoCloseable {
 
     private static volatile Runner defaultRunner;
 
-    private static SandboxManager SHARED_SANDBOX_MANAGER = new SandboxManager();
+    private static volatile SandboxManager SHARED_SANDBOX_MANAGER;
 
     private Agent agent;
     private ContextManager contextManager;
@@ -29,6 +29,13 @@ public class Runner implements AutoCloseable {
     private ManagerConfig managerConfig;
 
     public static SandboxManager getSandboxManager() {
+        if (SHARED_SANDBOX_MANAGER == null) {
+            synchronized (Runner.class) {
+                if (SHARED_SANDBOX_MANAGER == null) {
+                    SHARED_SANDBOX_MANAGER = new SandboxManager();
+                }
+            }
+        }
         return SHARED_SANDBOX_MANAGER;
     }
 
