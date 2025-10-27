@@ -16,27 +16,90 @@
 package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
-public class ConsoleMessagesTool implements BiFunction<ConsoleMessagesTool.Request, ToolContext, ConsoleMessagesTool.Response> {
+public class ConsoleMessagesTool extends SandboxTool {
+
+    public ConsoleMessagesTool() {
+        super("browser_console_messages", "browser", "Get console messages from the browser");
+        schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", new HashMap<>());
+        schema.put("description", "Request object to get console messages");
+    }
 
     @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        String result = new SandboxTools().browser_console_messages_tool(userID, sessionID);
-        return new Response(result, "success");
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
     }
 
-    public record Request() {
-    }
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-    @JsonClassDescription("Returns all console messages")
-    public record Response(String result, String message) {
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new ConsoleMessagesRetriever()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(ConsoleMessagesRetriever.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class ConsoleMessagesRetriever implements BiFunction<ConsoleMessagesRetriever.Request, ToolContext, ConsoleMessagesRetriever.Response> {
+
+        Logger logger = Logger.getLogger(ConsoleMessagesRetriever.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            String result = browser_console_messages_tool(userID, sessionID);
+            return new Response(result, "success");
+        }
+
+        private String browser_console_messages_tool(String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+                    return browserSandbox.consoleMessages();
+                }
+                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+                return browserSandbox.consoleMessages();
+            } catch (Exception e) {
+                String errorMsg = "Browser Console Messages Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request() {}
+
+        @JsonClassDescription("Returns all console messages")
+        public record Response(String result, String message) {}
     }
 }

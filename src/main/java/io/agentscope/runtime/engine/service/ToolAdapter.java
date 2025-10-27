@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Tool adapter interface
+ * BaseSandboxTool adapter interface
  * Corresponds to the tool adaptation functionality in the Python version
  */
 public interface ToolAdapter {

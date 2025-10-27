@@ -1,111 +1,159 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package io.agentscope.runtime.sandbox.tools.base;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BaseSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-/**
- * Call sandbox to run Python code
- *
- * @author xuehuitian45
- * @since 2025/9/4
- */
-public class RunPythonTool implements BiFunction<RunPythonTool.RunPythonToolRequest, ToolContext, RunPythonTool.RunPythonToolResponse> {
+public class RunPythonTool extends SandboxTool {
+    public RunPythonTool() {
+        super("run_ipython_cell", "generic", "Execute Python code snippets and return the output or errors.");
+        schema = new HashMap<>();
+        Map<String, Object> codeProperty = new HashMap<>();
+        codeProperty.put("type", "string");
+        codeProperty.put("description", "Python code to be executed");
 
-    Logger logger = Logger.getLogger(RunPythonTool.class.getName());
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("code", codeProperty);
+
+        List<String> required = Arrays.asList("code");
+
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", required);
+        schema.put("description", "Request object to perform Python code execution");
+    }
 
     @Override
-    public RunPythonToolResponse apply(RunPythonToolRequest request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
+
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
         try {
-            String result = performPythonExecute(
-                    request.code,
-                    userID,
-                    sessionID
-            );
-
-            return new RunPythonToolResponse(
-                    new Response(result, "Code execution completed")
-            );
+            inputSchema = mapper.writeValueAsString(schema);
         } catch (Exception e) {
-            return new RunPythonToolResponse(
-                    new Response("Error", "Code execution error : " + e.getMessage())
-            );
+            e.printStackTrace();
         }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new PythonExecutor()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(PythonExecutor.RunPythonToolRequest.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
     }
 
+    class PythonExecutor implements BiFunction<PythonExecutor.RunPythonToolRequest, ToolContext, PythonExecutor.RunPythonToolResponse> {
 
-    private String performPythonExecute(String code, String userID, String sessionID) {
-        logger.info("Run Code: " + code);
-        SandboxTools tools = new SandboxTools();
-        String result = tools.run_ipython_cell(code, userID, sessionID);
-        logger.info("Execute Result: " + result);
-        return result;
-    }
+        Logger logger = Logger.getLogger(PythonExecutor.class.getName());
 
-    // Request type definition
-    public record RunPythonToolRequest(
-            @JsonProperty(required = true, value = "code")
-            @JsonPropertyDescription("Python code to be executed")
-            String code
-    ) {
-        public RunPythonToolRequest(String code) {
-            this.code = code;
-        }
-    }
+        @Override
+        public RunPythonToolResponse apply(RunPythonToolRequest request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
 
-    // Response type definition
-    public record RunPythonToolResponse(@JsonProperty("Response") Response output) {
-        public RunPythonToolResponse(Response output) {
-            this.output = output;
-        }
-    }
+            try {
+                String result = performPythonExecute(
+                        request.code,
+                        userID,
+                        sessionID
+                );
 
-
-
-    @JsonClassDescription("The result contains the code output and the execute result")
-    public record Response(String result, String message) {
-        public Response(String result, String message) {
-            this.result = result;
-            this.message = message;
+                return new RunPythonToolResponse(
+                        new Response(result, "Code execution completed")
+                );
+            } catch (Exception e) {
+                return new RunPythonToolResponse(
+                        new Response("Error", "Code execution error : " + e.getMessage())
+                );
+            }
         }
 
-        @JsonProperty(required = true, value = "result")
-        @JsonPropertyDescription("code output")
-        public String result() {
-            return this.result;
+
+        private String performPythonExecute(String code, String userID, String sessionID) {
+            logger.info("Run Code: " + code);
+            String result = run_ipython_cell(code, userID, sessionID);
+            logger.info("Execute Result: " + result);
+            return result;
         }
 
-        @JsonProperty(required = true, value = "message")
-        @JsonPropertyDescription("execute result")
-        public String message() {
-            return this.message;
+        public record RunPythonToolRequest(
+                @JsonProperty(required = true, value = "code")
+                @JsonPropertyDescription("Python code to be executed")
+                String code
+        ) {
+            public RunPythonToolRequest(String code) {
+                this.code = code;
+            }
+        }
+
+        public record RunPythonToolResponse(@JsonProperty("Response") Response output) {
+            public RunPythonToolResponse(Response output) {
+                this.output = output;
+            }
+        }
+
+
+        @JsonClassDescription("The result contains the code output and the execute result")
+        public record Response(String result, String message) {
+            public Response(String result, String message) {
+                this.result = result;
+                this.message = message;
+            }
+
+            @JsonProperty(required = true, value = "result")
+            @JsonPropertyDescription("code output")
+            public String result() {
+                return this.result;
+            }
+
+            @JsonProperty(required = true, value = "message")
+            @JsonPropertyDescription("execute result")
+            public String message() {
+                return this.message;
+            }
+        }
+
+        public String run_ipython_cell(String code, String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BaseSandbox baseSandbox) {
+                    return baseSandbox.runIpythonCell(code);
+                }
+                BaseSandbox baseSandbox = new BaseSandbox(sandboxManager, userID, sessionID);
+                return baseSandbox.runIpythonCell(code);
+
+            } catch (Exception e) {
+                String errorMsg = "Run Python Code Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
         }
     }
 }
+

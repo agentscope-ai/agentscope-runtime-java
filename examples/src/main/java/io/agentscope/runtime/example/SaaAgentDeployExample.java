@@ -78,6 +78,8 @@ public class SaaAgentDeployExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public void basicExample() {
+        Runner runner = new Runner();
+
         try {
             // Create ReactAgent Builder
             ReactAgent reactAgent = ReactAgent.builder()
@@ -90,12 +92,6 @@ public class SaaAgentDeployExample {
             SaaAgent saaAgent = SaaAgent.builder()
                     .agentBuilder(reactAgent)
                     .build();
-
-            // Create Runner with the SaaAgent
-            Runner runner = new Runner();
-
-            BaseClientConfig clientConfig = new DockerClientConfig(true);
-            runner.registerClientConfig(clientConfig);
 
             runner.registerAgent(saaAgent);
             runner.registerContextManager(contextManager);

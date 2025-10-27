@@ -18,53 +18,124 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class ReadFileTool implements BiFunction<ReadFileTool.Request, ToolContext, ReadFileTool.Response> {
+public class ReadFileTool extends SandboxTool {
 
-    Logger logger = Logger.getLogger(ReadFileTool.class.getName());
+    public ReadFileTool() {
+        super("fs_read_file", "filesystem", "Read contents of a file");
+        schema = new HashMap<>();
+        Map<String, Object> pathProperty = new HashMap<>();
+        pathProperty.put("type", "string");
+        pathProperty.put("description", "Path to the file to read");
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("path", pathProperty);
+
+        List<String> required = Arrays.asList("path");
+
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", required);
+        schema.put("description", "Request object to read file");
+    }
 
     @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        
-        try {
-            SandboxTools tools = new SandboxTools();
-            String result = tools.fs_read_file(request.path, userID, sessionID);
-            return new Response(result, "Filesystem read_file completed");
-        } catch (Exception e) {
-            return new Response("Error", "Filesystem read_file error: " + e.getMessage());
-        }
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
     }
 
-    public record Request(
-            @JsonProperty(required = true, value = "path")
-            @JsonPropertyDescription("Path to the file to read")
-            String path
-    ) { }
-
-    @JsonClassDescription("The result contains filesystem tool output and execution message")
-    public record Response(String result, String message) {
-        public Response(String result, String message) {
-            this.result = result;
-            this.message = message;
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-        @JsonProperty(required = true, value = "result")
-        @JsonPropertyDescription("tool output")
-        public String result() { return this.result; }
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new FileReader()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(FileReader.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class FileReader implements BiFunction<FileReader.Request, ToolContext, FileReader.Response> {
 
-        @JsonProperty(required = true, value = "message")
-        @JsonPropertyDescription("execute result")
-        public String message() { return this.message; }
+        Logger logger = Logger.getLogger(FileReader.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            try {
+                String result = fs_read_file(request.path, userID, sessionID);
+                return new Response(result, "Filesystem read_file completed");
+            } catch (Exception e) {
+                return new Response("Error", "Filesystem read_file error: " + e.getMessage());
+            }
+        }
+
+        private String fs_read_file(String path, String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+                    return filesystemSandbox.readFile(path);
+                }
+                FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
+                return filesystemSandbox.readFile(path);
+            } catch (Exception e) {
+                String errorMsg = "Read File Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request(
+                @JsonProperty(required = true, value = "path")
+                @JsonPropertyDescription("Path to the file to read")
+                String path
+        ) { }
+
+        @JsonClassDescription("The result contains filesystem tool output and execution message")
+        public record Response(String result, String message) {
+            public Response(String result, String message) {
+                this.result = result;
+                this.message = message;
+            }
+
+            @JsonProperty(required = true, value = "result")
+            @JsonPropertyDescription("tool output")
+            public String result() { return this.result; }
+
+            @JsonProperty(required = true, value = "message")
+            @JsonPropertyDescription("execute result")
+            public String message() { return this.message; }
+        }
     }
 }
-
 

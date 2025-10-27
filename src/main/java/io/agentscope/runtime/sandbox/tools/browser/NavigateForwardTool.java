@@ -16,28 +16,93 @@
 package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
 /**
  * Browser forward navigation tool
  */
-public class NavigateForwardTool implements BiFunction<NavigateForwardTool.Request, ToolContext, NavigateForwardTool.Response> {
+public class NavigateForwardTool extends SandboxTool {
 
-    @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        String result = new SandboxTools().browser_navigate_forward(userID, sessionID);
-        return new Response(result, "Browser navigate forward completed");
+    public NavigateForwardTool() {
+        super("browser_navigate_forward", "browser", "Navigate forward in browser history");
+        schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", new HashMap<>());
+        schema.put("description", "Request object to navigate forward");
     }
 
-    public record Request() { }
+    @Override
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
 
-    @JsonClassDescription("The result contains browser tool output and message")
-    public record Response(String result, String message) {}
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new ForwardNavigator()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(ForwardNavigator.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class ForwardNavigator implements BiFunction<ForwardNavigator.Request, ToolContext, ForwardNavigator.Response> {
+
+        Logger logger = Logger.getLogger(ForwardNavigator.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            String result = browser_navigate_forward(userID, sessionID);
+            return new Response(result, "Browser navigate forward completed");
+        }
+
+        private String browser_navigate_forward(String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+                    return browserSandbox.navigateForward();
+                }
+                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+                return browserSandbox.navigateForward();
+            } catch (Exception e) {
+                String errorMsg = "Browser Navigate Forward Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request() { }
+
+        @JsonClassDescription("The result contains browser tool output and message")
+        public record Response(String result, String message) {}
+    }
 }

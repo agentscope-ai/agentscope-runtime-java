@@ -71,6 +71,7 @@ public class RunnerStreamTest {
     @Test
     public void testStreamRunner() {
         System.out.println("=== Start Stream Runner Test ===");
+        Runner runner = new Runner(contextManager);
 
         try {
             ReactAgent reactAgent = ReactAgent.builder()
@@ -83,7 +84,7 @@ public class RunnerStreamTest {
                     .agentBuilder(reactAgent)
                     .build();
 
-            Runner runner = new Runner(saaAgent, contextManager);
+            runner.registerAgent(saaAgent);
 
             AgentRequest request = createAgentRequest("Please write a prose about West Lake", null, null);
 

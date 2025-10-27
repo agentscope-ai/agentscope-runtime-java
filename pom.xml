@@ -17,8 +17,8 @@
     <properties>
         <a2a-sdk.version>0.2.5</a2a-sdk.version>
         <spring-boot.version>3.4.5</spring-boot.version>
-        <spring-ai.version>1.0.0</spring-ai.version>
-        <spring-ai-alibaba.version>1.0.0.4-SNAPSHOT</spring-ai-alibaba.version>
+        <spring-ai.version>1.0.1</spring-ai.version>
+        <spring-ai-alibaba.version>1.1.0.0-SNAPSHOT</spring-ai-alibaba.version>
         <nacos-client.version>3.1.0-beta</nacos-client.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -101,11 +101,7 @@
         <!-- Spring AI Alibaba Core Dependencies -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-graph-core</artifactId>
+            <artifactId>spring-ai-alibaba-agent-framework</artifactId>
         </dependency>
         
         <!-- Nacos Dependencies -->
@@ -189,10 +185,9 @@
             <version>2.1.6</version>
         </dependency>
 
-        <!-- HTTP client dependency - using OkHttp -->
         <dependency>
             <groupId>com.github.docker-java</groupId>
-            <artifactId>docker-java-transport-okhttp</artifactId>
+            <artifactId>docker-java-transport-zerodep</artifactId>
             <version>3.4.0</version>
         </dependency>
 
@@ -221,6 +216,13 @@
         <dependency>
             <groupId>io.lettuce</groupId>
             <artifactId>lettuce-core</artifactId>
+        </dependency>
+
+        <!-- Aliyun OSS SDK -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.17.4</version>
         </dependency>
 
         <!-- MySQL Dependencies -->

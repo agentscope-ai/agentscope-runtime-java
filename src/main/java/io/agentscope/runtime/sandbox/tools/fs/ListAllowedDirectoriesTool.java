@@ -18,43 +18,106 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class ListAllowedDirectoriesTool implements BiFunction<ListAllowedDirectoriesTool.Request, ToolContext, ListAllowedDirectoriesTool.Response> {
+public class ListAllowedDirectoriesTool extends SandboxTool {
 
-    Logger logger = Logger.getLogger(ListAllowedDirectoriesTool.class.getName());
+    public ListAllowedDirectoriesTool() {
+        super("fs_list_allowed_directories", "filesystem", "List allowed directories for the current session");
+        schema = new HashMap<>();
+        
+        Map<String, Object> properties = new HashMap<>();
+
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("description", "Request object to list allowed directories");
+    }
 
     @Override
-    public Response apply(Request request, ToolContext toolContext) {
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
+
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
         try {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            SandboxTools tools = new SandboxTools();
-            String result = tools.fs_list_allowed_directories(userID, sessionID);
-            return new Response(result, "Filesystem list_allowed_directories completed");
+            inputSchema = mapper.writeValueAsString(schema);
         } catch (Exception e) {
-            return new Response("Error", "Filesystem list_allowed_directories error: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new AllowedDirectoriesLister()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(AllowedDirectoriesLister.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class AllowedDirectoriesLister implements BiFunction<AllowedDirectoriesLister.Request, ToolContext, AllowedDirectoriesLister.Response> {
+
+        Logger logger = Logger.getLogger(AllowedDirectoriesLister.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            try {
+                String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+                String userID = userAndSession[0];
+                String sessionID = userAndSession[1];
+                
+                String result = fs_list_allowed_directories(userID, sessionID);
+                return new Response(result, "Filesystem list_allowed_directories completed");
+            } catch (Exception e) {
+                return new Response("Error", "Filesystem list_allowed_directories error: " + e.getMessage());
+            }
+        }
+
+        private String fs_list_allowed_directories(String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+                    return filesystemSandbox.listAllowedDirectories();
+                }
+                FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
+                return filesystemSandbox.listAllowedDirectories();
+            } catch (Exception e) {
+                String errorMsg = "List Allowed Directories Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request() { }
+
+        @JsonClassDescription("The result contains filesystem tool output and execution message")
+        public record Response(String result, String message) {
+            public Response(String result, String message) { this.result = result; this.message = message; }
+            @JsonProperty(required = true, value = "result")
+            @JsonPropertyDescription("tool output")
+            public String result() { return this.result; }
+            @JsonProperty(required = true, value = "message")
+            @JsonPropertyDescription("execute result")
+            public String message() { return this.message; }
         }
     }
-
-    public record Request() { }
-
-    @JsonClassDescription("The result contains filesystem tool output and execution message")
-    public record Response(String result, String message) {
-        public Response(String result, String message) { this.result = result; this.message = message; }
-        @JsonProperty(required = true, value = "result")
-        @JsonPropertyDescription("tool output")
-        public String result() { return this.result; }
-        @JsonProperty(required = true, value = "message")
-        @JsonPropertyDescription("execute result")
-        public String message() { return this.message; }
-    }
 }
-
 

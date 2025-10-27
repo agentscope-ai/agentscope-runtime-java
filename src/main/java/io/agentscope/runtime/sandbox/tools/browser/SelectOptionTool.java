@@ -18,38 +18,126 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
 /**
  * Browser dropdown selection tool
  */
-public class SelectOptionTool implements BiFunction<SelectOptionTool.Request, ToolContext, SelectOptionTool.Response> {
+public class SelectOptionTool extends SandboxTool {
 
-    @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        String result = new SandboxTools().browser_select_option(request.element, request.ref, request.values, userID, sessionID);
-        return new Response(result, "Browser select option completed");
+    public SelectOptionTool() {
+        super("browser_select_option", "browser", "Select option(s) from a dropdown in the browser");
+        schema = new HashMap<>();
+        
+        Map<String, Object> elementProperty = new HashMap<>();
+        elementProperty.put("type", "string");
+        elementProperty.put("description", "Human-readable element description");
+        
+        Map<String, Object> refProperty = new HashMap<>();
+        refProperty.put("type", "string");
+        refProperty.put("description", "Exact target element reference from the page snapshot");
+        
+        Map<String, Object> valuesProperty = new HashMap<>();
+        valuesProperty.put("type", "array");
+        valuesProperty.put("description", "Array of values to select in the dropdown");
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("element", elementProperty);
+        properties.put("ref", refProperty);
+        properties.put("values", valuesProperty);
+
+        List<String> required = Arrays.asList("element", "ref", "values");
+
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", required);
+        schema.put("description", "Request object to select option");
     }
 
-    public record Request(
-            @JsonProperty(required = true, value = "element")
-            @JsonPropertyDescription("Human-readable element description")
-            String element,
-            @JsonProperty(required = true, value = "ref")
-            @JsonPropertyDescription("Exact target element reference from the page snapshot")
-            String ref,
-            @JsonProperty(required = true, value = "values")
-            @JsonPropertyDescription("Array of values to select in the dropdown")
-            String[] values
-    ) { }
+    @Override
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
 
-    @JsonClassDescription("The result contains browser tool output and message")
-    public record Response(String result, String message) {}
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new OptionSelector()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(OptionSelector.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class OptionSelector implements BiFunction<OptionSelector.Request, ToolContext, OptionSelector.Response> {
+
+        Logger logger = Logger.getLogger(OptionSelector.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            String result = browser_select_option(request.element, request.ref, request.values, userID, sessionID);
+            return new Response(result, "Browser select option completed");
+        }
+
+        private String browser_select_option(String element, String ref, String[] values, String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+                    return browserSandbox.selectOption(element, ref, values);
+                }
+                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+                return browserSandbox.selectOption(element, ref, values);
+            } catch (Exception e) {
+                String errorMsg = "Browser Select Option Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request(
+                @JsonProperty(required = true, value = "element")
+                @JsonPropertyDescription("Human-readable element description")
+                String element,
+                @JsonProperty(required = true, value = "ref")
+                @JsonPropertyDescription("Exact target element reference from the page snapshot")
+                String ref,
+                @JsonProperty(required = true, value = "values")
+                @JsonPropertyDescription("Array of values to select in the dropdown")
+                String[] values
+        ) { }
+
+        @JsonClassDescription("The result contains browser tool output and message")
+        public record Response(String result, String message) {}
+    }
 }

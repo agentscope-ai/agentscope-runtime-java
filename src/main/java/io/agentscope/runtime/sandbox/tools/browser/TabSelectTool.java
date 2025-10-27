@@ -18,31 +18,108 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
-public class TabSelectTool implements BiFunction<TabSelectTool.Request, ToolContext, TabSelectTool.Response> {
+public class TabSelectTool extends SandboxTool {
 
-    @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        String result = new SandboxTools().browser_tab_select(request.index, userID, sessionID);
-        return new Response(result, "Browser tab_select completed");
+    public TabSelectTool() {
+        super("browser_tab_select", "browser", "Select a browser tab by index");
+        schema = new HashMap<>();
+        
+        Map<String, Object> indexProperty = new HashMap<>();
+        indexProperty.put("type", "integer");
+        indexProperty.put("description", "The index of the tab to select");
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("index", indexProperty);
+
+        List<String> required = Arrays.asList("index");
+
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", required);
+        schema.put("description", "Request object to select tab");
     }
 
-    public record Request(
-            @JsonProperty(required = true, value = "index")
-            @JsonPropertyDescription("The index of the tab to select")
-            Integer index
-    ) { }
+    @Override
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
 
-    @JsonClassDescription("The result contains browser tool output and message")
-    public record Response(String result, String message) {}
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new TabSelector()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(TabSelector.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class TabSelector implements BiFunction<TabSelector.Request, ToolContext, TabSelector.Response> {
+
+        Logger logger = Logger.getLogger(TabSelector.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            String result = browser_tab_select(request.index, userID, sessionID);
+            return new Response(result, "Browser tab_select completed");
+        }
+
+        private String browser_tab_select(Integer index, String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+                    return browserSandbox.tabSelect(index);
+                }
+                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+                return browserSandbox.tabSelect(index);
+            } catch (Exception e) {
+                String errorMsg = "Browser Tab Select Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request(
+                @JsonProperty(required = true, value = "index")
+                @JsonPropertyDescription("The index of the tab to select")
+                Integer index
+        ) { }
+
+        @JsonClassDescription("The result contains browser tool output and message")
+        public record Response(String result, String message) {}
+    }
 }
-
 

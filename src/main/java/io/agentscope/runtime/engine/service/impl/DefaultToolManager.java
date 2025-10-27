@@ -30,7 +30,7 @@ public class DefaultToolManager implements ToolManager {
     @Override
     public void registerTool(String name, ToolAdapter adapter) {
         if (name == null || adapter == null) {
-            throw new IllegalArgumentException("Tool name and adapter cannot be null");
+            throw new IllegalArgumentException("BaseSandboxTool name and adapter cannot be null");
         }
         
         tools.put(name, adapter);
@@ -63,7 +63,7 @@ public class DefaultToolManager implements ToolManager {
         ToolAdapter adapter = tools.get(functionCall.getName());
         if (adapter == null) {
             return CompletableFuture.failedFuture(
-                new IllegalArgumentException("Tool not found: " + functionCall.getName())
+                new IllegalArgumentException("BaseSandboxTool not found: " + functionCall.getName())
             );
         }
         

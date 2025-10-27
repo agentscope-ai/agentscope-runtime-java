@@ -1,15 +1,6 @@
 server:
   port: 10001
 
-spring:
-  config:
-    import:
-      - optional:classpath:application-runtime.yml
-      - optional:classpath:application-memory.yml
-  application:
-    name: spring-ai-alibaba-a2a-server
-
-
 management:
   endpoints:
     web:
@@ -48,8 +39,8 @@ metadata:
   id: optional
   name: "my_assistant"
   description: "An AI assistant for various tasks"
-  mode: agent # confused
-  tags: # refer to kagent/rowboat for grouping/governance/retrieval
+  mode: agent 
+  tags:
     - domain: knowledge
     - env: prod
     - owner: saa

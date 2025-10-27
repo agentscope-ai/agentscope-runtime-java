@@ -16,7 +16,6 @@ import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.tools.ToolsInit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,7 +73,8 @@ public class ToolCallRunnerStreamTest {
 
     @Test
     public void testToolCallStreamRunner() {
-        System.out.println("=== Start Tool Call Stream Runner Test ===");
+        System.out.println("=== Start BaseSandboxTool Call Stream Runner Test ===");
+        Runner runner = new Runner(contextManager);
 
         try {
             ReactAgent reactAgent = ReactAgent.builder()
@@ -88,9 +88,7 @@ public class ToolCallRunnerStreamTest {
                     .agentBuilder(reactAgent)
                     .build();
 
-            Runner runner = new Runner(saaAgent, contextManager);
-
-            runner.registerClientConfig(new DockerClientConfig());
+            runner.registerAgent(saaAgent);
 
             AgentRequest request = createAgentRequest("Calculate the 10th Fibonacci number using Python for me", null, null);
 

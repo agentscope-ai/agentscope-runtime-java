@@ -77,10 +77,6 @@ public class LocalDeployerTest {
             // Create a simple Runner instance
             this.runner = new Runner();
             
-            // Register client configuration
-            BaseClientConfig clientConfig = new DockerClientConfig(true);
-            runner.registerClientConfig(clientConfig);
-            
             // Register ContextManager
             runner.registerContextManager(contextManager);
             
