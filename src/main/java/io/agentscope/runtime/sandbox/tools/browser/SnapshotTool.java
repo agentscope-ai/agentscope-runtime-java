@@ -16,27 +16,91 @@
 package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
-public class SnapshotTool implements BiFunction<SnapshotTool.Request, ToolContext, SnapshotTool.Response> {
+public class SnapshotTool extends SandboxTool {
 
-    @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        String result = new SandboxTools().browser_snapshot(userID, sessionID);
-        return new Response(result, "Browser snapshot completed");
+    public SnapshotTool() {
+        super("browser_snapshot", "browser", "Take a snapshot of the current browser state");
+        schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", new HashMap<>());
+        schema.put("description", "Request object to take snapshot");
     }
 
-    public record Request() { }
+    @Override
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
 
-    @JsonClassDescription("The result contains browser tool output and message")
-    public record Response(String result, String message) {}
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new SnapshotTaker()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(SnapshotTaker.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class SnapshotTaker implements BiFunction<SnapshotTaker.Request, ToolContext, SnapshotTaker.Response> {
+
+        Logger logger = Logger.getLogger(SnapshotTaker.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            String result = browser_snapshot(userID, sessionID);
+            return new Response(result, "Browser snapshot completed");
+        }
+
+        private String browser_snapshot(String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+                    return browserSandbox.snapshot();
+                }
+                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+                return browserSandbox.snapshot();
+            } catch (Exception e) {
+                String errorMsg = "Browser Snapshot Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request() { }
+
+        @JsonClassDescription("The result contains browser tool output and message")
+        public record Response(String result, String message) {}
+    }
 }
-
 

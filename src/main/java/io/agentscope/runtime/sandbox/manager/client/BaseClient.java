@@ -15,7 +15,7 @@
  */
 package io.agentscope.runtime.sandbox.manager.client;
 
-import io.agentscope.runtime.sandbox.manager.model.VolumeBinding;
+import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 
 import java.util.List;
 import java.util.Map;
@@ -46,7 +46,7 @@ public abstract class BaseClient {
     public abstract String createContainer(String containerName, String imageName,
                                          List<String> ports, Map<String, Integer> portMapping,
                                          List<VolumeBinding> volumeBindings,
-                                         Map<String, String> environment, String runtimeConfig);
+                                         Map<String, String> environment, Map<String, Object> runtimeConfig);
     
     /**
      * Start container
@@ -94,6 +94,13 @@ public abstract class BaseClient {
      * @return whether image exists locally
      */
     public abstract boolean imageExists(String imageName);
+    
+    /**
+     * Inspect container to check if it exists
+     * @param containerIdOrName container ID or name
+     * @return true if container exists, false otherwise
+     */
+    public abstract boolean inspectContainer(String containerIdOrName);
     
     /**
      * Pull image from registry

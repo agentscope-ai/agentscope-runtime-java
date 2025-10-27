@@ -15,12 +15,14 @@
  */
 package io.agentscope.runtime.sandbox.tools;
 
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 import org.springframework.stereotype.Component;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.base.RunPythonTool;
 import io.agentscope.runtime.sandbox.tools.base.RunShellCommandTool;
+import io.agentscope.runtime.sandbox.tools.utils.McpConfigConverter;
 import io.agentscope.runtime.sandbox.tools.browser.ClickTool;
 import io.agentscope.runtime.sandbox.tools.browser.CloseTool;
 import io.agentscope.runtime.sandbox.tools.browser.ConsoleMessagesTool;
@@ -56,9 +58,12 @@ import io.agentscope.runtime.sandbox.tools.fs.ReadMultipleFilesTool;
 import io.agentscope.runtime.sandbox.tools.fs.SearchFilesTool;
 import io.agentscope.runtime.sandbox.tools.fs.WriteFileTool;
 
-import javax.tools.Tool;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 @Component
 public class ToolsInit {
@@ -115,7 +120,6 @@ public class ToolsInit {
             return null;
         }
 
-        // Tool name mapping table
         return switch (toolName.toLowerCase().trim()) {
             // Base tools
             case "runpython", "run_python", "python" -> RunPythonCodeTool();
@@ -229,702 +233,294 @@ public class ToolsInit {
     }
 
     public static ToolCallback RunPythonCodeTool() {
-        return FunctionToolCallback
-                .builder(
-                        "PythonExecuteService",
-                        new RunPythonTool()
-                ).description("Execute Python code snippets and return the output or errors.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "code": {
-                                            "type": "string",
-                                            "description": "Python code to be executed"
-                                        }
-                                    },
-                                    "required": ["code"],
-                                    "description": "Request object to perform Python code execution"
-                                }
-                                """
-                ).inputType(RunPythonTool.RunPythonToolRequest.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new RunPythonTool().buildTool();
     }
 
     public static ToolCallback RunShellCommandTool() {
-        return FunctionToolCallback
-                .builder(
-                        "ShellExecuteService",
-                        new RunShellCommandTool()
-                ).description("Execute shell commands and return the output or errors.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "command": {
-                                            "type": "string",
-                                            "description": "Shell command to be executed"
-                                        }
-                                    },
-                                    "required": ["command"],
-                                    "description": "Request object to perform shell execution"
-                                }
-                                """
-                ).inputType(RunShellCommandTool.RunShellCommandToolRequest.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new RunShellCommandTool().buildTool();
     }
 
     public static ToolCallback ReadFileTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSReadFileService",
-                        new ReadFileTool()
-                ).description("Read the complete contents of a file.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": {"type": "string", "description": "Path to the file to read"}
-                                    },
-                                    "required": ["path"],
-                                    "description": "Filesystem read file request"
-                                }
-                                """
-                ).inputType(ReadFileTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new ReadFileTool().buildTool();
     }
 
     public static ToolCallback ReadMultipleFilesTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSReadMultipleFilesService",
-                        new ReadMultipleFilesTool()
-                ).description("Read the contents of multiple files simultaneously.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "paths": {"type": "array", "items": {"type": "string"}, "description": "Paths to the files to read"}
-                                    },
-                                    "required": ["paths"],
-                                    "description": "Filesystem read multiple files request"
-                                }
-                                """
-                ).inputType(ReadMultipleFilesTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new ReadMultipleFilesTool().buildTool();
     }
 
     public static ToolCallback WriteFileTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSWriteFileService",
-                        new WriteFileTool()
-                ).description("Create a new file or overwrite an existing file with new content.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": {"type": "string", "description": "Path to the file to write to"},
-                                        "content": {"type": "string", "description": "Content to write into the file"}
-                                    },
-                                    "required": ["path", "content"],
-                                    "description": "Filesystem write file request"
-                                }
-                                """
-                ).inputType(WriteFileTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new WriteFileTool().buildTool();
     }
 
     public static ToolCallback EditFileTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSEditFileService",
-                        new EditFileTool()
-                ).description("Make line-based edits to a text file.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": {"type": "string", "description": "Path to the file to edit"},
-                                        "edits": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "oldText": {"type": "string", "description": "Text to search for - must match exactly"},
-                                                    "newText": {"type": "string", "description": "Text to replace with"}
-                                                },
-                                                "required": ["oldText", "newText"],
-                                                "additionalProperties": false
-                                            },
-                                            "description": "Array of edit objects with oldText and newText properties"
-                                        }
-                                    },
-                                    "required": ["path", "edits"],
-                                    "description": "Filesystem edit file request"
-                                }
-                                """
-                ).inputType(EditFileTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new EditFileTool().buildTool();
     }
 
     public static ToolCallback CreateDirectoryTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSCreateDirectoryService",
-                        new CreateDirectoryTool()
-                ).description("Create a new directory or ensure a directory exists.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": {"type": "string", "description": "Path to the directory to create"}
-                                    },
-                                    "required": ["path"],
-                                    "description": "Filesystem create directory request"
-                                }
-                                """
-                ).inputType(CreateDirectoryTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new CreateDirectoryTool().buildTool();
     }
 
     public static ToolCallback ListDirectoryTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSListDirectoryService",
-                        new ListDirectoryTool()
-                ).description("Get a detailed listing of all files and directories in a specified path.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": {"type": "string", "description": "Path to list contents"}
-                                    },
-                                    "required": ["path"],
-                                    "description": "Filesystem list directory request"
-                                }
-                                """
-                ).inputType(ListDirectoryTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new ListDirectoryTool().buildTool();
     }
 
     public static ToolCallback DirectoryTreeTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSDirectoryTreeService",
-                        new DirectoryTreeTool()
-                ).description("Get a recursive tree view of files and directories as a JSON structure.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": {"type": "string", "description": "Path to get tree structure"}
-                                    },
-                                    "required": ["path"],
-                                    "description": "Filesystem directory tree request"
-                                }
-                                """
-                ).inputType(DirectoryTreeTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new DirectoryTreeTool().buildTool();
     }
 
     public static ToolCallback MoveFileTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSMoveFileService",
-                        new MoveFileTool()
-                ).description("Move or rename files and directories.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "source": {"type": "string", "description": "Source path to move from"},
-                                        "destination": {"type": "string", "description": "Destination path to move to"}
-                                    },
-                                    "required": ["source", "destination"],
-                                    "description": "Filesystem move file request"
-                                }
-                                """
-                ).inputType(MoveFileTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new MoveFileTool().buildTool();
     }
 
     public static ToolCallback SearchFilesTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSSearchFilesService",
-                        new SearchFilesTool()
-                ).description("Recursively search for files and directories matching a pattern.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": {"type": "string", "description": "Starting path for the search"},
-                                        "pattern": {"type": "string", "description": "Pattern to match files/directories"},
-                                        "excludePatterns": {"type": "array", "items": {"type": "string"}, "description": "Patterns to exclude from search"}
-                                    },
-                                    "required": ["path", "pattern"],
-                                    "description": "Filesystem search files request"
-                                }
-                                """
-                ).inputType(SearchFilesTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new SearchFilesTool().buildTool();
     }
 
     public static ToolCallback GetFileInfoTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSGetFileInfoService",
-                        new GetFileInfoTool()
-                ).description("Retrieve detailed metadata about a file or directory.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "path": {"type": "string", "description": "Path to the file or directory"}
-                                    },
-                                    "required": ["path"],
-                                    "description": "Filesystem get file info request"
-                                }
-                                """
-                ).inputType(GetFileInfoTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new GetFileInfoTool().buildTool();
     }
 
     public static ToolCallback ListAllowedDirectoriesTool() {
-        return FunctionToolCallback
-                .builder(
-                        "FSListAllowedDirectoriesService",
-                        new ListAllowedDirectoriesTool()
-                ).description("Returns the list of directories that this server is allowed to access.")
-                .inputSchema(
-                        """
-                                {
-                                    "type": "object",
-                                    "properties": {},
-                                    "required": [],
-                                    "description": "Filesystem list allowed directories request"
-                                }
-                                """
-                ).inputType(ListAllowedDirectoriesTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new ListAllowedDirectoriesTool().buildTool();
     }
 
     // Browser tools
     public static ToolCallback BrowserNavigateTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserNavigateService",
-                        new NavigateTool()
-                ).description("Navigate to a URL")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {"url": {"type": "string"}},
-                            "required": ["url"],
-                            "description": "Browser navigate request"
-                        }
-                        """)
-                .inputType(NavigateTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new NavigateTool().buildTool();
     }
 
     public static ToolCallback BrowserClickTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserClickService",
-                        new ClickTool()
-                ).description("Perform click on a web page")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {"element": {"type": "string"}, "ref": {"type": "string"}},
-                            "required": ["element", "ref"],
-                            "description": "Browser click request"
-                        }
-                        """)
-                .inputType(ClickTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new ClickTool().buildTool();
     }
 
     public static ToolCallback BrowserTypeTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserTypeService",
-                        new TypeTool()
-                ).description("Type text into an element")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "element": {"type": "string"},
-                                "ref": {"type": "string"},
-                                "text": {"type": "string"},
-                                "submit": {"type": "boolean"},
-                                "slowly": {"type": "boolean"}
-                            },
-                            "required": ["element", "ref", "text"],
-                            "description": "Browser type request"
-                        }
-                        """)
-                .inputType(TypeTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new TypeTool().buildTool();
     }
 
     public static ToolCallback BrowserTakeScreenshotTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserTakeScreenshotService",
-                        new TakeScreenshotTool()
-                ).description("Take a screenshot of the current page")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "raw": {"type": "boolean"},
-                                "filename": {"type": "string"},
-                                "element": {"type": "string"},
-                                "ref": {"type": "string"}
-                            },
-                            "required": [],
-                            "description": "Browser take screenshot request"
-                        }
-                        """)
-                .inputType(TakeScreenshotTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new TakeScreenshotTool().buildTool();
     }
 
     public static ToolCallback BrowserSnapshotTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserSnapshotService",
-                        new SnapshotTool()
-                ).description("Capture accessibility snapshot of the current page")
-                .inputSchema("""
-                        {"type": "object", "properties": {}, "required": [], "description": "Browser snapshot request"}
-                        """)
-                .inputType(SnapshotTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new SnapshotTool().buildTool();
     }
 
     public static ToolCallback BrowserTabNewTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserTabNewService",
-                        new TabNewTool()
-                ).description("Open a new tab")
-                .inputSchema("""
-                        {"type": "object", "properties": {"url": {"type": "string"}}, "required": [], "description": "Browser new tab request"}
-                        """)
-                .inputType(TabNewTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new TabNewTool().buildTool();
     }
 
     public static ToolCallback BrowserTabSelectTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserTabSelectService",
-                        new TabSelectTool()
-                ).description("Select a tab by index")
-                .inputSchema("""
-                        {"type": "object", "properties": {"index": {"type": "number"}}, "required": ["index"], "description": "Browser select tab request"}
-                        """)
-                .inputType(TabSelectTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new TabSelectTool().buildTool();
     }
 
     public static ToolCallback BrowserTabCloseTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserTabCloseService",
-                        new TabCloseTool()
-                ).description("Close a tab")
-                .inputSchema("""
-                        {"type": "object", "properties": {"index": {"type": "number"}}, "required": [], "description": "Browser close tab request"}
-                        """)
-                .inputType(TabCloseTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new TabCloseTool().buildTool();
     }
 
     public static ToolCallback BrowserWaitForTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserWaitForService",
-                        new WaitForTool()
-                ).description("Wait for conditions")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {"time": {"type": "number"}, "text": {"type": "string"}, "textGone": {"type": "string"}},
-                            "required": [],
-                            "description": "Browser wait for request"
-                        }
-                        """)
-                .inputType(WaitForTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new WaitForTool().buildTool();
     }
 
     public static ToolCallback BrowserResizeTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserResizeService",
-                        new ResizeTool()
-                ).description("Resize browser window")
-                .inputSchema("""
-                        {"type": "object", "properties": {"width": {"type": "number"}, "height": {"type": "number"}}, "required": ["width", "height"], "description": "Browser resize request"}
-                        """)
-                .inputType(ResizeTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new ResizeTool().buildTool();
     }
 
     public static ToolCallback BrowserCloseTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserCloseService",
-                        new CloseTool()
-                ).description("Close current page")
-                .inputSchema("""
-                        {"type": "object", "properties": {}, "required": [], "description": "Browser close request"}
-                        """)
-                .inputType(CloseTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new CloseTool().buildTool();
     }
 
     public static ToolCallback BrowserConsoleMessagesTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserConsoleMessagesService",
-                        new ConsoleMessagesTool()
-                ).description("Returns all console messages")
-                .inputSchema("""
-                        {"type": "object", "properties": {}, "required": [], "description": "Browser console messages request"}
-                        """)
-                .inputType(ConsoleMessagesTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new ConsoleMessagesTool().buildTool();
     }
 
     public static ToolCallback BrowserHandleDialogTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserHandleDialogService",
-                        new HandleDialogTool()
-                ).description("Handle a dialog")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "accept": {"type": "boolean", "description": "Whether to accept the dialog"},
-                                "promptText": {"type": "string", "description": "The text of the prompt in case of a prompt dialog"}
-                            },
-                            "required": ["accept"],
-                            "description": "Browser handle dialog request"
-                        }
-                        """)
-                .inputType(HandleDialogTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new HandleDialogTool().buildTool();
     }
 
     public static ToolCallback BrowserFileUploadTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserFileUploadService",
-                        new FileUploadTool()
-                ).description("Upload one or multiple files")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "paths": {"type": "array", "items": {"type": "string"}, "description": "The absolute paths to the files to upload"}
-                            },
-                            "required": ["paths"],
-                            "description": "Browser file upload request"
-                        }
-                        """)
-                .inputType(FileUploadTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new FileUploadTool().buildTool();
     }
 
     public static ToolCallback BrowserPressKeyTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserPressKeyService",
-                        new PressKeyTool()
-                ).description("Press a key on the keyboard")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "key": {"type": "string", "description": "Name of the key to press or a character to generate"}
-                            },
-                            "required": ["key"],
-                            "description": "Browser press key request"
-                        }
-                        """)
-                .inputType(PressKeyTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new PressKeyTool().buildTool();
     }
 
     public static ToolCallback BrowserNavigateBackTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserNavigateBackService",
-                        new NavigateBackTool()
-                ).description("Go back to the previous page")
-                .inputSchema("""
-                        {"type": "object", "properties": {}, "required": [], "description": "Browser navigate back request"}
-                        """)
-                .inputType(NavigateBackTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new NavigateBackTool().buildTool();
     }
 
     public static ToolCallback BrowserNavigateForwardTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserNavigateForwardService",
-                        new NavigateForwardTool()
-                ).description("Go forward to the next page")
-                .inputSchema("""
-                        {"type": "object", "properties": {}, "required": [], "description": "Browser navigate forward request"}
-                        """)
-                .inputType(NavigateForwardTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new NavigateForwardTool().buildTool();
     }
 
     public static ToolCallback BrowserNetworkRequestsTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserNetworkRequestsService",
-                        new NetworkRequestsTool()
-                ).description("Returns all network requests since loading the page")
-                .inputSchema("""
-                        {"type": "object", "properties": {}, "required": [], "description": "Returns all network requests since loading the page"}
-                        """)
-                .inputType(NetworkRequestsTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new NetworkRequestsTool().buildTool();
     }
 
     public static ToolCallback BrowserPdfSaveTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserPdfSaveService",
-                        new PdfSaveTool()
-                ).description("Save page as PDF")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "filename": {"type": "string", "description": "File name to save the pdf to"}
-                            },
-                            "required": [],
-                            "description": "Browser PDF save request"
-                        }
-                        """)
-                .inputType(PdfSaveTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new PdfSaveTool().buildTool();
     }
 
     public static ToolCallback BrowserDragTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserDragService",
-                        new DragTool()
-                ).description("Perform drag and drop between two elements")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "startElement": {"type": "string", "description": "Human-readable source element description"},
-                                "startRef": {"type": "string", "description": "Exact source element reference from the page snapshot"},
-                                "endElement": {"type": "string", "description": "Human-readable target element description"},
-                                "endRef": {"type": "string", "description": "Exact target element reference from the page snapshot"}
-                            },
-                            "required": ["startElement", "startRef", "endElement", "endRef"],
-                            "description": "Browser drag request"
-                        }
-                        """)
-                .inputType(DragTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new DragTool().buildTool();
     }
 
     public static ToolCallback BrowserHoverTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserHoverService",
-                        new HoverTool()
-                ).description("Hover over an element on a page")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "element": {"type": "string", "description": "Human-readable element description"},
-                                "ref": {"type": "string", "description": "Exact target element reference from the page snapshot"}
-                            },
-                            "required": ["element", "ref"],
-                            "description": "Browser hover request"
-                        }
-                        """)
-                .inputType(HoverTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new HoverTool().buildTool();
     }
 
     public static ToolCallback BrowserSelectOptionTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserSelectOptionService",
-                        new SelectOptionTool()
-                ).description("Select an option in a dropdown")
-                .inputSchema("""
-                        {
-                            "type": "object",
-                            "properties": {
-                                "element": {"type": "string", "description": "Human-readable element description"},
-                                "ref": {"type": "string", "description": "Exact target element reference from the page snapshot"},
-                                "values": {"type": "array", "items": {"type": "string"}, "description": "Array of values to select in the dropdown"}
-                            },
-                            "required": ["element", "ref", "values"],
-                            "description": "Browser select option request"
-                        }
-                        """)
-                .inputType(SelectOptionTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+        return new SelectOptionTool().buildTool();
     }
 
     public static ToolCallback BrowserTabListTool() {
-        return FunctionToolCallback.builder(
-                        "BrowserTabListService",
-                        new TabListTool()
-                ).description("List browser tabs")
-                .inputSchema("""
-                        {"type": "object", "properties": {}, "required": [], "description": "Browser tab list request"}
-                        """)
-                .inputType(TabListTool.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+        return new TabListTool().buildTool();
+    }
+
+    public static List<ToolCallback> getMcpTools(String serverConfigs,
+                                                SandboxType sandboxType,
+                                                SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
+    }
+
+    public static List<ToolCallback> getMcpTools(Map<String, Object> serverConfigs, 
+                                                SandboxType sandboxType,
+                                                SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
+    }
+
+    public static List<ToolCallback> getMcpTools(String serverConfigs,
+                                                SandboxType sandboxType,
+                                                SandboxManager sandboxManager,
+                                                Set<String> whitelist,
+                                                Set<String> blacklist) {
+        try {
+            logger.info("Creating MCP tools from server configuration");
+            
+            McpConfigConverter converter = McpConfigConverter.builder()
+                    .serverConfigs(serverConfigs)
+                    .sandboxType(sandboxType)
+                    .sandboxManager(sandboxManager)
+                    .whitelist(whitelist)
+                    .blacklist(blacklist)
+                    .build();
+            
+            List<MCPTool> mcpTools = converter.toBuiltinTools();
+            
+            List<ToolCallback> toolCallbacks = mcpTools.stream()
+                    .map(MCPTool::buildTool)
+                    .collect(Collectors.toList());
+            
+            logger.info(String.format("Created %d MCP tools", toolCallbacks.size()));
+            return toolCallbacks;
+            
+        } catch (Exception e) {
+            logger.severe("Failed to create MCP tools: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create MCP tools", e);
+        }
+    }
+
+    public static List<ToolCallback> getMcpTools(Map<String, Object> serverConfigs,
+                                                SandboxType sandboxType,
+                                                SandboxManager sandboxManager,
+                                                Set<String> whitelist,
+                                                Set<String> blacklist) {
+        try {
+            logger.info("Creating MCP tools from server configuration");
+            
+            McpConfigConverter converter = McpConfigConverter.builder()
+                    .serverConfigs(serverConfigs)
+                    .sandboxType(sandboxType)
+                    .sandboxManager(sandboxManager)
+                    .whitelist(whitelist)
+                    .blacklist(blacklist)
+                    .build();
+            
+            List<MCPTool> mcpTools = converter.toBuiltinTools();
+            
+            List<ToolCallback> toolCallbacks = mcpTools.stream()
+                    .map(MCPTool::buildTool)
+                    .collect(Collectors.toList());
+            
+            logger.info(String.format("Created %d MCP tools", toolCallbacks.size()));
+            return toolCallbacks;
+            
+        } catch (Exception e) {
+            logger.severe("Failed to create MCP tools: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create MCP tools", e);
+        }
+    }
+
+    public static List<ToolCallback> getMcpTools(String serverConfigs,
+                                                SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, null, sandboxManager, null, null);
+    }
+
+    public static List<ToolCallback> getMcpTools(Map<String, Object> serverConfigs,
+                                                SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, null, sandboxManager, null, null);
+    }
+
+    public static List<ToolCallback> getAllToolsWithMcp(String mcpServerConfigs,
+                                                       SandboxType sandboxType,
+                                                       SandboxManager sandboxManager) {
+        List<ToolCallback> allTools = new ArrayList<>(getAllTools());
+        
+        if (mcpServerConfigs != null && !mcpServerConfigs.trim().isEmpty()) {
+            try {
+                List<ToolCallback> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
+                allTools.addAll(mcpTools);
+                logger.info(String.format("Added %d MCP tools to the tool list", mcpTools.size()));
+            } catch (Exception e) {
+                logger.warning("Failed to add MCP tools: " + e.getMessage());
+            }
+        }
+        
+        return allTools;
+    }
+
+    public static List<ToolCallback> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
+                                                       SandboxType sandboxType,
+                                                       SandboxManager sandboxManager) {
+        List<ToolCallback> allTools = new ArrayList<>(getAllTools());
+        
+        if (mcpServerConfigs != null && !mcpServerConfigs.isEmpty()) {
+            try {
+                List<ToolCallback> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
+                allTools.addAll(mcpTools);
+                logger.info(String.format("Added %d MCP tools to the tool list", mcpTools.size()));
+            } catch (Exception e) {
+                logger.warning("Failed to add MCP tools: " + e.getMessage());
+            }
+        }
+        
+        return allTools;
+    }
+
+    public static List<MCPTool> createMcpToolInstances(String serverConfigs,
+                                                       SandboxType sandboxType,
+                                                       SandboxManager sandboxManager) {
+        McpConfigConverter converter = McpConfigConverter.builder()
+                .serverConfigs(serverConfigs)
+                .sandboxType(sandboxType)
+                .sandboxManager(sandboxManager)
                 .build();
+        
+        return converter.toBuiltinTools();
+    }
+
+    public static List<MCPTool> createMcpToolInstances(Map<String, Object> serverConfigs,
+                                                       SandboxType sandboxType,
+                                                       SandboxManager sandboxManager) {
+        McpConfigConverter converter = McpConfigConverter.builder()
+                .serverConfigs(serverConfigs)
+                .sandboxType(sandboxType)
+                .sandboxManager(sandboxManager)
+                .build();
+        
+        return converter.toBuiltinTools();
     }
 
 }

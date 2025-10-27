@@ -16,28 +16,93 @@
 package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
 /**
  * Browser network requests tool
  */
-public class NetworkRequestsTool implements BiFunction<NetworkRequestsTool.Request, ToolContext, NetworkRequestsTool.Response> {
+public class NetworkRequestsTool extends SandboxTool {
 
-    @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        String result = new SandboxTools().browser_network_requests(userID, sessionID);
-        return new Response(result, "Browser network requests completed");
+    public NetworkRequestsTool() {
+        super("browser_network_requests", "browser", "Get network requests from the browser");
+        schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", new HashMap<>());
+        schema.put("description", "Request object to get network requests");
     }
 
-    public record Request() { }
+    @Override
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
+    }
 
-    @JsonClassDescription("The result contains browser tool output and message")
-    public record Response(String result, String message) {}
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new NetworkRequestsRetriever()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(NetworkRequestsRetriever.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class NetworkRequestsRetriever implements BiFunction<NetworkRequestsRetriever.Request, ToolContext, NetworkRequestsRetriever.Response> {
+
+        Logger logger = Logger.getLogger(NetworkRequestsRetriever.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            String result = browser_network_requests(userID, sessionID);
+            return new Response(result, "Browser network requests completed");
+        }
+
+        private String browser_network_requests(String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+                    return browserSandbox.networkRequests();
+                }
+                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+                return browserSandbox.networkRequests();
+            } catch (Exception e) {
+                String errorMsg = "Browser Network Requests Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
+            }
+        }
+
+        public record Request() { }
+
+        @JsonClassDescription("The result contains browser tool output and message")
+        public record Response(String result, String message) {}
+    }
 }

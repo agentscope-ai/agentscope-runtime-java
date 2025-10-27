@@ -2,6 +2,7 @@ package runtime.domain.tools.service.sandbox.manager;
 
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -9,8 +10,8 @@ import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.SandboxType;
-import io.agentscope.runtime.sandbox.manager.model.ContainerModel;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 
 import java.util.UUID;
 
@@ -33,7 +34,10 @@ public class DockerLifecycleTest {
 
         // Initialize Docker sandbox manager
         try {
-            BaseClientConfig config = new DockerClientConfig();
+            BaseClientConfig clientConfig = new DockerClientConfig();
+            ManagerConfig config = new ManagerConfig.Builder()
+                    .containerDeployment(clientConfig)
+                    .build();
             sandboxManager = new SandboxManager(config);
             System.out.println("Docker SandboxManager initialized successfully");
         } catch (Exception e) {

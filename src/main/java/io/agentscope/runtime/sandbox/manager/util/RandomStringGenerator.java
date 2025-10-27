@@ -26,6 +26,7 @@ public class RandomStringGenerator {
 
     /**
      * Generate random string of specified length
+     *
      * @param length string length
      * @return random string
      */

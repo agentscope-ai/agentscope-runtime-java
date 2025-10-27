@@ -17,47 +17,134 @@ package io.agentscope.runtime.sandbox.tools.browser;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.agentscope.runtime.sandbox.tools.ContextUtils;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 import org.springframework.ai.chat.model.ToolContext;
-import io.agentscope.runtime.sandbox.tools.SandboxTools;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.logging.Logger;
 
-public class TakeScreenshotTool implements BiFunction<TakeScreenshotTool.Request, ToolContext, TakeScreenshotTool.Response> {
+public class TakeScreenshotTool extends SandboxTool {
+
+    public TakeScreenshotTool() {
+        super("browser_take_screenshot", "browser", "Take a screenshot of the browser");
+        schema = new HashMap<>();
+        
+        Map<String, Object> rawProperty = new HashMap<>();
+        rawProperty.put("type", "boolean");
+        rawProperty.put("description", "Whether to return raw image data");
+        
+        Map<String, Object> filenameProperty = new HashMap<>();
+        filenameProperty.put("type", "string");
+        filenameProperty.put("description", "Filename to save screenshot");
+        
+        Map<String, Object> elementProperty = new HashMap<>();
+        elementProperty.put("type", "string");
+        elementProperty.put("description", "Element description for partial screenshot");
+        
+        Map<String, Object> refProperty = new HashMap<>();
+        refProperty.put("type", "string");
+        refProperty.put("description", "Element reference for partial screenshot");
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("raw", rawProperty);
+        properties.put("filename", filenameProperty);
+        properties.put("element", elementProperty);
+        properties.put("ref", refProperty);
+
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("description", "Request object to take screenshot");
+    }
 
     @Override
-    public Response apply(Request request, ToolContext toolContext) {
-        String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-        String userID = userAndSession[0];
-        String sessionID = userAndSession[1];
-        String result = new SandboxTools().browser_take_screenshot(
-                request.raw, request.filename, request.element, request.ref, userID, sessionID);
-        return new Response(result, "Browser take_screenshot completed");
+    public SandboxTool bind(Sandbox sandbox) {
+        this.sandbox = sandbox;
+        return this;
     }
 
-    public record Request(
-            @JsonProperty("raw") Boolean raw,
-            @JsonProperty("filename") String filename,
-            @JsonProperty("element") String element,
-            @JsonProperty("ref") String ref
-    ) { 
-        public Request {
-            // Provide default value handling for optional parameters
-            if (raw == null) {
-                raw = false;
-            }
-            if (filename == null) {
-                filename = "";
-            }
-            if (element == null) {
-                element = "";
-            }
-            if (ref == null) {
-                ref = "";
+    @Override
+    public ToolCallback buildTool() {
+        ObjectMapper mapper = new ObjectMapper();
+        String inputSchema = "";
+        try {
+            inputSchema = mapper.writeValueAsString(schema);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return FunctionToolCallback
+                .builder(
+                        name,
+                        new ScreenshotTaker()
+                ).description(description)
+                .inputSchema(
+                        inputSchema
+                ).inputType(ScreenshotTaker.Request.class)
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+                .build();
+    }
+    class ScreenshotTaker implements BiFunction<ScreenshotTaker.Request, ToolContext, ScreenshotTaker.Response> {
+
+        Logger logger = Logger.getLogger(ScreenshotTaker.class.getName());
+
+        @Override
+        public Response apply(Request request, ToolContext toolContext) {
+            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+            String userID = userAndSession[0];
+            String sessionID = userAndSession[1];
+            
+            String result = browser_take_screenshot(request.raw, request.filename, request.element, request.ref, userID, sessionID);
+            return new Response(result, "Browser take_screenshot completed");
+        }
+
+        private String browser_take_screenshot(Boolean raw, String filename, String element, String ref, String userID, String sessionID) {
+            try {
+                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+                    return browserSandbox.takeScreenshot(raw, filename, element, ref);
+                }
+                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+                return browserSandbox.takeScreenshot(raw, filename, element, ref);
+            } catch (Exception e) {
+                String errorMsg = "Browser Take Screenshot Error: " + e.getMessage();
+                logger.severe(errorMsg);
+                e.printStackTrace();
+                return errorMsg;
             }
         }
-    }
 
-    @JsonClassDescription("The result contains browser tool output and message")
-    public record Response(String result, String message) {}
+        public record Request(
+                @JsonProperty("raw") Boolean raw,
+                @JsonProperty("filename") String filename,
+                @JsonProperty("element") String element,
+                @JsonProperty("ref") String ref
+        ) { 
+            public Request {
+                if (raw == null) {
+                    raw = false;
+                }
+                if (filename == null) {
+                    filename = "";
+                }
+                if (element == null) {
+                    element = "";
+                }
+                if (ref == null) {
+                    ref = "";
+                }
+            }
+        }
+
+        @JsonClassDescription("The result contains browser tool output and message")
+        public record Response(String result, String message) {}
+    }
 }

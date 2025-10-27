@@ -89,10 +89,13 @@ public class SaaAgentSandboxExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public CompletableFuture<Void> basicExample() {
-        System.out.println("=== Tool Using SaaAgent Example ===");
+        // Create Runner with the SaaAgent
+        Runner runner = new Runner(contextManager);
+        System.out.println("=== BaseSandboxTool Using SaaAgent Example ===");
 
         return CompletableFuture.supplyAsync(() -> {
             try {
+
                 // Create ReactAgent Builder
                 Builder builder = ReactAgent.builder()
                         .name("saa_agent")
@@ -104,11 +107,7 @@ public class SaaAgentSandboxExample {
                         .agentBuilder(builder.build())
                         .build();
 
-                // Create Runner with the SaaAgent
-                Runner runner = new Runner(saaAgent, contextManager);
-
-                BaseClientConfig clientConfig = new DockerClientConfig();
-                runner.registerClientConfig(clientConfig);
+                runner.registerAgent(saaAgent);
 
                 // Create AgentRequest
                 AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);
@@ -216,6 +215,16 @@ public class SaaAgentSandboxExample {
                     .join();
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            // Clean up all sandbox containers before exiting
+            System.out.println("\n=== Cleaning up sandbox containers ===");
+            try {
+                Runner.getSandboxManager().cleanupAllSandboxes();
+                System.out.println("=== Sandbox cleanup completed ===");
+            } catch (Exception e) {
+                System.err.println("Error during sandbox cleanup: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 }

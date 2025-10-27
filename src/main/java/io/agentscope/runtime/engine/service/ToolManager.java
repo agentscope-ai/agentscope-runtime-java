@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Tool manager interface
+ * BaseSandboxTool manager interface
  * Corresponds to the tool management functionality in the Python version
  */
 public interface ToolManager {

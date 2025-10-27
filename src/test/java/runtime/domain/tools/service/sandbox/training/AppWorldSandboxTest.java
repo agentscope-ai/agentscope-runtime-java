@@ -2,11 +2,11 @@ package runtime.domain.tools.service.sandbox.training;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.APPWorldSandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.SandboxType;
-import io.agentscope.runtime.sandbox.tools.TrainingSandboxTools;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,10 @@ public class AppWorldSandboxTest {
         // Initialize sandbox manager
         java.util.logging.Logger.getLogger("").setLevel(java.util.logging.Level.OFF);
         try {
-            BaseClientConfig config = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+            BaseClientConfig clientConfig = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+            ManagerConfig config = new ManagerConfig.Builder()
+                    .containerDeployment(clientConfig)
+                    .build();
             sandboxManager = new SandboxManager(config);
             System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {
@@ -53,47 +56,47 @@ public class AppWorldSandboxTest {
 
     @Test
     public void testEnvProfiles() {
-        TrainingSandboxTools tools = new TrainingSandboxTools(sandboxManager);
-        String envProfiles = tools.getEnvProfiles(SandboxType.TRAINING, "appworld", "train", null, "", "");
-
-        System.out.println(envProfiles);
-        assertNotNull(envProfiles);
+        try(APPWorldSandbox appWorldSandbox = new APPWorldSandbox(sandboxManager, "test-user", "test-session")) {
+            String profiles = appWorldSandbox.getEnvProfile("appworld", "train", null);
+            System.out.println("APPWorldSandbox env profiles: " + profiles);
+            assertNotNull(profiles);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
     public void testInstance() throws JsonProcessingException {
-        TrainingSandboxTools tools = new TrainingSandboxTools(sandboxManager);
-        String initResponse = tools.createInstance("appworld", "82e2fac_1", null, null, "", "");
-        assertNotNull(initResponse);
+        try(APPWorldSandbox appWorldSandbox = new APPWorldSandbox(sandboxManager, "test-user", "test-session")) {
+            String initResponse = appWorldSandbox.createInstance("appworld", "82e2fac_1", null, null);
+            assertNotNull(initResponse);
+            Map<String, Object> dataMap = parseTopLevel(initResponse);
+            String instanceId = parseInstanceId(initResponse);
+            String query = dataMap.get("state").toString();
+            System.out.println("Create instance " + instanceId + " with query: " + query);
+            assertNotNull(instanceId);
+            assertNotNull(query);
 
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> responseMap = mapper.readValue(initResponse, Map.class);
-        String data = responseMap.get("data").toString();
-        Map<String, Object> dataMap = parseTopLevel(data);
-        String instanceId = parseInstanceId(data);
-        String query = dataMap.get("state").toString();
+            Map<String, Object> action = Map.of("role", "assistant", "content", "```python\nprint('hello appworld!!')\n```");
 
-        System.out.println("Create instance " + instanceId + " with query: " + query);
-        assertNotNull(instanceId);
-        assertNotNull(query);
+            String result = appWorldSandbox.step(instanceId, action, null);
+            System.out.println("Step result: " + result);
+            assertNotNull(result);
 
-        Map<String, String> action = Map.of("role", "assistant", "content", "```python\nprint('hello appworld!!')\n```");
+            String score = appWorldSandbox.evaluate(instanceId, Map.of(), Map.of("sparse", true));
+            System.out.println("Evaluate score: " + score);
+            assertNotNull(score);
 
-        String result = tools.step(instanceId, action, null, "", "");
-        System.out.println("Step result: " + result);
-        assertNotNull(result);
+            String taskIDs = appWorldSandbox.getTaskIds("appworld", "train", null);
+            System.out.println("Task IDs: " + taskIDs);
+            assertNotNull(taskIDs);
 
-        String score = tools.evaluate(instanceId, Map.of(), Map.of("sparse", true), "", "");
-        System.out.println("Evaluate score: " + score);
-        assertNotNull(score);
-
-        String taskIDs = tools.getTaskIDs(SandboxType.TRAINING, "appworld", "train", null, "", "");
-        System.out.println("Task IDs: " + taskIDs);
-        assertNotNull(taskIDs);
-
-        String success = tools.releaseInstance(instanceId, "", "");
-        System.out.println("Release instance result: " + success);
-        assertNotNull(success);
+            String success = appWorldSandbox.releaseInstance(instanceId);
+            System.out.println("Release instance result: " + success);
+            assertNotNull(success);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 
