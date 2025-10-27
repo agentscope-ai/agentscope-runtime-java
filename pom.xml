@@ -240,6 +240,20 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- TableStore dependency -->
+        <dependency>
+            <groupId>com.aliyun.openservices.tablestore</groupId>
+            <artifactId>tablestore-for-agent-memory</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+
+        <!-- Apache HttpClient5 for Mem0 API -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.2.1</version>
+        </dependency>
+
     </dependencies>
 
     <repositories>
