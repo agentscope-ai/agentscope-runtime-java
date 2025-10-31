@@ -39,12 +39,6 @@ public class SandboxManagerController {
 
     @PostConstruct
     public void registerEndpoints() {
-        SandboxManager sandboxManager = Runner.getSandboxManager();
-        if (sandboxManager == null) {
-            logger.warning("No SandboxManager bean found, remote endpoints will not be registered");
-            return;
-        }
-
         Class<?> clazz = SandboxManager.class;
 
         logger.info("Scanning class: " + clazz.getName());
