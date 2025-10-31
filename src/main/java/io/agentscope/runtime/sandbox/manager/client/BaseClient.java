@@ -37,14 +37,13 @@ public abstract class BaseClient {
      * @param containerName container name
      * @param imageName image name
      * @param ports port list
-     * @param portMapping port mapping
      * @param volumeBindings volume bindings
      * @param environment environment variables
      * @param runtimeConfig runtime configuration
-     * @return container ID
+     * @return ContainerCreateResult containing containerId, ports, ip, and optional protocol
      */
-    public abstract String createContainer(String containerName, String imageName,
-                                         List<String> ports, Map<String, Integer> portMapping,
+    public abstract ContainerCreateResult createContainer(String containerName, String imageName,
+                                         List<String> ports,
                                          List<VolumeBinding> volumeBindings,
                                          Map<String, String> environment, Map<String, Object> runtimeConfig);
     

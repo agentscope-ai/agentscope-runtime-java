@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RegisterSandbox(
-    imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest",
+    imageName = "agentscope/runtime-sandbox-browser:latest",
     sandboxType = SandboxType.BROWSER,
     securityLevel = "medium",
     timeout = 60,

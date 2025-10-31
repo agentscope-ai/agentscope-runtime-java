@@ -15,9 +15,13 @@
  */
 package io.agentscope.runtime.sandbox.manager;
 
+import io.agentscope.runtime.sandbox.manager.client.AgentRunClient;
 import io.agentscope.runtime.sandbox.manager.client.BaseClient;
+import io.agentscope.runtime.sandbox.manager.client.ContainerCreateResult;
 import io.agentscope.runtime.sandbox.manager.client.DockerClient;
 import io.agentscope.runtime.sandbox.manager.client.KubernetesClient;
+import io.agentscope.runtime.sandbox.manager.client.config.AgentRunClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.collections.ContainerQueue;
 import io.agentscope.runtime.sandbox.manager.collections.InMemoryContainerQueue;
@@ -27,7 +31,10 @@ import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.*;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryService;
+import io.agentscope.runtime.sandbox.manager.remote.RemoteHttpClient;
+import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 import io.agentscope.runtime.sandbox.manager.util.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -55,29 +62,41 @@ public class SandboxManager implements AutoCloseable {
     private RedisClientWrapper redisClient;
     private RedisContainerMapping redisContainerMapping;
     private final boolean redisEnabled;
+    private final RemoteHttpClient remoteHttpClient;
 
     public SandboxManager() {
         this(null, null);
     }
 
-    public SandboxManager(String baseUrl, String bearerToken) {
-        this(new ManagerConfig.Builder().build(), baseUrl, bearerToken);
+    public SandboxManager(String baseUrl, String bearerToken){
+        this(new ManagerConfig.Builder().baseUrl(baseUrl).bearerToken(bearerToken).build());
     }
 
-    public SandboxManager(ManagerConfig managerConfig) {
-        this(managerConfig, null, null);
+    public SandboxManager(ManagerConfig managerConfig){
+        this(managerConfig, managerConfig.getBaseUrl(), managerConfig.getBearerToken(), SandboxType.BASE);
     }
 
-    public SandboxManager(SandboxType defaultType) {
+    public SandboxManager(SandboxType defaultType){
         this(new ManagerConfig.Builder().build(), null, null, defaultType);
     }
 
-    public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken) {
-        this(managerConfig, baseUrl, bearerToken, SandboxType.BASE);
-    }
-
-    public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken, SandboxType defaultType) {
-        // TODO: Support for remote HTTP session needs to be added, currently ignored
+    public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken, SandboxType defaultType){
+        if (baseUrl != null && !baseUrl.isEmpty()) {
+            this.remoteHttpClient = new RemoteHttpClient(baseUrl, bearerToken);
+            logger.info("Initialized SandboxManager in remote mode with base URL: " + baseUrl);
+            this.managerConfig = managerConfig != null ? managerConfig : new ManagerConfig.Builder().build();
+            this.containerManagerType = this.managerConfig.getClientConfig().getClientType();
+            this.storageManager = null;
+            this.poolSize = 0;
+            this.defaultType = defaultType;
+            this.redisEnabled = false;
+            this.portManager = null;
+            this.poolQueue = null;
+            this.containerClient = null;
+            return;
+        }
+        
+        this.remoteHttpClient = null;
         this.managerConfig = managerConfig;
         this.containerManagerType = managerConfig.getClientConfig().getClientType();
         this.storageManager = new StorageManager(managerConfig.getFileSystemConfig());
@@ -122,8 +141,19 @@ public class SandboxManager implements AutoCloseable {
 
         switch (this.containerManagerType) {
             case DOCKER:
-                // TODO: Make DockerClient support DockerClientConfig configuration
-                DockerClient dockerClient = new DockerClient();
+                // Align with Python version: DockerClient receives config in constructor
+                DockerClientConfig dockerClientConfig;
+                if (managerConfig.getClientConfig() instanceof DockerClientConfig existingConfig) {
+                    dockerClientConfig = existingConfig;
+                } else {
+                    dockerClientConfig = new DockerClientConfig();
+                }
+                // Set port range and redis config from ManagerConfig
+                dockerClientConfig.setPortRange(managerConfig.getPortRange());
+                dockerClientConfig.setRedisEnabled(managerConfig.getRedisEnabled());
+                dockerClientConfig.setRedisConfig(managerConfig.getRedisConfig());
+                
+                DockerClient dockerClient = new DockerClient(dockerClientConfig);
                 this.containerClient = dockerClient;
                 this.client = dockerClient.connectDocker();
                 break;
@@ -137,9 +167,10 @@ public class SandboxManager implements AutoCloseable {
                 }
                 this.containerClient = kubernetesClient;
                 kubernetesClient.connect();
-                this.client = null;
                 break;
             case AGENTRUN:
+                AgentRunClient agentRunClient = getAgentRunClient(managerConfig);
+                this.containerClient = agentRunClient;
                 break;
             case CLOUD:
                 break;
@@ -150,6 +181,22 @@ public class SandboxManager implements AutoCloseable {
         if (this.poolSize > 0) {
             initContainerPool();
         }
+    }
+
+    @NotNull
+    private AgentRunClient getAgentRunClient(ManagerConfig managerConfig) {
+        AgentRunClient agentRunClient;
+        try{
+            if (managerConfig.getClientConfig() instanceof AgentRunClientConfig agentRunClientConfig) {
+                agentRunClient = new AgentRunClient(agentRunClientConfig);
+            } else {
+                throw new RuntimeException("Provided clientConfig is not an instance of AgentRun config, using default configuration");
+            }
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Failed to initialize agentrun client");
+        }
+        return agentRunClient;
     }
 
     private void initContainerPool() {
@@ -181,7 +228,26 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Container pool initialization complete. Pool size: " + poolQueue.size());
     }
 
+    @RemoteWrapper
     public ContainerModel createFromPool(SandboxType sandboxType) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding createFromPool to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/createFromPool",
+                requestData,
+                "data"
+            );
+            if (result instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resultMap = (Map<String, Object>) result;
+                return ContainerModel.fromMap(resultMap);
+            }
+            return null;
+        }
+        
         if (sandboxType != defaultType) {
             logger.info("Requested type " + sandboxType + " differs from pool type " + defaultType + ", creating directly");
             return createContainer(sandboxType, null, null, null);
@@ -241,7 +307,28 @@ public class SandboxManager implements AutoCloseable {
         return createContainer(sandboxType, null, null, null);
     }
 
+    @RemoteWrapper
     public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding createFromPool(with userID/sessionID) to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("userID", userID);
+            requestData.put("sessionID", sessionID);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/createFromPool",
+                requestData,
+                "data"
+            );
+            if (result instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resultMap = (Map<String, Object>) result;
+                return ContainerModel.fromMap(resultMap);
+            }
+            return null;
+        }
+        
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel existingContainer = sandboxMap.get(key);
 
@@ -278,7 +365,29 @@ public class SandboxManager implements AutoCloseable {
         return containerModel;
     }
 
-    private ContainerModel createContainer(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment) {
+    @RemoteWrapper
+    public ContainerModel createContainer(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding createContainer to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("mountDir", mountDir);
+            requestData.put("storagePath", storagePath);
+            requestData.put("environment", environment);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/createContainer",
+                requestData,
+                "data"
+            );
+            if (result instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resultMap = (Map<String, Object>) result;
+                return ContainerModel.fromMap(resultMap);
+            }
+            return null;
+        }
+        
         if (environment == null) {
             environment = new HashMap<>();
         }
@@ -294,8 +403,6 @@ public class SandboxManager implements AutoCloseable {
         String default_mount_dir = managerConfig.getFileSystemConfig().getMountDir();
         String[] portsArray = {"80/tcp"};
         List<String> ports = Arrays.asList(portsArray);
-        Map<String, Integer> portMapping = createPortMapping(ports);
-        logger.info("Port mapping: " + portMapping);
         String imageName = SandboxRegistryService.getImageByType(sandboxType).orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
         SandboxConfig sandboxConfig = SandboxRegistryService.getConfigByType(sandboxType).orElse(null);
         if (sandboxConfig != null) {
@@ -381,32 +488,47 @@ public class SandboxManager implements AutoCloseable {
             containerName = prefix.replace('_', '-') + sessionId.toLowerCase();
         }
         // TODO: Need to check container name uniqueness?
-        String containerId = containerClient.createContainer(containerName, imageName, ports, portMapping, volumeBindings, environment, runtimeConfig);
-        String[] mappedPorts = portMapping.values().stream().map(String::valueOf).toArray(String[]::new);
-        String baseHost;
-        String accessPort;
-        if (containerManagerType == ContainerManagerType.KUBERNETES) {
-            try {
-                String externalIP = ((KubernetesClient) containerClient).waitForLoadBalancerExternalIP(containerName, 60);
-                if (externalIP != null && !externalIP.isEmpty()) {
-                    baseHost = externalIP;
-                    accessPort = "80"; // LoadBalancer uses port 80 by default
-                    logger.info("Kubernetes LoadBalancer environment: using External IP " + externalIP + " port 80");
-                } else {
-                    logger.warning("Unable to get LoadBalancer External IP, using localhost and mapped port");
-                    baseHost = "localhost";
-                    accessPort = mappedPorts[0];
-                }
-            } catch (Exception e) {
-                logger.warning("Failed to get LoadBalancer External IP, using localhost and mapped port: " + e.getMessage());
-                baseHost = "localhost";
-                accessPort = mappedPorts[0];
-            }
-        } else {
-            baseHost = "localhost";
-            accessPort = mappedPorts[0];
+        ContainerCreateResult createResult = containerClient.createContainer(containerName, imageName, ports, volumeBindings, environment, runtimeConfig);
+        
+        String containerId = createResult.getContainerId();
+        if (containerId == null) {
+            logger.severe("Container creation failed: containerId is null");
+            return null;
         }
-        ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(mountDir).storagePath(storagePath).runtimeToken(runtimeToken).authToken(runtimeToken).version(imageName).build();
+        
+        // Extract values from createResult (align with Python version)
+        List<String> resultPorts = createResult.getPorts();
+        String ip = createResult.getIp();
+        String httpProtocol = createResult.getProtocol(); // Gets "https" from rest if available, else "http"
+        
+        // Get the first port (similar to Python's ports[0])
+        String firstPort = resultPorts != null && !resultPorts.isEmpty() ? resultPorts.get(0) : "80";
+        
+        // Build URL using protocol, ip, and port (similar to Python's f"{http_protocol}://{ip}:{ports[0]}")
+        String baseHost = ip != null ? ip : "localhost";
+        String accessPort = firstPort;
+        
+        // Convert ports list to array for ContainerModel
+        String[] mappedPorts = resultPorts != null ? resultPorts.toArray(new String[0]) : new String[]{firstPort};
+        
+        // Build ContainerModel using values from createResult (similar to Python version)
+        ContainerModel containerModel = ContainerModel.builder()
+                .sessionId(sessionId)
+                .containerId(containerId)
+                .containerName(containerName)
+                .baseUrl(String.format("%s://%s:%s/fastapi", httpProtocol, baseHost, accessPort))
+                .browserUrl(String.format("%s://%s:%s/steel-api/%s", httpProtocol, baseHost, accessPort, runtimeToken))
+                .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
+                .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
+                .artifactsSIO(String.format("%s://%s:%s/v1", httpProtocol, baseHost, accessPort))
+                .ports(mappedPorts)
+                .mountDir(mountDir)
+                .storagePath(storagePath)
+                .runtimeToken(runtimeToken)
+                .authToken(runtimeToken)
+                .version(imageName)
+                .build();
+        
         containerClient.startContainer(containerId);
         return containerModel;
     }
@@ -476,7 +598,24 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
+    @RemoteWrapper
     public void startSandbox(SandboxType sandboxType, String userID, String sessionID) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding startSandbox to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("userID", userID);
+            requestData.put("sessionID", sessionID);
+            remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/startSandbox",
+                requestData,
+                "data"
+            );
+            return;
+        }
+        
+        // Local mode: execute locally
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
 
@@ -495,7 +634,23 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
+    @RemoteWrapper
     public void stopSandbox(SandboxType sandboxType, String userID, String sessionID) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding stopSandbox to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("userID", userID);
+            requestData.put("sessionID", sessionID);
+            remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/stopSandbox",
+                requestData,
+                "data"
+            );
+            return;
+        }
+        
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
 
@@ -568,7 +723,24 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
+    @RemoteWrapper
     public String getSandboxStatus(SandboxType sandboxType, String userID, String sessionID) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding getSandboxStatus to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("userID", userID);
+            requestData.put("sessionID", sessionID);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/getSandboxStatus",
+                requestData,
+                "data"
+            );
+            return result != null ? result.toString() : null;
+        }
+        
+        // Local mode: execute locally
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
 
@@ -604,7 +776,26 @@ public class SandboxManager implements AutoCloseable {
         return allSandboxes;
     }
 
+    @RemoteWrapper
     public ContainerModel getInfo(String identity) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding getInfo to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("identity", identity);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/getInfo",
+                requestData,
+                "data"
+            );
+            if (result instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resultMap = (Map<String, Object>) result;
+                return ContainerModel.fromMap(resultMap);
+            }
+            return null;
+        }
+        
         if (identity == null || identity.isEmpty()) {
             throw new IllegalArgumentException("Identity cannot be null or empty");
         }
@@ -641,7 +832,21 @@ public class SandboxManager implements AutoCloseable {
     }
 
 
+    @RemoteWrapper
     public boolean release(String identity) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding release to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("identity", identity);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/release",
+                requestData,
+                "data"
+            );
+            return result instanceof Boolean ? (Boolean) result : false;
+        }
+        
         try {
             ContainerModel containerModel = getInfo(identity);
             logger.info("Releasing container with identity: " + identity);
@@ -710,23 +915,32 @@ public class SandboxManager implements AutoCloseable {
         return storageManager;
     }
 
+    public RemoteHttpClient getRemoteHttpClient() {
+        return remoteHttpClient;
+    }
+
+    @RemoteWrapper
     public void cleanupAllSandboxes() {
         logger.info("Starting cleanup of all sandbox containers...");
 
         // Clean up pool first (corresponds to Python's pool cleanup)
-        try {
-            logger.info("Cleaning up container pool (current size: " + poolQueue.size() + ")");
-            while (!poolQueue.isEmpty()) {
-                ContainerModel containerModel = poolQueue.dequeue();
-                if (containerModel != null) {
-                    logger.info("Destroying pool container: " + containerModel.getContainerId());
-                    releaseContainer(containerModel);
+        if (poolQueue != null) {
+            try {
+                logger.info("Cleaning up container pool (current size: " + poolQueue.size() + ")");
+                while (!poolQueue.isEmpty()) {
+                    ContainerModel containerModel = poolQueue.dequeue();
+                    if (containerModel != null) {
+                        logger.info("Destroying pool container: " + containerModel.getContainerId());
+                        releaseContainer(containerModel);
+                    }
                 }
+                logger.info("Container pool cleanup complete");
+            } catch (Exception e) {
+                logger.severe("Error cleaning up container pool: " + e.getMessage());
+                e.printStackTrace();
             }
-            logger.info("Container pool cleanup complete");
-        } catch (Exception e) {
-            logger.severe("Error cleaning up container pool: " + e.getMessage());
-            e.printStackTrace();
+        } else {
+            logger.info("Remote mode: no local pool to cleanup");
         }
 
         if (sandboxMap.isEmpty()) {
@@ -777,34 +991,6 @@ public class SandboxManager implements AutoCloseable {
         logger.info("SandboxManager closed successfully");
     }
 
-    private Map<String, Integer> createPortMapping(List<String> containerPorts) {
-        Map<String, Integer> portMapping = new HashMap<>();
-
-        if (containerPorts != null && !containerPorts.isEmpty()) {
-            if (containerManagerType == ContainerManagerType.KUBERNETES) {
-                // For Kubernetes LoadBalancer, use port 80
-                for (String containerPort : containerPorts) {
-                    portMapping.put(containerPort, 80);
-                }
-            } else {
-                // For Docker, use PortManager for thread-safe port allocation
-                int[] allocatedPorts = portManager.allocatePorts(containerPorts.size());
-                if (allocatedPorts == null) {
-                    logger.severe("Failed to allocate " + containerPorts.size() + " ports");
-                    return portMapping;
-                }
-
-                for (int i = 0; i < containerPorts.size() && i < allocatedPorts.length; i++) {
-                    String containerPort = containerPorts.get(i);
-                    Integer hostPort = allocatedPorts[i];
-                    portMapping.put(containerPort, hostPort);
-                    logger.fine("Mapped container port " + containerPort + " to host port " + hostPort);
-                }
-            }
-        }
-
-        return portMapping;
-    }
 
     public String listTools(String identity, String toolType) {
         return "";
@@ -842,7 +1028,29 @@ public class SandboxManager implements AutoCloseable {
         return null;
     }
 
+    @RemoteWrapper
     public Map<String, Object> listTools(String sandboxId, String userId, String sessionId, String toolType) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding listTools to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxId", sandboxId);
+            requestData.put("userId", userId);
+            requestData.put("sessionId", sessionId);
+            requestData.put("toolType", toolType);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/listTools",
+                requestData,
+                "data"
+            );
+            if (result instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resultMap = (Map<String, Object>) result;
+                return resultMap;
+            }
+            return new HashMap<>();
+        }
+        
         try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
             return client.listTools(toolType, Map.of());
         } catch (Exception e) {
@@ -851,7 +1059,24 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
-    public String callTool(String sandboxId, String userId, String sessionId, String toolName, Map<String, Object> arguments) {
+    @RemoteWrapper
+    public String callTool(String sandboxId, String userId, String sessionId, String toolName, Map<String, Object> arguments) {        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding callTool to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxId", sandboxId);
+            requestData.put("userId", userId);
+            requestData.put("sessionId", sessionId);
+            requestData.put("toolName", toolName);
+            requestData.put("arguments", arguments);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/callTool",
+                requestData,
+                "data"
+            );
+            return result != null ? result.toString() : null;
+        }
+        
         try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
             return client.callTool(toolName, arguments);
         } catch (Exception e) {
@@ -861,7 +1086,30 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
+    @RemoteWrapper
     public Map<String, Object> addMcpServers(String sandboxId, String userId, String sessionId, Map<String, Object> serverConfigs, boolean overwrite) {
+        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
+            logger.info("Remote mode: forwarding addMcpServers to remote server");
+            Map<String, Object> requestData = new HashMap<>();
+            requestData.put("sandboxId", sandboxId);
+            requestData.put("userId", userId);
+            requestData.put("sessionId", sessionId);
+            requestData.put("serverConfigs", serverConfigs);
+            requestData.put("overwrite", overwrite);
+            Object result = remoteHttpClient.makeRequest(
+                org.springframework.web.bind.annotation.RequestMethod.POST,
+                "/addMcpServers",
+                requestData,
+                "data"
+            );
+            if (result instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resultMap = (Map<String, Object>) result;
+                return resultMap;
+            }
+            return new HashMap<>();
+        }
+        
         try (SandboxClient client = establishConnection(sandboxId, userId, sessionId)) {
             return client.addMcpServers(serverConfigs, overwrite);
         } catch (Exception e) {

@@ -15,6 +15,9 @@
  */
 package io.agentscope.runtime.sandbox.manager.model.container;
 
+import java.util.List;
+import java.util.Map;
+
 public class ContainerModel {
     private String sessionId;
     private String containerId;
@@ -33,6 +36,44 @@ public class ContainerModel {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Create ContainerModel from a Map (typically from HTTP response)
+     */
+    public static ContainerModel fromMap(Map<String, Object> map) {
+        if (map == null) {
+            return null;
+        }
+        
+        ContainerModel model = new ContainerModel();
+        model.setSessionId((String) map.get("sessionId"));
+        model.setContainerId((String) map.get("containerId"));
+        model.setContainerName((String) map.get("containerName"));
+        model.setBaseUrl((String) map.get("baseUrl"));
+        model.setBrowserUrl((String) map.get("browserUrl"));
+        model.setFrontBrowserWS((String) map.get("frontBrowserWS"));
+        model.setClientBrowserWS((String) map.get("clientBrowserWS"));
+        model.setArtifactsSIO((String) map.get("artifactsSIO"));
+        model.setMountDir((String) map.get("mountDir"));
+        model.setStoragePath((String) map.get("storagePath"));
+        model.setRuntimeToken((String) map.get("runtimeToken"));
+        model.setVersion((String) map.get("version"));
+        model.setAuthToken((String) map.get("authToken"));
+        
+        // Handle ports array
+        Object portsObj = map.get("ports");
+        if (portsObj instanceof List) {
+            List<?> portsList = (List<?>) portsObj;
+            String[] ports = portsList.stream()
+                .map(Object::toString)
+                .toArray(String[]::new);
+            model.setPorts(ports);
+        } else if (portsObj instanceof String[]) {
+            model.setPorts((String[]) portsObj);
+        }
+        
+        return model;
     }
 
     public ContainerModel() {
