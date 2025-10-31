@@ -75,7 +75,7 @@ public class SaaAgentRemoteDeployExample {
     /**
      * Basic example of using SaaAgent with ReactAgent
      */
-    public void basicExample() {
+    public void basicExample() throws Exception {
         Runner runner = new Runner();
         ManagerConfig managerConfig = ManagerConfig.builder()
                 .baseUrl("http://localhost:10001")

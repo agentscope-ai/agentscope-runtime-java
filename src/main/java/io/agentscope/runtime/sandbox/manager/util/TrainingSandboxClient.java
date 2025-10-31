@@ -92,9 +92,6 @@ public class TrainingSandboxClient extends SandboxClient {
             HttpResponse<String> response = httpClient.send(request,
                     HttpResponse.BodyHandlers.ofString());
 
-            System.out.println(response);
-            System.out.println(endpoint);
-
             return response.statusCode() == 200;
         } catch (Exception e) {
             return false;
