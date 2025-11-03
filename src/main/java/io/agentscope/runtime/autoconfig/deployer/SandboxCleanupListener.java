@@ -16,7 +16,6 @@
 package io.agentscope.runtime.autoconfig.deployer;
 
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.sandbox.tools.SandboxTool;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;

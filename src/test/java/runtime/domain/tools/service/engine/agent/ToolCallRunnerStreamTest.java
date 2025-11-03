@@ -85,7 +85,7 @@ public class ToolCallRunnerStreamTest {
                     .build();
 
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(reactAgent)
+                    .agent(reactAgent)
                     .build();
 
             runner.registerAgent(saaAgent);

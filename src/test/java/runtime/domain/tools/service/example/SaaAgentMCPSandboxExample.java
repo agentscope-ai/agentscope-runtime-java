@@ -140,7 +140,7 @@ public class SaaAgentMCPSandboxExample {
 
                             // Create SaaAgent using the ReactAgent Builder
                             SaaAgent saaAgent = SaaAgent.builder()
-                                    .agentBuilder(reactAgent)
+                                    .agent(reactAgent)
                                     .build();
 
                             // Create AgentRequest

@@ -15,27 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.browser;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class NavigateTool extends SandboxTool {
+public class NavigateTool extends BrowserSandboxTool {
+
+    Logger logger = Logger.getLogger(NavigateTool.class.getName());
 
     public NavigateTool() {
         super("browser_navigate", "browser", "Navigate to a URL in the browser");
@@ -62,64 +54,19 @@ public class NavigateTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String browser_navigate(String url, String userID, String sessionID) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new Navigator()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(Navigator.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class Navigator implements BiFunction<Navigator.Request, ToolContext, Navigator.Response> {
-
-        Logger logger = Logger.getLogger(Navigator.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            String result = browser_navigate(request.url, userID, sessionID);
-            return new Response(result, "Browser navigate completed");
-        }
-
-        private String browser_navigate(String url, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
-                    return browserSandbox.navigate(url);
-                }
-                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
                 return browserSandbox.navigate(url);
-            } catch (Exception e) {
-                String errorMsg = "Browser Navigate Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
+            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            return browserSandbox.navigate(url);
+        } catch (Exception e) {
+            String errorMsg = "Browser Navigate Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
-
-        public record Request(
-                @JsonProperty(required = true, value = "url")
-                @JsonPropertyDescription("The URL to navigate to")
-                String url
-        ) { }
-
-        @JsonClassDescription("The result contains browser tool output and message")
-        public record Response(String result, String message) {}
     }
-}
 
+}

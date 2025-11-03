@@ -1,4 +1,12 @@
-package io.agentscope.runtime.sandbox.tools.utils;
+package io.agentscope.runtime.engine.agents.saa.tools;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.logging.Logger;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,9 +15,6 @@ import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
-
-import java.util.*;
-import java.util.logging.Logger;
 
 public class McpConfigConverter {
 

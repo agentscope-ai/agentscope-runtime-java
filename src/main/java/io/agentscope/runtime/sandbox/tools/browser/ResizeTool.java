@@ -15,27 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.browser;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class ResizeTool extends SandboxTool {
+public class ResizeTool extends BrowserSandboxTool {
+
+    Logger logger = Logger.getLogger(ResizeTool.class.getName());
 
     public ResizeTool() {
         super("browser_resize", "browser", "Resize the browser window");
@@ -67,67 +59,18 @@ public class ResizeTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String browser_resize(Double width, Double height, String userID, String sessionID) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new WindowResizer()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(WindowResizer.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class WindowResizer implements BiFunction<WindowResizer.Request, ToolContext, WindowResizer.Response> {
-
-        Logger logger = Logger.getLogger(WindowResizer.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            String result = browser_resize(request.width, request.height, userID, sessionID);
-            return new Response(result, "Browser resize completed");
-        }
-
-        private String browser_resize(Double width, Double height, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
-                    return browserSandbox.resize(width, height);
-                }
-                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
                 return browserSandbox.resize(width, height);
-            } catch (Exception e) {
-                String errorMsg = "Browser Resize Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
+            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            return browserSandbox.resize(width, height);
+        } catch (Exception e) {
+            String errorMsg = "Browser Resize Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
-
-        public record Request(
-                @JsonProperty(required = true, value = "width")
-                @JsonPropertyDescription("Width of the browser window")
-                Double width,
-                @JsonProperty(required = true, value = "height")
-                @JsonPropertyDescription("Height of the browser window")
-                Double height
-        ) { }
-
-        @JsonClassDescription("The result contains browser tool output and message")
-        public record Response(String result, String message) {}
     }
 }
-

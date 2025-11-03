@@ -105,7 +105,7 @@ public class McpCallRunnerStreamTest {
                     .build();
 
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(reactAgent)
+                    .agent(reactAgent)
                     .build();
 
             runner.registerAgent(saaAgent);

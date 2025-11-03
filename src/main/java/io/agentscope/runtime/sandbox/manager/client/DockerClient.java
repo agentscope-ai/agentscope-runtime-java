@@ -19,7 +19,6 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
-import io.agentscope.runtime.sandbox.manager.model.container.DockerProp;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;

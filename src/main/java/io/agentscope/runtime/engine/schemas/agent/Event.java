@@ -1,9 +1,5 @@
 package io.agentscope.runtime.engine.schemas.agent;
 
-import java.lang.Error;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * Event base class
@@ -73,15 +69,6 @@ public class Event {
      */
     public Event completed() {
         this.status = RunStatus.COMPLETED;
-        return this;
-    }
-    
-    /**
-     * Set to failed status
-     */
-    public Event failed(Error error) {
-        this.status = RunStatus.FAILED;
-        this.error = error;
         return this;
     }
     

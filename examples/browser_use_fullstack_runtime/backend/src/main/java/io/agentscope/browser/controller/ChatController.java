@@ -1,6 +1,7 @@
 package io.agentscope.browser.controller;
 
 import io.agentscope.browser.agent.AgentscopeBrowseruseAgent;
+import io.agentscope.runtime.engine.schemas.agent.Content;
 import io.agentscope.runtime.engine.schemas.agent.DataContent;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import org.slf4j.Logger;
@@ -45,32 +46,33 @@ public class ChatController {
             return Flux.error(new IllegalArgumentException("No messages provided"));
         }
 
-        String lastToolName = "";
-
         return agent.chat(messages)
-                .flatMap(itemList -> {
-                    if (itemList == null || itemList.isEmpty()) {
+                .flatMap(message -> {
+                    if (message == null || message.getContent() == null || message.getContent().isEmpty()) {
                         return Flux.just(simpleYield("", "content"));
                     }
 
-                    Object item = itemList.get(0);
-                    String response = "";
+                    List<Content> contentList = message.getContent();
+                    StringBuilder responseBuilder = new StringBuilder();
 
-                    if (item instanceof TextContent textContent) {
-                        response = textContent.getText();
-                    } else if (item instanceof DataContent dataContent) {
-                        Map<String, Object> data = dataContent.getData();
-                        if (data != null && data.containsKey("name")) {
-                            String toolName = String.valueOf(data.get("name"));
-                            // Avoid duplicate tool call messages
-                            if (!toolName.equals(lastToolName)) {
-                                response = "I will use the tool: " + toolName;
+                    for (Content item : contentList) {
+                        if (item instanceof TextContent textContent) {
+                            String text = textContent.getText();
+                            if (text != null && !text.isEmpty()) {
+                                responseBuilder.append(text);
+                            }
+                        } else if (item instanceof DataContent dataContent) {
+                            Map<String, Object> data = dataContent.getData();
+                            if (data != null && data.containsKey("name")) {
+                                String toolName = String.valueOf(data.get("name"));
+                                responseBuilder.append("Using tool: ").append(toolName).append("\n");
                             }
                         }
                     }
 
-                    if (response != null && !response.isEmpty()) {
-                        return Flux.just(simpleYield(response + "\n", "content"));
+                    String response = responseBuilder.toString();
+                    if (!response.isEmpty()) {
+                        return Flux.just(simpleYield(response, "content"));
                     } else {
                         return Flux.just(simpleYield("", "content"));
                     }

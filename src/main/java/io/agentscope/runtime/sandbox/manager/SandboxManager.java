@@ -406,7 +406,22 @@ public class SandboxManager implements AutoCloseable {
             baseHost = "localhost";
             accessPort = mappedPorts[0];
         }
-        ContainerModel containerModel = ContainerModel.builder().sessionId(sessionId).containerId(containerId).containerName(containerName).baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort)).browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken)).frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken)).clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID)).artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort)).ports(mappedPorts).mountDir(mountDir).storagePath(storagePath).runtimeToken(runtimeToken).authToken(runtimeToken).version(imageName).build();
+        ContainerModel containerModel = ContainerModel.builder()
+                .sessionId(sessionId)
+                .containerId(containerId)
+                .containerName(containerName)
+                .baseUrl(String.format("http://%s:%s/fastapi", baseHost, accessPort))
+                .browserUrl(String.format("http://%s:%s/steel-api/%s", baseHost, accessPort, runtimeToken))
+                .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, runtimeToken))
+                .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, runtimeToken, BROWSER_SESSION_ID))
+                .artifactsSIO(String.format("http://%s:%s/v1", baseHost, accessPort))
+                .ports(mappedPorts)
+                .mountDir(mountDir)
+                .storagePath(storagePath)
+                .runtimeToken(runtimeToken)
+                .authToken(runtimeToken)
+                .version(imageName)
+                .build();
         containerClient.startContainer(containerId);
         return containerModel;
     }

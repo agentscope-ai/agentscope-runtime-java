@@ -9,7 +9,7 @@ This Java backend provides the same HTTP API endpoints as the Python version, al
 ## Project Structure
 
 ```
-backend_java/
+backend/
 ├── src/
 │   └── main/
 │       ├── java/
@@ -57,7 +57,7 @@ mvn clean install -DskipTests
 Then build this backend:
 
 ```bash
-cd examples/browser_use_fullstack_runtime/backend_java
+cd examples/browser_use_fullstack_runtime/backend
 mvn clean package
 ```
 

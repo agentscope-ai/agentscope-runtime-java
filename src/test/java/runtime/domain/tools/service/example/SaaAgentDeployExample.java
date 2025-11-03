@@ -88,7 +88,7 @@ public class SaaAgentDeployExample {
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(reactAgent)
+                    .agent(reactAgent)
                     .build();
 
             runner.registerAgent(saaAgent);

@@ -1,10 +1,12 @@
 package io.agentscope.browser.agent;
 
+import com.alibaba.cloud.ai.agent.Agent;
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.exception.GraphStateException;
+
 import io.agentscope.browser.constants.Prompts;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
@@ -15,10 +17,10 @@ import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHi
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.agent.DataContent;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.ToolsInit;
 import org.slf4j.Logger;
@@ -27,7 +29,6 @@ import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -123,6 +124,37 @@ public class AgentscopeBrowseruseAgent {
             throw new RuntimeException("DASHSCOPE_API_KEY or AI_DASHSCOPE_API_KEY environment variable not set");
         }
 
+        // Create SaaAgent
+        agent = SaaAgent.builder()
+                .agent(createOrignalAgentBuilder(apiKey))
+                .build();
+
+        // Initialize runner
+//        runner = new Runner(agent);
+        runner = new Runner(agent, contextManager);
+//        runner = new Runner(agent, contextManager, environmentManager);
+
+        // Get browser WebSocket URL
+        try {
+            // Connect to browser sandbox
+            ContainerModel sandboxInfo = Runner.getSandboxManager().getSandbox(SandboxType.BROWSER, USER_ID, SESSION_ID);
+
+            if (sandboxInfo != null ) {
+                browserWebSocketUrl = sandboxInfo.getFrontBrowserWS();
+                logger.info("Browser WebSocket URL: {}", browserWebSocketUrl);
+            } else {
+                browserWebSocketUrl = "";
+                logger.warn("No browser WebSocket URL found");
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to get browser WebSocket URL: {}", e.getMessage());
+            browserWebSocketUrl = "";
+        }
+
+        logger.info("AgentscopeBrowseruseAgent initialized successfully");
+    }
+
+    private com.alibaba.cloud.ai.graph.agent.Builder createOrignalAgentBuilder(String apiKey) throws GraphStateException {
         DashScopeApi dashScopeApi = DashScopeApi.builder()
                 .apiKey(apiKey)
                 .build();
@@ -137,37 +169,7 @@ public class AgentscopeBrowseruseAgent {
                 .tools(tools)
                 .model(chatModel)
                 .systemPrompt(Prompts.SYSTEM_PROMPT);
-
-        ReactAgent reactAgent = builder.build();
-
-        // Create SaaAgent
-        agent = SaaAgent.builder()
-                .agentBuilder(reactAgent)
-                .build();
-
-        // Initialize runner
-        runner = new Runner(contextManager);
-        runner.registerAgent(agent);
-
-        // Get browser WebSocket URL
-        try {
-            // Connect to browser sandbox
-            Map<String, Object> sandboxInfo = Runner.getSandboxManager()
-                    .getSandboxInfo(SESSION_ID, USER_ID, SandboxType.BROWSER);
-
-            if (sandboxInfo != null && sandboxInfo.containsKey("front_browser_ws")) {
-                browserWebSocketUrl = (String) sandboxInfo.get("front_browser_ws");
-                logger.info("Browser WebSocket URL: {}", browserWebSocketUrl);
-            } else {
-                browserWebSocketUrl = "";
-                logger.warn("No browser WebSocket URL found");
-            }
-        } catch (Exception e) {
-            logger.warn("Failed to get browser WebSocket URL: {}", e.getMessage());
-            browserWebSocketUrl = "";
-        }
-
-        logger.info("AgentscopeBrowseruseAgent initialized successfully");
+        return builder;
     }
 
     /**
@@ -175,7 +177,7 @@ public class AgentscopeBrowseruseAgent {
      * @param chatMessages List of chat messages
      * @return Flux of response messages
      */
-    public Flux<List<Object>> chat(List<Map<String, String>> chatMessages) {
+    public Flux<Message> chat(List<Map<String, String>> chatMessages) {
         // Convert chat messages to agent request format
         List<Message> convertedMessages = new ArrayList<>();
 
@@ -202,14 +204,7 @@ public class AgentscopeBrowseruseAgent {
         // Transform events to message content
         return eventStream
                 .filter(event -> event instanceof Message)
-                .map(event -> {
-                    Message message = (Message) event;
-                    if (message.getContent() != null && !message.getContent().isEmpty()) {
-                        return message.getContent();
-                    }
-                    return List.of();
-                })
-                .filter(content -> !content.isEmpty());
+                .map(event -> (Message) event);
     }
 
     /**

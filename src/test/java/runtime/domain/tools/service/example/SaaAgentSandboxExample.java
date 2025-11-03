@@ -100,7 +100,7 @@ public class SaaAgentSandboxExample {
 
                 // Create SaaAgent using the ReactAgent Builder
                 SaaAgent saaAgent = SaaAgent.builder()
-                        .agentBuilder(builder.build())
+                        .agent(builder.build())
                         .build();
 
                 runner.registerAgent(saaAgent);

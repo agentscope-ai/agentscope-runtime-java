@@ -1,7 +1,10 @@
 package io.agentscope.runtime.engine;
 
+import io.agentscope.runtime.engine.agents.BaseAgent;
 import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.*;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import reactor.core.publisher.Flux;
@@ -17,46 +20,29 @@ import java.util.concurrent.CompletableFuture;
 
 public class Runner implements AutoCloseable {
 
+    // FIXME
     private static volatile Runner defaultRunner;
-
-    private static volatile SandboxManager SHARED_SANDBOX_MANAGER;
 
     private Agent agent;
     private ContextManager contextManager;
+    private EnvironmentManager environmentManager;
 
     // Todo: The current stream property has been completely set to true
     private final boolean stream = true;
-    private ManagerConfig managerConfig;
 
-    public static SandboxManager getSandboxManager() {
-        if (SHARED_SANDBOX_MANAGER == null) {
-            synchronized (Runner.class) {
-                if (SHARED_SANDBOX_MANAGER == null) {
-                    SHARED_SANDBOX_MANAGER = new SandboxManager();
-                }
-            }
-        }
-        return SHARED_SANDBOX_MANAGER;
-    }
-
-    public void registerManagerConfig(ManagerConfig managerConfig) {
-        this.managerConfig = managerConfig;
-        SHARED_SANDBOX_MANAGER= new SandboxManager(managerConfig);
-    }
-
-    public ManagerConfig getManagerClient() {
-        return this.managerConfig;
-    }
-
-
-    public Runner(ContextManager contextManager) {
-        this.contextManager = contextManager;
-        SHARED_SANDBOX_MANAGER = new SandboxManager();
+    public Runner(BaseAgent agent, ContextManager contextManager, EnvironmentManager environmentManager) {
+        this.agent = agent;
+        this.contextManager = contextManager == null ? new ContextManager() : contextManager;
+        this.environmentManager = environmentManager;
         defaultRunner = this;
     }
 
-    public Runner() {
-        this(null);
+    public Runner(BaseAgent agent, ContextManager contextManager) {
+        this(agent, contextManager , null);
+    }
+
+    public Runner(BaseAgent agent) {
+        this(agent, null);
     }
 
     public static Runner getRunner(){
@@ -118,6 +104,8 @@ public class Runner implements AutoCloseable {
                 context.setSession(session);
                 context.setRequest(request);
                 context.setAgent(this.agent);
+                context.setContextManager(this.contextManager);
+                context.setEnvironmentManager(this.environmentManager);
 
                 if (request.getInput() != null && !request.getInput().isEmpty()) {
                     context.setCurrentMessages(request.getInput());

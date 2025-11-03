@@ -18,22 +18,17 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class WaitForTool extends SandboxTool {
+public class WaitForTool extends BrowserSandboxTool {
+
+    Logger logger = Logger.getLogger(WaitForTool.class.getName());
 
     public WaitForTool() {
         super("browser_wait_for", "browser", "Wait for a condition in the browser");
@@ -67,75 +62,39 @@ public class WaitForTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String browser_wait_for(Double time, String text, String textGone, String userID, String sessionID) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new WaitExecutor()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(WaitExecutor.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class WaitExecutor implements BiFunction<WaitExecutor.Request, ToolContext, WaitExecutor.Response> {
-
-        Logger logger = Logger.getLogger(WaitExecutor.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            String result = browser_wait_for(request.time, request.text, request.textGone, userID, sessionID);
-            return new Response(result, "Browser wait_for completed");
-        }
-
-        private String browser_wait_for(Double time, String text, String textGone, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
-                    return browserSandbox.waitFor(time, text, textGone);
-                }
-                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
                 return browserSandbox.waitFor(time, text, textGone);
-            } catch (Exception e) {
-                String errorMsg = "Browser Wait For Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
+            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            return browserSandbox.waitFor(time, text, textGone);
+        } catch (Exception e) {
+            String errorMsg = "Browser Wait For Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
-
-        public record Request(
-                @JsonProperty("time") @JsonPropertyDescription("time in seconds") Double time,
-                @JsonProperty("text") String text,
-                @JsonProperty("textGone") String textGone
-        ) {
-            public Request {
-                if (time == null) {
-                    time = 0.0;
-                }
-                if (text == null) {
-                    text = "";
-                }
-                if (textGone == null) {
-                    textGone = "";
-                }
-            }
-        }
-
-        @JsonClassDescription("The result contains browser tool output and message")
-        public record Response(String result, String message) {}
     }
+
+    public record Request(
+            @JsonProperty("time") @JsonPropertyDescription("time in seconds") Double time,
+            @JsonProperty("text") String text,
+            @JsonProperty("textGone") String textGone
+    ) {
+        public Request {
+            if (time == null) {
+                time = 0.0;
+            }
+            if (text == null) {
+                text = "";
+            }
+            if (textGone == null) {
+                textGone = "";
+            }
+        }
+    }
+
+    @JsonClassDescription("The result contains browser tool output and message")
+    public record Response(String result, String message) {}
 }

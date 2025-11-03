@@ -119,7 +119,7 @@ public class SaaAgentExample {
 
                 // Create SaaAgent using the ReactAgent Builder
                 SaaAgent saaAgent = SaaAgent.builder()
-                        .agentBuilder(llmRoutingAgent)
+                        .agent(llmRoutingAgent)
                         .build();
 
                 runner.registerAgent(saaAgent);

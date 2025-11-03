@@ -1,0 +1,96 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.agentscope.runtime.engine.agents.saa.tools.browser;
+
+import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.tool.metadata.ToolMetadata;
+
+import java.util.logging.Logger;
+
+import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
+import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.tools.browser.NetworkRequestsTool;
+import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
+
+public class BrowserNetworkRequestsRetriever implements SandboxAwareTool<BrowserNetworkRequestsRetriever.Request, BrowserNetworkRequestsRetriever.Response> {
+	Logger logger = Logger.getLogger(BrowserNetworkRequestsRetriever.class.getName());
+	private NetworkRequestsTool networkRequestsTool;
+
+	public BrowserNetworkRequestsRetriever() {
+		this.networkRequestsTool = new NetworkRequestsTool();
+	}
+
+	@Override
+	public Response apply(Request request, ToolContext toolContext) {
+		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
+		String userID = userAndSession[0];
+		String sessionID = userAndSession[1];
+
+		String result = networkRequestsTool.browser_network_requests(userID, sessionID);
+		return new Response(result, "Browser network requests completed");
+	}
+
+	@Override
+	public SandboxManager getSandboxManager() {
+		return networkRequestsTool.getSandboxManager();
+	}
+
+	@Override
+	public void setSandboxManager(SandboxManager sandboxManager) {
+		this.networkRequestsTool.setSandboxManager(sandboxManager);
+	}
+
+	@Override
+	public Sandbox getSandbox() {
+		return this.networkRequestsTool.getSandbox();
+	}
+
+	@Override
+	public void setSandbox(Sandbox sandbox) {
+		this.networkRequestsTool.setSandbox(sandbox);
+	}
+
+	public record Request() { }
+
+	@JsonClassDescription("The result contains browser tool output and message")
+	public record Response(String result, String message) {}
+
+	public RuntimeFunctionToolCallback buildTool() {
+		ObjectMapper mapper = new ObjectMapper();
+		String inputSchema = "";
+		try {
+			inputSchema = mapper.writeValueAsString(networkRequestsTool.getSchema());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return RuntimeFunctionToolCallback
+				.builder(
+						networkRequestsTool.getName(),
+						new BrowserNetworkRequestsRetriever()
+				).description(networkRequestsTool.getDescription())
+				.inputSchema(
+						inputSchema
+				).inputType(BrowserNetworkRequestsRetriever.Request.class)
+				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
+				.build();
+	}
+}
