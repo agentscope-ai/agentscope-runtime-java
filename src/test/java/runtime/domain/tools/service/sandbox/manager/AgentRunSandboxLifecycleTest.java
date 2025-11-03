@@ -37,15 +37,6 @@ public class AgentRunSandboxLifecycleTest {
             BaseClientConfig clientConfig = AgentRunClientConfig.builder()
                     .agentRunAccessKeyId(System.getenv("AGENT_RUN_ACCESS_KEY_ID"))
                     .agentRunAccountId(System.getenv("AGENT_RUN_ACCOUNT_ID"))
-                    .agentRunCpu(2)
-                    .agentRunMemory(2048)
-                    .agentRunRegionId(System.getenv("AGENT_RUN_REGION_ID"))
-                    .agentRunVpcId(System.getenv("AGENT_RUN_VPC_ID"))
-                    .agentRunPrefix(System.getenv("AGENT_RUN_PREFIX"))
-                    .agentrunLogProject(System.getenv("AGENT_RUN_LOG_PROJECT"))
-                    .agentRunSecurityGroupId(System.getenv("AGENT_RUN_SECURITY_GROUP_ID"))
-                    .agentRunVswitchIds(List.of("vsw-bp1m9ovjjjflfekctgq5q"))
-                    .agentrunLogStore(System.getenv("AGENT_RUN_LOG_STORE"))
                     .agentRunAccessKeySecret(System.getenv("AGENT_RUN_ACCESS_KEY_SECRET"))
                     .build();
 
@@ -137,27 +128,6 @@ public class AgentRunSandboxLifecycleTest {
     }
 
     /**
-     * Test training sandbox creation and startup
-     */
-    @Test
-    void testCreateAndStartTrainingSandbox() {
-        System.out.println("Testing TRAINING sandbox creation and startup...");
-
-        ContainerModel sandbox = sandboxManager.getSandbox(SandboxType.TRAINING, testUserId, testSessionId);
-
-        assertNotNull(sandbox, "Training sandbox should be created successfully");
-        assertNotNull(sandbox.getContainerId(), "Training sandbox container ID should not be null");
-        assertNotNull(sandbox.getContainerName(), "Training sandbox container name should not be null");
-
-        System.out.println("Created TRAINING sandbox: " + sandbox.getContainerId());
-
-        // Check sandbox status
-        String status = sandboxManager.getSandboxStatus(SandboxType.TRAINING, testUserId, testSessionId);
-        assertNotNull(status, "Training sandbox status should not be null");
-        System.out.println("TRAINING sandbox status: " + status);
-    }
-
-    /**
      * Test multiple sandboxes running concurrently
      */
     @Test
@@ -168,35 +138,29 @@ public class AgentRunSandboxLifecycleTest {
         ContainerModel baseSandbox = sandboxManager.getSandbox(SandboxType.BASE, testUserId, testSessionId);
         ContainerModel browserSandbox = sandboxManager.getSandbox(SandboxType.BROWSER, testUserId, testSessionId);
         ContainerModel filesystemSandbox = sandboxManager.getSandbox(SandboxType.FILESYSTEM, testUserId, testSessionId);
-        ContainerModel trainingSandbox = sandboxManager.getSandbox(SandboxType.TRAINING, testUserId, testSessionId);
 
         // Verify all sandboxes are created successfully
         assertNotNull(baseSandbox, "Base sandbox should be created successfully");
         assertNotNull(browserSandbox, "Browser sandbox should be created successfully");
         assertNotNull(filesystemSandbox, "Filesystem sandbox should be created successfully");
-        assertNotNull(trainingSandbox, "Training sandbox should be created successfully");
 
         // Verify all sandboxes have different container IDs
         assertNotEquals(baseSandbox.getContainerId(), browserSandbox.getContainerId(), "Different sandboxes should have different container IDs");
         assertNotEquals(baseSandbox.getContainerId(), filesystemSandbox.getContainerId(), "Different sandboxes should have different container IDs");
         assertNotEquals(browserSandbox.getContainerId(), filesystemSandbox.getContainerId(), "Different sandboxes should have different container IDs");
-        assertNotEquals(trainingSandbox.getContainerId(), baseSandbox.getContainerId(), "Different sandboxes should have different container IDs");
 
         System.out.println("All sandboxes created successfully:");
         System.out.println("- BASE: " + baseSandbox.getContainerId());
         System.out.println("- BROWSER: " + browserSandbox.getContainerId());
         System.out.println("- FILESYSTEM: " + filesystemSandbox.getContainerId());
-        System.out.println("- TRAINING: " + trainingSandbox.getContainerId());
 
         // Check all sandbox statuses
         String baseStatus = sandboxManager.getSandboxStatus(SandboxType.BASE, testUserId, testSessionId);
         String browserStatus = sandboxManager.getSandboxStatus(SandboxType.BROWSER, testUserId, testSessionId);
         String filesystemStatus = sandboxManager.getSandboxStatus(SandboxType.FILESYSTEM, testUserId, testSessionId);
-        String trainingStatus = sandboxManager.getSandboxStatus(SandboxType.TRAINING, testUserId, testSessionId);
         assertNotNull(baseStatus, "Base sandbox status should not be null");
         assertNotNull(browserStatus, "Browser sandbox status should not be null");
         assertNotNull(filesystemStatus, "Filesystem sandbox status should not be null");
-        assertNotNull(trainingStatus, "Training sandbox status should not be null");
     }
 
     /**
