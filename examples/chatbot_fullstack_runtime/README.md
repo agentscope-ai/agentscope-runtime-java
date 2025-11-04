@@ -24,7 +24,7 @@ It contains following features:
 ├── backend                           # Python backend directory (original implementation)
 ├── backend                           # Backend directory, contains server-side scripts and logic
 │   ├── agent_server.py               # Script implementing agent-related server functionalities
-├── backend_java                      # Java backend directory (alternative implementation)
+├── backend                           # Java backend directory (alternative implementation)
 │   ├── src/main/java/                # Java source code
 │   │   └── io/agentscope/chatbot/
 │   │       ├── AgentServerApplication.java      # Agent service main class
@@ -38,7 +38,7 @@ It contains following features:
 │   ├── run-agent.sh                  # Start agent server script
 │   ├── run-web.sh                    # Start web server script
 │   └── README.md                     # Java backend documentation
-├── backend_java                      # Java backend directory (alternative implementation)
+├── backend                           # Java backend directory (alternative implementation)
 │   ├── src/main/java/                # Java source code
 │   │   └── io/agentscope/chatbot/
 │   │       ├── AgentServerApplication.java      # Agent service main class

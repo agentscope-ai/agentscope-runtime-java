@@ -2,6 +2,7 @@ package runtime.domain.tools.service.engine.agent;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
@@ -71,20 +72,17 @@ public class RunnerStreamTest {
     @Test
     public void testStreamRunner() {
         System.out.println("=== Start Stream Runner Test ===");
-        Runner runner = new Runner(contextManager);
-
         try {
-            ReactAgent reactAgent = ReactAgent.builder()
+            Builder builder = ReactAgent.builder()
                     .name("saa Agent")
                     .description("saa Agent")
-                    .model(chatModel)
-                    .build();
+                    .model(chatModel);
 
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(reactAgent)
+                    .agent(builder)
                     .build();
 
-            runner.registerAgent(saaAgent);
+            Runner runner = new Runner(saaAgent, contextManager);
 
             AgentRequest request = createAgentRequest("Please write a prose about West Lake", null, null);
 

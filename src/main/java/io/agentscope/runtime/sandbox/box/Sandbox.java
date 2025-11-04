@@ -91,7 +91,7 @@ public abstract class Sandbox implements AutoCloseable {
     }
     
     public ContainerModel getInfo() {
-        return managerApi.getInfo(sandboxId, userId, sessionId);
+        return managerApi.getInfo(sandboxId);
     }
     
     public Map<String, Object> listTools(String toolType) {

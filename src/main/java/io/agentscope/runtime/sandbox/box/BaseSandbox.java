@@ -24,7 +24,7 @@ import java.util.Map;
 
 
 @RegisterSandbox(
-        imageName = "agentscope/runtime-sandbox-base:latest",
+        imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest",
         sandboxType = SandboxType.BASE,
         securityLevel = "medium",
         timeout = 30,

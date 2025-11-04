@@ -15,26 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.browser;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.HashMap;
-import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
 /**
  * Browser back navigation tool
  */
-public class NavigateBackTool extends SandboxTool {
+public class NavigateBackTool extends BrowserSandboxTool {
+
+    Logger logger = Logger.getLogger(NavigateBackTool.class.getName());
 
     public NavigateBackTool() {
         super("browser_navigate_back", "browser", "Navigate back in browser history");
@@ -50,59 +43,18 @@ public class NavigateBackTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String browser_navigate_back(String userID, String sessionID) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new BackNavigator()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(BackNavigator.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class BackNavigator implements BiFunction<BackNavigator.Request, ToolContext, BackNavigator.Response> {
-
-        Logger logger = Logger.getLogger(BackNavigator.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            String result = browser_navigate_back(userID, sessionID);
-            return new Response(result, "Browser navigate back completed");
-        }
-
-        private String browser_navigate_back(String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
-                    return browserSandbox.navigateBack();
-                }
-                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
                 return browserSandbox.navigateBack();
-            } catch (Exception e) {
-                String errorMsg = "Browser Navigate Back Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
+            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            return browserSandbox.navigateBack();
+        } catch (Exception e) {
+            String errorMsg = "Browser Navigate Back Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
-
-        public record Request() { }
-
-        @JsonClassDescription("The result contains browser tool output and message")
-        public record Response(String result, String message) {}
     }
 }

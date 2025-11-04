@@ -5,6 +5,7 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
+
 import org.springframework.ai.tool.ToolCallback;
 
 import java.util.List;
