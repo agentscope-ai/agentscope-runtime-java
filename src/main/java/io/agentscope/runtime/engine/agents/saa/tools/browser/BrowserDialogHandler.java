@@ -39,11 +39,7 @@ public class BrowserDialogHandler extends BaseSandboxAwareTool<HandleDialogTool,
 
 	@Override
 	public HandleDialogToolResponse apply(HandleDialogToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_handle_dialog(request.accept, request.promptText, userID, sessionID);
+		String result = sandboxTool.browser_handle_dialog(request.accept, request.promptText);
 		return new HandleDialogToolResponse(new Response(result, "Browser handle dialog completed"));
 	}
 

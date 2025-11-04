@@ -39,11 +39,7 @@ public class FsFileInfoRetriever extends BaseSandboxAwareTool<GetFileInfoTool, F
 
 	@Override
 	public GetFileInfoToolResponse apply(GetFileInfoToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_get_file_info(request.path, userID, sessionID);
+		String result = sandboxTool.fs_get_file_info(request.path);
 		return new GetFileInfoToolResponse(new Response(result, "Filesystem get_file_info completed"));
 	}
 

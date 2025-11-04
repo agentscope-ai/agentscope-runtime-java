@@ -53,13 +53,12 @@ public class DirectoryTreeTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_directory_tree(String path, String userID, String sessionID) {
+    public String fs_directory_tree(String path) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.directoryTree(path);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.directoryTree(path);
+            throw new RuntimeException("Only FilesystemSandbox supported in directory tree tool");
         } catch (Exception e) {
             String errorMsg = "Directory Tree Error: " + e.getMessage();
             logger.severe(errorMsg);

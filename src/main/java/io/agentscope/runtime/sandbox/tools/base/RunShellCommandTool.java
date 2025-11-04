@@ -53,16 +53,15 @@ public class RunShellCommandTool extends BaseSandboxTool {
         return this;
     }
 
-    public String run_shell_command(String command, String userID, String sessionID) {
+    public String run_shell_command(String command) {
         try {
             logger.info("Run Shell Command: " + command);
-            if (sandbox != null && sandbox instanceof BaseSandbox baseSandbox) {
-                return baseSandbox.runShellCommand(command);
+            if(sandbox instanceof BaseSandbox baseSandbox){
+                String result = baseSandbox.runShellCommand(command);
+                logger.info("Execute Result: " + result);
+                return result;
             }
-            BaseSandbox baseSandbox = new BaseSandbox(sandboxManager, userID, sessionID);
-            String result = baseSandbox.runShellCommand(command);
-            logger.info("Execute Result: " + result);
-            return result;
+            throw new RuntimeException("Only BaseSandbox supported in run shell command tool");
         } catch (Exception e) {
             String errorMsg = "Run Shell Command Error: " + e.getMessage();
             logger.severe(errorMsg);

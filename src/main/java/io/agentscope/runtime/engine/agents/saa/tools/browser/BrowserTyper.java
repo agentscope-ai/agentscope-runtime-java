@@ -38,11 +38,7 @@ public class BrowserTyper extends BaseSandboxAwareTool<TypeTool, BrowserTyper.Ty
 
 	@Override
 	public TypeToolResponse apply(TypeToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_type(request.element, request.ref, request.text, request.submit, request.slowly, userID, sessionID);
+		String result = sandboxTool.browser_type(request.element, request.ref, request.text, request.submit, request.slowly);
 		return new TypeToolResponse(new Response(result, "Browser type completed"));
 	}
 

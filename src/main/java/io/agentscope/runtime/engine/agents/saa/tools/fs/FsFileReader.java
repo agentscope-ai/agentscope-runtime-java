@@ -39,11 +39,7 @@ public class FsFileReader extends BaseSandboxAwareTool<ReadFileTool, FsFileReade
 
 	@Override
 	public ReadFileToolResponse apply(ReadFileToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_read_file(request.path, userID, sessionID);
+		String result = sandboxTool.fs_read_file(request.path);
 		return new ReadFileToolResponse(new Response(result, "Filesystem read_file completed"));
 	}
 

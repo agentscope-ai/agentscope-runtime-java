@@ -53,13 +53,12 @@ public class GetFileInfoTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_get_file_info(String path, String userID, String sessionID) {
+    public String fs_get_file_info(String path) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.getFileInfo(path);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.getFileInfo(path);
+            throw new RuntimeException("Only FilesystemSandbox supported in get file info tool");
         } catch (Exception e) {
             String errorMsg = "Get File Info Error: " + e.getMessage();
             logger.severe(errorMsg);

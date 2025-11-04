@@ -49,13 +49,12 @@ public class TabNewTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_tab_new(String url, String userID, String sessionID) {
+    public String browser_tab_new(String url) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.tabNew(url);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.tabNew(url);
+            throw new RuntimeException("Only BrowserSandbox supported in browser tab new tool");
         } catch (Exception e) {
             String errorMsg = "Browser Tab New Error: " + e.getMessage();
             logger.severe(errorMsg);

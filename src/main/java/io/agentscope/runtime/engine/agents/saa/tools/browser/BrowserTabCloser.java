@@ -39,11 +39,7 @@ public class BrowserTabCloser extends BaseSandboxAwareTool<TabCloseTool, Browser
 
 	@Override
 	public TabCloseToolResponse apply(TabCloseToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_tab_close(request.index, userID, sessionID);
+		String result = sandboxTool.browser_tab_close(request.index);
 		return new TabCloseToolResponse(new Response(result, "Browser tab_close completed"));
 	}
 

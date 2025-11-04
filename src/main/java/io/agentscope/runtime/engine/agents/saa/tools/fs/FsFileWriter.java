@@ -39,11 +39,7 @@ public class FsFileWriter extends BaseSandboxAwareTool<WriteFileTool, FsFileWrit
 
 	@Override
 	public WriteFileToolResponse apply(WriteFileToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_write_file(request.path, request.content, userID, sessionID);
+		String result = sandboxTool.fs_write_file(request.path, request.content);
 		return new WriteFileToolResponse(new Response(result, "Filesystem write_file completed"));
 	}
 

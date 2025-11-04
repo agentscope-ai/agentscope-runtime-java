@@ -39,11 +39,7 @@ public class BrowserKeyPresser extends BaseSandboxAwareTool<PressKeyTool, Browse
 
 	@Override
 	public PressKeyToolResponse apply(PressKeyToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_press_key(request.key, userID, sessionID);
+		String result = sandboxTool.browser_press_key(request.key);
 		return new PressKeyToolResponse(new Response(result, "Browser press key completed"));
 	}
 

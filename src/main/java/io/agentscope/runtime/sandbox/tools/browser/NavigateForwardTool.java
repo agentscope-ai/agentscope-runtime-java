@@ -43,13 +43,12 @@ public class NavigateForwardTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_navigate_forward(String userID, String sessionID) {
+    public String browser_navigate_forward() {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.navigateForward();
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.navigateForward();
+            throw new RuntimeException("Only BrowserSandbox supported in browser navigate forward tool");
         } catch (Exception e) {
             String errorMsg = "Browser Navigate Forward Error: " + e.getMessage();
             logger.severe(errorMsg);

@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.base.RunShellCommandTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BaseShellRunner extends BaseSandboxAwareTool<RunShellCommandTool, BaseShellRunner.RunShellCommandToolRequest, BaseShellRunner.RunShellCommandToolResponse> {
 	Logger logger = Logger.getLogger(BaseShellRunner.class.getName());
@@ -39,11 +38,7 @@ public class BaseShellRunner extends BaseSandboxAwareTool<RunShellCommandTool, B
 
 	@Override
 	public RunShellCommandToolResponse apply(RunShellCommandToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.run_shell_command(request.command, userID, sessionID);
+		String result = sandboxTool.run_shell_command(request.command);
 		return new RunShellCommandToolResponse(new Response(result, "Shell execution completed"));
 	}
 

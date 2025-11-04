@@ -67,13 +67,12 @@ public class SelectOptionTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_select_option(String element, String ref, String[] values, String userID, String sessionID) {
+    public String browser_select_option(String element, String ref, String[] values) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.selectOption(element, ref, values);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.selectOption(element, ref, values);
+            throw new RuntimeException("Only BrowserSandbox supported in browser select option tool");
         } catch (Exception e) {
             String errorMsg = "Browser Select Option Error: " + e.getMessage();
             logger.severe(errorMsg);

@@ -72,13 +72,12 @@ public class DragTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_drag(String startElement, String startRef, String endElement, String endRef, String userID, String sessionID) {
+    public String browser_drag(String startElement, String startRef, String endElement, String endRef) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.drag(startElement, startRef, endElement, endRef);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.drag(startElement, startRef, endElement, endRef);
+            throw new RuntimeException("Only BrowserSandbox supported in browser drag tool");
         } catch (Exception e) {
             String errorMsg = "Browser Drag Error: " + e.getMessage();
             logger.severe(errorMsg);

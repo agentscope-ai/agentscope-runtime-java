@@ -49,13 +49,12 @@ public class TabCloseTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_tab_close(Integer index, String userID, String sessionID) {
+    public String browser_tab_close(Integer index) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.tabClose(index);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.tabClose(index);
+            throw new RuntimeException("Only BrowserSandbox supported in browser tab close tool");
         } catch (Exception e) {
             String errorMsg = "Browser Tab Close Error: " + e.getMessage();
             logger.severe(errorMsg);

@@ -62,13 +62,12 @@ public class WaitForTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_wait_for(Double time, String text, String textGone, String userID, String sessionID) {
+    public String browser_wait_for(Double time, String text, String textGone) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.waitFor(time, text, textGone);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.waitFor(time, text, textGone);
+            throw new RuntimeException("Only BrowserSandbox supported in browser wait for tool");
         } catch (Exception e) {
             String errorMsg = "Browser Wait For Error: " + e.getMessage();
             logger.severe(errorMsg);

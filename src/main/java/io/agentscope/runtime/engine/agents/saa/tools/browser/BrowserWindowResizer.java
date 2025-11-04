@@ -39,11 +39,7 @@ public class BrowserWindowResizer extends BaseSandboxAwareTool<ResizeTool, Brows
 
 	@Override
 	public ResizeToolResponse apply(ResizeToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_resize(request.width, request.height, userID, sessionID);
+		String result = sandboxTool.browser_resize(request.width, request.height);
 		return new ResizeToolResponse(new Response(result, "Browser resize completed"));
 	}
 

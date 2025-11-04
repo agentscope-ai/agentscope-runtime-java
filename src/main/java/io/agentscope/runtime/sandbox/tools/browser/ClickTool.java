@@ -59,15 +59,16 @@ public class ClickTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_click(String element, String ref, String userID, String sessionID) {
+    public String browser_click(String element, String ref) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.click(element, ref);
             }
-            throw new Exception("Sandbox is not properly initialized or is not a BrowserSandbox.");
+            throw new RuntimeException("Only BrowserSandbox supported in browser click tool");
         } catch (Exception e) {
             String errorMsg = "Browser Click Error: " + e.getMessage();
             logger.severe(errorMsg);
+            e.printStackTrace();
             return errorMsg;
         }
     }

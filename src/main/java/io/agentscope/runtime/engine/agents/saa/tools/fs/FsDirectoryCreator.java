@@ -39,11 +39,7 @@ public class FsDirectoryCreator extends BaseSandboxAwareTool<CreateDirectoryTool
 
 	@Override
 	public CreateDirectoryToolResponse apply(CreateDirectoryToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_create_directory(request.path, userID, sessionID);
+		String result = sandboxTool.fs_create_directory(request.path);
 		return new CreateDirectoryToolResponse(new Response(result, "Filesystem create_directory completed"));
 	}
 

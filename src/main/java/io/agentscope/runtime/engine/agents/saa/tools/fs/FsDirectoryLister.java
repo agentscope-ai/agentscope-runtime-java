@@ -39,11 +39,7 @@ public class FsDirectoryLister extends BaseSandboxAwareTool<ListDirectoryTool, F
 
 	@Override
 	public ListDirectoryToolResponse apply(ListDirectoryToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_list_directory(request.path, userID, sessionID);
+		String result = sandboxTool.fs_list_directory(request.path);
 		return new ListDirectoryToolResponse(new Response(result, "Filesystem list_directory completed"));
 	}
 

@@ -38,11 +38,7 @@ public class BrowserSnapshotTaker extends BaseSandboxAwareTool<SnapshotTool, Bro
 
 	@Override
 	public SnapshotToolResponse apply(SnapshotToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_snapshot(userID, sessionID);
+		String result = sandboxTool.browser_snapshot();
 		return new SnapshotToolResponse(new Response(result, "Browser snapshot completed"));
 	}
 

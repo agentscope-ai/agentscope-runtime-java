@@ -59,13 +59,12 @@ public class WriteFileTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_write_file(String path, String content, String userID, String sessionID) {
+    public String fs_write_file(String path, String content) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.writeFile(path, content);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.writeFile(path, content);
+            throw new RuntimeException("Only FilesystemSandbox supported in write file tool");
         } catch (Exception e) {
             String errorMsg = "Write File Error: " + e.getMessage();
             logger.severe(errorMsg);

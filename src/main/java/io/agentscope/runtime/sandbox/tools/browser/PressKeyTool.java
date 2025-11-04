@@ -57,13 +57,12 @@ public class PressKeyTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_press_key(String key, String userID, String sessionID) {
+    public String browser_press_key(String key) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.pressKey(key);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.pressKey(key);
+            throw new RuntimeException("Only BrowserSandbox supported in browser press key tool");
         } catch (Exception e) {
             String errorMsg = "Browser Press Key Error: " + e.getMessage();
             logger.severe(errorMsg);

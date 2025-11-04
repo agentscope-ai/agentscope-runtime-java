@@ -75,9 +75,7 @@ public class AgentScopeAgentExample {
      */
     public CompletableFuture<Void> basicExample() {
         System.out.println("=== Basic SaaAgent Example ===");
-        ManagerConfig managerConfig = ManagerConfig.builder()
-                .baseUrl("http://localhost:10001")
-                .build();
+        ManagerConfig managerConfig = ManagerConfig.builder().build();
 
         SandboxManager sandboxManager = new SandboxManager(managerConfig);
         EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);

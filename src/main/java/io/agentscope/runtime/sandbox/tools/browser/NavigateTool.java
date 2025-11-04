@@ -54,13 +54,12 @@ public class NavigateTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_navigate(String url, String userID, String sessionID) {
+    public String browser_navigate(String url) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.navigate(url);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.navigate(url);
+            throw new RuntimeException("Only BrowserSandbox supported in browser navigate tool");
         } catch (Exception e) {
             String errorMsg = "Browser Navigate Error: " + e.getMessage();
             logger.severe(errorMsg);

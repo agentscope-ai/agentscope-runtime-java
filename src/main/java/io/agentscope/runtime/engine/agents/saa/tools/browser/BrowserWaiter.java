@@ -39,11 +39,7 @@ public class BrowserWaiter extends BaseSandboxAwareTool<WaitForTool, BrowserWait
 
 	@Override
 	public WaitForToolResponse apply(WaitForToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_wait_for(request.time, request.text, request.textGone, userID, sessionID);
+		String result = sandboxTool.browser_wait_for(request.time, request.text, request.textGone);
 		return new WaitForToolResponse(new Response(result, "Browser wait_for completed"));
 	}
 

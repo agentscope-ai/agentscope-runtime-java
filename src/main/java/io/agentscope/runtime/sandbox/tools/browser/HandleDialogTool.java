@@ -62,13 +62,12 @@ public class HandleDialogTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_handle_dialog(Boolean accept, String promptText, String userID, String sessionID) {
+    public String browser_handle_dialog(Boolean accept, String promptText) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.handleDialog(accept, promptText);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.handleDialog(accept, promptText);
+            throw new RuntimeException("Only BrowserSandbox supported in browser handle dialog tool");
         } catch (Exception e) {
             String errorMsg = "Browser Handle Dialog Error: " + e.getMessage();
             logger.severe(errorMsg);

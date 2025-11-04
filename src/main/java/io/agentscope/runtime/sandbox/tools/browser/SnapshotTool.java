@@ -40,13 +40,12 @@ public class SnapshotTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_snapshot(String userID, String sessionID) {
+    public String browser_snapshot() {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.snapshot();
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.snapshot();
+            throw new RuntimeException("Only BrowserSandbox supported in browser snapshot tool");
         } catch (Exception e) {
             String errorMsg = "Browser Snapshot Error: " + e.getMessage();
             logger.severe(errorMsg);

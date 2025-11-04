@@ -53,13 +53,12 @@ public class ReadFileTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_read_file(String path, String userID, String sessionID) {
+    public String fs_read_file(String path) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.readFile(path);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.readFile(path);
+            throw new RuntimeException("Only FilesystemSandbox supported in read file tool");
         } catch (Exception e) {
             String errorMsg = "Read File Error: " + e.getMessage();
             logger.severe(errorMsg);

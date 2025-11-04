@@ -39,13 +39,12 @@ public class CloseTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_close(String userID, String sessionID) {
+    public String browser_close() {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.closeBrowser();
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.closeBrowser();
+            throw new RuntimeException("Only BrowserSandbox supported in browser close tool");
         } catch (Exception e) {
             String errorMsg = "Browser Close Error: " + e.getMessage();
             logger.severe(errorMsg);

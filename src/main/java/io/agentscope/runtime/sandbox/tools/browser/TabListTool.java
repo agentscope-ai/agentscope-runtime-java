@@ -43,13 +43,12 @@ public class TabListTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_tab_list(String userID, String sessionID) {
+    public String browser_tab_list() {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.tabList();
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.tabList();
+            throw new RuntimeException("Only BrowserSandbox supported in browser tab list tool");
         } catch (Exception e) {
             String errorMsg = "Browser Tab List Error: " + e.getMessage();
             logger.severe(errorMsg);

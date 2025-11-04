@@ -62,13 +62,12 @@ public class HoverTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_hover(String element, String ref, String userID, String sessionID) {
+    public String browser_hover(String element, String ref) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.hover(element, ref);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.hover(element, ref);
+            throw new RuntimeException("Only BrowserSandbox supported in browser hover tool");
         } catch (Exception e) {
             String errorMsg = "Browser Hover Error: " + e.getMessage();
             logger.severe(errorMsg);

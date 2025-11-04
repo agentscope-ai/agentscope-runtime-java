@@ -39,11 +39,7 @@ public class BrowserClicker extends BaseSandboxAwareTool<ClickTool, BrowserClick
 
 	@Override
 	public ClickToolResponse apply(ClickToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_click(request.element, request.ref, userID, sessionID);
+		String result = sandboxTool.browser_click(request.element, request.ref);
 		return new ClickToolResponse(new Response(result, "Browser click completed"));
 	}
 

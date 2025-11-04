@@ -57,13 +57,12 @@ public class FileUploadTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_file_upload(String[] paths, String userID, String sessionID) {
+    public String browser_file_upload(String[] paths) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.fileUpload(paths);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.fileUpload(paths);
+            throw new RuntimeException("Only BrowserSandbox supported in browser file upload tool");
         } catch (Exception e) {
             String errorMsg = "Browser File Upload Error: " + e.getMessage();
             logger.severe(errorMsg);

@@ -39,11 +39,7 @@ public class FsAllowedDirectoriesLister extends BaseSandboxAwareTool<ListAllowed
 
 	@Override
 	public ListAllowedDirectoriesToolResponse apply(ListAllowedDirectoriesToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_list_allowed_directories(userID, sessionID);
+		String result = sandboxTool.fs_list_allowed_directories();
 		return new ListAllowedDirectoriesToolResponse(new Response(result, "Filesystem list_allowed_directories completed"));
 	}
 

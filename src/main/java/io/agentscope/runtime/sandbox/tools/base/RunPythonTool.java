@@ -38,14 +38,12 @@ public class RunPythonTool extends BaseSandboxTool {
         return this;
     }
 
-    public String run_ipython_cell(String code, String userID, String sessionID) {
+    public String run_ipython_cell(String code) {
         try {
-            if (sandbox != null && sandbox instanceof BaseSandbox baseSandbox) {
+            if(sandbox instanceof BaseSandbox baseSandbox){
                 return baseSandbox.runIpythonCell(code);
             }
-            BaseSandbox baseSandbox = new BaseSandbox(sandboxManager, userID, sessionID);
-            return baseSandbox.runIpythonCell(code);
-
+            throw new RuntimeException("Only BaseSandbox supported in run python tool");
         } catch (Exception e) {
             String errorMsg = "Run Python Code Error: " + e.getMessage();
             logger.severe(errorMsg);

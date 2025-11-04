@@ -59,13 +59,12 @@ public class ResizeTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_resize(Double width, Double height, String userID, String sessionID) {
+    public String browser_resize(Double width, Double height) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.resize(width, height);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.resize(width, height);
+            throw new RuntimeException("Only BrowserSandbox supported in browser resize tool");
         } catch (Exception e) {
             String errorMsg = "Browser Resize Error: " + e.getMessage();
             logger.severe(errorMsg);

@@ -40,11 +40,7 @@ public class FsFileEditor extends BaseSandboxAwareTool<EditFileTool, FsFileEdito
 
 	@Override
 	public EditFileToolResponse apply(EditFileToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_edit_file(request.path, request.edits, userID, sessionID);
+		String result = sandboxTool.fs_edit_file(request.path, request.edits);
 		return new EditFileToolResponse(new Response(result, "Filesystem edit_file completed"));
 	}
 

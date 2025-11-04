@@ -39,11 +39,7 @@ public class BrowserOptionSelector extends BaseSandboxAwareTool<SelectOptionTool
 
 	@Override
 	public SelectOptionToolResponse apply(SelectOptionToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_select_option(request.element, request.ref, request.values, userID, sessionID);
+		String result = sandboxTool.browser_select_option(request.element, request.ref, request.values);
 		return new SelectOptionToolResponse(new Response(result, "Browser select option completed"));
 	}
 

@@ -43,13 +43,12 @@ public class NavigateBackTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_navigate_back(String userID, String sessionID) {
+    public String browser_navigate_back() {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.navigateBack();
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.navigateBack();
+            throw new RuntimeException("Only BrowserSandbox supported in browser navigate back tool");
         } catch (Exception e) {
             String errorMsg = "Browser Navigate Back Error: " + e.getMessage();
             logger.severe(errorMsg);

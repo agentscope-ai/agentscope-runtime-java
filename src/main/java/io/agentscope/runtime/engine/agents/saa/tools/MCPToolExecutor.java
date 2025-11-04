@@ -28,7 +28,6 @@ import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class MCPToolExecutor extends BaseSandboxAwareTool<MCPTool, Map<String, Object>, MCPToolExecutor.MCPToolResponse> {
 	private static final Logger logger = Logger.getLogger(MCPToolExecutor.class.getName());
@@ -53,12 +52,8 @@ public class MCPToolExecutor extends BaseSandboxAwareTool<MCPTool, Map<String, O
 
 	@Override
 	public MCPToolResponse apply(Map<String, Object> arguments, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
 		try {
-			String result = sandboxTool.executeMCPTool(arguments, userID, sessionID);
+			String result = sandboxTool.executeMCPTool(arguments);
 			return new MCPToolResponse(result, "MCP tool execution completed");
 		} catch (Exception e) {
 			logger.severe("MCP tool execution error: " + e.getMessage());

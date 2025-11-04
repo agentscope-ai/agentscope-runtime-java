@@ -63,13 +63,12 @@ public class TakeScreenshotTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_take_screenshot(Boolean raw, String filename, String element, String ref, String userID, String sessionID) {
+    public String browser_take_screenshot(Boolean raw, String filename, String element, String ref) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.takeScreenshot(raw, filename, element, ref);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.takeScreenshot(raw, filename, element, ref);
+            throw new RuntimeException("Only BrowserSandbox supported in browser take screenshot tool");
         } catch (Exception e) {
             String errorMsg = "Browser Take Screenshot Error: " + e.getMessage();
             logger.severe(errorMsg);

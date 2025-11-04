@@ -38,11 +38,7 @@ public class BrowserConsoleMessagesRetriever extends BaseSandboxAwareTool<Consol
 
 	@Override
 	public ConsoleMessagesToolResponse apply(ConsoleMessagesToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_console_messages(userID, sessionID);
+		String result = sandboxTool.browser_console_messages();
 		return new ConsoleMessagesToolResponse(new Response(result, "success"));
 	}
 

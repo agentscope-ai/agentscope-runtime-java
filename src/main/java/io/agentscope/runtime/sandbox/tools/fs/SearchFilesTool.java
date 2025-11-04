@@ -64,13 +64,12 @@ public class SearchFilesTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_search_files(String path, String pattern, String[] excludePatterns, String userID, String sessionID) {
+    public String fs_search_files(String path, String pattern, String[] excludePatterns) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.searchFiles(path, pattern, excludePatterns);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.searchFiles(path, pattern, excludePatterns);
+            throw new RuntimeException("Only FilesystemSandbox supported in search files tool");
         } catch (Exception e) {
             String errorMsg = "Search Files Error: " + e.getMessage();
             logger.severe(errorMsg);

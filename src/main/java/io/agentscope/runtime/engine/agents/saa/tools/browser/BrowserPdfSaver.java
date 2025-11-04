@@ -39,11 +39,7 @@ public class BrowserPdfSaver extends BaseSandboxAwareTool<PdfSaveTool, BrowserPd
 
 	@Override
 	public PdfSaveToolResponse apply(PdfSaveToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_pdf_save(request.filename, userID, sessionID);
+		String result = sandboxTool.browser_pdf_save(request.filename);
 		return new PdfSaveToolResponse(new Response(result, "Browser PDF save completed"));
 	}
 

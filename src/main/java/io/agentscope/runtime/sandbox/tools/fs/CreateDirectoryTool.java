@@ -53,13 +53,12 @@ public class CreateDirectoryTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_create_directory(String path, String userID, String sessionID) {
+    public String fs_create_directory(String path) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.createDirectory(path);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.createDirectory(path);
+            throw new RuntimeException("Only FilesystemSandbox supported in create directory tool");
         } catch (Exception e) {
             String errorMsg = "Create Directory Error: " + e.getMessage();
             logger.severe(errorMsg);

@@ -38,11 +38,7 @@ public class BrowserTabLister extends BaseSandboxAwareTool<TabListTool, BrowserT
 
 	@Override
 	public TabListToolResponse apply(TabListToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_tab_list(userID, sessionID);
+		String result = sandboxTool.browser_tab_list();
 		return new TabListToolResponse(new Response(result, "Browser tab list completed"));
 	}
 

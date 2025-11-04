@@ -59,13 +59,12 @@ public class MoveFileTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_move_file(String source, String destination, String userID, String sessionID) {
+    public String fs_move_file(String source, String destination) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.moveFile(source, destination);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.moveFile(source, destination);
+            throw new RuntimeException("Only FilesystemSandbox supported in move file tool");
         } catch (Exception e) {
             String errorMsg = "Move File Error: " + e.getMessage();
             logger.severe(errorMsg);

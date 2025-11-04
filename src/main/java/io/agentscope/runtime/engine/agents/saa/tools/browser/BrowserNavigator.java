@@ -39,11 +39,7 @@ public class BrowserNavigator extends BaseSandboxAwareTool<NavigateTool, Browser
 
 	@Override
 	public NavigateToolResponse apply(NavigateToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_navigate(request.url, userID, sessionID);
+		String result = sandboxTool.browser_navigate(request.url);
 		return new NavigateToolResponse(new Response(result, "Browser navigate completed"));
 	}
 

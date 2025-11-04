@@ -40,13 +40,12 @@ public class ConsoleMessagesTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_console_messages(String userID, String sessionID) {
+    public String browser_console_messages() {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.consoleMessages();
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.consoleMessages();
+            throw new RuntimeException("Only BrowserSandbox supported in browser console messages tool");
         } catch (Exception e) {
             String errorMsg = "Browser Console Messages Error: " + e.getMessage();
             logger.severe(errorMsg);

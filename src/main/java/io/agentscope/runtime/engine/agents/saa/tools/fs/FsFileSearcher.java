@@ -39,11 +39,7 @@ public class FsFileSearcher extends BaseSandboxAwareTool<SearchFilesTool, FsFile
 
 	@Override
 	public SearchFilesToolResponse apply(SearchFilesToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_search_files(request.path, request.pattern, request.excludePatterns, userID, sessionID);
+		String result = sandboxTool.fs_search_files(request.path, request.pattern, request.excludePatterns);
 		return new SearchFilesToolResponse(new Response(result, "Filesystem search_files completed"));
 	}
 

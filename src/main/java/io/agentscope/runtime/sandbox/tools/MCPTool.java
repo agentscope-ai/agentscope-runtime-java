@@ -16,8 +16,6 @@
 package io.agentscope.runtime.sandbox.tools;
 
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.BrowserSandbox;
-import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
@@ -66,12 +64,12 @@ public class MCPTool extends SandboxTool {
         this.serverConfigs = serverConfigs;
     }
 
-    public String executeMCPTool(Map<String, Object> arguments, String userID, String sessionID) {
+    public String executeMCPTool(Map<String, Object> arguments) {
         logger.info(String.format("Executing MCP tool '%s' with arguments: %s",
                 mcpToolName, arguments));
 
         if (sandbox == null) {
-            sandbox = createSandbox(userID, sessionID);
+            throw new RuntimeException("Sandbox is not properly initialized for MCP tool");
         }
 
         sandbox.addMcpServers(serverConfigs, false);
@@ -80,14 +78,6 @@ public class MCPTool extends SandboxTool {
 
         logger.info(String.format("MCP tool '%s' execution result: %s", mcpToolName, result));
         return result;
-    }
-
-    private Sandbox createSandbox(String userID, String sessionID) {
-        try {
-            return MCPTool.SandboxFactory.createSandbox(sandboxType, sandboxManager, userID, sessionID);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create sandbox for MCP tool", e);
-        }
     }
 
     @Override
@@ -111,42 +101,6 @@ public class MCPTool extends SandboxTool {
 
         this.sandbox = sandbox;
         return this;
-    }
-
-    private static class SandboxFactory {
-        static Sandbox createSandbox(SandboxType type, SandboxManager manager,
-                String userID, String sessionID) {
-            return switch (type) {
-                case BASE -> createBaseSandbox(manager, userID, sessionID);
-                case BROWSER -> createBrowserSandbox(manager, userID, sessionID);
-                case FILESYSTEM -> createFilesystemSandbox(manager, userID, sessionID);
-                default -> throw new IllegalArgumentException("Unsupported sandbox type: " + type);
-            };
-        }
-
-        private static Sandbox createBaseSandbox(SandboxManager manager, String userID, String sessionID) {
-            try {
-                return new BaseSandbox(manager, userID, sessionID);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create BaseSandbox", e);
-            }
-        }
-
-        private static Sandbox createBrowserSandbox(SandboxManager manager, String userID, String sessionID) {
-            try {
-                return new BrowserSandbox(manager, userID, sessionID);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create BrowserSandbox", e);
-            }
-        }
-
-        private static Sandbox createFilesystemSandbox(SandboxManager manager, String userID, String sessionID) {
-            try {
-                return new FilesystemSandbox(manager, userID, sessionID);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create FilesystemSandbox", e);
-            }
-        }
     }
 
 }

@@ -44,13 +44,12 @@ public class ListAllowedDirectoriesTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_list_allowed_directories(String userID, String sessionID) {
+    public String fs_list_allowed_directories() {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.listAllowedDirectories();
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.listAllowedDirectories();
+            throw new RuntimeException("Only FilesystemSandbox supported in list allowed directories tool");
         } catch (Exception e) {
             String errorMsg = "List Allowed Directories Error: " + e.getMessage();
             logger.severe(errorMsg);

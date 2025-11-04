@@ -39,11 +39,7 @@ public class BrowserFileUploader extends BaseSandboxAwareTool<FileUploadTool, Br
 
 	@Override
 	public FileUploadToolResponse apply(FileUploadToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_file_upload(request.paths, userID, sessionID);
+		String result = sandboxTool.browser_file_upload(request.paths);
 		return new FileUploadToolResponse(new Response(result, "Browser file upload completed"));
 	}
 

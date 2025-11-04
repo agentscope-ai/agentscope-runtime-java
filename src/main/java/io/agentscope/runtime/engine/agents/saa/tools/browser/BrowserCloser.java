@@ -38,11 +38,7 @@ public class BrowserCloser extends BaseSandboxAwareTool<CloseTool, BrowserCloser
 
 	@Override
 	public CloseToolResponse apply(CloseToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_close(userID, sessionID);
+		String result = sandboxTool.browser_close();
 		return new CloseToolResponse(new Response(result, "Browser close completed"));
 	}
 

@@ -38,11 +38,7 @@ public class BrowserScreenshotTaker extends BaseSandboxAwareTool<TakeScreenshotT
 
 	@Override
 	public TakeScreenshotToolResponse apply(TakeScreenshotToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_take_screenshot(request.raw, request.filename, request.element, request.ref, userID, sessionID);
+		String result = sandboxTool.browser_take_screenshot(request.raw, request.filename, request.element, request.ref);
 		return new TakeScreenshotToolResponse(new Response(result, "Browser take_screenshot completed"));
 	}
 

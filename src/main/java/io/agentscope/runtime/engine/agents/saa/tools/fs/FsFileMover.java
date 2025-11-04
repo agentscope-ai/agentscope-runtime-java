@@ -39,11 +39,7 @@ public class FsFileMover extends BaseSandboxAwareTool<MoveFileTool, FsFileMover.
 
 	@Override
 	public MoveFileToolResponse apply(MoveFileToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_move_file(request.source, request.destination, userID, sessionID);
+		String result = sandboxTool.fs_move_file(request.source, request.destination);
 		return new MoveFileToolResponse(new Response(result, "Filesystem move_file completed"));
 	}
 

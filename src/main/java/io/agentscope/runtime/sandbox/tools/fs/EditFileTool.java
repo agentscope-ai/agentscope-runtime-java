@@ -59,13 +59,12 @@ public class EditFileTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_edit_file(String path, Map<String, Object>[] edits, String userID, String sessionID) {
+    public String fs_edit_file(String path, Map<String, Object>[] edits) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.editFile(path, edits);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.editFile(path, edits);
+            throw new RuntimeException("Only FilesystemSandbox supported in edit file tool");
         } catch (Exception e) {
             String errorMsg = "Edit File Error: " + e.getMessage();
             logger.severe(errorMsg);

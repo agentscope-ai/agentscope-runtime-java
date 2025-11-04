@@ -74,13 +74,12 @@ public class TypeTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_type(String element, String ref, String text, Boolean submit, Boolean slowly, String userID, String sessionID) {
+    public String browser_type(String element, String ref, String text, Boolean submit, Boolean slowly) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.type(element, ref, text, submit, slowly);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.type(element, ref, text, submit, slowly);
+            throw new RuntimeException("Only BrowserSandbox supported in browser type tool");
         } catch (Exception e) {
             String errorMsg = "Browser Type Error: " + e.getMessage();
             logger.severe(errorMsg);

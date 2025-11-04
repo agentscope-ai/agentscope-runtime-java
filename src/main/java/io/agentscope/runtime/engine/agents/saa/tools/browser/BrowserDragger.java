@@ -39,11 +39,7 @@ public class BrowserDragger extends BaseSandboxAwareTool<DragTool, BrowserDragge
 
 	@Override
 	public DragToolResponse apply(DragToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_drag(request.startElement, request.startRef, request.endElement, request.endRef, userID, sessionID);
+		String result = sandboxTool.browser_drag(request.startElement, request.startRef, request.endElement, request.endRef);
 		return new DragToolResponse(new Response(result, "Browser drag completed"));
 	}
 

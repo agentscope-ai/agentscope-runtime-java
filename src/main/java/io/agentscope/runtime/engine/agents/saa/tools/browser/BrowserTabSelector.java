@@ -39,11 +39,7 @@ public class BrowserTabSelector extends BaseSandboxAwareTool<TabSelectTool, Brow
 
 	@Override
 	public TabSelectToolResponse apply(TabSelectToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_tab_select(request.index, userID, sessionID);
+		String result = sandboxTool.browser_tab_select(request.index);
 		return new TabSelectToolResponse(new Response(result, "Browser tab_select completed"));
 	}
 

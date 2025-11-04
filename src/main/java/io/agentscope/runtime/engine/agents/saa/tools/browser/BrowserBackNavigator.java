@@ -38,11 +38,7 @@ public class BrowserBackNavigator extends BaseSandboxAwareTool<NavigateBackTool,
 
 	@Override
 	public NavigateBackToolResponse apply(NavigateBackToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_navigate_back(userID, sessionID);
+		String result = sandboxTool.browser_navigate_back();
 		return new NavigateBackToolResponse(new Response(result, "Browser navigate back completed"));
 	}
 

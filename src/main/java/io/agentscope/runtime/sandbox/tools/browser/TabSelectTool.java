@@ -54,13 +54,12 @@ public class TabSelectTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_tab_select(Integer index, String userID, String sessionID) {
+    public String browser_tab_select(Integer index) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.tabSelect(index);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.tabSelect(index);
+            throw new RuntimeException("Only BrowserSandbox supported in browser tab select tool");
         } catch (Exception e) {
             String errorMsg = "Browser Tab Select Error: " + e.getMessage();
             logger.severe(errorMsg);

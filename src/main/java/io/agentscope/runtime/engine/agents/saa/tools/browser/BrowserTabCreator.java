@@ -39,11 +39,7 @@ public class BrowserTabCreator extends BaseSandboxAwareTool<TabNewTool, BrowserT
 
 	@Override
 	public TabNewToolResponse apply(TabNewToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_tab_new(request.url, userID, sessionID);
+		String result = sandboxTool.browser_tab_new(request.url);
 		return new TabNewToolResponse(new Response(result, "Browser tab_new completed"));
 	}
 

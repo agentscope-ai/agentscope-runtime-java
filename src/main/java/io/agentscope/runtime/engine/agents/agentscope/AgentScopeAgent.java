@@ -2,20 +2,25 @@ package io.agentscope.runtime.engine.agents.agentscope;
 
 import io.agentscope.core.agent.Agent;
 import io.agentscope.core.message.*;
+import io.agentscope.core.tool.AgentTool;
+import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.agents.AgentCallback;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
+import io.agentscope.runtime.engine.agents.agentscope.tools.AgentScopeSandboxAwareTool;
 import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.RunStatus;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.engine.schemas.context.Context;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.tools.SandboxTool;
 import reactor.core.publisher.Flux;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.lang.reflect.Field;
+import java.util.*;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -25,7 +30,7 @@ import java.util.logging.Logger;
  */
 public class AgentScopeAgent extends BaseAgent {
     private static final Logger logger = Logger.getLogger(AgentScopeAgent.class.getName());
-    
+
     private Agent agentScopeAgent;
     private Function<Context, Msg> contextAdapter;
     private Function<Msg, String> responseProcessor;
@@ -48,6 +53,7 @@ public class AgentScopeAgent extends BaseAgent {
         public void initialize() {
             this.memory = adaptMemory();
             this.newMessage = adaptNewMessage();
+            setupTools();
         }
 
         /**
@@ -56,7 +62,7 @@ public class AgentScopeAgent extends BaseAgent {
         private List<Msg> adaptMemory() {
             List<Msg> messages = new ArrayList<>();
             List<Message> sessionMessages = context.getSession().getMessages();
-            
+
             for (int i = 0; i < sessionMessages.size() - 1; i++) {
                 Message msg = sessionMessages.get(i);
                 Msg agentscopeMsg = convertToAgentScopeMsg(msg);
@@ -64,7 +70,7 @@ public class AgentScopeAgent extends BaseAgent {
                     messages.add(agentscopeMsg);
                 }
             }
-            
+
             return messages;
         }
 
@@ -75,13 +81,13 @@ public class AgentScopeAgent extends BaseAgent {
             if (!context.getCurrentMessages().isEmpty()) {
                 return convertToAgentScopeMsg(context.getCurrentMessages().get(0));
             }
-            
+
             List<Message> sessionMessages = context.getSession().getMessages();
             if (!sessionMessages.isEmpty()) {
                 Message lastMessage = sessionMessages.get(sessionMessages.size() - 1);
                 return convertToAgentScopeMsg(lastMessage);
             }
-            
+
             return null;
         }
 
@@ -99,7 +105,7 @@ public class AgentScopeAgent extends BaseAgent {
             }
 
             Msg.Builder builder = Msg.builder().role(role);
-            
+
             // Convert content blocks
             if (message.getContent() != null && !message.getContent().isEmpty()) {
                 List<ContentBlock> contentBlocks = new ArrayList<>();
@@ -152,6 +158,108 @@ public class AgentScopeAgent extends BaseAgent {
 
         public Agent getAgentScopeAgent() {
             return agentScopeAgent;
+        }
+
+        /**
+         * Setup tools with sandbox support
+         * Similar to SAA's setupTools() method, but adapted for AgentScope's Toolkit
+         * Supports both SandboxTool instances and BaseSandboxToolAdapter instances
+         */
+        private void setupTools() {
+            try {
+                // Try to get toolkit from agent using reflection
+                Field toolkitField = findFieldInHierarchy(agentScopeAgent.getClass(), "toolkit");
+                if (toolkitField == null) {
+                    return;
+                }
+
+                toolkitField.setAccessible(true);
+                Object toolkitObject = toolkitField.get(agentScopeAgent);
+
+                if (toolkitObject == null) {
+                    return;
+                }
+
+                if (toolkitObject instanceof Toolkit toolkit) {
+                    Set<String> toolNames = toolkit.getToolNames();
+                    List<AgentTool> tools = new ArrayList<>();
+                    for (String toolName : toolNames) {
+                        AgentTool tool = toolkit.getTool(toolName);
+                        if (tool != null) {
+                            tools.add(tool);
+                        }
+                    }
+
+                    boolean enableSandbox = false;
+                    for (Object tool : tools) {
+                        if (tool instanceof AgentScopeSandboxAwareTool) {
+                            enableSandbox = true;
+                            break;
+                        }
+                    }
+
+                    if (enableSandbox) {
+                        if (context.getEnvironmentManager() == null) {
+                            throw new IllegalStateException("EnvironmentManager cannot be null when SandboxAwareTool is present");
+                        }
+
+                        SandboxManager sandboxManager = context.getEnvironmentManager().getSandboxManager();
+                        if (sandboxManager == null) {
+                            throw new IllegalStateException("SandboxManager cannot be null when SandboxAwareTool is present");
+                        }
+
+                        String sessionId = context.getSession().getId();
+                        String userId = context.getSession().getUserId();
+
+                        for (Object tool : tools){
+                            if(tool instanceof AgentScopeSandboxAwareTool sandboxToolAdapter){
+                                SandboxTool sandboxTool = sandboxToolAdapter.getSandboxTool();
+                                Class<?> sandboxClass = sandboxTool.getSandboxClass();
+                                if(sandboxClass == null){
+                                    throw new IllegalStateException("SandboxClass cannot be null for AgentScopeSandboxAwareTool: " + tool.getClass().getName());
+                                }
+                                Sandbox sandbox = (Sandbox) sandboxClass.getConstructor(
+                                        SandboxManager.class,
+                                        String.class,
+                                        String.class
+                                ).newInstance(sandboxManager, userId, sessionId);
+
+                                sandboxTool.setSandboxManager(sandboxManager);
+                                sandboxTool.setSandbox(sandbox);
+                            }
+                        }
+                    }
+
+                }
+
+            } catch (Exception e) {
+                // Re-throw runtime exceptions
+                if (e instanceof RuntimeException) {
+                    throw (RuntimeException) e;
+                }
+                throw new RuntimeException("Error setting up tools: " + e.getMessage(), e);
+            }
+        }
+
+        /**
+         * Recursively find a field in the class hierarchy (including parent classes)
+         *
+         * @param clazz     The class to start searching from
+         * @param fieldName The name of the field to find
+         * @return The Field object if found, null otherwise
+         */
+        private Field findFieldInHierarchy(Class<?> clazz, String fieldName) {
+            Class<?> currentClass = clazz;
+            while (currentClass != null) {
+                try {
+                    return currentClass.getDeclaredField(fieldName);
+                } catch (NoSuchFieldException e) {
+                    // Field not found in current class, try parent class
+                    currentClass = currentClass.getSuperclass();
+                }
+            }
+            // Field not found in entire hierarchy
+            return null;
         }
     }
 
@@ -218,75 +326,75 @@ public class AgentScopeAgent extends BaseAgent {
 
                 if (stream) {
                     agentScopeAgent.call(userMsg)
-                        .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
-                        .subscribe(
-                            result -> {
-                                try {
-                                    // If streaming was configured via Hook, chunks were already emitted
-                                    // Here we emit the final message
-                                    String finalContent = responseProcessor.apply(result);
-                                    if (finalContent != null && !finalContent.isEmpty()) {
-                                        TextContent textContent = new TextContent();
-                                        textContent.setText(finalContent);
-                                        textContent.setDelta(false);
-                                        textMessage.setContent(List.of(textContent));
+                            .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                            .subscribe(
+                                    result -> {
+                                        try {
+                                            // If streaming was configured via Hook, chunks were already emitted
+                                            // Here we emit the final message
+                                            String finalContent = responseProcessor.apply(result);
+                                            if (finalContent != null && !finalContent.isEmpty()) {
+                                                TextContent textContent = new TextContent();
+                                                textContent.setText(finalContent);
+                                                textContent.setDelta(false);
+                                                textMessage.setContent(List.of(textContent));
+                                            }
+                                            textMessage.setStatus(RunStatus.COMPLETED);
+                                            sink.next(textMessage);
+                                            sink.complete();
+                                        } catch (Exception e) {
+                                            logger.severe("Error processing streaming response: " + e.getMessage());
+                                            sink.error(e);
+                                        }
+                                    },
+                                    error -> {
+                                        logger.severe("Agent call error: " + error.getMessage());
+                                        Message errorMessage = new Message();
+                                        errorMessage.setType(MessageType.MESSAGE.name());
+                                        errorMessage.setRole("assistant");
+                                        errorMessage.setStatus(RunStatus.FAILED);
+                                        TextContent errorContent = new TextContent();
+                                        errorContent.setText("Error: " + error.getMessage());
+                                        errorMessage.setContent(List.of(errorContent));
+                                        sink.next(errorMessage);
+                                        sink.error(error);
                                     }
-                                    textMessage.setStatus(RunStatus.COMPLETED);
-                                    sink.next(textMessage);
-                                    sink.complete();
-                                } catch (Exception e) {
-                                    logger.severe("Error processing streaming response: " + e.getMessage());
-                                    sink.error(e);
-                                }
-                            },
-                            error -> {
-                                logger.severe("Agent call error: " + error.getMessage());
-                                Message errorMessage = new Message();
-                                errorMessage.setType(MessageType.MESSAGE.name());
-                                errorMessage.setRole("assistant");
-                                errorMessage.setStatus(RunStatus.FAILED);
-                                TextContent errorContent = new TextContent();
-                                errorContent.setText("Error: " + error.getMessage());
-                                errorMessage.setContent(List.of(errorContent));
-                                sink.next(errorMessage);
-                                sink.error(error);
-                            }
-                        );
+                            );
 
                 } else {
                     // Non-streaming: call agent and wait for result
                     agentScopeAgent.call(userMsg)
-                        .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
-                        .subscribe(
-                            result -> {
-                                try {
-                                    String content = responseProcessor.apply(result);
-                                    
-                                    TextContent textContent = new TextContent();
-                                    textContent.setText(content);
-                                    textContent.setDelta(false);
-                                    textMessage.setContent(List.of(textContent));
-                                    textMessage.setStatus(RunStatus.COMPLETED);
-                                    sink.next(textMessage);
-                                    sink.complete();
-                                } catch (Exception e) {
-                                    logger.severe("Error processing response: " + e.getMessage());
-                                    sink.error(e);
-                                }
-                            },
-                            error -> {
-                                logger.severe("Agent call error: " + error.getMessage());
-                                Message errorMessage = new Message();
-                                errorMessage.setType(MessageType.MESSAGE.name());
-                                errorMessage.setRole("assistant");
-                                errorMessage.setStatus(RunStatus.FAILED);
-                                TextContent errorContent = new TextContent();
-                                errorContent.setText("Error: " + error.getMessage());
-                                errorMessage.setContent(List.of(errorContent));
-                                sink.next(errorMessage);
-                                sink.error(error);
-                            }
-                        );
+                            .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                            .subscribe(
+                                    result -> {
+                                        try {
+                                            String content = responseProcessor.apply(result);
+
+                                            TextContent textContent = new TextContent();
+                                            textContent.setText(content);
+                                            textContent.setDelta(false);
+                                            textMessage.setContent(List.of(textContent));
+                                            textMessage.setStatus(RunStatus.COMPLETED);
+                                            sink.next(textMessage);
+                                            sink.complete();
+                                        } catch (Exception e) {
+                                            logger.severe("Error processing response: " + e.getMessage());
+                                            sink.error(e);
+                                        }
+                                    },
+                                    error -> {
+                                        logger.severe("Agent call error: " + error.getMessage());
+                                        Message errorMessage = new Message();
+                                        errorMessage.setType(MessageType.MESSAGE.name());
+                                        errorMessage.setRole("assistant");
+                                        errorMessage.setStatus(RunStatus.FAILED);
+                                        TextContent errorContent = new TextContent();
+                                        errorContent.setText("Error: " + error.getMessage());
+                                        errorMessage.setContent(List.of(errorContent));
+                                        sink.next(errorMessage);
+                                        sink.error(error);
+                                    }
+                            );
                 }
 
             } catch (Exception e) {

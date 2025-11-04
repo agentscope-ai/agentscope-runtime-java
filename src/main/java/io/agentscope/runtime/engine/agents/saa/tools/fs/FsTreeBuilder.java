@@ -39,11 +39,7 @@ public class FsTreeBuilder extends BaseSandboxAwareTool<DirectoryTreeTool, FsTre
 
 	@Override
 	public DirectoryTreeToolResponse apply(DirectoryTreeToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_directory_tree(request.path, userID, sessionID);
+		String result = sandboxTool.fs_directory_tree(request.path);
 		return new DirectoryTreeToolResponse(new Response(result, "Filesystem directory_tree completed"));
 	}
 

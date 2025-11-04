@@ -39,11 +39,7 @@ public class FsMultiFileReader extends BaseSandboxAwareTool<ReadMultipleFilesToo
 
 	@Override
 	public ReadMultipleFilesToolResponse apply(ReadMultipleFilesToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.fs_read_multiple_files(request.paths, userID, sessionID);
+		String result = sandboxTool.fs_read_multiple_files(request.paths);
 		return new ReadMultipleFilesToolResponse(new Response(result, "Filesystem read_multiple_files completed"));
 	}
 

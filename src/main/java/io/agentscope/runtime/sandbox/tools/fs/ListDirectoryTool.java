@@ -53,13 +53,12 @@ public class ListDirectoryTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_list_directory(String path, String userID, String sessionID) {
+    public String fs_list_directory(String path) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.listDirectory(path);
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.listDirectory(path);
+            throw new RuntimeException("Only FilesystemSandbox supported in list directory tool");
         } catch (Exception e) {
             String errorMsg = "List Directory Error: " + e.getMessage();
             logger.severe(errorMsg);

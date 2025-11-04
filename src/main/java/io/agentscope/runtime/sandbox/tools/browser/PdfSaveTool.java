@@ -52,13 +52,12 @@ public class PdfSaveTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_pdf_save(String filename, String userID, String sessionID) {
+    public String browser_pdf_save(String filename) {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.pdfSave(filename);
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.pdfSave(filename);
+            throw new RuntimeException("Only BrowserSandbox supported in browser pdf save tool");
         } catch (Exception e) {
             String errorMsg = "Browser PDF Save Error: " + e.getMessage();
             logger.severe(errorMsg);

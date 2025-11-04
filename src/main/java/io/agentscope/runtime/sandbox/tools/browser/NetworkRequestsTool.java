@@ -43,13 +43,12 @@ public class NetworkRequestsTool extends BrowserSandboxTool {
         return this;
     }
 
-    public String browser_network_requests(String userID, String sessionID) {
+    public String browser_network_requests() {
         try {
-            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.networkRequests();
             }
-            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
-            return browserSandbox.networkRequests();
+            throw new RuntimeException("Only BrowserSandbox supported in browser network requests tool");
         } catch (Exception e) {
             String errorMsg = "Browser Network Requests Error: " + e.getMessage();
             logger.severe(errorMsg);

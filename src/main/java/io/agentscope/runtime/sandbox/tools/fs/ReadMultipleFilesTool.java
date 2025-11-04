@@ -54,13 +54,12 @@ public class ReadMultipleFilesTool extends FsSandboxTool {
         return this;
     }
 
-    public String fs_read_multiple_files(String[] paths, String userID, String sessionID) {
+    public String fs_read_multiple_files(String[] paths) {
         try {
-            if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.readMultipleFiles(java.util.Arrays.asList(paths));
             }
-            FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
-            return filesystemSandbox.readMultipleFiles(java.util.Arrays.asList(paths));
+            throw new RuntimeException("Only FilesystemSandbox supported in read multiple files tool");
         } catch (Exception e) {
             String errorMsg = "Read Multiple Files Error: " + e.getMessage();
             logger.severe(errorMsg);

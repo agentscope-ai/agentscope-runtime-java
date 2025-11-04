@@ -39,11 +39,7 @@ public class BrowserHoverer extends BaseSandboxAwareTool<HoverTool, BrowserHover
 
 	@Override
 	public HoverToolResponse apply(HoverToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_hover(request.element, request.ref, userID, sessionID);
+		String result = sandboxTool.browser_hover(request.element, request.ref);
 		return new HoverToolResponse(new Response(result, "Browser hover completed"));
 	}
 

@@ -38,11 +38,7 @@ public class BrowserNetworkRequestsRetriever extends BaseSandboxAwareTool<Networ
 
 	@Override
 	public NetworkRequestsToolResponse apply(NetworkRequestsToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.browser_network_requests(userID, sessionID);
+		String result = sandboxTool.browser_network_requests();
 		return new NetworkRequestsToolResponse(new Response(result, "Browser network requests completed"));
 	}
 

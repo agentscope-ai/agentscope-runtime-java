@@ -39,11 +39,7 @@ public class BasePythonRunner extends BaseSandboxAwareTool<RunPythonTool, BasePy
 
 	@Override
 	public RunPythonToolResponse apply(RunPythonToolRequest request, ToolContext toolContext) {
-		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-		String userID = userAndSession[0];
-		String sessionID = userAndSession[1];
-
-		String result = sandboxTool.run_ipython_cell(request.code, userID, sessionID);
+		String result = sandboxTool.run_ipython_cell(request.code);
 		return new RunPythonToolResponse(new Response(result, "Code execution completed"));
 	}
 
