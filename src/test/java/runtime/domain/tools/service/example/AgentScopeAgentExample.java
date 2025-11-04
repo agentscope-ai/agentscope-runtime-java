@@ -1,13 +1,6 @@
 package runtime.domain.tools.service.example;
 
 
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.formatter.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
@@ -26,7 +19,17 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import reactor.core.publisher.Flux;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
@@ -72,8 +75,14 @@ public class AgentScopeAgentExample {
      */
     public CompletableFuture<Void> basicExample() {
         System.out.println("=== Basic SaaAgent Example ===");
-        // Create Runner with the SaaAgent
-        Runner runner = new Runner(contextManager);
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .baseUrl("http://localhost:10001")
+                .build();
+
+        SandboxManager sandboxManager = new SandboxManager(managerConfig);
+        EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
+
+        Runner runner = new Runner(environmentManager);
 
         return CompletableFuture.supplyAsync(() -> {
                     try {
@@ -198,7 +207,7 @@ public class AgentScopeAgentExample {
             System.exit(1);
         }
 
-        SaaAgentExample example = new SaaAgentExample();
+        AgentScopeAgentExample example = new AgentScopeAgentExample();
 
         try {
             example.basicExample()

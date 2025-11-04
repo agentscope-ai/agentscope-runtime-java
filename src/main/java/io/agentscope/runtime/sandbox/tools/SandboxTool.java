@@ -15,7 +15,6 @@
  */
 package io.agentscope.runtime.sandbox.tools;
 
-import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 
@@ -31,7 +30,6 @@ public abstract class SandboxTool extends Tool {
 
     protected SandboxTool(String name, String toolType, String description) {
         super(name, toolType, description);
-        this.sandboxManager = Runner.getSandboxManager();
     }
 
     protected SandboxTool(String name, String toolType, String description,
@@ -42,6 +40,10 @@ public abstract class SandboxTool extends Tool {
 
     public SandboxManager getSandboxManager() {
         return sandboxManager;
+    }
+
+    public void setSandboxManager(SandboxManager sandboxManager) {
+        this.sandboxManager = sandboxManager;
     }
 
     public Sandbox getSandbox() {
@@ -59,6 +61,8 @@ public abstract class SandboxTool extends Tool {
     protected void setSchema(Map<String, Object> schema) {
         this.schema = schema;
     }
+
+    public abstract Class<? extends Sandbox> getSandboxClass();
 
     public abstract SandboxTool bind(Sandbox sandbox);
 }

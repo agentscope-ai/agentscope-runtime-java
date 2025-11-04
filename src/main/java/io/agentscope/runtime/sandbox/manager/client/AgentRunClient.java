@@ -665,11 +665,11 @@ public class AgentRunClient extends BaseClient {
 
     private String replaceAgentRuntimeImages(String image) {
         Map<String, String> replacementMap = new HashMap<>();
-        replacementMap.put("agentscope/runtime-sandbox-base",
+        replacementMap.put("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base",
                 "serverless-registry.cn-hangzhou.cr.aliyuncs.com/functionai/agentscope_runtime-sandbox-base:20251027");
-        replacementMap.put("agentscope/runtime-sandbox-browser",
+        replacementMap.put("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser",
                 "serverless-registry.cn-hangzhou.cr.aliyuncs.com/functionai/agentscope_runtime-sandbox-browser:20251027");
-        replacementMap.put("agentscope/runtime-sandbox-filesystem",
+        replacementMap.put("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem",
                 "serverless-registry.cn-hangzhou.cr.aliyuncs.com/functionai/agentscope_runtime-sandbox-filesystem:20251027");
         replacementMap.put("agentscope/runtime-sandbox-gui",
                 "serverless-registry.cn-hangzhou.cr.aliyuncs.com/functionai/agentscope_runtime-sandbox-gui:20251027");

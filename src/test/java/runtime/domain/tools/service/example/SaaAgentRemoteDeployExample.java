@@ -2,18 +2,22 @@ package runtime.domain.tools.service.example;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.runtime.autoconfig.deployer.LocalDeployManager;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
+import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
 
 import java.util.List;
 
@@ -75,29 +79,26 @@ public class SaaAgentRemoteDeployExample {
     /**
      * Basic example of using SaaAgent with ReactAgent
      */
-    public void basicExample() throws Exception {
-        Runner runner = new Runner();
-        ManagerConfig managerConfig = ManagerConfig.builder()
-                .baseUrl("http://localhost:10001")
-                .build();
-
-        runner.registerManagerConfig(managerConfig);
-
+    public void basicExample() {
         try {
             // Create ReactAgent Builder
-            ReactAgent reactAgent = ReactAgent.builder()
+            Builder builder = ReactAgent.builder()
                     .name("saa_agent")
                     .model(chatModel)
-                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
-                    .build();
+                    .tools(List.of(ToolcallsInit.RunPythonCodeTool()));
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(reactAgent)
+                    .agent(builder)
                     .build();
 
-            runner.registerAgent(saaAgent);
-            runner.registerContextManager(contextManager);
+            ManagerConfig managerConfig = ManagerConfig.builder()
+                    .baseUrl("http://localhost:10001/")
+                    .build();
+
+            EnvironmentManager environmentManager = new DefaultEnvironmentManager(new SandboxManager(managerConfig));
+
+            Runner runner = new Runner(saaAgent, contextManager, environmentManager);
 
             LocalDeployManager deployManager = new LocalDeployManager();
             deployManager.deployStreaming();

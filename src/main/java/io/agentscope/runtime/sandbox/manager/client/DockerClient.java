@@ -15,17 +15,17 @@
  */
 package io.agentscope.runtime.sandbox.manager.client;
 
-import com.github.dockerjava.core.DefaultDockerClientConfig;
-import com.github.dockerjava.core.DockerClientImpl;
-import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
-import com.github.dockerjava.transport.DockerHttpClient;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.command.PullImageCmd;
 import com.github.dockerjava.api.model.*;
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.transport.DockerHttpClient;
+import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.util.PortManager;
 
 import java.util.*;
@@ -656,9 +656,9 @@ public class DockerClient extends BaseClient {
             
             PullImageCmd pullCmd = client.pullImageCmd(imageName);
             
-            pullCmd.exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.PullResponseItem>() {
+            pullCmd.exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<PullResponseItem>() {
                 @Override
-                public void onNext(com.github.dockerjava.api.model.PullResponseItem item) {
+                public void onNext(PullResponseItem item) {
                     if (item.getStatus() != null) {
                         logger.info("Pull progress: " + item.getStatus());
                     }

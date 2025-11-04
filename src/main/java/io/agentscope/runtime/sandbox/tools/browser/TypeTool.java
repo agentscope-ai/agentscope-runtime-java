@@ -15,27 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.browser;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class TypeTool extends SandboxTool {
+public class TypeTool extends BrowserSandboxTool {
+
+    Logger logger = Logger.getLogger(TypeTool.class.getName());
 
     public TypeTool() {
         super("browser_type", "browser", "Type text into an element in the browser");
@@ -82,74 +74,19 @@ public class TypeTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String browser_type(String element, String ref, String text, Boolean submit, Boolean slowly, String userID, String sessionID) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new TypeExecutor()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(TypeExecutor.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class TypeExecutor implements BiFunction<TypeExecutor.Request, ToolContext, TypeExecutor.Response> {
-
-        Logger logger = Logger.getLogger(TypeExecutor.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            String result = browser_type(request.element, request.ref, request.text, request.submit, request.slowly, userID, sessionID);
-            return new Response(result, "Browser type completed");
-        }
-
-        private String browser_type(String element, String ref, String text, Boolean submit, Boolean slowly, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
-                    return browserSandbox.type(element, ref, text, submit, slowly);
-                }
-                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
                 return browserSandbox.type(element, ref, text, submit, slowly);
-            } catch (Exception e) {
-                String errorMsg = "Browser Type Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
+            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            return browserSandbox.type(element, ref, text, submit, slowly);
+        } catch (Exception e) {
+            String errorMsg = "Browser Type Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
-
-        public record Request(
-                @JsonProperty(required = true, value = "element") String element,
-                @JsonProperty(required = true, value = "ref") String ref,
-                @JsonProperty(required = true, value = "text") String text,
-                @JsonProperty("submit") Boolean submit,
-                @JsonProperty("slowly") Boolean slowly
-        ) { 
-            public Request {
-                if (submit == null) {
-                    submit = false;
-                }
-                if (slowly == null) {
-                    slowly = false;
-                }
-            }
-        }
-
-        @JsonClassDescription("The result contains browser tool output and message")
-        public record Response(String result, String message) {}
     }
+
 }

@@ -15,23 +15,16 @@
  */
 package io.agentscope.runtime.sandbox.tools.browser;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.HashMap;
-import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class SnapshotTool extends SandboxTool {
+public class SnapshotTool extends BrowserSandboxTool {
+
+    Logger logger = Logger.getLogger(SnapshotTool.class.getName());
 
     public SnapshotTool() {
         super("browser_snapshot", "browser", "Take a snapshot of the current browser state");
@@ -47,60 +40,19 @@ public class SnapshotTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String browser_snapshot(String userID, String sessionID) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new SnapshotTaker()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(SnapshotTaker.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class SnapshotTaker implements BiFunction<SnapshotTaker.Request, ToolContext, SnapshotTaker.Response> {
-
-        Logger logger = Logger.getLogger(SnapshotTaker.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            String result = browser_snapshot(userID, sessionID);
-            return new Response(result, "Browser snapshot completed");
-        }
-
-        private String browser_snapshot(String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
-                    return browserSandbox.snapshot();
-                }
-                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
                 return browserSandbox.snapshot();
-            } catch (Exception e) {
-                String errorMsg = "Browser Snapshot Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
+            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            return browserSandbox.snapshot();
+        } catch (Exception e) {
+            String errorMsg = "Browser Snapshot Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
-
-        public record Request() { }
-
-        @JsonClassDescription("The result contains browser tool output and message")
-        public record Response(String result, String message) {}
     }
-}
 
+}

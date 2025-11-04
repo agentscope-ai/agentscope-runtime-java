@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 @RegisterSandbox(
-    imageName = "agentscope/runtime-sandbox-filesystem:latest",
+    imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem:latest",
     sandboxType = SandboxType.FILESYSTEM,
     securityLevel = "medium",
     timeout = 60,

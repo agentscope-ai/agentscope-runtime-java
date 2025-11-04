@@ -2,15 +2,12 @@ package runtime.domain.tools.service.engine.agent;
 
 import io.agentscope.runtime.autoconfig.deployer.LocalDeployManager;
 import io.agentscope.runtime.autoconfig.deployer.LocalDeployer;
-import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -27,14 +24,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class LocalDeployerTest {
 
     private LocalDeployManager localDeployManager;
-    private Runner runner;
     private ContextManager contextManager;
 
     @BeforeEach
     void setUp() {
         localDeployManager = new LocalDeployManager();
         initializeContextManager();
-        initializeRunner();
     }
 
     @AfterEach
@@ -69,21 +64,6 @@ public class LocalDeployerTest {
         } catch (Exception e) {
             System.err.println("Failed to initialize ContextManager: " + e.getMessage());
             throw new RuntimeException("ContextManager initialization failed", e);
-        }
-    }
-
-    private void initializeRunner() {
-        try {
-            // Create a simple Runner instance
-            this.runner = new Runner();
-            
-            // Register ContextManager
-            runner.registerContextManager(contextManager);
-            
-            System.out.println("Runner initialized successfully");
-        } catch (Exception e) {
-            System.err.println("Failed to initialize Runner: " + e.getMessage());
-            throw new RuntimeException("Runner initialization failed", e);
         }
     }
 

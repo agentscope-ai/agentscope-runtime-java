@@ -16,7 +16,7 @@
 package io.agentscope.runtime.autoconfig.deployer;
 
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
@@ -37,8 +37,15 @@ public class SandboxCleanupListener implements ApplicationListener<ContextClosed
         logger.info("Application is shutting down, starting sandbox cleanup...");
 
         try {
-            SandboxManager sandboxManager = Runner.getSandboxManager();
-            
+
+            EnvironmentManager environmentManager = Runner.getRunner().getEnvironmentManager();
+            if (environmentManager == null) {
+                logger.info("No EnvironmentManager found, skipping sandbox cleanup");
+                return;
+            }
+
+            SandboxManager sandboxManager = environmentManager.getSandboxManager();
+
             if (sandboxManager != null) {
                 logger.info("Found shared SandboxManager instance, starting cleanup...");
                 sandboxManager.cleanupAllSandboxes();

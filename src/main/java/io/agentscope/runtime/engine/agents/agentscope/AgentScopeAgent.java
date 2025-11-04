@@ -1,5 +1,6 @@
 package io.agentscope.runtime.engine.agents.agentscope;
 
+import io.agentscope.core.agent.Agent;
 import io.agentscope.core.message.*;
 import io.agentscope.runtime.engine.agents.AgentCallback;
 import io.agentscope.runtime.engine.agents.AgentConfig;
@@ -10,7 +11,6 @@ import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.RunStatus;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.engine.schemas.context.Context;
-import io.agentscope.core.agent.Agent;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -167,9 +167,9 @@ public class AgentScopeAgent extends BaseAgent {
     }
 
     public AgentScopeAgent(Agent agentScopeAgent,
-                          Function<Context, Msg> contextAdapter,
-                          Function<Msg, String> responseProcessor,
-                          Function<Msg, String> streamResponseProcessor) {
+                           Function<Context, Msg> contextAdapter,
+                           Function<Msg, String> responseProcessor,
+                           Function<Msg, String> streamResponseProcessor) {
         super();
         this.agentScopeAgent = agentScopeAgent;
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;
@@ -178,12 +178,12 @@ public class AgentScopeAgent extends BaseAgent {
     }
 
     public AgentScopeAgent(List<AgentCallback> beforeCallbacks,
-                          List<AgentCallback> afterCallbacks,
-                          AgentConfig config,
-                          Agent agentScopeAgent,
-                          Function<Context, Msg> contextAdapter,
-                          Function<Msg, String> responseProcessor,
-                          Function<Msg, String> streamResponseProcessor) {
+                           List<AgentCallback> afterCallbacks,
+                           AgentConfig config,
+                           Agent agentScopeAgent,
+                           Function<Context, Msg> contextAdapter,
+                           Function<Msg, String> responseProcessor,
+                           Function<Msg, String> streamResponseProcessor) {
         super(beforeCallbacks, afterCallbacks, config);
         this.agentScopeAgent = agentScopeAgent;
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;

@@ -15,8 +15,6 @@
  */
 package io.agentscope.runtime.sandbox.tools;
 
-import org.springframework.ai.tool.ToolCallback;
-
 public abstract class Tool {
     
     protected String name;
@@ -43,8 +41,6 @@ public abstract class Tool {
         return description;
     }
 
-    public abstract ToolCallback buildTool();
-    
     @Override
     public String toString() {
         return String.format("%s(name='%s', type='%s')", 

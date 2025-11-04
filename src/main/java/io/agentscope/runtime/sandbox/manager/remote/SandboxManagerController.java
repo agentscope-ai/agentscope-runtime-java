@@ -15,7 +15,6 @@
  */
 package io.agentscope.runtime.sandbox.manager.remote;
 
-import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -59,6 +58,8 @@ public class SandboxManagerController {
                 endpointRegistry.put(path, methodInfo);
 
                 logger.info("Registered endpoint: " + annotation.method() + " " + path +
+                        " -> " + method.getName());
+                System.out.println("Registered endpoint: " + annotation.method() + " " + path +
                         " -> " + method.getName());
             }
         }
@@ -111,9 +112,10 @@ public class SandboxManagerController {
     private ResponseEntity<Map<String, Object>> handleRequest(
             String path,
             Map<String, Object> requestData,
-            org.springframework.web.bind.annotation.RequestMethod httpMethod) {
+            RequestMethod httpMethod) {
 
-        SandboxManager sandboxManager = Runner.getSandboxManager();
+        // Todo: fix this
+        SandboxManager sandboxManager = new SandboxManager();
 
         logger.info("Handling " + httpMethod + " request for path: " + path);
 

@@ -1,6 +1,7 @@
 package io.agentscope.runtime.engine.service.impl;
 
 import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,14 +12,26 @@ import java.util.concurrent.CompletableFuture;
  * Corresponds to the default implementation in environment_manager.py of the Python version
  */
 public class DefaultEnvironmentManager implements EnvironmentManager {
-    
+
+    private final SandboxManager sandboxManager;
     private final Map<String, String> environmentVariables;
     private boolean initialized = false;
     
     public DefaultEnvironmentManager() {
         this.environmentVariables = new HashMap<>();
+        this.sandboxManager = new SandboxManager();
     }
-    
+
+    public DefaultEnvironmentManager(SandboxManager sandboxManager) {
+        this.environmentVariables = new HashMap<>();
+        this.sandboxManager = sandboxManager;
+    }
+
+    @Override
+    public SandboxManager getSandboxManager() {
+        return sandboxManager;
+    }
+
     @Override
     public String getEnvironmentVariable(String key) {
         // First get from system environment variables

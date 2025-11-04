@@ -1,8 +1,10 @@
 package io.agentscope.runtime.sandbox.manager.client.config;
 
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
+import org.apache.commons.lang3.StringUtils;
 
 public class KubernetesClientConfig extends BaseClientConfig {
+    private static final String KUBE_CONFIG_PATH = System.getProperty("user.home") + "/.kube/config";
     private String kubeConfigPath;
     private String namespace;
 
@@ -20,7 +22,7 @@ public class KubernetesClientConfig extends BaseClientConfig {
 
     public KubernetesClientConfig(boolean isLocal, String kubeConfigPath, String namespace) {
         super(isLocal, ContainerManagerType.KUBERNETES);
-        this.kubeConfigPath = kubeConfigPath;
+        this.kubeConfigPath = StringUtils.isEmpty(kubeConfigPath) ? KUBE_CONFIG_PATH : kubeConfigPath;
         this.namespace = namespace;
     }
 
