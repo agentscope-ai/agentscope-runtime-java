@@ -117,8 +117,8 @@ public class AgentscopeBrowseruseAgent {
         );
         contextManager.start().get();
 
-//        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new KubernetesClientConfig("/Users/xht/Downloads/kubeconfig.txt")).build());
-        environmentManager = new DefaultEnvironmentManager();
+        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new KubernetesClientConfig()).build());
+        environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
         // Initialize chat model
         String apiKey = System.getenv("DASHSCOPE_API_KEY");

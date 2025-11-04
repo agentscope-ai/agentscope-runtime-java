@@ -24,7 +24,7 @@ import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import reactor.core.publisher.Flux;
 
@@ -78,7 +78,7 @@ public class AgentScopeToolExample {
      */
     public CompletableFuture<Void> basicExample() {
         System.out.println("=== Basic SaaAgent Example ===");
-        BaseClientConfig clientConfig = new KubernetesClientConfig("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt");
+        BaseClientConfig clientConfig = new DockerClientConfig();
         ManagerConfig managerConfig = ManagerConfig.builder()
                 .containerDeployment(clientConfig)
                 .build();

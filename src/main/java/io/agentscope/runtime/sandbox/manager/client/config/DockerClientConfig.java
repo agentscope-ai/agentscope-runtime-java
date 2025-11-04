@@ -11,21 +11,16 @@ public class DockerClientConfig extends BaseClientConfig {
     private boolean redisEnabled;
     private RedisManagerConfig redisConfig;
 
-    public DockerClientConfig(){
-        this(true, "localhost", 2375, null, null, false, null);
+    public DockerClientConfig() {
+        this("localhost", 2375, null, null, false, null);
     }
 
-    public DockerClientConfig(boolean isLocal) {
-        this(isLocal, "localhost", 2375, null, null, false, null);
+    public DockerClientConfig(String host, int port, String certPath) {
+        this(host, port, certPath, null, false, null);
     }
 
-    public DockerClientConfig(boolean isLocal, String host, int port, String certPath) {
-        this(isLocal, host, port, certPath, null, false, null);
-    }
-
-    public DockerClientConfig(boolean isLocal, String host, int port, String certPath,
+    public DockerClientConfig(String host, int port, String certPath,
                              PortRange portRange, boolean redisEnabled, RedisManagerConfig redisConfig) {
-        super(isLocal);
         this.host = host;
         this.port = port;
         this.certPath = certPath;

@@ -3,28 +3,14 @@ package io.agentscope.runtime.sandbox.manager.client.config;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
 
 public class BaseClientConfig {
-    private boolean isLocal;
     private ContainerManagerType clientType;
 
     public BaseClientConfig() {
-        this(true, ContainerManagerType.DOCKER);
+        this(ContainerManagerType.DOCKER);
     }
 
-    public BaseClientConfig(boolean isLocal) {
-        this(isLocal, ContainerManagerType.DOCKER);
-    }
-
-    public BaseClientConfig(boolean isLocal, ContainerManagerType clientType) {
-        this.isLocal = isLocal;
+    public BaseClientConfig(ContainerManagerType clientType) {
         this.clientType = clientType;
-    }
-
-    public boolean getIsLocal() {
-        return isLocal;
-    }
-
-    public void setIsLocal(boolean isLocal) {
-        this.isLocal = isLocal;
     }
 
     public ContainerManagerType getClientType() {

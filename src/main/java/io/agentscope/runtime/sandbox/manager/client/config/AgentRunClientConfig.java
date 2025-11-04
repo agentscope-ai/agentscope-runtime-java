@@ -24,7 +24,7 @@ public class AgentRunClientConfig extends BaseClientConfig {
     private final String agentrunLogStore;
 
     private AgentRunClientConfig(Builder builder) {
-        super(builder.isLocal, ContainerManagerType.AGENTRUN);
+        super(ContainerManagerType.AGENTRUN);
         this.agentRunAccessKeyId = builder.agentRunAccessKeyId;
         this.agentRunAccessKeySecret = builder.agentRunAccessKeySecret;
         this.agentRunAccountId = builder.agentRunAccountId;
@@ -93,7 +93,6 @@ public class AgentRunClientConfig extends BaseClientConfig {
     }
 
     public static class Builder {
-        private boolean isLocal = true;
         private String agentRunAccessKeyId;
         private String agentRunAccessKeySecret;
         private String agentRunAccountId;
@@ -106,11 +105,6 @@ public class AgentRunClientConfig extends BaseClientConfig {
         private String agentRunPrefix = "agentscope-sandbox_";
         private String agentrunLogProject;
         private String agentrunLogStore;
-
-        public Builder isLocal(boolean isLocal) {
-            this.isLocal = isLocal;
-            return this;
-        }
 
         public Builder agentRunAccessKeyId(String agentRunAccessKeyId) {
             this.agentRunAccessKeyId = agentRunAccessKeyId;

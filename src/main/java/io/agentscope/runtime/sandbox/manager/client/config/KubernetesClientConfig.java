@@ -9,19 +9,15 @@ public class KubernetesClientConfig extends BaseClientConfig {
     private String namespace;
 
     public KubernetesClientConfig(){
-        this(true, null, "default");
+        this(null, "default");
     }
 
     public KubernetesClientConfig(String kubeConfigPath) {
-        this(false, kubeConfigPath, "default");
+        this(kubeConfigPath, "default");
     }
 
-    public KubernetesClientConfig(boolean isLocal) {
-        this(isLocal, null, "default");
-    }
-
-    public KubernetesClientConfig(boolean isLocal, String kubeConfigPath, String namespace) {
-        super(isLocal, ContainerManagerType.KUBERNETES);
+    public KubernetesClientConfig(String kubeConfigPath, String namespace) {
+        super(ContainerManagerType.KUBERNETES);
         this.kubeConfigPath = StringUtils.isEmpty(kubeConfigPath) ? KUBE_CONFIG_PATH : kubeConfigPath;
         this.namespace = namespace;
     }

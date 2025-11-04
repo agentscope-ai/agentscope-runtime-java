@@ -201,7 +201,40 @@ public class DockerClient extends BaseClient {
         return getContainerStatus(client, containerId);
     }
 
-    private static com.github.dockerjava.api.DockerClient openDockerClient() {
+    private com.github.dockerjava.api.DockerClient openDockerClient() {
+        if (this.config != null) {
+            try {
+                DefaultDockerClientConfig.Builder configBuilder = DefaultDockerClientConfig.createDefaultConfigBuilder();
+                String dockerHost = "tcp://" + this.config.getHost() + ":" + this.config.getPort();
+                configBuilder.withDockerHost(dockerHost);
+                
+                if (this.config.getCertPath() != null && !this.config.getCertPath().isEmpty()) {
+                    configBuilder.withDockerCertPath(this.config.getCertPath());
+                    logger.info("Connecting to Docker at " + dockerHost + " with TLS");
+                } else {
+                    logger.info("Connecting to Docker at " + dockerHost + " without TLS");
+                }
+
+                var config = configBuilder.build();
+
+                DockerHttpClient httpClient = new ZerodepDockerHttpClient.Builder()
+                        .dockerHost(config.getDockerHost())
+                        .sslConfig(config.getSSLConfig())
+                        .build();
+
+                com.github.dockerjava.api.DockerClient client = DockerClientImpl.getInstance(config, httpClient);
+                
+                client.infoCmd().exec();
+                logger.info("Successfully connected to Docker using configured host and port");
+                return client;
+            } catch (Exception e) {
+                logger.warning("Failed to connect to Docker using configured host (" + 
+                             this.config.getHost() + ":" + this.config.getPort() + 
+                             "): " + e.getMessage());
+                logger.info("Falling back to default Docker configuration");
+            }
+        }
+
         var config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
 
         DockerHttpClient httpClient = new ZerodepDockerHttpClient.Builder()
