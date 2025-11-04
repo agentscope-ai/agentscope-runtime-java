@@ -66,7 +66,11 @@ public class SaaAgent extends BaseAgent {
 
         private void setupTools() {
             try {
-                Field toolsField = originalAgentBuilder.getClass().getDeclaredField("tools");
+                Field toolsField = findFieldInHierarchy(originalAgentBuilder.getClass(), "tools");
+                if (toolsField == null) {
+                    // No tools field found, skip setup
+                    return;
+                }
                 toolsField.setAccessible(true);
                 @SuppressWarnings("unchecked")
                 List<Object> tools = (List<Object>) toolsField.get(originalAgentBuilder);
@@ -78,7 +82,7 @@ public class SaaAgent extends BaseAgent {
                 // Step 1: Check if any tool is SandboxAwareTool
                 boolean enableSandbox = false;
                 for (Object tool : tools) {
-                    if (tool instanceof SandboxAwareTool) {
+                    if (tool instanceof RuntimeFunctionToolCallback) {
                         enableSandbox = true;
                         break;
                     }
@@ -100,8 +104,9 @@ public class SaaAgent extends BaseAgent {
 
                     // Step 3: Setup each SandboxAwareTool
                     for (Object tool : tools) {
-                        if (tool instanceof SandboxAwareTool sandboxAwareTool) {
+                        if (tool instanceof RuntimeFunctionToolCallback runtimeFunctionToolCallback) {
                             // 3.1: Get sandbox class and create sandbox instance
+                            SandboxAwareTool sandboxAwareTool = runtimeFunctionToolCallback.getToolFunction();
                             Class<?> sandboxClass = sandboxAwareTool.getSandboxClass();
                             if (sandboxClass == null) {
                                 throw new IllegalStateException("SandboxClass cannot be null for SandboxAwareTool: " + tool.getClass().getName());
@@ -131,6 +136,26 @@ public class SaaAgent extends BaseAgent {
                 }
                 throw new RuntimeException("Error setting up tools: " + e.getMessage(), e);
             }
+        }
+
+        /**
+         * Recursively find a field in the class hierarchy (including parent classes)
+         * @param clazz The class to start searching from
+         * @param fieldName The name of the field to find
+         * @return The Field object if found, null otherwise
+         */
+        private Field findFieldInHierarchy(Class<?> clazz, String fieldName) {
+            Class<?> currentClass = clazz;
+            while (currentClass != null) {
+                try {
+                    return currentClass.getDeclaredField(fieldName);
+                } catch (NoSuchFieldException e) {
+                    // Field not found in current class, try parent class
+                    currentClass = currentClass.getSuperclass();
+                }
+            }
+            // Field not found in entire hierarchy
+            return null;
         }
 
         private List<org.springframework.ai.chat.messages.Message> adaptMemory() {

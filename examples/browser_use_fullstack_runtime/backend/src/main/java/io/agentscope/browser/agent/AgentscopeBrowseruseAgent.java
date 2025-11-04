@@ -23,6 +23,9 @@ import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 
@@ -114,7 +117,8 @@ public class AgentscopeBrowseruseAgent {
         );
         contextManager.start().get();
 
-        environmentManager = new DefaultEnvironmentManager();
+        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new KubernetesClientConfig()).build());
+        environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
         // Initialize chat model
         String apiKey = System.getenv("DASHSCOPE_API_KEY");
@@ -169,6 +173,34 @@ public class AgentscopeBrowseruseAgent {
                 .tools(tools)
                 .model(chatModel)
                 .systemPrompt(Prompts.SYSTEM_PROMPT);
+    }
+
+    public Flux<Message> chatSimple(String userMessage) {
+        // Convert chat messages to agent request format
+        List<Message> convertedMessages = new ArrayList<>();
+
+        Message message = new Message();
+        message.setRole("user");
+
+        TextContent textContent = new TextContent();
+        textContent.setText(userMessage);
+        message.setContent(List.of(textContent));
+
+        convertedMessages.add(message);
+
+        // Create agent request
+        AgentRequest request = new AgentRequest();
+        request.setSessionId(SESSION_ID);
+        request.setUserId(USER_ID);
+        request.setInput(convertedMessages);
+
+        // Stream query
+        Flux<Event> eventStream = runner.streamQuery(request);
+
+        // Transform events to message content
+        return eventStream
+                .filter(event -> event instanceof Message)
+                .map(event -> (Message) event);
     }
 
     /**

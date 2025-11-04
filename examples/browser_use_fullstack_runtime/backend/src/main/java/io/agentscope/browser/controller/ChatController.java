@@ -83,6 +83,55 @@ public class ChatController {
                 });
     }
 
+
+    @PostMapping(value = {"/v1/chatSimple/completions", "/chatSimple/completions"},
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> streamChatSimpleCompletions(String userMessage) {
+        logger.info("Received chat completion request");
+
+        if (userMessage == null || userMessage.isEmpty()) {
+            return Flux.error(new IllegalArgumentException("No messages provided"));
+        }
+
+        return agent.chatSimple(userMessage)
+                .flatMap(message -> {
+                    System.out.println("Received message: " + message);
+                    if (message == null || message.getContent() == null || message.getContent().isEmpty()) {
+                        return Flux.just(simpleYield("", "content"));
+                    }
+
+                    List<Content> contentList = message.getContent();
+                    StringBuilder responseBuilder = new StringBuilder();
+
+                    for (Content item : contentList) {
+                        if (item instanceof TextContent textContent) {
+                            String text = textContent.getText();
+                            if (text != null && !text.isEmpty()) {
+                                responseBuilder.append(text);
+                            }
+                        } else if (item instanceof DataContent dataContent) {
+                            Map<String, Object> data = dataContent.getData();
+                            if (data != null && data.containsKey("name")) {
+                                String toolName = String.valueOf(data.get("name"));
+                                responseBuilder.append("Using tool: ").append(toolName).append("\n");
+                            }
+                        }
+                    }
+
+                    String response = responseBuilder.toString();
+                    if (!response.isEmpty()) {
+                        return Flux.just(simpleYield(response, "content"));
+                    } else {
+                        return Flux.just(simpleYield("", "content"));
+                    }
+                })
+                .onErrorResume(error -> {
+                    logger.error("Error during chat completion", error);
+                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content"));
+                });
+    }
+
+
     /**
      * Get browser environment info
      */
