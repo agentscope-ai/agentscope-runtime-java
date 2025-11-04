@@ -25,85 +25,81 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.fs.GetFileInfoTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class FsFileInfoRetriever implements SandboxAwareTool<FsFileInfoRetriever.Request, FsFileInfoRetriever.Response> {
+public class FsFileInfoRetriever extends BaseSandboxAwareTool<GetFileInfoTool, FsFileInfoRetriever.GetFileInfoToolRequest, FsFileInfoRetriever.GetFileInfoToolResponse> {
 	Logger logger = Logger.getLogger(FsFileInfoRetriever.class.getName());
-	private GetFileInfoTool getFileInfoTool;
 
 	public FsFileInfoRetriever() {
-		this.getFileInfoTool = new GetFileInfoTool();
+		super(new GetFileInfoTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public GetFileInfoToolResponse apply(GetFileInfoToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = getFileInfoTool.fs_get_file_info(request.path, userID, sessionID);
-		return new Response(result, "Filesystem get_file_info completed");
+		String result = sandboxTool.fs_get_file_info(request.path, userID, sessionID);
+		return new GetFileInfoToolResponse(new Response(result, "Filesystem get_file_info completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return getFileInfoTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.getFileInfoTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.getFileInfoTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.getFileInfoTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record GetFileInfoToolRequest(
 			@JsonProperty(required = true, value = "path")
 			@JsonPropertyDescription("Path to the file or directory")
 			String path
-	) { }
+	) {
+		public GetFileInfoToolRequest(String path) {
+			this.path = path;
+		}
+	}
+
+	public record GetFileInfoToolResponse(@JsonProperty("Response") Response output) {
+		public GetFileInfoToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains filesystem tool output and execution message")
 	public record Response(String result, String message) {
-		public Response(String result, String message) { this.result = result; this.message = message; }
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
 		@JsonProperty(required = true, value = "result")
 		@JsonPropertyDescription("tool output")
-		public String result() { return this.result; }
+		public String result() {
+			return this.result;
+		}
+
 		@JsonProperty(required = true, value = "message")
 		@JsonPropertyDescription("execute result")
-		public String message() { return this.message; }
+		public String message() {
+			return this.message;
+		}
 	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(getFileInfoTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						getFileInfoTool.getName(),
-						new FsFileInfoRetriever()
-				).description(getFileInfoTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(FsFileInfoRetriever.Request.class)
+				).inputType(FsFileInfoRetriever.GetFileInfoToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

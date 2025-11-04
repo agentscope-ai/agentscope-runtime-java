@@ -25,80 +25,85 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.ClickTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserClicker implements SandboxAwareTool<BrowserClicker.Request, BrowserClicker.Response> {
+public class BrowserClicker extends BaseSandboxAwareTool<ClickTool, BrowserClicker.ClickToolRequest, BrowserClicker.ClickToolResponse> {
 	Logger logger = Logger.getLogger(BrowserClicker.class.getName());
-	private ClickTool clickTool;
 
 	public BrowserClicker() {
-		this.clickTool = new ClickTool();
+		super(new ClickTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public ClickToolResponse apply(ClickToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = clickTool.browser_click(request.element, request.ref, userID, sessionID);
-		return new Response(result, "Browser click completed");
+		String result = sandboxTool.browser_click(request.element, request.ref, userID, sessionID);
+		return new ClickToolResponse(new Response(result, "Browser click completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return clickTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.clickTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.clickTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.clickTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record ClickToolRequest(
 			@JsonProperty(required = true, value = "element")
 			@JsonPropertyDescription("Human-readable element description")
 			String element,
 			@JsonProperty(required = true, value = "ref")
 			@JsonPropertyDescription("Exact target element reference from the page snapshot")
 			String ref
-	) { }
+	) {
+		public ClickToolRequest(String element, String ref) {
+			this.element = element;
+			this.ref = ref;
+		}
+	}
+
+	public record ClickToolResponse(@JsonProperty("Response") Response output) {
+		public ClickToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		@JsonPropertyDescription("browser output")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		@JsonPropertyDescription("execute result")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(clickTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						clickTool.getName(),
-						new BrowserClicker()
-				).description(clickTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserClicker.Request.class)
+				).inputType(BrowserClicker.ClickToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

@@ -22,74 +22,76 @@ import org.springframework.ai.tool.metadata.ToolMetadata;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.NetworkRequestsTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserNetworkRequestsRetriever implements SandboxAwareTool<BrowserNetworkRequestsRetriever.Request, BrowserNetworkRequestsRetriever.Response> {
+public class BrowserNetworkRequestsRetriever extends BaseSandboxAwareTool<NetworkRequestsTool, BrowserNetworkRequestsRetriever.NetworkRequestsToolRequest, BrowserNetworkRequestsRetriever.NetworkRequestsToolResponse> {
 	Logger logger = Logger.getLogger(BrowserNetworkRequestsRetriever.class.getName());
-	private NetworkRequestsTool networkRequestsTool;
 
 	public BrowserNetworkRequestsRetriever() {
-		this.networkRequestsTool = new NetworkRequestsTool();
+		super(new NetworkRequestsTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public NetworkRequestsToolResponse apply(NetworkRequestsToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = networkRequestsTool.browser_network_requests(userID, sessionID);
-		return new Response(result, "Browser network requests completed");
+		String result = sandboxTool.browser_network_requests(userID, sessionID);
+		return new NetworkRequestsToolResponse(new Response(result, "Browser network requests completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return networkRequestsTool.getSandboxManager();
+	public record NetworkRequestsToolRequest() {
+		public NetworkRequestsToolRequest() {
+		}
 	}
 
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.networkRequestsTool.setSandboxManager(sandboxManager);
+	public record NetworkRequestsToolResponse(@JsonProperty("Response") Response output) {
+		public NetworkRequestsToolResponse(Response output) {
+			this.output = output;
+		}
 	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.networkRequestsTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.networkRequestsTool.setSandbox(sandbox);
-	}
-
-	public record Request() { }
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(networkRequestsTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						networkRequestsTool.getName(),
-						new BrowserNetworkRequestsRetriever()
-				).description(networkRequestsTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserNetworkRequestsRetriever.Request.class)
+				).inputType(BrowserNetworkRequestsRetriever.NetworkRequestsToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

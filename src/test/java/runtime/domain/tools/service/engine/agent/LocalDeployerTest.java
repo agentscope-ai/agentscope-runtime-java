@@ -25,14 +25,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class LocalDeployerTest {
 
     private LocalDeployManager localDeployManager;
-    private Runner runner;
     private ContextManager contextManager;
 
     @BeforeEach
     void setUp() {
         localDeployManager = new LocalDeployManager();
         initializeContextManager();
-        initializeRunner();
     }
 
     @AfterEach
@@ -67,21 +65,6 @@ public class LocalDeployerTest {
         } catch (Exception e) {
             System.err.println("Failed to initialize ContextManager: " + e.getMessage());
             throw new RuntimeException("ContextManager initialization failed", e);
-        }
-    }
-
-    private void initializeRunner() {
-        try {
-            // Create a simple Runner instance
-            this.runner = new Runner();
-            
-            // Register ContextManager
-            runner.registerContextManager(contextManager);
-            
-            System.out.println("Runner initialized successfully");
-        } catch (Exception e) {
-            System.err.println("Failed to initialize Runner: " + e.getMessage());
-            throw new RuntimeException("Runner initialization failed", e);
         }
     }
 

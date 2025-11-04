@@ -25,77 +25,79 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.FileUploadTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserFileUploader implements SandboxAwareTool<BrowserFileUploader.Request, BrowserFileUploader.Response> {
+public class BrowserFileUploader extends BaseSandboxAwareTool<FileUploadTool, BrowserFileUploader.FileUploadToolRequest, BrowserFileUploader.FileUploadToolResponse> {
 	Logger logger = Logger.getLogger(BrowserFileUploader.class.getName());
-	private FileUploadTool fileUploadTool;
 
 	public BrowserFileUploader() {
-		this.fileUploadTool = new FileUploadTool();
+		super(new FileUploadTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public FileUploadToolResponse apply(FileUploadToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = fileUploadTool.browser_file_upload(request.paths, userID, sessionID);
-		return new Response(result, "Browser file upload completed");
+		String result = sandboxTool.browser_file_upload(request.paths, userID, sessionID);
+		return new FileUploadToolResponse(new Response(result, "Browser file upload completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return fileUploadTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.fileUploadTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.fileUploadTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.fileUploadTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record FileUploadToolRequest(
 			@JsonProperty(required = true, value = "paths")
 			@JsonPropertyDescription("The absolute paths to the files to upload")
 			String[] paths
-	) { }
+	) {
+		public FileUploadToolRequest(String[] paths) {
+			this.paths = paths;
+		}
+	}
+
+	public record FileUploadToolResponse(@JsonProperty("Response") Response output) {
+		public FileUploadToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(fileUploadTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						fileUploadTool.getName(),
-						new BrowserFileUploader()
-				).description(fileUploadTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserFileUploader.Request.class)
+				).inputType(BrowserFileUploader.FileUploadToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

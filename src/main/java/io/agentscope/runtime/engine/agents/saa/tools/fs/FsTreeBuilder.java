@@ -25,85 +25,81 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.fs.DirectoryTreeTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class FsTreeBuilder implements SandboxAwareTool<FsTreeBuilder.Request, FsTreeBuilder.Response> {
+public class FsTreeBuilder extends BaseSandboxAwareTool<DirectoryTreeTool, FsTreeBuilder.DirectoryTreeToolRequest, FsTreeBuilder.DirectoryTreeToolResponse> {
 	Logger logger = Logger.getLogger(FsTreeBuilder.class.getName());
-	private DirectoryTreeTool directoryTreeTool;
 
 	public FsTreeBuilder() {
-		this.directoryTreeTool = new DirectoryTreeTool();
+		super(new DirectoryTreeTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public DirectoryTreeToolResponse apply(DirectoryTreeToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = directoryTreeTool.fs_directory_tree(request.path, userID, sessionID);
-		return new Response(result, "Filesystem directory_tree completed");
+		String result = sandboxTool.fs_directory_tree(request.path, userID, sessionID);
+		return new DirectoryTreeToolResponse(new Response(result, "Filesystem directory_tree completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return directoryTreeTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.directoryTreeTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.directoryTreeTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.directoryTreeTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record DirectoryTreeToolRequest(
 			@JsonProperty(required = true, value = "path")
 			@JsonPropertyDescription("Path to get tree structure")
 			String path
-	) { }
+	) {
+		public DirectoryTreeToolRequest(String path) {
+			this.path = path;
+		}
+	}
+
+	public record DirectoryTreeToolResponse(@JsonProperty("Response") Response output) {
+		public DirectoryTreeToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains filesystem tool output and execution message")
 	public record Response(String result, String message) {
-		public Response(String result, String message) { this.result = result; this.message = message; }
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
 		@JsonProperty(required = true, value = "result")
 		@JsonPropertyDescription("tool output")
-		public String result() { return this.result; }
+		public String result() {
+			return this.result;
+		}
+
 		@JsonProperty(required = true, value = "message")
 		@JsonPropertyDescription("execute result")
-		public String message() { return this.message; }
+		public String message() {
+			return this.message;
+		}
 	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(directoryTreeTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						directoryTreeTool.getName(),
-						new FsTreeBuilder()
-				).description(directoryTreeTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(FsTreeBuilder.Request.class)
+				).inputType(FsTreeBuilder.DirectoryTreeToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

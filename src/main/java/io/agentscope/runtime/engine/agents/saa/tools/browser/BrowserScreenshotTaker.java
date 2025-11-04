@@ -24,58 +24,35 @@ import java.util.logging.Logger;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.TakeScreenshotTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserScreenshotTaker implements SandboxAwareTool<BrowserScreenshotTaker.Request, BrowserScreenshotTaker.Response> {
+public class BrowserScreenshotTaker extends BaseSandboxAwareTool<TakeScreenshotTool, BrowserScreenshotTaker.TakeScreenshotToolRequest, BrowserScreenshotTaker.TakeScreenshotToolResponse> {
 	Logger logger = Logger.getLogger(BrowserScreenshotTaker.class.getName());
-	private TakeScreenshotTool takeScreenshotTool;
 
 	public BrowserScreenshotTaker() {
-		this.takeScreenshotTool = new TakeScreenshotTool();
+		super(new TakeScreenshotTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public TakeScreenshotToolResponse apply(TakeScreenshotToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = takeScreenshotTool.browser_take_screenshot(request.raw, request.filename, request.element, request.ref, userID, sessionID);
-		return new Response(result, "Browser take_screenshot completed");
+		String result = sandboxTool.browser_take_screenshot(request.raw, request.filename, request.element, request.ref, userID, sessionID);
+		return new TakeScreenshotToolResponse(new Response(result, "Browser take_screenshot completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return takeScreenshotTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.takeScreenshotTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.takeScreenshotTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.takeScreenshotTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record TakeScreenshotToolRequest(
 			@JsonProperty("raw") Boolean raw,
 			@JsonProperty("filename") String filename,
 			@JsonProperty("element") String element,
 			@JsonProperty("ref") String ref
 	) {
-		public Request {
+		public TakeScreenshotToolRequest {
 			if (raw == null) {
 				raw = false;
 			}
@@ -91,26 +68,47 @@ public class BrowserScreenshotTaker implements SandboxAwareTool<BrowserScreensho
 		}
 	}
 
+	public record TakeScreenshotToolResponse(@JsonProperty("Response") Response output) {
+		public TakeScreenshotToolResponse(Response output) {
+			this.output = output;
+		}
+	}
+
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(takeScreenshotTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						takeScreenshotTool.getName(),
-						new BrowserScreenshotTaker()
-				).description(takeScreenshotTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserScreenshotTaker.Request.class)
+				).inputType(BrowserScreenshotTaker.TakeScreenshotToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

@@ -25,85 +25,81 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.fs.ListDirectoryTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class FsDirectoryLister implements SandboxAwareTool<FsDirectoryLister.Request, FsDirectoryLister.Response> {
+public class FsDirectoryLister extends BaseSandboxAwareTool<ListDirectoryTool, FsDirectoryLister.ListDirectoryToolRequest, FsDirectoryLister.ListDirectoryToolResponse> {
 	Logger logger = Logger.getLogger(FsDirectoryLister.class.getName());
-	private ListDirectoryTool listDirectoryTool;
 
 	public FsDirectoryLister() {
-		this.listDirectoryTool = new ListDirectoryTool();
+		super(new ListDirectoryTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public ListDirectoryToolResponse apply(ListDirectoryToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = listDirectoryTool.fs_list_directory(request.path, userID, sessionID);
-		return new Response(result, "Filesystem list_directory completed");
+		String result = sandboxTool.fs_list_directory(request.path, userID, sessionID);
+		return new ListDirectoryToolResponse(new Response(result, "Filesystem list_directory completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return listDirectoryTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.listDirectoryTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.listDirectoryTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.listDirectoryTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record ListDirectoryToolRequest(
 			@JsonProperty(required = true, value = "path")
 			@JsonPropertyDescription("Path to list contents")
 			String path
-	) { }
+	) {
+		public ListDirectoryToolRequest(String path) {
+			this.path = path;
+		}
+	}
+
+	public record ListDirectoryToolResponse(@JsonProperty("Response") Response output) {
+		public ListDirectoryToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains filesystem tool output and execution message")
 	public record Response(String result, String message) {
-		public Response(String result, String message) { this.result = result; this.message = message; }
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
 		@JsonProperty(required = true, value = "result")
 		@JsonPropertyDescription("tool output")
-		public String result() { return this.result; }
+		public String result() {
+			return this.result;
+		}
+
 		@JsonProperty(required = true, value = "message")
 		@JsonPropertyDescription("execute result")
-		public String message() { return this.message; }
+		public String message() {
+			return this.message;
+		}
 	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(listDirectoryTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						listDirectoryTool.getName(),
-						new FsDirectoryLister()
-				).description(listDirectoryTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(FsDirectoryLister.Request.class)
+				).inputType(FsDirectoryLister.ListDirectoryToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

@@ -25,52 +25,29 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.HandleDialogTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserDialogHandler implements SandboxAwareTool<BrowserDialogHandler.Request, BrowserDialogHandler.Response> {
+public class BrowserDialogHandler extends BaseSandboxAwareTool<HandleDialogTool, BrowserDialogHandler.HandleDialogToolRequest, BrowserDialogHandler.HandleDialogToolResponse> {
 	Logger logger = Logger.getLogger(BrowserDialogHandler.class.getName());
-	private HandleDialogTool handleDialogTool;
 
 	public BrowserDialogHandler() {
-		this.handleDialogTool = new HandleDialogTool();
+		super(new HandleDialogTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public HandleDialogToolResponse apply(HandleDialogToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = handleDialogTool.browser_handle_dialog(request.accept, request.promptText, userID, sessionID);
-		return new Response(result, "Browser handle dialog completed");
+		String result = sandboxTool.browser_handle_dialog(request.accept, request.promptText, userID, sessionID);
+		return new HandleDialogToolResponse(new Response(result, "Browser handle dialog completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return handleDialogTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.handleDialogTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.handleDialogTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.handleDialogTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record HandleDialogToolRequest(
 			@JsonProperty(required = true, value = "accept")
 			@JsonPropertyDescription("Whether to accept the dialog")
 			Boolean accept,
@@ -78,7 +55,7 @@ public class BrowserDialogHandler implements SandboxAwareTool<BrowserDialogHandl
 			@JsonPropertyDescription("The text of the prompt in case of a prompt dialog")
 			String promptText
 	) {
-		public Request {
+		public HandleDialogToolRequest {
 			if (accept == null) {
 				accept = true;
 			}
@@ -88,26 +65,47 @@ public class BrowserDialogHandler implements SandboxAwareTool<BrowserDialogHandl
 		}
 	}
 
+	public record HandleDialogToolResponse(@JsonProperty("Response") Response output) {
+		public HandleDialogToolResponse(Response output) {
+			this.output = output;
+		}
+	}
+
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(handleDialogTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						handleDialogTool.getName(),
-						new BrowserDialogHandler()
-				).description(handleDialogTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserDialogHandler.Request.class)
+				).inputType(BrowserDialogHandler.HandleDialogToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

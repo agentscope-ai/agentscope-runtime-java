@@ -25,77 +25,81 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.NavigateTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserNavigator implements SandboxAwareTool<BrowserNavigator.Request, BrowserNavigator.Response> {
+public class BrowserNavigator extends BaseSandboxAwareTool<NavigateTool, BrowserNavigator.NavigateToolRequest, BrowserNavigator.NavigateToolResponse> {
 	Logger logger = Logger.getLogger(BrowserNavigator.class.getName());
-	private NavigateTool navigateTool;
 
 	public BrowserNavigator() {
-		this.navigateTool = new NavigateTool();
+		super(new NavigateTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public NavigateToolResponse apply(NavigateToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = navigateTool.browser_navigate(request.url, userID, sessionID);
-		return new Response(result, "Browser navigate completed");
+		String result = sandboxTool.browser_navigate(request.url, userID, sessionID);
+		return new NavigateToolResponse(new Response(result, "Browser navigate completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return navigateTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.navigateTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.navigateTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.navigateTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record NavigateToolRequest(
 			@JsonProperty(required = true, value = "url")
 			@JsonPropertyDescription("The URL to navigate to")
 			String url
-	) { }
+	) {
+		public NavigateToolRequest(String url) {
+			this.url = url;
+		}
+	}
+
+	public record NavigateToolResponse(@JsonProperty("Response") Response output) {
+		public NavigateToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		@JsonPropertyDescription("browser output")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		@JsonPropertyDescription("execute result")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(navigateTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						navigateTool.getName(),
-						new BrowserNavigator()
-				).description(navigateTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserNavigator.Request.class)
+				).inputType(BrowserNavigator.NavigateToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

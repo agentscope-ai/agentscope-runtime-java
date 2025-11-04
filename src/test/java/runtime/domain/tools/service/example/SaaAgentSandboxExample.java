@@ -23,7 +23,9 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
+import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import reactor.core.publisher.Flux;
 
 /**
@@ -31,6 +33,7 @@ import reactor.core.publisher.Flux;
  */
 public class SaaAgentSandboxExample {
 
+    private EnvironmentManager environmentManager;
     private DashScopeChatModel chatModel;
     private ContextManager contextManager;
 
@@ -38,6 +41,8 @@ public class SaaAgentSandboxExample {
         // Initialize DashScope ChatModel
         initializeChatModel();
 
+
+        environmentManager = new DefaultEnvironmentManager();
         // Initialize ContextManager (you may need to adapt this based on your actual implementation)
         initializeContextManager();
     }
@@ -81,12 +86,8 @@ public class SaaAgentSandboxExample {
         }
     }
 
-    /**
-     * Basic example of using SaaAgent with ReactAgent
-     */
     public CompletableFuture<Void> basicExample() {
         // Create Runner with the SaaAgent
-        Runner runner = new Runner(contextManager);
         System.out.println("=== BaseSandboxTool Using SaaAgent Example ===");
 
         return CompletableFuture.supplyAsync(() -> {
@@ -95,14 +96,15 @@ public class SaaAgentSandboxExample {
                 // Create ReactAgent Builder
                 Builder builder = ReactAgent.builder()
                         .name("saa_agent")
-                        .tools(List.of(ToolsInit.RunPythonCodeTool()))
+                        .tools(List.of(ToolcallsInit.RunPythonCodeTool()))
                         .model(chatModel);
 
-                // Create SaaAgent using the ReactAgent Builder
+                // Create Runner with the SaaAgent
                 SaaAgent saaAgent = SaaAgent.builder()
-                        .agent(builder.build())
+                        .agent(builder)
                         .build();
 
+                Runner runner = new Runner(saaAgent, contextManager, environmentManager);
                 runner.registerAgent(saaAgent);
 
                 // Create AgentRequest
@@ -211,15 +213,15 @@ public class SaaAgentSandboxExample {
                     .join();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
+                example.environmentManager.getSandboxManager().cleanupAllSandboxes();
             // Clean up all sandbox containers before exiting
             System.out.println("\n=== Cleaning up sandbox containers ===");
             try {
-                Runner.getSandboxManager().cleanupAllSandboxes();
+                example.environmentManager.getSandboxManager().cleanupAllSandboxes();
                 System.out.println("=== Sandbox cleanup completed ===");
-            } catch (Exception e) {
-                System.err.println("Error during sandbox cleanup: " + e.getMessage());
-                e.printStackTrace();
+            } catch (Exception innerExe) {
+                System.err.println("Error during sandbox cleanup: " + innerExe.getMessage());
+                innerExe.printStackTrace();
             }
         }
     }

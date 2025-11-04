@@ -91,6 +91,11 @@ public class MCPTool extends SandboxTool {
     }
 
     @Override
+    public Class<? extends Sandbox> getSandboxClass() {
+        return BaseSandbox.class;
+    }
+
+    @Override
     public MCPTool bind(Sandbox sandbox) {
         if (sandbox == null) {
             throw new IllegalArgumentException("The provided sandbox cannot be null.");

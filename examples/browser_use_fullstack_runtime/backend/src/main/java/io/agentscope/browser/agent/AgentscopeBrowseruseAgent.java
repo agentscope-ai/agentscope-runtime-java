@@ -10,6 +10,7 @@ import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import io.agentscope.browser.constants.Prompts;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
+import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
@@ -20,9 +21,11 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.ToolCallback;
@@ -47,6 +50,7 @@ public class AgentscopeBrowseruseAgent {
     private SaaAgent agent;
     private Runner runner;
     private ContextManager contextManager;
+    private EnvironmentManager environmentManager;
     private MemoryService memoryService;
     private SessionHistoryService sessionHistoryService;
     private String browserWebSocketUrl;
@@ -60,33 +64,33 @@ public class AgentscopeBrowseruseAgent {
         this.tools = new ArrayList<>();
 
         // Base tools
-        tools.add(ToolsInit.RunShellCommandTool());
-        tools.add(ToolsInit.RunPythonCodeTool());
+        tools.add(ToolcallsInit.RunShellCommandTool());
+        tools.add(ToolcallsInit.RunPythonCodeTool());
 
         // Browser tools
-        tools.add(ToolsInit.BrowserCloseTool());
-        tools.add(ToolsInit.BrowserResizeTool());
-        tools.add(ToolsInit.BrowserConsoleMessagesTool());
-        tools.add(ToolsInit.BrowserHandleDialogTool());
-        tools.add(ToolsInit.BrowserFileUploadTool());
-        tools.add(ToolsInit.BrowserPressKeyTool());
-        tools.add(ToolsInit.BrowserNavigateTool());
-        tools.add(ToolsInit.BrowserNavigateBackTool());
-        tools.add(ToolsInit.BrowserNavigateForwardTool());
-        tools.add(ToolsInit.BrowserNetworkRequestsTool());
-        tools.add(ToolsInit.BrowserPdfSaveTool());
-        tools.add(ToolsInit.BrowserTakeScreenshotTool());
-        tools.add(ToolsInit.BrowserSnapshotTool());
-        tools.add(ToolsInit.BrowserClickTool());
-        tools.add(ToolsInit.BrowserDragTool());
-        tools.add(ToolsInit.BrowserHoverTool());
-        tools.add(ToolsInit.BrowserTypeTool());
-        tools.add(ToolsInit.BrowserSelectOptionTool());
-        tools.add(ToolsInit.BrowserTabListTool());
-        tools.add(ToolsInit.BrowserTabNewTool());
-        tools.add(ToolsInit.BrowserTabSelectTool());
-        tools.add(ToolsInit.BrowserTabCloseTool());
-        tools.add(ToolsInit.BrowserWaitForTool());
+        tools.add(ToolcallsInit.BrowserCloseTool());
+        tools.add(ToolcallsInit.BrowserResizeTool());
+        tools.add(ToolcallsInit.BrowserConsoleMessagesTool());
+        tools.add(ToolcallsInit.BrowserHandleDialogTool());
+        tools.add(ToolcallsInit.BrowserFileUploadTool());
+        tools.add(ToolcallsInit.BrowserPressKeyTool());
+        tools.add(ToolcallsInit.BrowserNavigateTool());
+        tools.add(ToolcallsInit.BrowserNavigateBackTool());
+        tools.add(ToolcallsInit.BrowserNavigateForwardTool());
+        tools.add(ToolcallsInit.BrowserNetworkRequestsTool());
+        tools.add(ToolcallsInit.BrowserPdfSaveTool());
+        tools.add(ToolcallsInit.BrowserTakeScreenshotTool());
+        tools.add(ToolcallsInit.BrowserSnapshotTool());
+        tools.add(ToolcallsInit.BrowserClickTool());
+        tools.add(ToolcallsInit.BrowserDragTool());
+        tools.add(ToolcallsInit.BrowserHoverTool());
+        tools.add(ToolcallsInit.BrowserTypeTool());
+        tools.add(ToolcallsInit.BrowserSelectOptionTool());
+        tools.add(ToolcallsInit.BrowserTabListTool());
+        tools.add(ToolcallsInit.BrowserTabNewTool());
+        tools.add(ToolcallsInit.BrowserTabSelectTool());
+        tools.add(ToolcallsInit.BrowserTabCloseTool());
+        tools.add(ToolcallsInit.BrowserWaitForTool());
     }
 
     /**
@@ -97,14 +101,10 @@ public class AgentscopeBrowseruseAgent {
 
         // Initialize session history service
         sessionHistoryService = new InMemorySessionHistoryService();
-        sessionHistoryService.start().get();
-
         // Create session
         sessionHistoryService.createSession(USER_ID, Optional.of(SESSION_ID)).get();
-
         // Initialize memory service
         memoryService = new InMemoryMemoryService();
-        memoryService.start().get();
 
         // Initialize context manager
         contextManager = new ContextManager(
@@ -113,6 +113,8 @@ public class AgentscopeBrowseruseAgent {
             memoryService
         );
         contextManager.start().get();
+
+        environmentManager = new DefaultEnvironmentManager();
 
         // Initialize chat model
         String apiKey = System.getenv("DASHSCOPE_API_KEY");
@@ -130,14 +132,12 @@ public class AgentscopeBrowseruseAgent {
                 .build();
 
         // Initialize runner
-//        runner = new Runner(agent);
-        runner = new Runner(agent, contextManager);
-//        runner = new Runner(agent, contextManager, environmentManager);
+        runner = new Runner(agent, contextManager, environmentManager);
 
         // Get browser WebSocket URL
         try {
             // Connect to browser sandbox
-            ContainerModel sandboxInfo = Runner.getSandboxManager().getSandbox(SandboxType.BROWSER, USER_ID, SESSION_ID);
+            ContainerModel sandboxInfo = environmentManager.getSandboxManager().getSandbox(SandboxType.BROWSER, USER_ID, SESSION_ID);
 
             if (sandboxInfo != null ) {
                 browserWebSocketUrl = sandboxInfo.getFrontBrowserWS();
@@ -164,12 +164,11 @@ public class AgentscopeBrowseruseAgent {
                 .build();
 
         // Create ReactAgent
-        Builder builder = ReactAgent.builder()
+        return ReactAgent.builder()
                 .name("Friday")
                 .tools(tools)
                 .model(chatModel)
                 .systemPrompt(Prompts.SYSTEM_PROMPT);
-        return builder;
     }
 
     /**
@@ -230,7 +229,7 @@ public class AgentscopeBrowseruseAgent {
 
         // Cleanup sandboxes
         try {
-            Runner.getSandboxManager().cleanupAllSandboxes();
+            environmentManager.getSandboxManager().cleanupAllSandboxes();
         } catch (Exception e) {
             logger.warn("Failed to cleanup sandboxes: {}", e.getMessage());
         }

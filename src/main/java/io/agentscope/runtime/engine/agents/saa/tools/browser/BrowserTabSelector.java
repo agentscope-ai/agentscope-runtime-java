@@ -25,77 +25,79 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.TabSelectTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserTabSelector implements SandboxAwareTool<BrowserTabSelector.Request, BrowserTabSelector.Response> {
+public class BrowserTabSelector extends BaseSandboxAwareTool<TabSelectTool, BrowserTabSelector.TabSelectToolRequest, BrowserTabSelector.TabSelectToolResponse> {
 	Logger logger = Logger.getLogger(BrowserTabSelector.class.getName());
-	private TabSelectTool tabSelectTool;
 
 	public BrowserTabSelector() {
-		this.tabSelectTool = new TabSelectTool();
+		super(new TabSelectTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public TabSelectToolResponse apply(TabSelectToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = tabSelectTool.browser_tab_select(request.index, userID, sessionID);
-		return new Response(result, "Browser tab_select completed");
+		String result = sandboxTool.browser_tab_select(request.index, userID, sessionID);
+		return new TabSelectToolResponse(new Response(result, "Browser tab_select completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return tabSelectTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.tabSelectTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.tabSelectTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.tabSelectTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record TabSelectToolRequest(
 			@JsonProperty(required = true, value = "index")
 			@JsonPropertyDescription("The index of the tab to select")
 			Integer index
-		) { }
+	) {
+		public TabSelectToolRequest(Integer index) {
+			this.index = index;
+		}
+	}
+
+	public record TabSelectToolResponse(@JsonProperty("Response") Response output) {
+		public TabSelectToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(tabSelectTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						tabSelectTool.getName(),
-						new BrowserTabSelector()
-				).description(tabSelectTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserTabSelector.Request.class)
+				).inputType(BrowserTabSelector.TabSelectToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

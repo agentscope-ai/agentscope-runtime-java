@@ -10,6 +10,7 @@ import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
 import io.agentscope.runtime.engine.memory.model.MessageType;
 
+import com.alibaba.cloud.ai.graph.agent.flow.builder.FlowAgentBuilder;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 
@@ -64,37 +65,73 @@ public class SaaAgent extends BaseAgent {
         }
 
         private void setupTools() {
-
-            /**
-             * 1. 遍历所有 tools，如果有aware tool，则 enableSandbox = true
-             * 2. 如果 enableSandbox = true，则context.getEnvironmentManager()不能为null
-             * 3. 重新遍临所有tools，针对每一个aware tool，设置 sandbox，sandbox从 context.getEnvironmentManager().getSandboxManager()获取
-             * 4.
-             */
-
-            SandboxManager sandboxManager = context.getEnvironmentManager().getSandboxManager();
-
-
             try {
                 Field toolsField = originalAgentBuilder.getClass().getDeclaredField("tools");
                 toolsField.setAccessible(true);
                 @SuppressWarnings("unchecked")
                 List<Object> tools = (List<Object>) toolsField.get(originalAgentBuilder);
 
-                if (tools != null) {
+                if (tools == null || tools.isEmpty()) {
+                    return;
+                }
+
+                // Step 1: Check if any tool is SandboxAwareTool
+                boolean enableSandbox = false;
+                for (Object tool : tools) {
+                    if (tool instanceof SandboxAwareTool) {
+                        enableSandbox = true;
+                        break;
+                    }
+                }
+
+                // Step 2: Validate environment manager if sandbox is needed
+                if (enableSandbox) {
+                    if (context.getEnvironmentManager() == null) {
+                        throw new IllegalStateException("EnvironmentManager cannot be null when SandboxAwareTool is present");
+                    }
+
+                    SandboxManager sandboxManager = context.getEnvironmentManager().getSandboxManager();
+                    if (sandboxManager == null) {
+                        throw new IllegalStateException("SandboxManager cannot be null when SandboxAwareTool is present");
+                    }
+
+                    String sessionId = context.getSession().getId();
+                    String userId = context.getSession().getUserId();
+
+                    // Step 3: Setup each SandboxAwareTool
                     for (Object tool : tools) {
-                        if (tool instanceof SandboxAwareTool sandboxManagerAwareTool) {
-                            sandboxManagerAwareTool.setSandboxManager(sandboxManager);
+                        if (tool instanceof SandboxAwareTool sandboxAwareTool) {
+                            // 3.1: Get sandbox class and create sandbox instance
+                            Class<?> sandboxClass = sandboxAwareTool.getSandboxClass();
+                            if (sandboxClass == null) {
+                                throw new IllegalStateException("SandboxClass cannot be null for SandboxAwareTool: " + tool.getClass().getName());
+                            }
+
+                            try {
+                                // Create Sandbox instance with constructor: (SandboxManager, String userId, String sessionId)
+                                Sandbox sandbox = (Sandbox) sandboxClass.getConstructor(
+                                    SandboxManager.class,
+                                    String.class,
+                                    String.class
+                                ).newInstance(sandboxManager, userId, sessionId);
+
+                                // 3.2: Set sandboxManager and sandbox instance
+                                sandboxAwareTool.setSandboxManager(sandboxManager);
+                                sandboxAwareTool.setSandbox(sandbox);
+                            } catch (Exception e) {
+                                throw new RuntimeException("Failed to create Sandbox instance for class: " + sandboxClass.getName(), e);
+                            }
                         }
                     }
                 }
             } catch (Exception e) {
-                // Log error if logger is available, otherwise print to console
-                System.err.println("Error setting up tools: " + e.getMessage());
+                // Re-throw runtime exceptions
+                if (e instanceof RuntimeException) {
+                    throw (RuntimeException) e;
+                }
+                throw new RuntimeException("Error setting up tools: " + e.getMessage(), e);
             }
         }
-
-        private Sandbox
 
         private List<org.springframework.ai.chat.messages.Message> adaptMemory() {
             List<org.springframework.ai.chat.messages.Message> messages = new ArrayList<>();
@@ -456,6 +493,7 @@ public class SaaAgent extends BaseAgent {
 
     public static class SaaAgentBuilder {
         private com.alibaba.cloud.ai.graph.agent.Builder originalAgentBuilder;
+        private FlowAgentBuilder flowAgentBuilder;
         private Function<Context, Object> contextAdapter;
         private Function<Object, String> responseProcessor;
         private Function<Object, String> streamResponseProcessor;
@@ -463,6 +501,11 @@ public class SaaAgent extends BaseAgent {
 
         public SaaAgentBuilder agent(com.alibaba.cloud.ai.graph.agent.Builder originalAgentBuilder) {
             this.originalAgentBuilder = originalAgentBuilder;
+            return this;
+        }
+
+        public SaaAgentBuilder flowAgent(FlowAgentBuilder flowAgentBuilder) {
+            this.flowAgentBuilder = flowAgentBuilder;
             return this;
         }
 

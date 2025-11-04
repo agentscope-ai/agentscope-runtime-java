@@ -25,80 +25,83 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.ResizeTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserWindowResizer implements SandboxAwareTool<BrowserWindowResizer.Request, BrowserWindowResizer.Response> {
+public class BrowserWindowResizer extends BaseSandboxAwareTool<ResizeTool, BrowserWindowResizer.ResizeToolRequest, BrowserWindowResizer.ResizeToolResponse> {
 	Logger logger = Logger.getLogger(BrowserWindowResizer.class.getName());
-	private ResizeTool resizeTool;
 
 	public BrowserWindowResizer() {
-		this.resizeTool = new ResizeTool();
+		super(new ResizeTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public ResizeToolResponse apply(ResizeToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = resizeTool.browser_resize(request.width, request.height, userID, sessionID);
-		return new Response(result, "Browser resize completed");
+		String result = sandboxTool.browser_resize(request.width, request.height, userID, sessionID);
+		return new ResizeToolResponse(new Response(result, "Browser resize completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return resizeTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.resizeTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.resizeTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.resizeTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record ResizeToolRequest(
 			@JsonProperty(required = true, value = "width")
 			@JsonPropertyDescription("Width of the browser window")
 			Double width,
 			@JsonProperty(required = true, value = "height")
 			@JsonPropertyDescription("Height of the browser window")
 			Double height
-	) { }
+	) {
+		public ResizeToolRequest(Double width, Double height) {
+			this.width = width;
+			this.height = height;
+		}
+	}
+
+	public record ResizeToolResponse(@JsonProperty("Response") Response output) {
+		public ResizeToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(resizeTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						resizeTool.getName(),
-						new BrowserWindowResizer()
-				).description(resizeTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserWindowResizer.Request.class)
+				).inputType(BrowserWindowResizer.ResizeToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

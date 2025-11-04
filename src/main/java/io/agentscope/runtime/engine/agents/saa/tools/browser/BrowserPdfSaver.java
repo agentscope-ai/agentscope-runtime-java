@@ -25,83 +25,81 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.PdfSaveTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserPdfSaver implements SandboxAwareTool<BrowserPdfSaver.Request, BrowserPdfSaver.Response> {
+public class BrowserPdfSaver extends BaseSandboxAwareTool<PdfSaveTool, BrowserPdfSaver.PdfSaveToolRequest, BrowserPdfSaver.PdfSaveToolResponse> {
 	Logger logger = Logger.getLogger(BrowserPdfSaver.class.getName());
-	private PdfSaveTool pdfSaveTool;
 
 	public BrowserPdfSaver() {
-		this.pdfSaveTool = new PdfSaveTool();
+		super(new PdfSaveTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public PdfSaveToolResponse apply(PdfSaveToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = pdfSaveTool.browser_pdf_save(request.filename, userID, sessionID);
-		return new Response(result, "Browser PDF save completed");
+		String result = sandboxTool.browser_pdf_save(request.filename, userID, sessionID);
+		return new PdfSaveToolResponse(new Response(result, "Browser PDF save completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return pdfSaveTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.pdfSaveTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.pdfSaveTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.pdfSaveTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record PdfSaveToolRequest(
 			@JsonProperty("filename")
 			@JsonPropertyDescription("File name to save the pdf to")
 			String filename
 	) {
-		public Request {
+		public PdfSaveToolRequest {
 			if (filename == null) {
 				filename = "";
 			}
 		}
 	}
 
+	public record PdfSaveToolResponse(@JsonProperty("Response") Response output) {
+		public PdfSaveToolResponse(Response output) {
+			this.output = output;
+		}
+	}
+
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(pdfSaveTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						pdfSaveTool.getName(),
-						new BrowserPdfSaver()
-				).description(pdfSaveTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserPdfSaver.Request.class)
+				).inputType(BrowserPdfSaver.PdfSaveToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

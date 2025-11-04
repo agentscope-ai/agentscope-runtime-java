@@ -25,56 +25,43 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.fs.ReadMultipleFilesTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class FsMultiFileReader implements SandboxAwareTool<FsMultiFileReader.Request, FsMultiFileReader.Response> {
+public class FsMultiFileReader extends BaseSandboxAwareTool<ReadMultipleFilesTool, FsMultiFileReader.ReadMultipleFilesToolRequest, FsMultiFileReader.ReadMultipleFilesToolResponse> {
 	Logger logger = Logger.getLogger(FsMultiFileReader.class.getName());
-	private ReadMultipleFilesTool readMultipleFilesTool;
 
 	public FsMultiFileReader() {
-		this.readMultipleFilesTool = new ReadMultipleFilesTool();
+		super(new ReadMultipleFilesTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public ReadMultipleFilesToolResponse apply(ReadMultipleFilesToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = readMultipleFilesTool.fs_read_multiple_files(request.paths, userID, sessionID);
-		return new Response(result, "Filesystem read_multiple_files completed");
+		String result = sandboxTool.fs_read_multiple_files(request.paths, userID, sessionID);
+		return new ReadMultipleFilesToolResponse(new Response(result, "Filesystem read_multiple_files completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return readMultipleFilesTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.readMultipleFilesTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.readMultipleFilesTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.readMultipleFilesTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record ReadMultipleFilesToolRequest(
 			@JsonProperty(required = true, value = "paths")
 			@JsonPropertyDescription("Paths to the files to read")
 			String[] paths
-	) { }
+	) {
+		public ReadMultipleFilesToolRequest(String[] paths) {
+			this.paths = paths;
+		}
+	}
+
+	public record ReadMultipleFilesToolResponse(@JsonProperty("Response") Response output) {
+		public ReadMultipleFilesToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains filesystem tool output and execution message")
 	public record Response(String result, String message) {
@@ -85,30 +72,34 @@ public class FsMultiFileReader implements SandboxAwareTool<FsMultiFileReader.Req
 
 		@JsonProperty(required = true, value = "result")
 		@JsonPropertyDescription("tool output")
-		public String result() { return this.result; }
+		public String result() {
+			return this.result;
+		}
 
 		@JsonProperty(required = true, value = "message")
 		@JsonPropertyDescription("execute result")
-		public String message() { return this.message; }
+		public String message() {
+			return this.message;
+		}
 	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(readMultipleFilesTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						readMultipleFilesTool.getName(),
-						new FsMultiFileReader()
-				).description(readMultipleFilesTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(FsMultiFileReader.Request.class)
+				).inputType(FsMultiFileReader.ReadMultipleFilesToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

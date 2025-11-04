@@ -23,23 +23,20 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class MCPToolExecutor implements SandboxAwareTool<Map<String, Object>, MCPToolExecutor.MCPToolResponse> {
+public class MCPToolExecutor extends BaseSandboxAwareTool<MCPTool, Map<String, Object>, MCPToolExecutor.MCPToolResponse> {
 	private static final Logger logger = Logger.getLogger(MCPToolExecutor.class.getName());
-
-	private MCPTool mcpTool;
 
 	public MCPToolExecutor(String name, String toolType, String description,
 			Map<String, Object> schema, Map<String, Object> serverConfigs,
 			SandboxType sandboxType, SandboxManager sandboxManager) {
-		this.mcpTool = new MCPTool(
+		super(new MCPTool(
 				name,
 				toolType,
 				description,
@@ -47,11 +44,11 @@ public class MCPToolExecutor implements SandboxAwareTool<Map<String, Object>, MC
 				serverConfigs,
 				sandboxType,
 				sandboxManager
-		);
+		));
 	}
 
 	public MCPToolExecutor(MCPTool mcpTool) {
-		this.mcpTool = mcpTool;
+		super(mcpTool);
 	}
 
 	@Override
@@ -61,7 +58,7 @@ public class MCPToolExecutor implements SandboxAwareTool<Map<String, Object>, MC
 		String sessionID = userAndSession[1];
 
 		try {
-			String result = mcpTool.executeMCPTool(arguments, userID, sessionID);
+			String result = sandboxTool.executeMCPTool(arguments, userID, sessionID);
 			return new MCPToolResponse(result, "MCP tool execution completed");
 		} catch (Exception e) {
 			logger.severe("MCP tool execution error: " + e.getMessage());
@@ -71,26 +68,6 @@ public class MCPToolExecutor implements SandboxAwareTool<Map<String, Object>, MC
 					"MCP tool execution error: " + e.getMessage()
 			);
 		}
-	}
-
-	@Override
-	public SandboxManager getSandboxManager() {
-		return mcpTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		mcpTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return mcpTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		mcpTool.setSandbox(sandbox);
 	}
 
 	public record MCPToolResponse(String result, String message) {
@@ -104,7 +81,7 @@ public class MCPToolExecutor implements SandboxAwareTool<Map<String, Object>, MC
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(mcpTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			logger.severe("Failed to serialize schema: " + e.getMessage());
 			e.printStackTrace();
@@ -112,10 +89,10 @@ public class MCPToolExecutor implements SandboxAwareTool<Map<String, Object>, MC
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						mcpTool.getName(),
+						sandboxTool.getName(),
 						this
 				)
-				.description(mcpTool.getDescription())
+				.description(sandboxTool.getDescription())
 				.inputSchema(inputSchema)
 				.inputType(Map.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())

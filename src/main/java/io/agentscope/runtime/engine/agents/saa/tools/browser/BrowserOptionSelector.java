@@ -25,52 +25,29 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.SelectOptionTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserOptionSelector implements SandboxAwareTool<BrowserOptionSelector.Request, BrowserOptionSelector.Response> {
+public class BrowserOptionSelector extends BaseSandboxAwareTool<SelectOptionTool, BrowserOptionSelector.SelectOptionToolRequest, BrowserOptionSelector.SelectOptionToolResponse> {
 	Logger logger = Logger.getLogger(BrowserOptionSelector.class.getName());
-	private SelectOptionTool selectOptionTool;
 
 	public BrowserOptionSelector() {
-		this.selectOptionTool = new SelectOptionTool();
+		super(new SelectOptionTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public SelectOptionToolResponse apply(SelectOptionToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = selectOptionTool.browser_select_option(request.element, request.ref, request.values, userID, sessionID);
-		return new Response(result, "Browser select option completed");
+		String result = sandboxTool.browser_select_option(request.element, request.ref, request.values, userID, sessionID);
+		return new SelectOptionToolResponse(new Response(result, "Browser select option completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return selectOptionTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.selectOptionTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.selectOptionTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.selectOptionTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record SelectOptionToolRequest(
 			@JsonProperty(required = true, value = "element")
 			@JsonPropertyDescription("Human-readable element description")
 			String element,
@@ -80,28 +57,55 @@ public class BrowserOptionSelector implements SandboxAwareTool<BrowserOptionSele
 			@JsonProperty(required = true, value = "values")
 			@JsonPropertyDescription("Array of values to select in the dropdown")
 			String[] values
-	) { }
+	) {
+		public SelectOptionToolRequest(String element, String ref, String[] values) {
+			this.element = element;
+			this.ref = ref;
+			this.values = values;
+		}
+	}
+
+	public record SelectOptionToolResponse(@JsonProperty("Response") Response output) {
+		public SelectOptionToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(selectOptionTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						selectOptionTool.getName(),
-						new BrowserOptionSelector()
-				).description(selectOptionTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserOptionSelector.Request.class)
+				).inputType(BrowserOptionSelector.SelectOptionToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

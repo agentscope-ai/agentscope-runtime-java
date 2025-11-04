@@ -2,6 +2,7 @@ package runtime.domain.tools.service.example;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 
 import java.util.List;
@@ -15,7 +16,7 @@ import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMe
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
+import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
@@ -76,23 +77,19 @@ public class SaaAgentDeployExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public void basicExample() {
-        Runner runner = new Runner();
-
         try {
             // Create ReactAgent Builder
-            ReactAgent reactAgent = ReactAgent.builder()
+           Builder builder = ReactAgent.builder()
                     .name("saa_agent")
                     .model(chatModel)
-                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
-                    .build();
+                    .tools(List.of(ToolcallsInit.RunPythonCodeTool()));
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agent(reactAgent)
+                    .agent(builder)
                     .build();
 
-            runner.registerAgent(saaAgent);
-            runner.registerContextManager(contextManager);
+            Runner runner = new Runner(saaAgent, contextManager);
 
             LocalDeployManager deployManager = new LocalDeployManager();
             deployManager.deployStreaming();

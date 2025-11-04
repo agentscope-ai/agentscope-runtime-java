@@ -25,88 +25,85 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.fs.MoveFileTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class FsFileMover implements SandboxAwareTool<FsFileMover.Request, FsFileMover.Response> {
+public class FsFileMover extends BaseSandboxAwareTool<MoveFileTool, FsFileMover.MoveFileToolRequest, FsFileMover.MoveFileToolResponse> {
 	Logger logger = Logger.getLogger(FsFileMover.class.getName());
-	private MoveFileTool moveFileTool;
 
 	public FsFileMover() {
-		this.moveFileTool = new MoveFileTool();
+		super(new MoveFileTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public MoveFileToolResponse apply(MoveFileToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = moveFileTool.fs_move_file(request.source, request.destination, userID, sessionID);
-		return new Response(result, "Filesystem move_file completed");
+		String result = sandboxTool.fs_move_file(request.source, request.destination, userID, sessionID);
+		return new MoveFileToolResponse(new Response(result, "Filesystem move_file completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return moveFileTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.moveFileTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.moveFileTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.moveFileTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record MoveFileToolRequest(
 			@JsonProperty(required = true, value = "source")
 			@JsonPropertyDescription("Source path to move from")
 			String source,
 			@JsonProperty(required = true, value = "destination")
 			@JsonPropertyDescription("Destination path to move to")
 			String destination
-	) { }
+	) {
+		public MoveFileToolRequest(String source, String destination) {
+			this.source = source;
+			this.destination = destination;
+		}
+	}
+
+	public record MoveFileToolResponse(@JsonProperty("Response") Response output) {
+		public MoveFileToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains filesystem tool output and execution message")
 	public record Response(String result, String message) {
-		public Response(String result, String message) { this.result = result; this.message = message; }
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
 		@JsonProperty(required = true, value = "result")
 		@JsonPropertyDescription("tool output")
-		public String result() { return this.result; }
+		public String result() {
+			return this.result;
+		}
+
 		@JsonProperty(required = true, value = "message")
 		@JsonPropertyDescription("execute result")
-		public String message() { return this.message; }
+		public String message() {
+			return this.message;
+		}
 	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(moveFileTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						moveFileTool.getName(),
-						new FsFileMover()
-				).description(moveFileTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(FsFileMover.Request.class)
+				).inputType(FsFileMover.MoveFileToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

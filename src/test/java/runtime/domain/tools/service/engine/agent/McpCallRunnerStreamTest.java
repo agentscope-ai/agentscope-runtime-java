@@ -2,6 +2,7 @@ package runtime.domain.tools.service.engine.agent;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
@@ -15,9 +16,10 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -34,12 +36,13 @@ import java.util.concurrent.TimeUnit;
 public class McpCallRunnerStreamTest {
     private DashScopeChatModel chatModel;
     private ContextManager contextManager;
-    private SandboxManager sandboxManager;
+    private EnvironmentManager environmentManager;
 
     @BeforeEach
     void setUp() {
         initializeChatModel();
         initializeContextManager();
+        environmentManager = new DefaultEnvironmentManager();
     }
 
     private void initializeChatModel() {
@@ -76,7 +79,6 @@ public class McpCallRunnerStreamTest {
     @Test
     public void testToolCallStreamRunner() {
         System.out.println("=== Start BaseSandboxTool Call Stream Runner Test ===");
-        Runner runner = new Runner(contextManager);
         try {
             String mcpServerConfig = """
                            {
@@ -92,23 +94,22 @@ public class McpCallRunnerStreamTest {
                 }
                 """;
 
-            List<ToolCallback> mcpTools = ToolsInit.getMcpTools(
+            List<ToolCallback> mcpTools = ToolcallsInit.getMcpTools(
                     mcpServerConfig,
                     SandboxType.BASE,
-                    Runner.getSandboxManager());
+                    environmentManager.getSandboxManager());
 
-            ReactAgent reactAgent = ReactAgent.builder()
+            Builder builder = ReactAgent.builder()
                     .name("saa Agent")
                     .description("saa Agent")
                     .tools(mcpTools)
-                    .model(chatModel)
-                    .build();
+                    .model(chatModel);
 
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agent(reactAgent)
+                    .agent(builder)
                     .build();
 
-            runner.registerAgent(saaAgent);
+            Runner runner = new Runner(saaAgent, contextManager, environmentManager);
 
             AgentRequest request = createAgentRequest("Tell me the time in New York", null, null);
 
@@ -136,7 +137,7 @@ public class McpCallRunnerStreamTest {
                     })
                     .join();
 
-            Runner.getSandboxManager().cleanupAllSandboxes();
+            environmentManager.getSandboxManager().cleanupAllSandboxes();
 
         } catch (Exception e) {
             e.printStackTrace();

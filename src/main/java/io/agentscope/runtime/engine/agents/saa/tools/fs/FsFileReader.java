@@ -25,56 +25,43 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.fs.ReadFileTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class FsFileReader implements SandboxAwareTool<FsFileReader.Request, FsFileReader.Response> {
+public class FsFileReader extends BaseSandboxAwareTool<ReadFileTool, FsFileReader.ReadFileToolRequest, FsFileReader.ReadFileToolResponse> {
 	Logger logger = Logger.getLogger(FsFileReader.class.getName());
-	private ReadFileTool readFileTool;
 
 	public FsFileReader() {
-		this.readFileTool = new ReadFileTool();
+		super(new ReadFileTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public ReadFileToolResponse apply(ReadFileToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = readFileTool.fs_read_file(request.path, userID, sessionID);
-		return new Response(result, "Filesystem read_file completed");
+		String result = sandboxTool.fs_read_file(request.path, userID, sessionID);
+		return new ReadFileToolResponse(new Response(result, "Filesystem read_file completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return readFileTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.readFileTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.readFileTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.readFileTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record ReadFileToolRequest(
 			@JsonProperty(required = true, value = "path")
 			@JsonPropertyDescription("Path to the file to read")
 			String path
-	) { }
+	) {
+		public ReadFileToolRequest(String path) {
+			this.path = path;
+		}
+	}
+
+	public record ReadFileToolResponse(@JsonProperty("Response") Response output) {
+		public ReadFileToolResponse(Response output) {
+			this.output = output;
+		}
+	}
 
 	@JsonClassDescription("The result contains filesystem tool output and execution message")
 	public record Response(String result, String message) {
@@ -85,30 +72,34 @@ public class FsFileReader implements SandboxAwareTool<FsFileReader.Request, FsFi
 
 		@JsonProperty(required = true, value = "result")
 		@JsonPropertyDescription("tool output")
-		public String result() { return this.result; }
+		public String result() {
+			return this.result;
+		}
 
 		@JsonProperty(required = true, value = "message")
 		@JsonPropertyDescription("execute result")
-		public String message() { return this.message; }
+		public String message() {
+			return this.message;
+		}
 	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(readFileTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						readFileTool.getName(),
-						new FsFileReader()
-				).description(readFileTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(FsFileReader.Request.class)
+				).inputType(FsFileReader.ReadFileToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

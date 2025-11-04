@@ -22,74 +22,76 @@ import org.springframework.ai.tool.metadata.ToolMetadata;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.CloseTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserCloser implements SandboxAwareTool<BrowserCloser.Request, BrowserCloser.Response> {
+public class BrowserCloser extends BaseSandboxAwareTool<CloseTool, BrowserCloser.CloseToolRequest, BrowserCloser.CloseToolResponse> {
 	Logger logger = Logger.getLogger(BrowserCloser.class.getName());
-	private CloseTool closeTool;
 
 	public BrowserCloser() {
-		this.closeTool = new CloseTool();
+		super(new CloseTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public CloseToolResponse apply(CloseToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = closeTool.browser_close(userID, sessionID);
-		return new Response(result, "Browser close completed");
+		String result = sandboxTool.browser_close(userID, sessionID);
+		return new CloseToolResponse(new Response(result, "Browser close completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return closeTool.getSandboxManager();
+	public record CloseToolRequest() {
+		public CloseToolRequest() {
+		}
 	}
 
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.closeTool.setSandboxManager(sandboxManager);
+	public record CloseToolResponse(@JsonProperty("Response") Response output) {
+		public CloseToolResponse(Response output) {
+			this.output = output;
+		}
 	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.closeTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.closeTool.setSandbox(sandbox);
-	}
-
-	public record Request() { }
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(closeTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						closeTool.getName(),
-						new BrowserCloser()
-				).description(closeTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserCloser.Request.class)
+				).inputType(BrowserCloser.CloseToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

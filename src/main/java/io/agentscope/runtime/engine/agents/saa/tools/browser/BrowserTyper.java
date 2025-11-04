@@ -24,59 +24,36 @@ import java.util.logging.Logger;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.TypeTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserTyper implements SandboxAwareTool<BrowserTyper.Request, BrowserTyper.Response> {
+public class BrowserTyper extends BaseSandboxAwareTool<TypeTool, BrowserTyper.TypeToolRequest, BrowserTyper.TypeToolResponse> {
 	Logger logger = Logger.getLogger(BrowserTyper.class.getName());
-	private TypeTool typeTool;
 
 	public BrowserTyper() {
-		this.typeTool = new TypeTool();
+		super(new TypeTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public TypeToolResponse apply(TypeToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = typeTool.browser_type(request.element, request.ref, request.text, request.submit, request.slowly, userID, sessionID);
-		return new Response(result, "Browser type completed");
+		String result = sandboxTool.browser_type(request.element, request.ref, request.text, request.submit, request.slowly, userID, sessionID);
+		return new TypeToolResponse(new Response(result, "Browser type completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return typeTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.typeTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.typeTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.typeTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record TypeToolRequest(
 			@JsonProperty(required = true, value = "element") String element,
 			@JsonProperty(required = true, value = "ref") String ref,
 			@JsonProperty(required = true, value = "text") String text,
 			@JsonProperty("submit") Boolean submit,
 			@JsonProperty("slowly") Boolean slowly
 	) {
-		public Request {
+		public TypeToolRequest {
 			if (submit == null) {
 				submit = false;
 			}
@@ -86,26 +63,47 @@ public class BrowserTyper implements SandboxAwareTool<BrowserTyper.Request, Brow
 		}
 	}
 
+	public record TypeToolResponse(@JsonProperty("Response") Response output) {
+		public TypeToolResponse(Response output) {
+			this.output = output;
+		}
+	}
+
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(typeTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						typeTool.getName(),
-						new BrowserTyper()
-				).description(typeTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserTyper.Request.class)
+				).inputType(BrowserTyper.TypeToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

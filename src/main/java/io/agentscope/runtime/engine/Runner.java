@@ -4,9 +4,6 @@ import io.agentscope.runtime.engine.agents.BaseAgent;
 import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
-import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
@@ -244,6 +241,14 @@ public class Runner implements AutoCloseable {
             // Log the error but do not interrupt the process
             e.printStackTrace();
         }
+    }
+
+    public EnvironmentManager getEnvironmentManager() {
+        return environmentManager;
+    }
+
+    public ContextManager getContextManager() {
+        return contextManager;
     }
 
     @Override

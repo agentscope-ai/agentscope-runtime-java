@@ -25,57 +25,34 @@ import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.WaitForTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserWaiter implements SandboxAwareTool<BrowserWaiter.Request, BrowserWaiter.Response> {
+public class BrowserWaiter extends BaseSandboxAwareTool<WaitForTool, BrowserWaiter.WaitForToolRequest, BrowserWaiter.WaitForToolResponse> {
 	Logger logger = Logger.getLogger(BrowserWaiter.class.getName());
-	private WaitForTool waitForTool;
 
 	public BrowserWaiter() {
-		this.waitForTool = new WaitForTool();
+		super(new WaitForTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public WaitForToolResponse apply(WaitForToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = waitForTool.browser_wait_for(request.time, request.text, request.textGone, userID, sessionID);
-		return new Response(result, "Browser wait_for completed");
+		String result = sandboxTool.browser_wait_for(request.time, request.text, request.textGone, userID, sessionID);
+		return new WaitForToolResponse(new Response(result, "Browser wait_for completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return waitForTool.getSandboxManager();
-	}
-
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.waitForTool.setSandboxManager(sandboxManager);
-	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.waitForTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.waitForTool.setSandbox(sandbox);
-	}
-
-	public record Request(
+	public record WaitForToolRequest(
 			@JsonProperty("time") @JsonPropertyDescription("time in seconds") Double time,
 			@JsonProperty("text") String text,
 			@JsonProperty("textGone") String textGone
 	) {
-		public Request {
+		public WaitForToolRequest {
 			if (time == null) {
 				time = 0.0;
 			}
@@ -88,26 +65,47 @@ public class BrowserWaiter implements SandboxAwareTool<BrowserWaiter.Request, Br
 		}
 	}
 
+	public record WaitForToolResponse(@JsonProperty("Response") Response output) {
+		public WaitForToolResponse(Response output) {
+			this.output = output;
+		}
+	}
+
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(waitForTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						waitForTool.getName(),
-						new BrowserWaiter()
-				).description(waitForTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserWaiter.Request.class)
+				).inputType(BrowserWaiter.WaitForToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

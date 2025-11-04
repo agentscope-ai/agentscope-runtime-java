@@ -22,74 +22,76 @@ import org.springframework.ai.tool.metadata.ToolMetadata;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.TabListTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserTabLister implements SandboxAwareTool<BrowserTabLister.Request, BrowserTabLister.Response> {
+public class BrowserTabLister extends BaseSandboxAwareTool<TabListTool, BrowserTabLister.TabListToolRequest, BrowserTabLister.TabListToolResponse> {
 	Logger logger = Logger.getLogger(BrowserTabLister.class.getName());
-	private TabListTool tabListTool;
 
 	public BrowserTabLister() {
-		this.tabListTool = new TabListTool();
+		super(new TabListTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public TabListToolResponse apply(TabListToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = tabListTool.browser_tab_list(userID, sessionID);
-		return new Response(result, "Browser tab list completed");
+		String result = sandboxTool.browser_tab_list(userID, sessionID);
+		return new TabListToolResponse(new Response(result, "Browser tab list completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return tabListTool.getSandboxManager();
+	public record TabListToolRequest() {
+		public TabListToolRequest() {
+		}
 	}
 
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.tabListTool.setSandboxManager(sandboxManager);
+	public record TabListToolResponse(@JsonProperty("Response") Response output) {
+		public TabListToolResponse(Response output) {
+			this.output = output;
+		}
 	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.tabListTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.tabListTool.setSandbox(sandbox);
-	}
-
-	public record Request() { }
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(tabListTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						tabListTool.getName(),
-						new BrowserTabLister()
-				).description(tabListTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserTabLister.Request.class)
+				).inputType(BrowserTabLister.TabListToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}

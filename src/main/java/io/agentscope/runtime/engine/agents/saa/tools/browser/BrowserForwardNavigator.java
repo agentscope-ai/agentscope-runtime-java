@@ -22,74 +22,76 @@ import org.springframework.ai.tool.metadata.ToolMetadata;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonClassDescription;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
-import io.agentscope.runtime.engine.agents.saa.SandboxAwareTool;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.browser.NavigateForwardTool;
 import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
-public class BrowserForwardNavigator implements SandboxAwareTool<BrowserForwardNavigator.Request, BrowserForwardNavigator.Response> {
+public class BrowserForwardNavigator extends BaseSandboxAwareTool<NavigateForwardTool, BrowserForwardNavigator.NavigateForwardToolRequest, BrowserForwardNavigator.NavigateForwardToolResponse> {
 	Logger logger = Logger.getLogger(BrowserForwardNavigator.class.getName());
-	private NavigateForwardTool navigateForwardTool;
 
 	public BrowserForwardNavigator() {
-		this.navigateForwardTool = new NavigateForwardTool();
+		super(new NavigateForwardTool());
 	}
 
 	@Override
-	public Response apply(Request request, ToolContext toolContext) {
+	public NavigateForwardToolResponse apply(NavigateForwardToolRequest request, ToolContext toolContext) {
 		String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
 		String userID = userAndSession[0];
 		String sessionID = userAndSession[1];
 
-		String result = navigateForwardTool.browser_navigate_forward(userID, sessionID);
-		return new Response(result, "Browser navigate forward completed");
+		String result = sandboxTool.browser_navigate_forward(userID, sessionID);
+		return new NavigateForwardToolResponse(new Response(result, "Browser navigate forward completed"));
 	}
 
-	@Override
-	public SandboxManager getSandboxManager() {
-		return navigateForwardTool.getSandboxManager();
+	public record NavigateForwardToolRequest() {
+		public NavigateForwardToolRequest() {
+		}
 	}
 
-	@Override
-	public void setSandboxManager(SandboxManager sandboxManager) {
-		this.navigateForwardTool.setSandboxManager(sandboxManager);
+	public record NavigateForwardToolResponse(@JsonProperty("Response") Response output) {
+		public NavigateForwardToolResponse(Response output) {
+			this.output = output;
+		}
 	}
-
-	@Override
-	public Sandbox getSandbox() {
-		return this.navigateForwardTool.getSandbox();
-	}
-
-	@Override
-	public void setSandbox(Sandbox sandbox) {
-		this.navigateForwardTool.setSandbox(sandbox);
-	}
-
-	public record Request() { }
 
 	@JsonClassDescription("The result contains browser tool output and message")
-	public record Response(String result, String message) {}
+	public record Response(String result, String message) {
+		public Response(String result, String message) {
+			this.result = result;
+			this.message = message;
+		}
+
+		@JsonProperty(required = true, value = "result")
+		public String result() {
+			return this.result;
+		}
+
+		@JsonProperty(required = true, value = "message")
+		public String message() {
+			return this.message;
+		}
+	}
 
 	public RuntimeFunctionToolCallback buildTool() {
 		ObjectMapper mapper = new ObjectMapper();
 		String inputSchema = "";
 		try {
-			inputSchema = mapper.writeValueAsString(navigateForwardTool.getSchema());
+			inputSchema = mapper.writeValueAsString(sandboxTool.getSchema());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		return RuntimeFunctionToolCallback
 				.builder(
-						navigateForwardTool.getName(),
-						new BrowserForwardNavigator()
-				).description(navigateForwardTool.getDescription())
+						sandboxTool.getName(),
+						this
+				).description(sandboxTool.getDescription())
 				.inputSchema(
 						inputSchema
-				).inputType(BrowserForwardNavigator.Request.class)
+				).inputType(BrowserForwardNavigator.NavigateForwardToolRequest.class)
 				.toolMetadata(ToolMetadata.builder().returnDirect(false).build())
 				.build();
 	}
