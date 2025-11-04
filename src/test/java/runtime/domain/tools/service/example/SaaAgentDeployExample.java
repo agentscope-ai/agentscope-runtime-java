@@ -5,6 +5,7 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.runtime.autoconfig.deployer.LocalDeployManager;
+import io.agentscope.runtime.autoconfig.deployer.ServerConfig;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
 import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
@@ -94,8 +95,11 @@ public class SaaAgentDeployExample {
 
             Runner runner = new Runner(saaAgent, contextManager, environmentManager);
 
+            ServerConfig serverConfig = new ServerConfig(10001);
+
             LocalDeployManager deployManager = new LocalDeployManager();
-            deployManager.deployStreaming();
+
+            deployManager.deployStreaming("process", serverConfig);
 
         } catch (Exception e) {
             e.printStackTrace();

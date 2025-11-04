@@ -16,6 +16,9 @@
 package io.agentscope.runtime.engine.a2a;
 
 import io.a2a.spec.AgentCard;
+import io.agentscope.runtime.autoconfig.deployer.ServerConfig;
+import io.agentscope.runtime.engine.Runner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +30,10 @@ public class AgentCardController {
 
 	private final JSONRPCHandler jsonRpcHandler;
 
-	public AgentCardController() {
+	public AgentCardController(@Autowired(required = false) ServerConfig serverConfig) {
+		if (serverConfig != null) {
+			AgentHandlerConfiguration.initialize(new GraphAgentExecutor(Runner.getRunner()::streamQuery), serverConfig);
+		}
 		this.jsonRpcHandler = AgentHandlerConfiguration.getInstance().jsonrpcHandler();
 	}
 

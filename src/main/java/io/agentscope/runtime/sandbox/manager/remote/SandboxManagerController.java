@@ -59,8 +59,6 @@ public class SandboxManagerController {
 
                 logger.info("Registered endpoint: " + annotation.method() + " " + path +
                         " -> " + method.getName());
-                System.out.println("Registered endpoint: " + annotation.method() + " " + path +
-                        " -> " + method.getName());
             }
         }
 
