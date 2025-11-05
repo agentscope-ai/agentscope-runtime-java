@@ -84,7 +84,7 @@ public class AgentScopeAgentExample {
 
         return CompletableFuture.supplyAsync(() -> {
                     try {
-                        ReActAgent agent =
+                        ReActAgent.Builder agentBuilder =
                                 ReActAgent.builder()
                                         .name("Assistant")
                                         .sysPrompt("You are a helpful AI assistant. Be friendly and concise.")
@@ -101,15 +101,14 @@ public class AgentScopeAgentExample {
                                                                         .build())
                                                         .build())
                                         .memory(new InMemoryMemory())
-                                        .toolkit(new Toolkit())
-                                        .build();
+                                        .toolkit(new Toolkit());
 
-                        AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder().agentScopeAgent(agent).build();
+                        AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder().agent(agentBuilder).build();
 
                         runner.registerAgent(agentScopeAgent);
 
                         // Create AgentRequest
-                        AgentRequest request = createAgentRequest("给我讲个笑话", null, null);
+                        AgentRequest request = createAgentRequest("Tell me a joke", null, null);
 
                         // Execute the agent and handle the response stream
                         Flux<Event> eventStream = runner.streamQuery(request);

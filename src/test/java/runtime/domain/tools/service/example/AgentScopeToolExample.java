@@ -25,6 +25,7 @@ import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import reactor.core.publisher.Flux;
 
@@ -78,7 +79,9 @@ public class AgentScopeToolExample {
      */
     public CompletableFuture<Void> basicExample() {
         System.out.println("=== Basic SaaAgent Example ===");
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+
+//        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        BaseClientConfig clientConfig = KubernetesClientConfig.builder().kubeConfigPath("/Users/xht/Downloads/agentscope-runtime-java/kubeconfig.txt").build();
         ManagerConfig managerConfig = ManagerConfig.builder()
                 .containerDeployment(clientConfig)
                 .build();
@@ -93,7 +96,7 @@ public class AgentScopeToolExample {
 
         return CompletableFuture.supplyAsync(() -> {
                     try {
-                        ReActAgent agent =
+                        ReActAgent.Builder agentBuilder =
                                 ReActAgent.builder()
                                         .name("Assistant")
                                         .sysPrompt("You are a helpful AI assistant. Be friendly and concise.")
@@ -110,10 +113,9 @@ public class AgentScopeToolExample {
                                                                         .build())
                                                         .build())
                                         .memory(new InMemoryMemory())
-                                        .toolkit(toolkit)
-                                        .build();
+                                        .toolkit(toolkit);
 
-                        AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder().agentScopeAgent(agent).build();
+                        AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder().agent(agentBuilder).build();
 
                         runner.registerAgent(agentScopeAgent);
 
