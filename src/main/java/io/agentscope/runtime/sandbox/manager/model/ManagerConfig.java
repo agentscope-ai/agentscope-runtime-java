@@ -39,6 +39,9 @@ public class ManagerConfig {
 
     private Boolean redisEnabled = false;
 
+    private String baseUrl;
+    private String bearerToken;
+
 
     private PortRange portRange;
     private int poolSize = 0;
@@ -56,6 +59,9 @@ public class ManagerConfig {
         this.fileSystemConfig = builder.fileSystemConfig;
         this.portRange = builder.portRange;
         this.poolSize = builder.poolSize;
+
+        this.baseUrl = builder.baseUrl;
+        this.bearerToken = builder.bearerToken;
 
         validate();
     }
@@ -124,6 +130,14 @@ public class ManagerConfig {
         return redisConfig;
     }
 
+    public String getBaseUrl() {
+        return this.baseUrl;
+    }
+
+    public String getBearerToken() {
+        return this.bearerToken;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -131,10 +145,12 @@ public class ManagerConfig {
     public static class Builder {
         private String containerPrefixKey = "runtime_sandbox_container_";
         private Boolean redisEnabled = false;
-        private BaseClientConfig clientConfig = new DockerClientConfig();
+        private BaseClientConfig clientConfig = DockerClientConfig.builder().build();
         private RedisManagerConfig redisConfig;
         private PortRange portRange = new PortRange(49152, 59152);
         private int poolSize = 0;
+        private String baseUrl;
+        private String bearerToken;
 
         private FileSystemConfig fileSystemConfig = LocalFileSystemConfig.builder().build();
 
@@ -153,6 +169,16 @@ public class ManagerConfig {
         public Builder redisConfig(RedisManagerConfig redisConfig) {
             this.redisConfig = redisConfig;
             this.redisEnabled = true;
+            return this;
+        }
+
+        public Builder bearerToken(String bearerToken) {
+            this.bearerToken = bearerToken;
+            return this;
+        }
+
+        public Builder baseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
             return this;
         }
 

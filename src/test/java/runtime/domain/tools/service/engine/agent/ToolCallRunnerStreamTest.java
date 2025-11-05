@@ -2,6 +2,7 @@ package runtime.domain.tools.service.engine.agent;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
@@ -15,8 +16,9 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
+import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -32,12 +34,13 @@ import java.util.concurrent.TimeUnit;
 public class ToolCallRunnerStreamTest {
     private DashScopeChatModel chatModel;
     private ContextManager contextManager;
-    private SandboxManager sandboxManager;
+    private EnvironmentManager environmentManager;
 
     @BeforeEach
     void setUp() {
         initializeChatModel();
         initializeContextManager();
+        environmentManager = new DefaultEnvironmentManager();
     }
 
     private void initializeChatModel() {
@@ -74,21 +77,18 @@ public class ToolCallRunnerStreamTest {
     @Test
     public void testToolCallStreamRunner() {
         System.out.println("=== Start BaseSandboxTool Call Stream Runner Test ===");
-        Runner runner = new Runner(contextManager);
-
         try {
-            ReactAgent reactAgent = ReactAgent.builder()
+            Builder builder = ReactAgent.builder()
                     .name("saa Agent")
                     .description("saa Agent")
-                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
-                    .model(chatModel)
-                    .build();
+                    .tools(List.of(ToolcallsInit.RunPythonCodeTool()))
+                    .model(chatModel);
 
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(reactAgent)
+                    .agent(builder)
                     .build();
 
-            runner.registerAgent(saaAgent);
+            Runner runner = new Runner(saaAgent, contextManager, environmentManager);
 
             AgentRequest request = createAgentRequest("Calculate the 10th Fibonacci number using Python for me", null, null);
 
@@ -116,7 +116,7 @@ public class ToolCallRunnerStreamTest {
                     })
                     .join();
 
-            Runner.getSandboxManager().cleanupAllSandboxes();
+            environmentManager.getSandboxManager().cleanupAllSandboxes();
 
         } catch (Exception e) {
             e.printStackTrace();

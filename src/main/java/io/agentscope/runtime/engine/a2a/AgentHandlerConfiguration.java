@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 import io.a2a.spec.AgentCapabilities;
+import io.agentscope.runtime.autoconfig.deployer.ServerConfig;
 import io.agentscope.runtime.engine.Runner;
 
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -40,11 +41,15 @@ public class AgentHandlerConfiguration {
     private final JSONRPCHandler jsonrpcHandler;
 
     public AgentHandlerConfiguration() {
-        this(new GraphAgentExecutor(Runner.getRunner()::streamQuery), new NetworkUtils());
+        this(new GraphAgentExecutor(Runner.getRunner()::streamQuery), ServerConfig.defaultConfig());
     }
 
     public AgentHandlerConfiguration(AgentExecutor agentExecutor) {
-        this(agentExecutor, new NetworkUtils());
+        this(agentExecutor, ServerConfig.defaultConfig());
+    }
+
+    public AgentHandlerConfiguration(AgentExecutor agentExecutor, ServerConfig serverConfig) {
+        this(agentExecutor, new NetworkUtils(serverConfig));
     }
 
     public AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
@@ -74,6 +79,12 @@ public class AgentHandlerConfiguration {
         return inst;
     }
 
+    public static synchronized void initialize(AgentExecutor agentExecutor, ServerConfig serverConfig) {
+        if (INSTANCE == null) {
+            INSTANCE = new AgentHandlerConfiguration(agentExecutor, serverConfig);
+        }
+    }
+
     public static AgentCard createDefaultAgentCard(NetworkUtils networkUtils) {
         AgentCapabilities capabilities = createDefaultCapabilities();
         String dynamicUrl = networkUtils.getServerUrl("/a2a/");
@@ -90,8 +101,12 @@ public class AgentHandlerConfiguration {
                 .build();
     }
 
+    public static AgentCard createDefaultAgentCard(ServerConfig serverConfig) {
+        return createDefaultAgentCard(new NetworkUtils(serverConfig));
+    }
+
     public static AgentCard createDefaultAgentCard() {
-        return createDefaultAgentCard(new NetworkUtils());
+        return createDefaultAgentCard(ServerConfig.defaultConfig());
     }
 
     private static AgentCapabilities createDefaultCapabilities() {

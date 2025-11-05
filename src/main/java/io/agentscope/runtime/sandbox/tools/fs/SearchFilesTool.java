@@ -15,27 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.fs;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class SearchFilesTool extends SandboxTool {
+public class SearchFilesTool extends FsSandboxTool {
+
+    Logger logger = Logger.getLogger(SearchFilesTool.class.getName());
 
     public SearchFilesTool() {
         super("fs_search_files", "filesystem", "Search for files matching a pattern");
@@ -72,82 +64,17 @@ public class SearchFilesTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String fs_search_files(String path, String pattern, String[] excludePatterns) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new FileSearcher()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(FileSearcher.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class FileSearcher implements BiFunction<FileSearcher.Request, ToolContext, FileSearcher.Response> {
-
-        Logger logger = Logger.getLogger(FileSearcher.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            try {
-                String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-                String userID = userAndSession[0];
-                String sessionID = userAndSession[1];
-                
-                String result = fs_search_files(request.path, request.pattern, request.excludePatterns, userID, sessionID);
-                return new Response(result, "Filesystem search_files completed");
-            } catch (Exception e) {
-                return new Response("Error", "Filesystem search_files error: " + e.getMessage());
-            }
-        }
-
-        private String fs_search_files(String path, String pattern, String[] excludePatterns, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
-                    return filesystemSandbox.searchFiles(path, pattern, excludePatterns);
-                }
-                FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.searchFiles(path, pattern, excludePatterns);
-            } catch (Exception e) {
-                String errorMsg = "Search Files Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
-        }
-
-        public record Request(
-                @JsonProperty(required = true, value = "path")
-                @JsonPropertyDescription("Starting path for the search")
-                String path,
-                @JsonProperty(required = true, value = "pattern")
-                @JsonPropertyDescription("Pattern to match files/directories")
-                String pattern,
-                @JsonProperty(value = "excludePatterns")
-                @JsonPropertyDescription("Patterns to exclude from search")
-                String[] excludePatterns
-        ) { }
-
-        @JsonClassDescription("The result contains filesystem tool output and execution message")
-        public record Response(String result, String message) {
-            public Response(String result, String message) { this.result = result; this.message = message; }
-            @JsonProperty(required = true, value = "result")
-            @JsonPropertyDescription("tool output")
-            public String result() { return this.result; }
-            @JsonProperty(required = true, value = "message")
-            @JsonPropertyDescription("execute result")
-            public String message() { return this.message; }
+            throw new RuntimeException("Only FilesystemSandbox supported in search files tool");
+        } catch (Exception e) {
+            String errorMsg = "Search Files Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
     }
 }
-

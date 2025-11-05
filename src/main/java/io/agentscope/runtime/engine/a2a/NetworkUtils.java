@@ -15,7 +15,8 @@
  */
 package io.agentscope.runtime.engine.a2a;
 
-import java.io.InputStream;
+import io.agentscope.runtime.autoconfig.deployer.ServerConfig;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -29,111 +30,30 @@ public class NetworkUtils {
     private final int serverPort;
     private final String serverAddress;
 
-    public NetworkUtils() {
-        this(loadPortFromConfig(), "");
-    }
-
-    public NetworkUtils(int serverPort) {
-        this(serverPort, "");
+    public NetworkUtils(ServerConfig serverConfig) {
+        this.serverPort = serverConfig.getServerPort();
+        this.serverAddress = serverConfig.getServerAddress();
     }
 
     public NetworkUtils(int serverPort, String serverAddress) {
         this.serverPort = serverPort;
-        this.serverAddress = serverAddress;
-    }
-
-    /**
-     * Load port number from configuration files
-     * Supports multiple configuration methods: environment variables, system properties, configuration files
-     * 
-     * @return port number, defaults to 8080
-     */
-    private static int loadPortFromConfig() {
-        // 1. Check environment variables first
-        String envPort = System.getenv("SERVER_PORT");
-        if (envPort != null && !envPort.trim().isEmpty()) {
-            try {
-                return Integer.parseInt(envPort.trim());
-            } catch (NumberFormatException e) {
-                // Ignore format errors, continue with other methods
-            }
-        }
-
-        // 2. Check system properties
-        String sysPort = System.getProperty("server.port");
-        if (sysPort != null && !sysPort.trim().isEmpty()) {
-            try {
-                return Integer.parseInt(sysPort.trim());
-            } catch (NumberFormatException e) {
-                // Ignore format errors, continue with other methods
-            }
-        }
-
-        // 3. Check application.yml
-        try {
-            InputStream input = NetworkUtils.class.getClassLoader().getResourceAsStream("application.yml");
-            if (input != null) {
-                String content = new String(input.readAllBytes());
-                String[] lines = content.split("\n");
-                for (String line : lines) {
-                    line = line.trim();
-                    if (line.startsWith("port:")) {
-                        String portStr = line.substring(5).trim();
-                        return Integer.parseInt(portStr);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // If reading fails, continue with other methods
-        }
-
-        // 4. Check application.properties
-        try {
-            InputStream input = NetworkUtils.class.getClassLoader().getResourceAsStream("application.properties");
-            if (input != null) {
-                String content = new String(input.readAllBytes());
-                String[] lines = content.split("\n");
-                for (String line : lines) {
-                    line = line.trim();
-                    if (line.startsWith("server.port=")) {
-                        String portStr = line.substring(12).trim();
-                        return Integer.parseInt(portStr);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // If reading fails, use default port
-        }
-
-        return 8080; // Default port
+        this.serverAddress = serverAddress != null ? serverAddress : "";
     }
 
     /**
      * Get current server IP address
-     * Supports multiple configuration methods: environment variables, system properties, constructor parameters, auto-detection
+     * Uses address from configuration, or auto-detects local IP if not configured
      * 
      * @return server IP address
      */
     public String getServerIpAddress() {
-        // 1. Check environment variables first
-        String envAddress = System.getenv("SERVER_ADDRESS");
-        if (envAddress != null && !envAddress.trim().isEmpty()) {
-            return envAddress.trim();
-        }
-
-        // 2. Check system properties
-        String sysAddress = System.getProperty("server.address");
-        if (sysAddress != null && !sysAddress.trim().isEmpty()) {
-            return sysAddress.trim();
-        }
-
-        // 3. Use address passed in constructor
+        // Use address from configuration
         if (serverAddress != null && !serverAddress.trim().isEmpty()) {
             return serverAddress;
         }
         
         try {
-            // 4. Try to get local IP address
+            // Try to get local IP address
             return getLocalIpAddress();
         } catch (Exception e) {
             // If getting fails, use localhost
@@ -177,11 +97,7 @@ public class NetworkUtils {
         StringBuilder info = new StringBuilder();
         info.append("NetworkUtils Configuration:\n");
         info.append("  Server Port: ").append(serverPort).append("\n");
-        info.append("  Server Address: ").append(serverAddress != null ? serverAddress : "auto-detect").append("\n");
-        info.append("  Environment SERVER_PORT: ").append(System.getenv("SERVER_PORT")).append("\n");
-        info.append("  Environment SERVER_ADDRESS: ").append(System.getenv("SERVER_ADDRESS")).append("\n");
-        info.append("  System Property server.port: ").append(System.getProperty("server.port")).append("\n");
-        info.append("  System Property server.address: ").append(System.getProperty("server.address")).append("\n");
+        info.append("  Server Address: ").append(serverAddress != null && !serverAddress.isEmpty() ? serverAddress : "auto-detect").append("\n");
         info.append("  Final IP: ").append(getServerIpAddress()).append("\n");
         info.append("  Final URL: ").append(getServerUrl(""));
         return info.toString();

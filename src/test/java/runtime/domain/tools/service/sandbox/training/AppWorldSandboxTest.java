@@ -1,7 +1,6 @@
 package runtime.domain.tools.service.sandbox.training;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.APPWorldSandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
@@ -29,7 +28,9 @@ public class AppWorldSandboxTest {
         // Initialize sandbox manager
         java.util.logging.Logger.getLogger("").setLevel(java.util.logging.Level.OFF);
         try {
-            BaseClientConfig clientConfig = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+            BaseClientConfig clientConfig = KubernetesClientConfig.builder()
+                    .kubeConfigPath(System.getenv("KUBECONFIG_PATH"))
+                    .build();
             ManagerConfig config = new ManagerConfig.Builder()
                     .containerDeployment(clientConfig)
                     .build();

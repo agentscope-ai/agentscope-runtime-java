@@ -17,7 +17,6 @@ package io.agentscope.runtime.sandbox.box;
 
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
 import java.util.HashMap;
 import java.util.Map;

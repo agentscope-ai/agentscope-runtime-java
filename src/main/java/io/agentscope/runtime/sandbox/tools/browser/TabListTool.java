@@ -15,26 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.browser;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.HashMap;
-import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
 /**
  * Browser tab list tool
  */
-public class TabListTool extends SandboxTool {
+public class TabListTool extends BrowserSandboxTool {
+
+    Logger logger = Logger.getLogger(TabListTool.class.getName());
 
     public TabListTool() {
         super("browser_tab_list", "browser", "List all browser tabs");
@@ -50,59 +43,18 @@ public class TabListTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String browser_tab_list() {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new TabLister()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(TabLister.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class TabLister implements BiFunction<TabLister.Request, ToolContext, TabLister.Response> {
-
-        Logger logger = Logger.getLogger(TabLister.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            String result = browser_tab_list(userID, sessionID);
-            return new Response(result, "Browser tab list completed");
-        }
-
-        private String browser_tab_list(String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof BrowserSandbox browserSandbox) {
-                    return browserSandbox.tabList();
-                }
-                BrowserSandbox browserSandbox = new BrowserSandbox(sandboxManager, userID, sessionID);
+            if(sandbox instanceof BrowserSandbox browserSandbox){
                 return browserSandbox.tabList();
-            } catch (Exception e) {
-                String errorMsg = "Browser Tab List Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
+            throw new RuntimeException("Only BrowserSandbox supported in browser tab list tool");
+        } catch (Exception e) {
+            String errorMsg = "Browser Tab List Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
-
-        public record Request() { }
-
-        @JsonClassDescription("The result contains browser tool output and message")
-        public record Response(String result, String message) {}
     }
+
 }

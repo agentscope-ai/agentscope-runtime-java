@@ -12,9 +12,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
+import io.agentscope.runtime.engine.agents.saa.tools.MCPToolExecutor;
+import io.agentscope.runtime.engine.agents.saa.tools.McpConfigConverter;
+import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
@@ -25,10 +29,10 @@ import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
-import io.agentscope.runtime.sandbox.tools.utils.McpConfigConverter;
 import reactor.core.publisher.Flux;
 
 
@@ -36,11 +40,12 @@ public class SaaAgentMCPSandboxExample {
 
     private DashScopeChatModel chatModel;
     private ContextManager contextManager;
+    private EnvironmentManager environmentManager;
 
     public SaaAgentMCPSandboxExample() {
         initializeChatModel();
-
         initializeContextManager();
+        this.environmentManager = new DefaultEnvironmentManager();
     }
 
     private void initializeChatModel() {
@@ -85,8 +90,6 @@ public class SaaAgentMCPSandboxExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public CompletableFuture<Void> basicExample() {
-        Runner runner = new Runner(contextManager);
-
         System.out.println("=== SaaAgent example Using custom MCP server ===");
 
         String mcpServerConfig = """
@@ -104,10 +107,10 @@ public class SaaAgentMCPSandboxExample {
                 """;
 
         try  {
-            List<ToolCallback> mcpTools = ToolsInit.getMcpTools(
+            List<ToolCallback> mcpTools = ToolcallsInit.getMcpTools(
                     mcpServerConfig,
                     SandboxType.BASE,
-                    Runner.getSandboxManager());
+                    environmentManager.getSandboxManager());
 
             System.out.println("Created " + mcpTools.size() + " MCP tools");
             mcpTools.forEach(tool -> System.out.println("  - " + tool));
@@ -115,15 +118,15 @@ public class SaaAgentMCPSandboxExample {
             McpConfigConverter converter = McpConfigConverter.builder()
                     .serverConfigs(mcpServerConfig)
                     .sandboxType(SandboxType.BASE)
-                    .sandboxManager(Runner.getSandboxManager())
+                    .sandboxManager(environmentManager.getSandboxManager())
                     .build();
 
             List<MCPTool> mcpToolInstances = converter.toBuiltinTools();
             System.out.println("Created " + mcpToolInstances.size() + " MCPTool instances");
 
             List<ToolCallback> toolCallbacks = mcpToolInstances.stream()
-                    .map(MCPTool::buildTool)
-                    .toList();
+                    .map(mcpTool -> new MCPToolExecutor(mcpTool).buildTool())
+                    .collect(Collectors.toUnmodifiableList());
 
             System.out.println("Built " + toolCallbacks.size() + " ToolCallbacks");
 
@@ -136,17 +139,15 @@ public class SaaAgentMCPSandboxExample {
                                     .tools(toolCallbacks)
                                     .model(chatModel);
 
-                            ReactAgent reactAgent = builder.build();
-
                             // Create SaaAgent using the ReactAgent Builder
                             SaaAgent saaAgent = SaaAgent.builder()
-                                    .agentBuilder(reactAgent)
+                                    .agent(builder)
                                     .build();
 
                             // Create AgentRequest
                             AgentRequest request = createAgentRequest("Get current time for me.", null, null);
 
-                            runner.registerAgent(saaAgent);
+                            Runner runner = new Runner(saaAgent, contextManager, environmentManager);
 
                             // Execute the agent and handle the response stream
                             Flux<Event> eventStream = runner.streamQuery(request);
@@ -260,7 +261,7 @@ public class SaaAgentMCPSandboxExample {
             // Clean up all sandbox containers before exiting
             System.out.println("\n=== Cleaning up sandbox containers ===");
             try {
-                Runner.getSandboxManager().cleanupAllSandboxes();
+                example.environmentManager.getSandboxManager().cleanupAllSandboxes();
                 System.out.println("=== Sandbox cleanup completed ===");
             } catch (Exception e) {
                 System.err.println("Error during sandbox cleanup: " + e.getMessage());

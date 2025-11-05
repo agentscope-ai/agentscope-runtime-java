@@ -15,21 +15,12 @@
  */
 package io.agentscope.runtime.sandbox.tools;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.BrowserSandbox;
-import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
 public class MCPTool extends SandboxTool {
@@ -72,7 +63,28 @@ public class MCPTool extends SandboxTool {
         }
         this.serverConfigs = serverConfigs;
     }
-    
+
+    public String executeMCPTool(Map<String, Object> arguments) {
+        logger.info(String.format("Executing MCP tool '%s' with arguments: %s",
+                mcpToolName, arguments));
+
+        if (sandbox == null) {
+            throw new RuntimeException("Sandbox is not properly initialized for MCP tool");
+        }
+
+        sandbox.addMcpServers(serverConfigs, false);
+
+        String result = sandbox.callTool(mcpToolName, arguments);
+
+        logger.info(String.format("MCP tool '%s' execution result: %s", mcpToolName, result));
+        return result;
+    }
+
+    @Override
+    public Class<? extends Sandbox> getSandboxClass() {
+        return BaseSandbox.class;
+    }
+
     @Override
     public MCPTool bind(Sandbox sandbox) {
         if (sandbox == null) {
@@ -86,131 +98,10 @@ public class MCPTool extends SandboxTool {
                             sandboxType, sandbox.getSandboxType())
             );
         }
-        
-        MCPTool newTool = new MCPTool(
-            this.name,
-            this.toolType,
-            this.description,
-            this.schema,
-            this.serverConfigs,
-            this.sandboxType,
-            this.sandboxManager
-        );
-        newTool.setSandbox(sandbox);
-        return newTool;
-    }
-    
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
-        try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            logger.severe("Failed to serialize schema: " + e.getMessage());
-            e.printStackTrace();
-        }
-        
-        return FunctionToolCallback
-                .builder(
-                    name,
-                    new MCPToolExecutor()
-                )
-                .description(description)
-                .inputSchema(inputSchema)
-                .inputType(Map.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
+
+        this.sandbox = sandbox;
+        return this;
     }
 
-    class MCPToolExecutor implements BiFunction<Map<String, Object>, ToolContext, MCPToolResponse> {
-        
-        @Override
-        public MCPToolResponse apply(Map<String, Object> arguments, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            try {
-                String result = executeMCPTool(arguments, userID, sessionID);
-                return new MCPToolResponse(result, "MCP tool execution completed");
-            } catch (Exception e) {
-                logger.severe("MCP tool execution error: " + e.getMessage());
-                e.printStackTrace();
-                return new MCPToolResponse(
-                    "Error",
-                    "MCP tool execution error: " + e.getMessage()
-                );
-            }
-        }
-        
-        private String executeMCPTool(Map<String, Object> arguments, String userID, String sessionID) {
-            logger.info(String.format("Executing MCP tool '%s' with arguments: %s", 
-                                     mcpToolName, arguments));
-            
-            if (sandbox == null) {
-                sandbox = createSandbox(userID, sessionID);
-            }
-            
-            sandbox.addMcpServers(serverConfigs, false);
-            
-            String result = sandbox.callTool(mcpToolName, arguments);
-            
-            logger.info(String.format("MCP tool '%s' execution result: %s", mcpToolName, result));
-            return result;
-        }
-        
-        private Sandbox createSandbox(String userID, String sessionID) {
-            try {
-                return SandboxFactory.createSandbox(sandboxType, sandboxManager, userID, sessionID);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create sandbox for MCP tool", e);
-            }
-        }
-    }
-
-
-    public record MCPToolResponse(String result, String message) {
-        public MCPToolResponse(String result, String message) {
-            this.result = result;
-            this.message = message;
-        }
-    }
-
-    private static class SandboxFactory {
-        static Sandbox createSandbox(SandboxType type, SandboxManager manager, 
-                                    String userID, String sessionID) {
-            return switch (type) {
-                case BASE -> createBaseSandbox(manager, userID, sessionID);
-                case BROWSER -> createBrowserSandbox(manager, userID, sessionID);
-                case FILESYSTEM -> createFilesystemSandbox(manager, userID, sessionID);
-                default -> throw new IllegalArgumentException("Unsupported sandbox type: " + type);
-            };
-        }
-        
-        private static Sandbox createBaseSandbox(SandboxManager manager, String userID, String sessionID) {
-            try {
-                return new BaseSandbox(manager, userID, sessionID);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create BaseSandbox", e);
-            }
-        }
-        
-        private static Sandbox createBrowserSandbox(SandboxManager manager, String userID, String sessionID) {
-            try {
-                return new BrowserSandbox(manager, userID, sessionID);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create BrowserSandbox", e);
-            }
-        }
-        
-        private static Sandbox createFilesystemSandbox(SandboxManager manager, String userID, String sessionID) {
-            try {
-                return new FilesystemSandbox(manager, userID, sessionID);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create FilesystemSandbox", e);
-            }
-        }
-    }
 }
 

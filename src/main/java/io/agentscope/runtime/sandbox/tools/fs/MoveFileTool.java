@@ -15,27 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.fs;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class MoveFileTool extends SandboxTool {
+public class MoveFileTool extends FsSandboxTool {
+
+    Logger logger = Logger.getLogger(MoveFileTool.class.getName());
 
     public MoveFileTool() {
         super("fs_move_file", "filesystem", "Move or rename a file or directory");
@@ -67,79 +59,17 @@ public class MoveFileTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String fs_move_file(String source, String destination) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new FileMover()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(FileMover.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class FileMover implements BiFunction<FileMover.Request, ToolContext, FileMover.Response> {
-
-        Logger logger = Logger.getLogger(FileMover.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            try {
-                String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-                String userID = userAndSession[0];
-                String sessionID = userAndSession[1];
-                
-                String result = fs_move_file(request.source, request.destination, userID, sessionID);
-                return new Response(result, "Filesystem move_file completed");
-            } catch (Exception e) {
-                return new Response("Error", "Filesystem move_file error: " + e.getMessage());
-            }
-        }
-
-        private String fs_move_file(String source, String destination, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
-                    return filesystemSandbox.moveFile(source, destination);
-                }
-                FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.moveFile(source, destination);
-            } catch (Exception e) {
-                String errorMsg = "Move File Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
-        }
-
-        public record Request(
-                @JsonProperty(required = true, value = "source")
-                @JsonPropertyDescription("Source path to move from")
-                String source,
-                @JsonProperty(required = true, value = "destination")
-                @JsonPropertyDescription("Destination path to move to")
-                String destination
-        ) { }
-
-        @JsonClassDescription("The result contains filesystem tool output and execution message")
-        public record Response(String result, String message) {
-            public Response(String result, String message) { this.result = result; this.message = message; }
-            @JsonProperty(required = true, value = "result")
-            @JsonPropertyDescription("tool output")
-            public String result() { return this.result; }
-            @JsonProperty(required = true, value = "message")
-            @JsonPropertyDescription("execute result")
-            public String message() { return this.message; }
+            throw new RuntimeException("Only FilesystemSandbox supported in move file tool");
+        } catch (Exception e) {
+            String errorMsg = "Move File Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
     }
 }
-

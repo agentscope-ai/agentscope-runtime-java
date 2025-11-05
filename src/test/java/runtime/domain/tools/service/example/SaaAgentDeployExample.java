@@ -2,20 +2,23 @@ package runtime.domain.tools.service.example;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-
-import java.util.List;
-
 import io.agentscope.runtime.autoconfig.deployer.LocalDeployManager;
+import io.agentscope.runtime.autoconfig.deployer.ServerConfig;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
+import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
+
+import java.util.List;
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
@@ -76,26 +79,27 @@ public class SaaAgentDeployExample {
      * Basic example of using SaaAgent with ReactAgent
      */
     public void basicExample() {
-        Runner runner = new Runner();
-
         try {
             // Create ReactAgent Builder
-            ReactAgent reactAgent = ReactAgent.builder()
+            Builder builder = ReactAgent.builder()
                     .name("saa_agent")
                     .model(chatModel)
-                    .tools(List.of(ToolsInit.RunPythonCodeTool()))
-                    .build();
+                    .tools(List.of(ToolcallsInit.RunPythonCodeTool()));
 
             // Create SaaAgent using the ReactAgent Builder
             SaaAgent saaAgent = SaaAgent.builder()
-                    .agentBuilder(reactAgent)
+                    .agent(builder)
                     .build();
 
-            runner.registerAgent(saaAgent);
-            runner.registerContextManager(contextManager);
+            EnvironmentManager environmentManager = new DefaultEnvironmentManager();
+
+            Runner runner = new Runner(saaAgent, contextManager, environmentManager);
+
+            ServerConfig serverConfig = new ServerConfig(10001);
 
             LocalDeployManager deployManager = new LocalDeployManager();
-            deployManager.deployStreaming();
+
+            deployManager.deployStreaming("process", serverConfig);
 
         } catch (Exception e) {
             e.printStackTrace();

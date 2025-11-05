@@ -15,25 +15,53 @@
  */
 package io.agentscope.runtime.sandbox.manager.client;
 
-import com.github.dockerjava.core.DefaultDockerClientConfig;
-import com.github.dockerjava.core.DockerClientImpl;
-import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
-import com.github.dockerjava.transport.DockerHttpClient;
-import io.agentscope.runtime.sandbox.manager.model.container.DockerProp;
-import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.command.PullImageCmd;
 import com.github.dockerjava.api.model.*;
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.transport.DockerHttpClient;
+import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
+import io.agentscope.runtime.sandbox.manager.util.PortManager;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 public class DockerClient extends BaseClient {
     Logger logger = Logger.getLogger(DockerClient.class.getName());
     private com.github.dockerjava.api.DockerClient client;
     private boolean connected = false;
+    private DockerClientConfig config;
+    private PortManager portManager;
+    private final Map<String, List<Integer>> portsCache = new ConcurrentHashMap<>();
+
+    /**
+     * Default constructor without configuration
+     */
+    public DockerClient() {
+        this.config = null;
+        this.portManager = null;
+    }
+
+    /**
+     * Constructor with DockerClientConfig
+     * Aligns with Python version where DockerClient receives config in __init__
+     */
+    public DockerClient(DockerClientConfig config) {
+        this.config = config;
+        if (config != null && config.getPortRange() != null) {
+            this.portManager = new PortManager(config.getPortRange());
+            logger.info("DockerClient initialized with port range: " + 
+                       config.getPortRange().getStart() + "-" + config.getPortRange().getEnd());
+        } else {
+            this.portManager = null;
+        }
+    }
 
     public com.github.dockerjava.api.DockerClient connectDocker() {
         this.client = openDockerClient();
@@ -62,18 +90,73 @@ public class DockerClient extends BaseClient {
     }
 
     @Override
-    public String createContainer(String containerName, String imageName,
-                                  List<String> ports, Map<String, Integer> portMapping,
+    public ContainerCreateResult createContainer(String containerName, String imageName,
+                                  List<String> ports,
                                   List<VolumeBinding> volumeBindings,
                                   Map<String, String> environment, Map<String, Object> runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Docker client is not connected");
         }
 
+        // Align with Python version: DockerClient handles port finding internally
+        // Find free ports automatically if ports are provided
+        Map<String, Integer> portMapping = new HashMap<>();
+        if (ports != null && !ports.isEmpty()) {
+            if (portManager != null) {
+                portMapping = findFreePorts(ports);
+            } else {
+                logger.warning("Ports requested but no PortManager available. Cannot allocate ports.");
+            }
+        }
+
         CreateContainerResponse response = createContainers(client, containerName, imageName,
                 ports, portMapping, volumeBindings, environment, runtimeConfig);
 
-        return response.getId();
+        String containerId = response.getId();
+        
+        // Store port mapping in cache (align with Python's ports_cache.set)
+        if (portMapping != null && !portMapping.isEmpty()) {
+            List<Integer> hostPorts = new ArrayList<>(portMapping.values());
+            portsCache.put(containerId, hostPorts);
+            logger.fine("Stored port mapping for container " + containerId + ": " + hostPorts);
+        }
+        
+        // Extract ports from portMapping (align with Python version)
+        List<String> portList = new ArrayList<>();
+        if (portMapping != null && !portMapping.isEmpty()) {
+            for (Integer port : portMapping.values()) {
+                portList.add(String.valueOf(port));
+            }
+        }
+        
+        String ip = "localhost";
+        
+        return new ContainerCreateResult(containerId, portList, ip);
+    }
+
+    /**
+     * Find free ports for the given container ports
+     * Aligns with Python's _find_free_ports method
+     */
+    private Map<String, Integer> findFreePorts(List<String> containerPorts) {
+        if (portManager == null || containerPorts == null || containerPorts.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        int[] freePorts = portManager.allocatePorts(containerPorts.size());
+        if (freePorts == null) {
+            throw new RuntimeException("Not enough free ports available in the specified range.");
+        }
+
+        Map<String, Integer> portMapping = new HashMap<>();
+        for (int i = 0; i < containerPorts.size() && i < freePorts.length; i++) {
+            String containerPort = containerPorts.get(i);
+            Integer hostPort = freePorts[i];
+            portMapping.put(containerPort, hostPort);
+            logger.fine("Mapped container port " + containerPort + " to host port " + hostPort);
+        }
+
+        return portMapping;
     }
 
     @Override
@@ -97,6 +180,16 @@ public class DockerClient extends BaseClient {
         if (!isConnected()) {
             throw new IllegalStateException("Docker client is not connected");
         }
+        
+        // Align with Python version: release ports when container is removed
+        List<Integer> ports = portsCache.remove(containerId);
+        if (ports != null && portManager != null) {
+            for (Integer port : ports) {
+                portManager.releasePort(port);
+            }
+            logger.fine("Released " + ports.size() + " port(s) for container " + containerId);
+        }
+        
         removeContainer(client, containerId);
     }
 
@@ -108,7 +201,40 @@ public class DockerClient extends BaseClient {
         return getContainerStatus(client, containerId);
     }
 
-    private static com.github.dockerjava.api.DockerClient openDockerClient() {
+    private com.github.dockerjava.api.DockerClient openDockerClient() {
+        if (this.config != null) {
+            try {
+                DefaultDockerClientConfig.Builder configBuilder = DefaultDockerClientConfig.createDefaultConfigBuilder();
+                String dockerHost = "tcp://" + this.config.getHost() + ":" + this.config.getPort();
+                configBuilder.withDockerHost(dockerHost);
+                
+                if (this.config.getCertPath() != null && !this.config.getCertPath().isEmpty()) {
+                    configBuilder.withDockerCertPath(this.config.getCertPath());
+                    logger.info("Connecting to Docker at " + dockerHost + " with TLS");
+                } else {
+                    logger.info("Connecting to Docker at " + dockerHost + " without TLS");
+                }
+
+                var config = configBuilder.build();
+
+                DockerHttpClient httpClient = new ZerodepDockerHttpClient.Builder()
+                        .dockerHost(config.getDockerHost())
+                        .sslConfig(config.getSSLConfig())
+                        .build();
+
+                com.github.dockerjava.api.DockerClient client = DockerClientImpl.getInstance(config, httpClient);
+                
+                client.infoCmd().exec();
+                logger.info("Successfully connected to Docker using configured host and port");
+                return client;
+            } catch (Exception e) {
+                logger.warning("Failed to connect to Docker using configured host (" + 
+                             this.config.getHost() + ":" + this.config.getPort() + 
+                             "): " + e.getMessage());
+                logger.info("Falling back to default Docker configuration");
+            }
+        }
+
         var config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
 
         DockerHttpClient httpClient = new ZerodepDockerHttpClient.Builder()
@@ -563,9 +689,9 @@ public class DockerClient extends BaseClient {
             
             PullImageCmd pullCmd = client.pullImageCmd(imageName);
             
-            pullCmd.exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<com.github.dockerjava.api.model.PullResponseItem>() {
+            pullCmd.exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<PullResponseItem>() {
                 @Override
-                public void onNext(com.github.dockerjava.api.model.PullResponseItem item) {
+                public void onNext(PullResponseItem item) {
                     if (item.getStatus() != null) {
                         logger.info("Pull progress: " + item.getStatus());
                     }

@@ -18,9 +18,17 @@ package io.agentscope.runtime.autoconfig.deployer;
 public class DeployManager {
 
     public void deployStreaming(){
-        deployStreaming("process");
+        deployStreaming("process", ServerConfig.defaultConfig());
     }
 
     public void deployStreaming(String endpointName) {
+        deployStreaming(endpointName, ServerConfig.defaultConfig());
+    }
+
+    public void deployStreaming(ServerConfig serverConfig) {
+        deployStreaming("process", serverConfig);
+    }
+
+    public void deployStreaming(String endpointName, ServerConfig serverConfig) {
     }
 }

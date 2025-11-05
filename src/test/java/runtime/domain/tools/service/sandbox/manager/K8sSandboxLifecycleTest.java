@@ -35,7 +35,9 @@ public class K8sSandboxLifecycleTest {
 
         // Initialize Kubernetes sandbox manager
         try {
-            BaseClientConfig clientConfig = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+            BaseClientConfig clientConfig = KubernetesClientConfig.builder()
+                    .kubeConfigPath(System.getenv("KUBECONFIG_PATH"))
+                    .build();
             System.out.println(System.getenv("KUBECONFIG_PATH"));
             ManagerConfig config = new ManagerConfig.Builder()
                     .containerDeployment(clientConfig)

@@ -15,27 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.fs;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class ListDirectoryTool extends SandboxTool {
+public class ListDirectoryTool extends FsSandboxTool {
+
+    Logger logger = Logger.getLogger(ListDirectoryTool.class.getName());
 
     public ListDirectoryTool() {
         super("fs_list_directory", "filesystem", "List contents of a directory");
@@ -61,76 +53,17 @@ public class ListDirectoryTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String fs_list_directory(String path) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new DirectoryLister()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(DirectoryLister.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class DirectoryLister implements BiFunction<DirectoryLister.Request, ToolContext, DirectoryLister.Response> {
-
-        Logger logger = Logger.getLogger(DirectoryLister.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            try {
-                String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-                String userID = userAndSession[0];
-                String sessionID = userAndSession[1];
-                
-                String result = fs_list_directory(request.path, userID, sessionID);
-                return new Response(result, "Filesystem list_directory completed");
-            } catch (Exception e) {
-                return new Response("Error", "Filesystem list_directory error: " + e.getMessage());
-            }
-        }
-
-        private String fs_list_directory(String path, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
-                    return filesystemSandbox.listDirectory(path);
-                }
-                FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.listDirectory(path);
-            } catch (Exception e) {
-                String errorMsg = "List Directory Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
-        }
-
-        public record Request(
-                @JsonProperty(required = true, value = "path")
-                @JsonPropertyDescription("Path to list contents")
-                String path
-        ) { }
-
-        @JsonClassDescription("The result contains filesystem tool output and execution message")
-        public record Response(String result, String message) {
-            public Response(String result, String message) { this.result = result; this.message = message; }
-            @JsonProperty(required = true, value = "result")
-            @JsonPropertyDescription("tool output")
-            public String result() { return this.result; }
-            @JsonProperty(required = true, value = "message")
-            @JsonPropertyDescription("execute result")
-            public String message() { return this.message; }
+            throw new RuntimeException("Only FilesystemSandbox supported in list directory tool");
+        } catch (Exception e) {
+            String errorMsg = "List Directory Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
     }
 }
-

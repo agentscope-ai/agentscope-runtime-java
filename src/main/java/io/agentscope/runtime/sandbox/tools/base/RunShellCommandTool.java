@@ -15,28 +15,20 @@
  */
 package io.agentscope.runtime.sandbox.tools.base;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class RunShellCommandTool extends SandboxTool {
-    
+public class RunShellCommandTool extends BaseSandboxTool {
+
+    Logger logger = Logger.getLogger(RunShellCommandTool.class.getName());
+
     public RunShellCommandTool() {
         super("run_shell_command", "generic", "Execute shell commands and return the output or errors.");
         schema = new HashMap<>();
@@ -61,112 +53,20 @@ public class RunShellCommandTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String run_shell_command(String command) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new ShellExecutor()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(ShellExecutor.RunShellCommandToolRequest.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-
-    class ShellExecutor implements BiFunction<ShellExecutor.RunShellCommandToolRequest, ToolContext, ShellExecutor.RunShellCommandToolResponse> {
-        
-        Logger logger = Logger.getLogger(ShellExecutor.class.getName());
-
-        @Override
-        public RunShellCommandToolResponse apply(RunShellCommandToolRequest request, ToolContext toolContext) {
-            String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-            String userID = userAndSession[0];
-            String sessionID = userAndSession[1];
-            
-            try {
-                String result = performShellExecute(
-                        request.command,
-                        userID,
-                        sessionID
-                );
-
-                return new RunShellCommandToolResponse(
-                        new Response(result, "Shell execution completed")
-                );
-            } catch (Exception e) {
-                return new RunShellCommandToolResponse(
-                        new Response("Error", "Shell execution error : " + e.getMessage())
-                );
-            }
-        }
-
-
-        private String performShellExecute(String command, String userID, String sessionID) {
-            return run_shell_command(command, userID, sessionID);
-        }
-
-        private String run_shell_command(String command, String userID, String sessionID) {
-            try {
-                logger.info("Run Shell Command: " + command);
-                if (sandbox != null && sandbox instanceof BaseSandbox baseSandbox) {
-                    return baseSandbox.runShellCommand(command);
-                }
-                BaseSandbox baseSandbox = new BaseSandbox(sandboxManager, userID, sessionID);
+            logger.info("Run Shell Command: " + command);
+            if(sandbox instanceof BaseSandbox baseSandbox){
                 String result = baseSandbox.runShellCommand(command);
                 logger.info("Execute Result: " + result);
                 return result;
-            } catch (Exception e) {
-                String errorMsg = "Run Shell Command Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
-        }
-
-        public record RunShellCommandToolRequest(
-                @JsonProperty(required = true, value = "command")
-                @JsonPropertyDescription("Shell command to be executed")
-                String command
-        ) {
-            public RunShellCommandToolRequest(String command) {
-                this.command = command;
-            }
-        }
-
-        public record RunShellCommandToolResponse(@JsonProperty("Response") Response output) {
-            public RunShellCommandToolResponse(Response output) {
-                this.output = output;
-            }
-        }
-
-        @JsonClassDescription("The result contains the shell output and the execute result")
-        public record Response(String result, String message) {
-            public Response(String result, String message) {
-                this.result = result;
-                this.message = message;
-            }
-
-            @JsonProperty(required = true, value = "result")
-            @JsonPropertyDescription("shell output")
-            public String result() {
-                return this.result;
-            }
-
-            @JsonProperty(required = true, value = "message")
-            @JsonPropertyDescription("execute result")
-            public String message() {
-                return this.message;
-            }
+            throw new RuntimeException("Only BaseSandbox supported in run shell command tool");
+        } catch (Exception e) {
+            String errorMsg = "Run Shell Command Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
     }
 }

@@ -23,19 +23,41 @@ import java.util.logging.Logger;
 
 public class LocalDeployManager extends DeployManager{
     private ConfigurableApplicationContext applicationContext;
+    private ServerConfig serverConfig;
     Logger logger = Logger.getLogger(LocalDeployManager.class.getName());
 
     @Override
-    public synchronized void deployStreaming(String endpointName) {
+    public synchronized void deployStreaming(String endpointName, ServerConfig serverConfig) {
         if (this.applicationContext != null && this.applicationContext.isActive()) {
             return;
         }
 
+        this.serverConfig = serverConfig;
+
+        String[] properties = new String[]{
+            "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration",
+            "server.port=" + serverConfig.getServerPort()
+        };
+        
+        if (serverConfig.getServerAddress() != null && !serverConfig.getServerAddress().trim().isEmpty()) {
+            String[] propertiesWithAddress = new String[properties.length + 1];
+            System.arraycopy(properties, 0, propertiesWithAddress, 0, properties.length);
+            propertiesWithAddress[properties.length] = "server.address=" + serverConfig.getServerAddress();
+            properties = propertiesWithAddress;
+        }
+
         // Todo: Currently, only the A2A protocol is supported for calls. The protocol format for regular calls needs to be determined in the future
         this.applicationContext = new SpringApplicationBuilder(LocalDeployer.class)
-            .initializers((GenericApplicationContext ctx) -> ctx.registerBean("endpointName", String.class, () -> endpointName))
-            .properties("spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration")
+            .initializers((GenericApplicationContext ctx) -> {
+                ctx.registerBean("endpointName", String.class, () -> endpointName);
+                ctx.registerBean("serverConfig", ServerConfig.class, () -> serverConfig);
+            })
+            .properties(properties)
             .run();
+    }
+
+    public ServerConfig getServerConfig() {
+        return serverConfig;
     }
 
     /**

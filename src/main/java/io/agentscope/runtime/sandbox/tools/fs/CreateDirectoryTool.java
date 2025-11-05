@@ -15,27 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.fs;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class CreateDirectoryTool extends SandboxTool {
+public class CreateDirectoryTool extends FsSandboxTool {
+
+    Logger logger = Logger.getLogger(CreateDirectoryTool.class.getName());
 
     public CreateDirectoryTool() {
         super("fs_create_directory", "filesystem", "Create a new directory");
@@ -61,76 +53,17 @@ public class CreateDirectoryTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String fs_create_directory(String path) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new DirectoryCreator()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(DirectoryCreator.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class DirectoryCreator implements BiFunction<DirectoryCreator.Request, ToolContext, DirectoryCreator.Response> {
-
-        Logger logger = Logger.getLogger(DirectoryCreator.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            try {
-                String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-                String userID = userAndSession[0];
-                String sessionID = userAndSession[1];
-                
-                String result = fs_create_directory(request.path, userID, sessionID);
-                return new Response(result, "Filesystem create_directory completed");
-            } catch (Exception e) {
-                return new Response("Error", "Filesystem create_directory error: " + e.getMessage());
-            }
-        }
-
-        private String fs_create_directory(String path, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
-                    return filesystemSandbox.createDirectory(path);
-                }
-                FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.createDirectory(path);
-            } catch (Exception e) {
-                String errorMsg = "Create Directory Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
-        }
-
-        public record Request(
-                @JsonProperty(required = true, value = "path")
-                @JsonPropertyDescription("Path to the directory to create")
-                String path
-        ) { }
-
-        @JsonClassDescription("The result contains filesystem tool output and execution message")
-        public record Response(String result, String message) {
-            public Response(String result, String message) { this.result = result; this.message = message; }
-            @JsonProperty(required = true, value = "result")
-            @JsonPropertyDescription("tool output")
-            public String result() { return this.result; }
-            @JsonProperty(required = true, value = "message")
-            @JsonPropertyDescription("execute result")
-            public String message() { return this.message; }
+            throw new RuntimeException("Only FilesystemSandbox supported in create directory tool");
+        } catch (Exception e) {
+            String errorMsg = "Create Directory Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
     }
 }
-

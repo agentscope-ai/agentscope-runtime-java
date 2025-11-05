@@ -15,27 +15,19 @@
  */
 package io.agentscope.runtime.sandbox.tools.fs;
 
-import com.fasterxml.jackson.annotation.JsonClassDescription;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
-import org.springframework.ai.chat.model.ToolContext;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.logging.Logger;
 
-public class ReadMultipleFilesTool extends SandboxTool {
+public class ReadMultipleFilesTool extends FsSandboxTool {
+
+    Logger logger = Logger.getLogger(ReadMultipleFilesTool.class.getName());
 
     public ReadMultipleFilesTool() {
         super("fs_read_multiple_files", "filesystem", "Read contents of multiple files");
@@ -62,81 +54,17 @@ public class ReadMultipleFilesTool extends SandboxTool {
         return this;
     }
 
-    @Override
-    public ToolCallback buildTool() {
-        ObjectMapper mapper = new ObjectMapper();
-        String inputSchema = "";
+    public String fs_read_multiple_files(String[] paths) {
         try {
-            inputSchema = mapper.writeValueAsString(schema);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return FunctionToolCallback
-                .builder(
-                        name,
-                        new MultiFileReader()
-                ).description(description)
-                .inputSchema(
-                        inputSchema
-                ).inputType(MultiFileReader.Request.class)
-                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
-                .build();
-    }
-    class MultiFileReader implements BiFunction<MultiFileReader.Request, ToolContext, MultiFileReader.Response> {
-
-        Logger logger = Logger.getLogger(MultiFileReader.class.getName());
-
-        @Override
-        public Response apply(Request request, ToolContext toolContext) {
-            try {
-                String[] userAndSession = ContextUtils.extractUserAndSessionID(toolContext);
-                String userID = userAndSession[0];
-                String sessionID = userAndSession[1];
-                
-                String result = fs_read_multiple_files(request.paths, userID, sessionID);
-                return new Response(result, "Filesystem read_multiple_files completed");
-            } catch (Exception e) {
-                return new Response("Error", "Filesystem read_multiple_files error: " + e.getMessage());
-            }
-        }
-
-        private String fs_read_multiple_files(String[] paths, String userID, String sessionID) {
-            try {
-                if (sandbox != null && sandbox instanceof FilesystemSandbox filesystemSandbox) {
-                    return filesystemSandbox.readMultipleFiles(java.util.Arrays.asList(paths));
-                }
-                FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxManager, userID, sessionID);
+            if(sandbox instanceof FilesystemSandbox filesystemSandbox){
                 return filesystemSandbox.readMultipleFiles(java.util.Arrays.asList(paths));
-            } catch (Exception e) {
-                String errorMsg = "Read Multiple Files Error: " + e.getMessage();
-                logger.severe(errorMsg);
-                e.printStackTrace();
-                return errorMsg;
             }
-        }
-
-        public record Request(
-                @JsonProperty(required = true, value = "paths")
-                @JsonPropertyDescription("Paths to the files to read")
-                String[] paths
-        ) { }
-
-        @JsonClassDescription("The result contains filesystem tool output and execution message")
-        public record Response(String result, String message) {
-            public Response(String result, String message) {
-                this.result = result;
-                this.message = message;
-            }
-
-            @JsonProperty(required = true, value = "result")
-            @JsonPropertyDescription("tool output")
-            public String result() { return this.result; }
-
-            @JsonProperty(required = true, value = "message")
-            @JsonPropertyDescription("execute result")
-            public String message() { return this.message; }
+            throw new RuntimeException("Only FilesystemSandbox supported in read multiple files tool");
+        } catch (Exception e) {
+            String errorMsg = "Read Multiple Files Error: " + e.getMessage();
+            logger.severe(errorMsg);
+            e.printStackTrace();
+            return errorMsg;
         }
     }
 }
-

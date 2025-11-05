@@ -2,8 +2,6 @@ package io.agentscope.runtime.engine.service;
 
 import io.agentscope.runtime.engine.schemas.agent.FunctionCall;
 import io.agentscope.runtime.engine.schemas.agent.FunctionCallOutput;
-import io.agentscope.runtime.engine.service.ToolAdapter;
-import io.agentscope.runtime.engine.service.ToolInfo;
 
 import java.util.List;
 import java.util.Map;
