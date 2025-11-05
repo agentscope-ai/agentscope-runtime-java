@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.agentscope</groupId>
+  <artifactId>agentscope-runtime-saa</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>AgentScope Runtime SAA</name>
+  <description>Java Implementation for AgentScope Runtime</description>
+  <url>https://github.com/agentscope-ai/agentscope-runtime-java</url>
+  <organization>
+    <name>Alibaba Cloud Inc.</name>
+    <url>https://runtime.agentscope.io</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>Apache 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>chickenlj</id>
+      <name>Jun Liu</name>
+      <email>ken.lj.hz@gmail.com</email>
+      <organization>Alibaba Cloud</organization>
+      <organizationUrl>https://aliyun.com</organizationUrl>
+    </developer>
+  </developers>
+  <scm>
+    <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>
+    <developerConnection>git@github.com:agentscope-ai/agentscope-runtime-java.git</developerConnection>
+    <url>https://github.com/agentscope-ai/agentscope-runtime-java</url>
+  </scm>
+  <dependencies>
+    <dependency>
+      <groupId>io.agentscope</groupId>
+      <artifactId>agentscope-runtime-core</artifactId>
+      <version>0.1.0-SNAPSHOT</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba.cloud.ai</groupId>
+      <artifactId>spring-ai-alibaba-agent-framework</artifactId>
+      <version>1.1.0.0-M4</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba.cloud.ai</groupId>
+      <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+      <version>1.1.0.0-M4</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+</project>

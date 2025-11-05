@@ -119,7 +119,7 @@ public class AgentscopeBrowseruseAgent {
         );
         contextManager.start().get();
 
-        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new KubernetesClientConfig()).build());
+        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(KubernetesClientConfig.builder().build()).build());
 //        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new DockerClientConfig(true, "127.0.0.1", 64352, null)).build());
         environmentManager = new DefaultEnvironmentManager(sandboxManager);
 

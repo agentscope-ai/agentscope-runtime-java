@@ -55,6 +55,9 @@ bin/
 .DS_Store
 Thumbs.db
 
+# Maven ignore
+.flattened-pom.xml
+
 # Environment variables and configuration
 *.env
 .env.local
