@@ -33,7 +33,7 @@ public class LocalDeployManager implements DeployManager {
     Logger logger = Logger.getLogger(LocalDeployManager.class.getName());
 
     @Override
-    public synchronized void deployStreaming(String endpointName, Runner runner) {
+    public synchronized void deploy(String endpointName, Runner runner) {
         if (this.applicationContext != null && this.applicationContext.isActive()) {
             logger.info("Application context is already active, skipping deployment");
             return;
