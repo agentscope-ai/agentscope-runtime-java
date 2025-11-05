@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.SelectOptionTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserOptionSelector extends BaseSandboxAwareTool<SelectOptionTool, BrowserOptionSelector.SelectOptionToolRequest, BrowserOptionSelector.SelectOptionToolResponse> {
 	Logger logger = Logger.getLogger(BrowserOptionSelector.class.getName());

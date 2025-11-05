@@ -18,11 +18,13 @@
         <a2a-sdk.version>0.2.5</a2a-sdk.version>
         <spring-boot.version>3.4.5</spring-boot.version>
         <spring-ai.version>1.0.1</spring-ai.version>
-        <spring-ai-alibaba.version>1.1.0.0-SNAPSHOT</spring-ai-alibaba.version>
+        <spring-ai-alibaba.version>1.1.0.0-M3</spring-ai-alibaba.version>
         <nacos-client.version>3.1.0-beta</nacos-client.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <spotless.version>2.44.5</spotless.version>
     </properties>
 
     <dependencyManagement>
@@ -62,16 +64,10 @@
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-        
-        <!-- AOP for RemoteWrapper aspect -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.boot</groupId>-->
+<!--            <artifactId>spring-boot-starter-actuator</artifactId>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>io.github.a2asdk</groupId>
@@ -117,13 +113,12 @@
             <artifactId>spring-ai-alibaba-agent-framework</artifactId>
         </dependency>
 
-        <!-- Spring AI Alibaba DashScope Starter -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
             <version>${spring-ai-alibaba.version}</version>
         </dependency>
-        
+
         <!-- Nacos Dependencies -->
         <dependency>
             <groupId>com.alibaba.nacos</groupId>
@@ -230,8 +225,8 @@
 
         <!-- Redis Dependencies -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-redis</artifactId>
         </dependency>
         <dependency>
             <groupId>io.lettuce</groupId>
@@ -245,21 +240,6 @@
             <version>3.17.4</version>
         </dependency>
 
-        <!-- MySQL Dependencies -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
         <!-- TableStore dependency -->
         <dependency>
             <groupId>com.aliyun.openservices.tablestore</groupId>
@@ -267,11 +247,15 @@
             <version>1.1.0</version>
         </dependency>
 
-        <!-- Apache HttpClient5 for Mem0 API -->
+        <!-- Apache HttpClient5 for Mem0 API and Spring RestClient -->
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
         </dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents.core5</groupId>
+			<artifactId>httpcore5</artifactId>
+		</dependency>
 
         <dependency>
             <groupId>io.agentscope</groupId>
@@ -336,6 +320,26 @@
                         <arg>-parameters</arg>
                     </compilerArgs>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <removeUnusedImports></removeUnusedImports>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotless-apply</id>
+                        <goals>
+                            <goal>apply</goal>
+                        </goals>
+                        <phase>process-sources</phase>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

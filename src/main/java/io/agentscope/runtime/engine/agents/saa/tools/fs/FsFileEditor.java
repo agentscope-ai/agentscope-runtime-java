@@ -29,7 +29,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.fs.EditFileTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class FsFileEditor extends BaseSandboxAwareTool<EditFileTool, FsFileEditor.EditFileToolRequest, FsFileEditor.EditFileToolResponse> {
 	Logger logger = Logger.getLogger(FsFileEditor.class.getName());

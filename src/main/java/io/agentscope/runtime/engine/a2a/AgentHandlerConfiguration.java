@@ -40,49 +40,28 @@ public class AgentHandlerConfiguration {
 
     private final JSONRPCHandler jsonrpcHandler;
 
-    public AgentHandlerConfiguration() {
-        this(new GraphAgentExecutor(Runner.getRunner()::streamQuery), ServerConfig.defaultConfig());
+    public AgentHandlerConfiguration(Runner runner, ServerConfig serverConfig) {
+        this(new GraphAgentExecutor(runner::streamQuery), new NetworkUtils(serverConfig));
     }
 
-    public AgentHandlerConfiguration(AgentExecutor agentExecutor) {
-        this(agentExecutor, ServerConfig.defaultConfig());
-    }
-
-    public AgentHandlerConfiguration(AgentExecutor agentExecutor, ServerConfig serverConfig) {
-        this(agentExecutor, new NetworkUtils(serverConfig));
-    }
-
-    public AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
+    protected AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
         this.jsonrpcHandler = new JSONRPCHandler(
                 createDefaultAgentCard(networkUtils),
                 requestHandler(agentExecutor)
         );
     }
 
-    public static synchronized AgentHandlerConfiguration initialize(AgentExecutor agentExecutor) {
-        if (INSTANCE == null) {
-            INSTANCE = new AgentHandlerConfiguration(agentExecutor);
-        }
-        return INSTANCE;
-    }
-
-    public static AgentHandlerConfiguration getInstance() {
+    public static AgentHandlerConfiguration getInstance(Runner runner, ServerConfig serverConfig) {
         AgentHandlerConfiguration inst = INSTANCE;
         if (inst == null) {
             synchronized (AgentHandlerConfiguration.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new AgentHandlerConfiguration();
+                    INSTANCE = new AgentHandlerConfiguration(runner, serverConfig);
                 }
                 inst = INSTANCE;
             }
         }
         return inst;
-    }
-
-    public static synchronized void initialize(AgentExecutor agentExecutor, ServerConfig serverConfig) {
-        if (INSTANCE == null) {
-            INSTANCE = new AgentHandlerConfiguration(agentExecutor, serverConfig);
-        }
     }
 
     public static AgentCard createDefaultAgentCard(NetworkUtils networkUtils) {
@@ -103,10 +82,6 @@ public class AgentHandlerConfiguration {
 
     public static AgentCard createDefaultAgentCard(ServerConfig serverConfig) {
         return createDefaultAgentCard(new NetworkUtils(serverConfig));
-    }
-
-    public static AgentCard createDefaultAgentCard() {
-        return createDefaultAgentCard(ServerConfig.defaultConfig());
     }
 
     private static AgentCapabilities createDefaultCapabilities() {

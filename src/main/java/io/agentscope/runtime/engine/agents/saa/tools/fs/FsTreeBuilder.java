@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.fs.DirectoryTreeTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class FsTreeBuilder extends BaseSandboxAwareTool<DirectoryTreeTool, FsTreeBuilder.DirectoryTreeToolRequest, FsTreeBuilder.DirectoryTreeToolResponse> {
 	Logger logger = Logger.getLogger(FsTreeBuilder.class.getName());

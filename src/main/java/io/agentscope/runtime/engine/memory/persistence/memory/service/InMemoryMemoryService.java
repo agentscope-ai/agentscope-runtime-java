@@ -20,7 +20,6 @@ import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
 import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
-import io.agentscope.runtime.engine.service.MemoryProperties;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -34,8 +33,7 @@ public class InMemoryMemoryService implements MemoryService {
     
     private final Map<String, Map<String, List<Message>>> store = new ConcurrentHashMap<>();
     private static final String DEFAULT_SESSION_ID = "default_session";
-    private MemoryProperties memoryProperties;
-    
+
     @Override
     public CompletableFuture<Void> start() {
         return CompletableFuture.runAsync(() -> {
@@ -125,8 +123,7 @@ public class InMemoryMemoryService implements MemoryService {
             if (filters.isPresent()) {
                 Map<String, Object> filterMap = filters.get();
                 int pageNum = (Integer) filterMap.getOrDefault("page_num", 1);
-                int pageSize = (Integer) filterMap.getOrDefault("page_size", 
-                    memoryProperties != null ? memoryProperties.getDefaultPageSize() : 10);
+                int pageSize = (Integer) filterMap.getOrDefault("page_size", 10);
                 
                 int startIndex = (pageNum - 1) * pageSize;
                 int endIndex = Math.min(startIndex + pageSize, allMessages.size());
@@ -187,10 +184,4 @@ public class InMemoryMemoryService implements MemoryService {
         return null;
     }
     
-    /**
-     * Set memory configuration properties
-     */
-    public void setMemoryProperties(MemoryProperties memoryProperties) {
-        this.memoryProperties = memoryProperties;
-    }
 }

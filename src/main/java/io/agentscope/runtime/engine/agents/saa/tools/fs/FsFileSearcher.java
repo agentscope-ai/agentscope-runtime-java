@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.fs.SearchFilesTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class FsFileSearcher extends BaseSandboxAwareTool<SearchFilesTool, FsFileSearcher.SearchFilesToolRequest, FsFileSearcher.SearchFilesToolResponse> {
 	Logger logger = Logger.getLogger(FsFileSearcher.class.getName());

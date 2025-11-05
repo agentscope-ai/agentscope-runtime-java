@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.TakeScreenshotTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserScreenshotTaker extends BaseSandboxAwareTool<TakeScreenshotTool, BrowserScreenshotTaker.TakeScreenshotToolRequest, BrowserScreenshotTaker.TakeScreenshotToolResponse> {
 	Logger logger = Logger.getLogger(BrowserScreenshotTaker.class.getName());

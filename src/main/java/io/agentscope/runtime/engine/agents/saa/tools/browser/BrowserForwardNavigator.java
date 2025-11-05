@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.NavigateForwardTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserForwardNavigator extends BaseSandboxAwareTool<NavigateForwardTool, BrowserForwardNavigator.NavigateForwardToolRequest, BrowserForwardNavigator.NavigateForwardToolResponse> {
 	Logger logger = Logger.getLogger(BrowserForwardNavigator.class.getName());

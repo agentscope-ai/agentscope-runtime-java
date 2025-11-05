@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.ResizeTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserWindowResizer extends BaseSandboxAwareTool<ResizeTool, BrowserWindowResizer.ResizeToolRequest, BrowserWindowResizer.ResizeToolResponse> {
 	Logger logger = Logger.getLogger(BrowserWindowResizer.class.getName());

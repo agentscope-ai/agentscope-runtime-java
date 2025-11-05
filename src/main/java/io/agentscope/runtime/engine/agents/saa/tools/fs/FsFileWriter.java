@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.fs.WriteFileTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class FsFileWriter extends BaseSandboxAwareTool<WriteFileTool, FsFileWriter.WriteFileToolRequest, FsFileWriter.WriteFileToolResponse> {
 	Logger logger = Logger.getLogger(FsFileWriter.class.getName());

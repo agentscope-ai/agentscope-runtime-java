@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.NetworkRequestsTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserNetworkRequestsRetriever extends BaseSandboxAwareTool<NetworkRequestsTool, BrowserNetworkRequestsRetriever.NetworkRequestsToolRequest, BrowserNetworkRequestsRetriever.NetworkRequestsToolResponse> {
 	Logger logger = Logger.getLogger(BrowserNetworkRequestsRetriever.class.getName());
