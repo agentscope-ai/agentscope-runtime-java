@@ -112,7 +112,6 @@ public class AgentScopeAgent extends BaseAgent {
 
             Msg.Builder builder = Msg.builder().role(role);
 
-            // Convert content blocks
             if (message.getContent() != null && !message.getContent().isEmpty()) {
                 List<ContentBlock> contentBlocks = new ArrayList<>();
                 for (var content : message.getContent()) {
@@ -121,7 +120,6 @@ public class AgentScopeAgent extends BaseAgent {
                             contentBlocks.add(TextBlock.builder().text(textContent.getText()).build());
                         }
                     }
-                    // Add more content type conversions as needed (ImageContent, etc.)
                 }
                 if (!contentBlocks.isEmpty()) {
                     builder.content(contentBlocks);
@@ -250,13 +248,6 @@ public class AgentScopeAgent extends BaseAgent {
             }
         }
 
-        /**
-         * Recursively find a field in the class hierarchy (including parent classes)
-         *
-         * @param clazz     The class to start searching from
-         * @param fieldName The name of the field to find
-         * @return The Field object if found, null otherwise
-         */
         private Field findFieldInHierarchy(Class<?> clazz, String fieldName) {
             Class<?> currentClass = clazz;
             while (currentClass != null) {
@@ -267,7 +258,6 @@ public class AgentScopeAgent extends BaseAgent {
                     currentClass = currentClass.getSuperclass();
                 }
             }
-            // Field not found in entire hierarchy
             return null;
         }
     }
@@ -347,7 +337,6 @@ public class AgentScopeAgent extends BaseAgent {
                 sink.next(textMessage);
 
                 if (stream) {
-                    // Create a sink for streaming chunks
                     Sinks.Many<String> chunkSink = Sinks.many().multicast().onBackpressureBuffer();
 
                     // Create streaming hook
@@ -444,8 +433,6 @@ public class AgentScopeAgent extends BaseAgent {
                             );
 
                 } else {
-                    // Non-streaming mode
-                    // Create and initialize context adapter
                     AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, agentScopeBuilder);
                     adapter.initialize();
 
