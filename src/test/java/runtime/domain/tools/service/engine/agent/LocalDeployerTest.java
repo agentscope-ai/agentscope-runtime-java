@@ -1,7 +1,15 @@
 package runtime.domain.tools.service.engine.agent;
 
+import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.graph.agent.Builder;
+import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+
+import org.springframework.ai.chat.model.ChatModel;
+
 import io.agentscope.runtime.autoconfig.deployer.LocalDeployManager;
-import io.agentscope.runtime.autoconfig.deployer.LocalDeployer;
+import io.agentscope.runtime.engine.Runner;
+import io.agentscope.runtime.engine.agents.saa.SaaAgent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
@@ -25,11 +33,13 @@ public class LocalDeployerTest {
 
     private LocalDeployManager localDeployManager;
     private ContextManager contextManager;
+    private Runner runner;
 
     @BeforeEach
     void setUp() {
         localDeployManager = new LocalDeployManager();
         initializeContextManager();
+        initializeRunner();
     }
 
     @AfterEach
@@ -44,6 +54,27 @@ public class LocalDeployerTest {
                 System.err.println("Error stopping context manager: " + e.getMessage());
             }
         }
+    }
+
+    private void initializeRunner() {
+        DashScopeApi dashScopeApi = DashScopeApi.builder()
+                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                .build();
+
+        ChatModel chatModel = DashScopeChatModel.builder()
+                .dashScopeApi(dashScopeApi)
+                .build();
+
+        Builder builder = ReactAgent.builder()
+                .name("saa Agent")
+                .description("saa Agent")
+                .model(chatModel);
+
+        SaaAgent saaAgent = SaaAgent.builder()
+                .agent(builder)
+                .build();
+
+        this.runner = new Runner(saaAgent, contextManager);
     }
 
     private void initializeContextManager() {
@@ -77,7 +108,7 @@ public class LocalDeployerTest {
         
         // Test deployment functionality
         String endpointName = "test-endpoint";
-        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName), "Deployment should execute successfully without throwing exceptions");
+        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName, runner), "Deployment should execute successfully without throwing exceptions");
         
         // Verify deployment status
         // Note: Since LocalDeployManager uses Spring context, we cannot directly access applicationContext
@@ -94,10 +125,10 @@ public class LocalDeployerTest {
         String endpointName = "duplicate-test-endpoint";
         
         // First deployment
-        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName), "First deployment should succeed");
+        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName, runner), "First deployment should succeed");
         
         // Second deployment - should not create duplicates
-        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName), "Duplicate deployment should be ignored without throwing exceptions");
+        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName, runner), "Duplicate deployment should be ignored without throwing exceptions");
         
         System.out.println("Duplicate deployment test completed");
     }
@@ -110,7 +141,7 @@ public class LocalDeployerTest {
         String[] endpointNames = {"endpoint1", "endpoint2", "test-endpoint"};
         
         for (String endpointName : endpointNames) {
-            assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName), "Deployment of endpoint: " + endpointName + " should succeed");
+            assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName, runner), "Deployment of endpoint: " + endpointName + " should succeed");
         }
         
         System.out.println("Different endpoint names deployment test completed");
@@ -124,7 +155,7 @@ public class LocalDeployerTest {
         String endpointName = "shutdown-test-endpoint";
         
         // Deploy first
-        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName), "Deployment should succeed");
+        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName, runner), "Deployment should succeed");
         
         // Test shutdown
         assertDoesNotThrow(() -> localDeployManager.shutdown(), "Shutdown should execute successfully without throwing exceptions");
@@ -140,7 +171,7 @@ public class LocalDeployerTest {
         String endpointName = "multiple-shutdown-test";
         
         // Deploy
-        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName), "Deployment should succeed");
+        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName, runner), "Deployment should succeed");
         
         // First shutdown
         assertDoesNotThrow(() -> localDeployManager.shutdown(), "First shutdown should succeed");
@@ -149,25 +180,6 @@ public class LocalDeployerTest {
         assertDoesNotThrow(() -> localDeployManager.shutdown(), "Duplicate shutdown should be handled safely without throwing exceptions");
         
         System.out.println("Multiple shutdowns test completed");
-    }
-
-    @Test
-    @DisplayName("Test LocalDeployer class structure")
-    void testLocalDeployerClassStructure() {
-        System.out.println("=== Starting LocalDeployer class structure test ===");
-        
-        // Verify LocalDeployer class can be instantiated
-        assertDoesNotThrow(() -> {
-            LocalDeployer deployer = new LocalDeployer();
-            assertNotNull(deployer, "LocalDeployer instance should be created correctly");
-        }, "LocalDeployer instantiation should succeed");
-        
-        // Verify main method exists (check via reflection)
-        assertDoesNotThrow(() -> {
-            LocalDeployer.class.getMethod("main", String[].class);
-        }, "LocalDeployer should have main method");
-        
-        System.out.println("LocalDeployer class structure test completed");
     }
 
     @Test
@@ -181,7 +193,7 @@ public class LocalDeployerTest {
         System.out.println("Pre-deployment status check completed");
         
         // Execute deployment
-        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName), "Deployment should succeed");
+        assertDoesNotThrow(() -> localDeployManager.deployStreaming(endpointName, runner), "Deployment should succeed");
         
         // Post-deployment status
         System.out.println("Post-deployment status check completed");

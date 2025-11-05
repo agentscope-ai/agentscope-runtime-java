@@ -15,27 +15,44 @@
  */
 package io.agentscope.runtime.autoconfig.deployer;
 
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.GenericApplicationContext;
 
 import java.util.logging.Logger;
 
-public class LocalDeployManager extends DeployManager{
+import io.agentscope.runtime.engine.DeployManager;
+import io.agentscope.runtime.engine.Runner;
+
+public class LocalDeployManager implements DeployManager {
     private ConfigurableApplicationContext applicationContext;
     Logger logger = Logger.getLogger(LocalDeployManager.class.getName());
 
     @Override
-    public synchronized void deployStreaming(String endpointName) {
+    public synchronized void deployStreaming(String endpointName, Runner runner) {
         if (this.applicationContext != null && this.applicationContext.isActive()) {
+            logger.info("Application context is already active, skipping deployment");
             return;
         }
 
-        // Todo: Currently, only the A2A protocol is supported for calls. The protocol format for regular calls needs to be determined in the future
-        this.applicationContext = new SpringApplicationBuilder(LocalDeployer.class)
-            .initializers((GenericApplicationContext ctx) -> ctx.registerBean("endpointName", String.class, () -> endpointName))
-            .properties("spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration")
-            .run();
+        logger.info("Starting streaming deployment for endpoint: " + endpointName);
+
+        this.applicationContext = new SpringApplicationBuilder()
+                .sources(LocalDeployConfig.class)
+                .web(WebApplicationType.SERVLET)
+                .initializers((GenericApplicationContext ctx) -> {
+                    // Register Runner instance as a bean
+                    ctx.registerBean(Runner.class, () -> runner);
+                    // Register endpoint name as a bean
+                    ctx.registerBean("endpointName", String.class, () -> endpointName);
+                })
+                .run();
+
+        logger.info("Streaming deployment completed for endpoint: " + endpointName);
     }
 
     /**
@@ -48,5 +65,17 @@ public class LocalDeployManager extends DeployManager{
             this.applicationContext = null;
             logger.info("LocalDeployManager shutdown completed");
         }
+    }
+
+    /**
+     * Configuration class for local deployment of streaming services.
+     * This class enables component scanning for A2A controllers and other Spring components.
+     */
+    @Configuration
+    @EnableAutoConfiguration
+    @ComponentScan(basePackages = {
+        "io.agentscope.runtime"
+    })
+    public static class LocalDeployConfig {
     }
 }

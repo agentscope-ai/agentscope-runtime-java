@@ -16,6 +16,8 @@
 package io.agentscope.runtime.engine.a2a;
 
 import io.a2a.spec.AgentCard;
+import io.agentscope.runtime.engine.Runner;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,8 +29,8 @@ public class AgentCardController {
 
 	private final JSONRPCHandler jsonRpcHandler;
 
-	public AgentCardController() {
-		this.jsonRpcHandler = AgentHandlerConfiguration.getInstance().jsonrpcHandler();
+	public AgentCardController(Runner runner) {
+		this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner).jsonrpcHandler();
 	}
 
 	@GetMapping(value = "/.well-known/agent.json", produces = MediaType.APPLICATION_JSON_VALUE)

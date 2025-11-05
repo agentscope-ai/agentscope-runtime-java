@@ -15,6 +15,7 @@
  */
 package io.agentscope.runtime.engine.a2a;
 
+import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.memory.context.ServerCallContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -62,8 +63,8 @@ public class A2aController {
 
     private final JSONRPCHandler jsonRpcHandler;
 
-    public A2aController() {
-        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance().jsonrpcHandler();
+    public A2aController(Runner runner) {
+        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner).jsonrpcHandler();
     }
 
     @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})

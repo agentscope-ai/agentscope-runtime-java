@@ -15,11 +15,7 @@ import jakarta.annotation.PreDestroy;
 /**
  * Spring Boot application for browser agent service
  */
-@SpringBootApplication(exclude = {
-        DataSourceAutoConfiguration.class,
-        DataSourceTransactionManagerAutoConfiguration.class,
-        HibernateJpaAutoConfiguration.class
-})
+@SpringBootApplication
 public class BrowserAgentApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(BrowserAgentApplication.class);

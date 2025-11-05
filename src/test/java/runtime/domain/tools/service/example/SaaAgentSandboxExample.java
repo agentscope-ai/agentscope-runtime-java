@@ -105,7 +105,6 @@ public class SaaAgentSandboxExample {
                         .build();
 
                 Runner runner = new Runner(saaAgent, contextManager, environmentManager);
-                runner.registerAgent(saaAgent);
 
                 // Create AgentRequest
                 AgentRequest request = createAgentRequest("What is the 8th number of Fibonacci?", null, null);

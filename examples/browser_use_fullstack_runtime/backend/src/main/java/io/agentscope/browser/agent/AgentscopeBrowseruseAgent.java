@@ -15,6 +15,7 @@ import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
+import io.agentscope.runtime.engine.memory.persistence.session.RedisSessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
@@ -24,6 +25,7 @@ import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
@@ -118,6 +120,7 @@ public class AgentscopeBrowseruseAgent {
         contextManager.start().get();
 
         SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new KubernetesClientConfig()).build());
+//        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new DockerClientConfig(true, "127.0.0.1", 64352, null)).build());
         environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
         // Initialize chat model

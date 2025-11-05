@@ -16,13 +16,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class Runner implements AutoCloseable {
-
-    // FIXME
-    private static volatile Runner defaultRunner;
-
-    private Agent agent;
-    private ContextManager contextManager;
-    private EnvironmentManager environmentManager;
+    private final Agent agent;
+    private final ContextManager contextManager;
+    private final EnvironmentManager environmentManager;
 
     // Todo: The current stream property has been completely set to true
     private final boolean stream = true;
@@ -31,7 +27,6 @@ public class Runner implements AutoCloseable {
         this.agent = agent;
         this.contextManager = contextManager == null ? new ContextManager() : contextManager;
         this.environmentManager = environmentManager;
-        defaultRunner = this;
     }
 
     public Runner(BaseAgent agent, ContextManager contextManager) {
@@ -42,26 +37,8 @@ public class Runner implements AutoCloseable {
         this(agent, null);
     }
 
-    public static Runner getRunner(){
-        return defaultRunner;
-    }
-
-    public void registerAgent(Agent agent) {
-        defaultRunner = this;
-        this.agent = agent;
-    }
-
-    public void registerContextManager(ContextManager contextManager) {
-        defaultRunner = this;
-        this.contextManager = contextManager;
-    }
-
     public Flux<Event> streamQuery(AgentRequest request) {
-        Runner runner = defaultRunner;
-        if (runner == null) {
-            throw new IllegalStateException("No default Runner instance initialized");
-        }
-        return runner.streamQueryInstance(request);
+        return this.streamQueryInstance(request);
     }
 
     public Flux<Event> streamQueryInstance(AgentRequest request) {
@@ -249,6 +226,10 @@ public class Runner implements AutoCloseable {
 
     public ContextManager getContextManager() {
         return contextManager;
+    }
+
+    public void deploy(DeployManager deployManager) {
+        deployManager.deployStreaming(this);
     }
 
     @Override

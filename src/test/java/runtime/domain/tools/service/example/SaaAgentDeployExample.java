@@ -90,9 +90,7 @@ public class SaaAgentDeployExample {
                     .build();
 
             Runner runner = new Runner(saaAgent, contextManager);
-
-            LocalDeployManager deployManager = new LocalDeployManager();
-            deployManager.deployStreaming();
+            runner.deploy(new LocalDeployManager());
 
         } catch (Exception e) {
             e.printStackTrace();

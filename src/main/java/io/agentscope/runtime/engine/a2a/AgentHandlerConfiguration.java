@@ -39,34 +39,23 @@ public class AgentHandlerConfiguration {
 
     private final JSONRPCHandler jsonrpcHandler;
 
-    public AgentHandlerConfiguration() {
-        this(new GraphAgentExecutor(Runner.getRunner()::streamQuery), new NetworkUtils());
+    public AgentHandlerConfiguration(Runner runner) {
+        this(new GraphAgentExecutor(runner::streamQuery), new NetworkUtils());
     }
 
-    public AgentHandlerConfiguration(AgentExecutor agentExecutor) {
-        this(agentExecutor, new NetworkUtils());
-    }
-
-    public AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
+    protected AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
         this.jsonrpcHandler = new JSONRPCHandler(
                 createDefaultAgentCard(networkUtils),
                 requestHandler(agentExecutor)
         );
     }
 
-    public static synchronized AgentHandlerConfiguration initialize(AgentExecutor agentExecutor) {
-        if (INSTANCE == null) {
-            INSTANCE = new AgentHandlerConfiguration(agentExecutor);
-        }
-        return INSTANCE;
-    }
-
-    public static AgentHandlerConfiguration getInstance() {
+    public static AgentHandlerConfiguration getInstance(Runner runner) {
         AgentHandlerConfiguration inst = INSTANCE;
         if (inst == null) {
             synchronized (AgentHandlerConfiguration.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new AgentHandlerConfiguration();
+                    INSTANCE = new AgentHandlerConfiguration(runner);
                 }
                 inst = INSTANCE;
             }

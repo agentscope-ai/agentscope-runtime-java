@@ -218,8 +218,8 @@
 
         <!-- Redis Dependencies -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-redis</artifactId>
         </dependency>
         <dependency>
             <groupId>io.lettuce</groupId>
@@ -233,21 +233,6 @@
             <version>3.17.4</version>
         </dependency>
 
-        <!-- MySQL Dependencies -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
         <!-- TableStore dependency -->
         <dependency>
             <groupId>com.aliyun.openservices.tablestore</groupId>
@@ -255,11 +240,14 @@
             <version>1.1.0</version>
         </dependency>
 
-        <!-- Apache HttpClient5 for Mem0 API -->
+        <!-- Apache HttpClient5 for Mem0 API and Spring RestClient -->
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
-            <version>5.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents.core5</groupId>
+            <artifactId>httpcore5</artifactId>
         </dependency>
 
         <!-- Apache Commons Math for vector calculations -->

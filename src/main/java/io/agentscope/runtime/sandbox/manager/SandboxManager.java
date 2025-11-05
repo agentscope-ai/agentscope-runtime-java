@@ -827,7 +827,7 @@ public class SandboxManager implements AutoCloseable {
 
     private SandboxClient establishConnection(String sandboxId, String userId, String sessionId) {
         try {
-            ContainerModel containerInfo = getInfo(sandboxId, userId, sessionId);
+            ContainerModel containerInfo = getInfo(sandboxId);
             if (containerInfo.getVersion().contains("sandbox-appworld") || containerInfo.getVersion().contains("sandbox-bfclient")) {
                 return new TrainingSandboxClient(containerInfo, 60);
             }
