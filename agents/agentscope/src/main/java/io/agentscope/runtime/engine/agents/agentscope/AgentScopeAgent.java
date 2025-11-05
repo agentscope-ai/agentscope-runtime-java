@@ -1,9 +1,24 @@
+/*
+ * Copyright 2024-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.agentscope.runtime.engine.agents.agentscope;
 
 import io.agentscope.core.ReActAgent.Builder;
 import io.agentscope.core.agent.Agent;
-import io.agentscope.core.hook.Hook;
-import io.agentscope.core.hook.HookEvent;
+import io.agentscope.core.agent.EventType;
+import io.agentscope.core.agent.StreamOptions;
 import io.agentscope.core.message.*;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.Toolkit;
@@ -21,8 +36,6 @@ import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
 
 import java.lang.reflect.Field;
@@ -337,37 +350,56 @@ public class AgentScopeAgent extends BaseAgent {
                 sink.next(textMessage);
 
                 if (stream) {
-                    Sinks.Many<String> chunkSink = Sinks.many().multicast().onBackpressureBuffer();
-
-                    // Create streaming hook
-                    // FIXME
-                    Hook streamingHook = new Hook(){
-                        @Override
-                        public <T extends HookEvent> Mono<T> onEvent(T event) {
-                            return null;
-                        }
-                    };
-
-                    // Create a new builder with hook
-                    Builder builderWithHook = agentScopeBuilder.hook(streamingHook);
-
-                    // Create and initialize context adapter with the new builder
-                    AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, builderWithHook);
+                    AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, agentScopeBuilder);
                     adapter.initialize();
 
-                    // Get the agent from builder (now with hook)
                     Agent agentScopeAgent = adapter.getAgent();
 
-                    // Start agent execution asynchronously on boundedElastic scheduler
-                    agentScopeAgent.call(userMsg)
+                    StreamOptions streamOptions = StreamOptions.builder()
+                            .eventTypes(EventType.REASONING, EventType.TOOL_RESULT)
+                            .incremental(true)
+                            .build();
+
+                    agentScopeAgent.stream(userMsg, streamOptions)
                             .subscribeOn(Schedulers.boundedElastic())
                             .subscribe(
-                                    response -> {
-                                        // Success - already handled via hook
+                                    event -> {
+                                        try {
+                                            String delta = streamResponseProcessor.apply(event.getMessage());
+                                            if (delta != null && !delta.isEmpty()) {
+                                                TextContent deltaContent = new TextContent();
+                                                deltaContent.setText(delta);
+                                                deltaContent.setDelta(true);
+                                                Message deltaMessage = new Message();
+                                                deltaMessage.setType(MessageType.MESSAGE.name());
+                                                deltaMessage.setRole("assistant");
+                                                deltaMessage.setStatus(RunStatus.IN_PROGRESS);
+                                                deltaMessage.setContent(List.of(deltaContent));
+                                                sink.next(deltaMessage);
+                                            }
+                                        } catch (Exception e) {
+                                            logger.severe("Error processing stream event: " + e.getMessage());
+                                        }
                                     },
                                     error -> {
-                                        // Error handling - already handled via hook, but log here too
-                                        logger.severe("Agent call error: " + error.getMessage());
+                                        logger.severe("Agent stream error: " + error.getMessage());
+                                        Message errorMessage = new Message();
+                                        errorMessage.setType(MessageType.MESSAGE.name());
+                                        errorMessage.setRole("assistant");
+                                        errorMessage.setStatus(RunStatus.FAILED);
+                                        TextContent errorContent = new TextContent();
+                                        errorContent.setText("Error: " + error.getMessage());
+                                        errorMessage.setContent(List.of(errorContent));
+                                        sink.next(errorMessage);
+                                        sink.error(error);
+                                    },
+                                    () -> {
+                                        Message completedMessage = new Message();
+                                        completedMessage.setType(MessageType.MESSAGE.name());
+                                        completedMessage.setRole("assistant");
+                                        completedMessage.setStatus(RunStatus.COMPLETED);
+                                        sink.next(completedMessage);
+                                        sink.complete();
                                     }
                             );
 

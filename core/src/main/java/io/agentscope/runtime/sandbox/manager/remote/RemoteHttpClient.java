@@ -16,12 +16,12 @@
 package io.agentscope.runtime.sandbox.manager.remote;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestTemplate;
-
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -33,7 +33,7 @@ import java.util.logging.Logger;
 public class RemoteHttpClient {
     
     private static final Logger logger = Logger.getLogger(RemoteHttpClient.class.getName());
-    private final RestTemplate restTemplate;
+    private final HttpClient httpClient;
     private final String baseUrl;
     private final String bearerToken;
     private final ObjectMapper objectMapper;
@@ -41,7 +41,7 @@ public class RemoteHttpClient {
     public RemoteHttpClient(String baseUrl, String bearerToken) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.bearerToken = bearerToken;
-        this.restTemplate = new RestTemplate();
+        this.httpClient = HttpClient.newHttpClient();
         this.objectMapper = new ObjectMapper();
     }
     
@@ -59,68 +59,40 @@ public class RemoteHttpClient {
         
         logger.info("Making " + method + " request to: " + url);
         
-        // Prepare headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        if (bearerToken != null && !bearerToken.isEmpty()) {
-            headers.set("Authorization", "Bearer " + bearerToken);
-        }
-        
         try {
-            HttpEntity<Map<String, Object>> requestEntity;
-            ResponseEntity<Map<String, Object>> response;
-            
-            if (method == RequestMethod.GET) {
-                requestEntity = new HttpEntity<>(headers);
-                StringBuilder queryString = new StringBuilder();
-                if (data != null && !data.isEmpty()) {
-                    queryString.append("?");
-                    for (Map.Entry<String, Object> entry : data.entrySet()) {
-                        if (queryString.length() > 1) {
-                            queryString.append("&");
-                        }
-                        queryString.append(entry.getKey()).append("=").append(entry.getValue());
-                    }
+            HttpRequest request = buildHttpRequest(method, url, data);
+            HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            int statusCode = httpResponse.statusCode();
+            String body = httpResponse.body();
+
+            if (statusCode < 200 || statusCode >= 300) {
+                String errorMessage = extractErrorMessage(body, statusCode);
+                logger.severe("HTTP error: " + statusCode + " - " + errorMessage);
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", errorMessage);
+                if (successKey != null && !successKey.isEmpty()) {
+                    return null;
                 }
-                url += queryString.toString();
-                org.springframework.core.ParameterizedTypeReference<Map<String, Object>> typeRef = 
-                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {};
-                response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, typeRef);
-            } else {
-                requestEntity = new HttpEntity<>(data, headers);
-                HttpMethod httpMethod = HttpMethod.valueOf(method.name());
-                org.springframework.core.ParameterizedTypeReference<Map<String, Object>> typeRef = 
-                    new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {};
-                response = restTemplate.exchange(url, httpMethod, requestEntity, typeRef);
+                return errorResponse;
             }
 
-            Map<String, Object> responseBody = response.getBody();
-            if (responseBody == null) {
-                logger.warning("Response body is null");
+            if (body == null || body.isEmpty()) {
+                logger.warning("Response body is empty");
                 return null;
             }
-            
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> responseBody = objectMapper.readValue(body, Map.class);
+
             if (successKey != null && !successKey.isEmpty()) {
                 Object result = responseBody.get(successKey);
                 logger.info("Request successful, extracted data with key: " + successKey);
                 return result;
             }
-            
+
             return responseBody;
-            
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            logger.severe("HTTP error: " + e.getStatusCode() + " - " + e.getMessage());
-            
-            String errorMessage = extractErrorMessage(e);
-            logger.severe("Error details: " + errorMessage);
-            
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", errorMessage);
-            if (successKey != null && !successKey.isEmpty()) {
-                return errorResponse.get(successKey);
-            }
-            return errorResponse;
-            
+
         } catch (Exception e) {
             logger.severe("Error making request: " + e.getMessage());
             e.printStackTrace();
@@ -128,44 +100,83 @@ public class RemoteHttpClient {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Error: " + e.getMessage());
             if (successKey != null && !successKey.isEmpty()) {
-                return errorResponse.get(successKey);
+                return null;
             }
             return errorResponse;
         }
     }
     
     /**
-     * Extract error message from HTTP exception
+     * Build HttpRequest with method, headers and body
      */
-    private String extractErrorMessage(Exception e) {
+    private HttpRequest buildHttpRequest(RequestMethod method, String url, Map<String, Object> data) throws Exception {
+        HttpRequest.Builder builder;
+
+        if (method == RequestMethod.GET || method == RequestMethod.HEAD) {
+            String fullUrl = url + buildQueryString(data);
+            builder = HttpRequest.newBuilder(URI.create(fullUrl));
+            if (method == RequestMethod.HEAD) {
+                builder = builder.method("HEAD", HttpRequest.BodyPublishers.noBody());
+            } else {
+                builder = builder.GET();
+            }
+        } else if (method == RequestMethod.DELETE) {
+            builder = HttpRequest.newBuilder(URI.create(url)).DELETE();
+        } else {
+            String body = data == null ? "{}" : objectMapper.writeValueAsString(data);
+            builder = HttpRequest.newBuilder(URI.create(url))
+                .method(method.name(), HttpRequest.BodyPublishers.ofString(body))
+                .header("Content-Type", "application/json");
+        }
+
+        if (bearerToken != null && !bearerToken.isEmpty()) {
+            builder.header("Authorization", "Bearer " + bearerToken);
+        }
+
+        return builder.build();
+    }
+    
+    /**
+     * Extract error message from HTTP response body
+     */
+    private String extractErrorMessage(String responseBody, int statusCode) {
         try {
-            if (e instanceof HttpClientErrorException) {
-                HttpClientErrorException httpException = (HttpClientErrorException) e;
-                String responseBody = httpException.getResponseBodyAsString();
-                
-                if (responseBody != null && !responseBody.isEmpty()) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> errorMap = objectMapper.readValue(responseBody, Map.class);
-                    
-                    if (errorMap.containsKey("detail")) {
-                        return "Server Detail: " + errorMap.get("detail");
-                    } else if (errorMap.containsKey("error")) {
-                        return "Server Error: " + errorMap.get("error");
-                    } else {
-                        return "Server Response: " + responseBody;
-                    }
+            if (responseBody != null && !responseBody.isEmpty()) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> errorMap = objectMapper.readValue(responseBody, Map.class);
+                if (errorMap.containsKey("detail")) {
+                    return "Server Detail: " + errorMap.get("detail");
+                } else if (errorMap.containsKey("error")) {
+                    return "Server Error: " + errorMap.get("error");
+                } else if (errorMap.containsKey("message")) {
+                    return String.valueOf(errorMap.get("message"));
                 }
-            } else if (e instanceof HttpServerErrorException) {
-                HttpServerErrorException httpException = (HttpServerErrorException) e;
-                return "Server Error " + httpException.getStatusCode() + ": " + httpException.getMessage();
+                return responseBody;
             }
         } catch (Exception parseException) {
             logger.warning("Failed to parse error response: " + parseException.getMessage());
         }
-        
-        return e.getMessage();
+        return "HTTP " + statusCode + " Error";
     }
-    
+
+    private String buildQueryString(Map<String, Object> data) {
+        if (data == null || data.isEmpty()) {
+            return "";
+        }
+        StringBuilder query = new StringBuilder("?");
+        boolean first = true;
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            if (!first) {
+                query.append("&");
+            }
+            first = false;
+            String key = URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8);
+            String value = entry.getValue() == null ? "" : URLEncoder.encode(String.valueOf(entry.getValue()), StandardCharsets.UTF_8);
+            query.append(key).append("=").append(value);
+        }
+        return query.toString();
+    }
+
     public String getBaseUrl() {
         return baseUrl;
     }
