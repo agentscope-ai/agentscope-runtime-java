@@ -144,7 +144,7 @@ public class SandboxManager implements AutoCloseable {
                 if (managerConfig.getClientConfig() instanceof DockerClientConfig existingConfig) {
                     dockerClientConfig = existingConfig;
                 } else {
-                    dockerClientConfig = new DockerClientConfig();
+                    dockerClientConfig = DockerClientConfig.builder().build();
                 }
                 // Set port range and redis config from ManagerConfig
                 dockerClientConfig.setPortRange(managerConfig.getPortRange());

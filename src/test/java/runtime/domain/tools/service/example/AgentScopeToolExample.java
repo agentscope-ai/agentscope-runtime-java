@@ -78,7 +78,7 @@ public class AgentScopeToolExample {
      */
     public CompletableFuture<Void> basicExample() {
         System.out.println("=== Basic SaaAgent Example ===");
-        BaseClientConfig clientConfig = new DockerClientConfig();
+        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
                 .containerDeployment(clientConfig)
                 .build();

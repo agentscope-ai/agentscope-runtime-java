@@ -20,7 +20,7 @@ public class BrowserToolsTest{
     void setUp() {
         // Initialize sandbox manager
         try {
-            BaseClientConfig clientConfig = new DockerClientConfig();
+            BaseClientConfig clientConfig = DockerClientConfig.builder().build();
             ManagerConfig config = new ManagerConfig.Builder()
                     .containerDeployment(clientConfig)
                     .build();

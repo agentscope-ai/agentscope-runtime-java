@@ -8,18 +8,18 @@ public class KubernetesClientConfig extends BaseClientConfig {
     private String kubeConfigPath;
     private String namespace;
 
-    public KubernetesClientConfig(){
-        this(null, "default");
+    private KubernetesClientConfig(){
+        super(ContainerManagerType.KUBERNETES);
     }
 
-    public KubernetesClientConfig(String kubeConfigPath) {
-        this(kubeConfigPath, "default");
-    }
-
-    public KubernetesClientConfig(String kubeConfigPath, String namespace) {
+    private KubernetesClientConfig(String kubeConfigPath, String namespace) {
         super(ContainerManagerType.KUBERNETES);
         this.kubeConfigPath = StringUtils.isEmpty(kubeConfigPath) ? KUBE_CONFIG_PATH : kubeConfigPath;
         this.namespace = namespace;
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     public String getNamespace() {
@@ -36,5 +36,27 @@ public class KubernetesClientConfig extends BaseClientConfig {
 
     public void setKubeConfigPath(String kubeConfigPath) {
         this.kubeConfigPath = kubeConfigPath;
+    }
+
+    public static class Builder {
+        private String kubeConfigPath;
+        private String namespace = "default";
+
+        private Builder() {
+        }
+
+        public Builder kubeConfigPath(String kubeConfigPath) {
+            this.kubeConfigPath = kubeConfigPath;
+            return this;
+        }
+
+        public Builder namespace(String namespace) {
+            this.namespace = namespace;
+            return this;
+        }
+
+        public KubernetesClientConfig build() {
+            return new KubernetesClientConfig(kubeConfigPath, namespace);
+        }
     }
 }

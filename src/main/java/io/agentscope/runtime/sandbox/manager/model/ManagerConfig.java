@@ -145,7 +145,7 @@ public class ManagerConfig {
     public static class Builder {
         private String containerPrefixKey = "runtime_sandbox_container_";
         private Boolean redisEnabled = false;
-        private BaseClientConfig clientConfig = new DockerClientConfig();
+        private BaseClientConfig clientConfig = DockerClientConfig.builder().build();
         private RedisManagerConfig redisConfig;
         private PortRange portRange = new PortRange(49152, 59152);
         private int poolSize = 0;

@@ -79,7 +79,9 @@ OssConfig ossConfig = OssConfig.builder()
 默认使用docker，要使用k8s，需要配置一个KubernetesClientConfig，参数如果传空的话，会直接使用本地的默认k8s环境
 
 ```java
-BaseClientConfig clientConfig = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+BaseClientConfig clientConfig = KubernetesClientConfig.builder()
+        .kubeConfigPath(System.getenv("KUBECONFIG_PATH"))
+        .build();
 ```
 
 **可选配置4：容器池的大小**

@@ -117,7 +117,7 @@ public class AgentscopeBrowseruseAgent {
         );
         contextManager.start().get();
 
-        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new KubernetesClientConfig()).build());
+        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(KubernetesClientConfig.builder().build()).build());
         environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
         // Initialize chat model

@@ -28,7 +28,9 @@ public class AppWorldSandboxTest {
         // Initialize sandbox manager
         java.util.logging.Logger.getLogger("").setLevel(java.util.logging.Level.OFF);
         try {
-            BaseClientConfig clientConfig = new KubernetesClientConfig(System.getenv("KUBECONFIG_PATH"));
+            BaseClientConfig clientConfig = KubernetesClientConfig.builder()
+                    .kubeConfigPath(System.getenv("KUBECONFIG_PATH"))
+                    .build();
             ManagerConfig config = new ManagerConfig.Builder()
                     .containerDeployment(clientConfig)
                     .build();
