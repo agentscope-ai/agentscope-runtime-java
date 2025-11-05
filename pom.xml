@@ -58,6 +58,8 @@
     </scm>
 
     <properties>
+        <revision>0.1.0-SNAPSHOT</revision>
+
         <a2a-sdk.version>0.2.5</a2a-sdk.version>
         <spring-boot.version>3.4.5</spring-boot.version>
         <spring-ai.version>1.0.1</spring-ai.version>

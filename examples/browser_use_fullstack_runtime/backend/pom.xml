@@ -15,7 +15,7 @@
     <groupId>io.agentscope</groupId>
     <artifactId>browser-agent-backend</artifactId>
     <version>1.0.0</version>
-    <name>AgentScope Browser Use Backend</name>
+    <name>Example::Browser Use Backend</name>
     <description>Java backend for AgentScope browser use demo</description>
 
     <properties>

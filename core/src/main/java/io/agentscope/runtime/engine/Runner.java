@@ -229,7 +229,7 @@ public class Runner implements AutoCloseable {
     }
 
     public void deploy(DeployManager deployManager) {
-        deployManager.deployStreaming(this);
+        deployManager.deploy(this);
     }
 
     @Override
