@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.WaitForTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserWaiter extends BaseSandboxAwareTool<WaitForTool, BrowserWaiter.WaitForToolRequest, BrowserWaiter.WaitForToolResponse> {
 	Logger logger = Logger.getLogger(BrowserWaiter.class.getName());

@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.PdfSaveTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserPdfSaver extends BaseSandboxAwareTool<PdfSaveTool, BrowserPdfSaver.PdfSaveToolRequest, BrowserPdfSaver.PdfSaveToolResponse> {
 	Logger logger = Logger.getLogger(BrowserPdfSaver.class.getName());

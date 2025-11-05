@@ -1,6 +1,5 @@
 package io.agentscope.runtime.engine.agents.agentscope.tools;
 
-import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;

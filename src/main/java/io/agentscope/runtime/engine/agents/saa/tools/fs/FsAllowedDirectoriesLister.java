@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.fs.ListAllowedDirectoriesTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class FsAllowedDirectoriesLister extends BaseSandboxAwareTool<ListAllowedDirectoriesTool, FsAllowedDirectoriesLister.ListAllowedDirectoriesToolRequest, FsAllowedDirectoriesLister.ListAllowedDirectoriesToolResponse> {
 	Logger logger = Logger.getLogger(FsAllowedDirectoriesLister.class.getName());

@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.PressKeyTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserKeyPresser extends BaseSandboxAwareTool<PressKeyTool, BrowserKeyPresser.PressKeyToolRequest, BrowserKeyPresser.PressKeyToolResponse> {
 	Logger logger = Logger.getLogger(BrowserKeyPresser.class.getName());

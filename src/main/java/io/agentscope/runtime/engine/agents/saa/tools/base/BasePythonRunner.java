@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.base.RunPythonTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BasePythonRunner extends BaseSandboxAwareTool<RunPythonTool, BasePythonRunner.RunPythonToolRequest, BasePythonRunner.RunPythonToolResponse> {
 	Logger logger = Logger.getLogger(BasePythonRunner.class.getName());

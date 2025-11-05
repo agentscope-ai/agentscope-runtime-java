@@ -2,8 +2,8 @@ package io.agentscope.runtime.engine.agents.agentscope;
 
 import io.agentscope.core.ReActAgent.Builder;
 import io.agentscope.core.agent.Agent;
-import io.agentscope.core.hook.ChunkMode;
 import io.agentscope.core.hook.Hook;
+import io.agentscope.core.hook.HookEvent;
 import io.agentscope.core.message.*;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.Toolkit;
@@ -340,72 +340,11 @@ public class AgentScopeAgent extends BaseAgent {
                     Sinks.Many<String> chunkSink = Sinks.many().multicast().onBackpressureBuffer();
 
                     // Create streaming hook
-                    Hook streamingHook = new Hook() {
+                    // FIXME
+                    Hook streamingHook = new Hook(){
                         @Override
-                        public ChunkMode reasoningChunkMode() {
-                            return ChunkMode.INCREMENTAL; // Get only new content in each chunk
-                        }
-
-                        @Override
-                        public Mono<Void> onReasoningChunk(Agent agent, Msg chunk) {
-                            try {
-                                // Use streamResponseProcessor to extract text from chunk
-                                String chunkText = streamResponseProcessor.apply(chunk);
-                                if (chunkText != null && !chunkText.isEmpty()) {
-                                    chunkSink.tryEmitNext(chunkText);
-
-                                    // Emit chunk as delta message
-                                    TextContent textContent = new TextContent();
-                                    textContent.setText(chunkText);
-                                    textContent.setDelta(true);
-                                    Message deltaMessage = new Message();
-                                    deltaMessage.setType(MessageType.CHUNK.name());
-                                    deltaMessage.setRole("assistant");
-                                    deltaMessage.setStatus(RunStatus.IN_PROGRESS);
-                                    deltaMessage.setContent(List.of(textContent));
-                                    sink.next(deltaMessage);
-                                }
-                            } catch (Exception e) {
-                                logger.warning("Error processing chunk: " + e.getMessage());
-                            }
-                            return Mono.empty();
-                        }
-
-                        @Override
-                        public Mono<Msg> postCall(Agent agent, Msg finalMsg) {
-                            try {
-                                String finalContent = responseProcessor.apply(finalMsg);
-                                if (finalContent != null && !finalContent.isEmpty()) {
-                                    TextContent textContent = new TextContent();
-                                    textContent.setText(finalContent);
-                                    textContent.setDelta(false);
-                                    textMessage.setContent(List.of(textContent));
-                                }
-                                textMessage.setStatus(RunStatus.COMPLETED);
-                                sink.next(textMessage);
-                                sink.complete();
-                            } catch (Exception e) {
-                                logger.severe("Error processing final message: " + e.getMessage());
-                                sink.error(e);
-                            }
-                            chunkSink.tryEmitComplete();
-                            return Mono.just(finalMsg);
-                        }
-
-                        @Override
-                        public Mono<Void> onError(Agent agent, Throwable error) {
-                            logger.severe("Agent error in hook: " + error.getMessage());
-                            Message errorMessage = new Message();
-                            errorMessage.setType(MessageType.MESSAGE.name());
-                            errorMessage.setRole("assistant");
-                            errorMessage.setStatus(RunStatus.FAILED);
-                            TextContent errorContent = new TextContent();
-                            errorContent.setText("Error: " + error.getMessage());
-                            errorMessage.setContent(List.of(errorContent));
-                            sink.next(errorMessage);
-                            sink.error(error);
-                            chunkSink.tryEmitError(error);
-                            return Mono.empty();
+                        public <T extends HookEvent> Mono<T> onEvent(T event) {
+                            return null;
                         }
                     };
 

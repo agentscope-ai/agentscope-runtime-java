@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.CloseTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserCloser extends BaseSandboxAwareTool<CloseTool, BrowserCloser.CloseToolRequest, BrowserCloser.CloseToolResponse> {
 	Logger logger = Logger.getLogger(BrowserCloser.class.getName());

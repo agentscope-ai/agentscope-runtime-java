@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.TypeTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserTyper extends BaseSandboxAwareTool<TypeTool, BrowserTyper.TypeToolRequest, BrowserTyper.TypeToolResponse> {
 	Logger logger = Logger.getLogger(BrowserTyper.class.getName());

@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.agents.saa.BaseSandboxAwareTool;
 import io.agentscope.runtime.engine.agents.saa.RuntimeFunctionToolCallback;
 import io.agentscope.runtime.sandbox.tools.browser.TabListTool;
-import io.agentscope.runtime.sandbox.tools.utils.ContextUtils;
 
 public class BrowserTabLister extends BaseSandboxAwareTool<TabListTool, BrowserTabLister.TabListToolRequest, BrowserTabLister.TabListToolResponse> {
 	Logger logger = Logger.getLogger(BrowserTabLister.class.getName());

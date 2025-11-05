@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 import io.a2a.spec.AgentCapabilities;
+import io.agentscope.runtime.autoconfig.deployer.ServerConfig;
 import io.agentscope.runtime.engine.Runner;
 
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -39,8 +40,8 @@ public class AgentHandlerConfiguration {
 
     private final JSONRPCHandler jsonrpcHandler;
 
-    public AgentHandlerConfiguration(Runner runner) {
-        this(new GraphAgentExecutor(runner::streamQuery), new NetworkUtils());
+    public AgentHandlerConfiguration(Runner runner, ServerConfig serverConfig) {
+        this(new GraphAgentExecutor(runner::streamQuery), new NetworkUtils(serverConfig));
     }
 
     protected AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
@@ -50,12 +51,12 @@ public class AgentHandlerConfiguration {
         );
     }
 
-    public static AgentHandlerConfiguration getInstance(Runner runner) {
+    public static AgentHandlerConfiguration getInstance(Runner runner, ServerConfig serverConfig) {
         AgentHandlerConfiguration inst = INSTANCE;
         if (inst == null) {
             synchronized (AgentHandlerConfiguration.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new AgentHandlerConfiguration(runner);
+                    INSTANCE = new AgentHandlerConfiguration(runner, serverConfig);
                 }
                 inst = INSTANCE;
             }
@@ -79,8 +80,8 @@ public class AgentHandlerConfiguration {
                 .build();
     }
 
-    public static AgentCard createDefaultAgentCard() {
-        return createDefaultAgentCard(new NetworkUtils());
+    public static AgentCard createDefaultAgentCard(ServerConfig serverConfig) {
+        return createDefaultAgentCard(new NetworkUtils(serverConfig));
     }
 
     private static AgentCapabilities createDefaultCapabilities() {
