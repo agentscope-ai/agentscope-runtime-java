@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 import io.a2a.spec.AgentCapabilities;
-import io.agentscope.runtime.autoconfig.deployer.ServerConfig;
 import io.agentscope.runtime.engine.Runner;
 
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -40,49 +39,28 @@ public class AgentHandlerConfiguration {
 
     private final JSONRPCHandler jsonrpcHandler;
 
-    public AgentHandlerConfiguration() {
-        this(new GraphAgentExecutor(Runner.getRunner()::streamQuery), ServerConfig.defaultConfig());
+    public AgentHandlerConfiguration(Runner runner) {
+        this(new GraphAgentExecutor(runner::streamQuery), new NetworkUtils());
     }
 
-    public AgentHandlerConfiguration(AgentExecutor agentExecutor) {
-        this(agentExecutor, ServerConfig.defaultConfig());
-    }
-
-    public AgentHandlerConfiguration(AgentExecutor agentExecutor, ServerConfig serverConfig) {
-        this(agentExecutor, new NetworkUtils(serverConfig));
-    }
-
-    public AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
+    protected AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
         this.jsonrpcHandler = new JSONRPCHandler(
                 createDefaultAgentCard(networkUtils),
                 requestHandler(agentExecutor)
         );
     }
 
-    public static synchronized AgentHandlerConfiguration initialize(AgentExecutor agentExecutor) {
-        if (INSTANCE == null) {
-            INSTANCE = new AgentHandlerConfiguration(agentExecutor);
-        }
-        return INSTANCE;
-    }
-
-    public static AgentHandlerConfiguration getInstance() {
+    public static AgentHandlerConfiguration getInstance(Runner runner) {
         AgentHandlerConfiguration inst = INSTANCE;
         if (inst == null) {
             synchronized (AgentHandlerConfiguration.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new AgentHandlerConfiguration();
+                    INSTANCE = new AgentHandlerConfiguration(runner);
                 }
                 inst = INSTANCE;
             }
         }
         return inst;
-    }
-
-    public static synchronized void initialize(AgentExecutor agentExecutor, ServerConfig serverConfig) {
-        if (INSTANCE == null) {
-            INSTANCE = new AgentHandlerConfiguration(agentExecutor, serverConfig);
-        }
     }
 
     public static AgentCard createDefaultAgentCard(NetworkUtils networkUtils) {
@@ -101,12 +79,8 @@ public class AgentHandlerConfiguration {
                 .build();
     }
 
-    public static AgentCard createDefaultAgentCard(ServerConfig serverConfig) {
-        return createDefaultAgentCard(new NetworkUtils(serverConfig));
-    }
-
     public static AgentCard createDefaultAgentCard() {
-        return createDefaultAgentCard(ServerConfig.defaultConfig());
+        return createDefaultAgentCard(new NetworkUtils());
     }
 
     private static AgentCapabilities createDefaultCapabilities() {

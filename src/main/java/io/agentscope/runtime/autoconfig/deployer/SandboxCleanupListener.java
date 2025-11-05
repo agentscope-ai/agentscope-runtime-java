@@ -32,13 +32,19 @@ import java.util.logging.Logger;
 public class SandboxCleanupListener implements ApplicationListener<ContextClosedEvent> {
     Logger logger = Logger.getLogger(SandboxCleanupListener.class.getName());
 
+    private final Runner runner;
+
+    public SandboxCleanupListener(Runner runner) {
+        this.runner = runner;
+    }
+
     @Override
     public void onApplicationEvent(@NonNull ContextClosedEvent event) {
         logger.info("Application is shutting down, starting sandbox cleanup...");
 
         try {
 
-            EnvironmentManager environmentManager = Runner.getRunner().getEnvironmentManager();
+            EnvironmentManager environmentManager = runner.getEnvironmentManager();
             if (environmentManager == null) {
                 logger.info("No EnvironmentManager found, skipping sandbox cleanup");
                 return;
