@@ -16,7 +16,6 @@
 package io.agentscope.runtime.sandbox.manager;
 
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxAnnotationProcessor;
