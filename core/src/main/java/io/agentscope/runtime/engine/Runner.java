@@ -228,10 +228,6 @@ public class Runner implements AutoCloseable {
         return contextManager;
     }
 
-    public void deploy(DeployManager deployManager) {
-        deployManager.deploy(this);
-    }
-
     @Override
     public void close() {
 

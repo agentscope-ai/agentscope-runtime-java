@@ -50,6 +50,7 @@
         <module>core</module>
         <module>agents</module>
         <module>web</module>
+        <module>starters/spring-boot-starter-runtime-a2a</module>
     </modules>
     <scm>
         <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>
