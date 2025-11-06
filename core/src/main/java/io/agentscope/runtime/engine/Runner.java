@@ -7,7 +7,6 @@ import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
-import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
