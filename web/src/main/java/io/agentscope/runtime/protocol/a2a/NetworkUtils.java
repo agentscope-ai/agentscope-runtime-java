@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.a2a;
+package io.agentscope.runtime.protocol.a2a;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
+
+import io.agentscope.runtime.autoconfigure.DeployProperties;
 
 /**
  * Network utility class for getting current server IP address and port configuration
@@ -28,7 +30,7 @@ public class NetworkUtils {
     private final int serverPort;
     private final String serverAddress;
 
-    public NetworkUtils(ServerConfig serverConfig) {
+    public NetworkUtils(DeployProperties serverConfig) {
         this.serverPort = serverConfig.getServerPort();
         this.serverAddress = serverConfig.getServerAddress();
     }

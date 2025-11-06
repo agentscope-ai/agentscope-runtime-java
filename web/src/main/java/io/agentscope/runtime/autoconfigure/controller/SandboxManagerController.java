@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.controller;
+package io.agentscope.runtime.autoconfigure.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

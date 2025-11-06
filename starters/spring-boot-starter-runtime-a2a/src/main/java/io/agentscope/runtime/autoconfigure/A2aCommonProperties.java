@@ -13,35 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.a2a;
+package io.agentscope.runtime.autoconfigure;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Server configuration for deployment
  */
-public class ServerConfig {
-    private final int serverPort;
-    private final String serverAddress;
+@ConfigurationProperties("spring.agentscope.runtime.a2a")
+public class A2aCommonProperties {
+    private int serverPort;
+    private String serverAddress;
+    private String endpointName;
 
-    public ServerConfig(int serverPort){
-        this(serverPort, "");
-    }
-
-    public ServerConfig(int serverPort, String serverAddress) {
-        this.serverPort = serverPort;
-        this.serverAddress = serverAddress != null ? serverAddress : "";
-    }
+    public A2aCommonProperties() {}
 
     public int getServerPort() {
         return serverPort;
+    }
+
+    public void setServerPort(int serverPort) {
+        this.serverPort = serverPort;
     }
 
     public String getServerAddress() {
         return serverAddress;
     }
 
-    public static ServerConfig defaultConfig() {
-        return new ServerConfig(8080, "");
+    public void setServerAddress(String serverAddress) {
+        this.serverAddress = serverAddress;
+    }
+
+    String getEndpointName() {
+        return endpointName;
+    }
+
+    void setEndpointName(String endpointName) {
+        this.endpointName = endpointName;
     }
 }
-
-

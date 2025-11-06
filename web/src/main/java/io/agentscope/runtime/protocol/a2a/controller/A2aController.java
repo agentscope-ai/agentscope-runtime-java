@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.controller;
+package io.agentscope.runtime.protocol.a2a.controller;
 
-import io.agentscope.runtime.a2a.ServerConfig;
+import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.a2a.AgentHandlerConfiguration;
-import io.agentscope.runtime.a2a.JSONRPCHandler;
+import io.agentscope.runtime.protocol.a2a.AgentHandlerConfiguration;
+import io.agentscope.runtime.protocol.a2a.JSONRPCHandler;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.a2a.spec.CancelTaskRequest;
@@ -39,7 +39,7 @@ import io.a2a.spec.StreamingJSONRPCRequest;
 import io.a2a.spec.TaskResubscriptionRequest;
 import io.a2a.spec.UnsupportedOperationError;
 import io.a2a.util.Utils;
-import io.agentscope.runtime.a2a.ServerCallContext;
+import io.agentscope.runtime.protocol.a2a.ServerCallContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.reactivestreams.FlowAdapters;
 import org.springframework.http.MediaType;
@@ -66,8 +66,8 @@ public class A2aController {
 
     private final JSONRPCHandler jsonRpcHandler;
 
-    public A2aController(Runner runner, ServerConfig serverConfig) {
-        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner, serverConfig).jsonrpcHandler();
+    public A2aController(Runner runner, DeployProperties properties) {
+        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner, properties).jsonrpcHandler();
     }
 
     @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})

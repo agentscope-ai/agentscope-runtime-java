@@ -16,10 +16,5 @@
 package io.agentscope.runtime.engine;
 
 public interface DeployManager {
-
-    default void deploy(Runner runner) {
-        deploy("process", runner);
-    }
-
-    void deploy(String endpointName, Runner runner);
+    void deploy(Runner runner);
 }

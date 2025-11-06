@@ -223,10 +223,6 @@ public class Runner {
         return contextManager;
     }
 
-    public void deploy(DeployManager deployManager) {
-        deployManager.deploy(this);
-    }
-
     public static RunnerBuilder builder() {
         return new RunnerBuilder();
     }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.a2a;
+package io.agentscope.runtime.protocol.a2a;
 
 import static io.a2a.server.util.async.AsyncUtils.createTubeConfig;
 

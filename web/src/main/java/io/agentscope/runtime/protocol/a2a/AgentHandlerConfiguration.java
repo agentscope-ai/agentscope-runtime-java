@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.a2a;
+package io.agentscope.runtime.protocol.a2a;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 
 import io.a2a.spec.AgentCapabilities;
+import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.Runner;
 
 import io.a2a.server.agentexecution.AgentExecutor;
@@ -39,8 +40,8 @@ public class AgentHandlerConfiguration {
 
     private final JSONRPCHandler jsonrpcHandler;
 
-    public AgentHandlerConfiguration(Runner runner, ServerConfig serverConfig) {
-        this(new GraphAgentExecutor(runner::streamQuery), new NetworkUtils(serverConfig));
+    public AgentHandlerConfiguration(Runner runner, DeployProperties properties) {
+        this(new GraphAgentExecutor(runner::streamQuery), new NetworkUtils(properties));
     }
 
     protected AgentHandlerConfiguration(AgentExecutor agentExecutor, NetworkUtils networkUtils) {
@@ -50,12 +51,12 @@ public class AgentHandlerConfiguration {
         );
     }
 
-    public static AgentHandlerConfiguration getInstance(Runner runner, ServerConfig serverConfig) {
+    public static AgentHandlerConfiguration getInstance(Runner runner, DeployProperties properties) {
         AgentHandlerConfiguration inst = INSTANCE;
         if (inst == null) {
             synchronized (AgentHandlerConfiguration.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new AgentHandlerConfiguration(runner, serverConfig);
+                    INSTANCE = new AgentHandlerConfiguration(runner, properties);
                 }
                 inst = INSTANCE;
             }
@@ -79,7 +80,7 @@ public class AgentHandlerConfiguration {
                 .build();
     }
 
-    public static AgentCard createDefaultAgentCard(ServerConfig serverConfig) {
+    public static AgentCard createDefaultAgentCard(DeployProperties serverConfig) {
         return createDefaultAgentCard(new NetworkUtils(serverConfig));
     }
 
