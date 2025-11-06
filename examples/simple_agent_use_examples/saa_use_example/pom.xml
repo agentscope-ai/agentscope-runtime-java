@@ -13,7 +13,7 @@
     </parent>
 
     <groupId>io.agentscope</groupId>
-    <artifactId>browser-agent-backend</artifactId>
+    <artifactId>agentscope_use_examples</artifactId>
     <version>1.0.0</version>
     <name>Example::Browser Use Backend</name>
     <description>Java backend for AgentScope browser use demo</description>
@@ -26,30 +26,49 @@
     </properties>
 
     <dependencies>
-        <!-- Spring Boot Starter Web (includes Tomcat and Spring WebMVC) -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.18.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.18.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.18.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jdk8</artifactId>
+            <version>2.18.3</version>
         </dependency>
 
-        <!-- Spring Boot Starter WebFlux (for reactive support) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-        </dependency>
-
-        <!-- AgentScope Runtime -->
-        <dependency>
-            <groupId>io.agentscope</groupId>
-            <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
-        </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-agentscope</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
 
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-runtime-saa</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-runtime-web</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+        </dependency>
 
         <!-- Logging -->
         <dependency>
@@ -61,6 +80,7 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
+
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime</artifactId>
@@ -110,4 +130,3 @@
         </plugins>
     </build>
 </project>
-

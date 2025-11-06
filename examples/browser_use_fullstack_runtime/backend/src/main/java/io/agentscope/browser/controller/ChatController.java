@@ -1,6 +1,6 @@
 package io.agentscope.browser.controller;
 
-import io.agentscope.browser.agent.AgentscopeBrowseruseAgent;
+import io.agentscope.browser.agent.AgentscopeBrowserUseAgent;
 import io.agentscope.runtime.engine.schemas.agent.Content;
 import io.agentscope.runtime.engine.schemas.agent.DataContent;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
@@ -25,9 +25,9 @@ public class ChatController {
 
     private static final Logger logger = LoggerFactory.getLogger(ChatController.class);
 
-    private final AgentscopeBrowseruseAgent agent;
+    private final AgentscopeBrowserUseAgent agent;
 
-    public ChatController(AgentscopeBrowseruseAgent agent) {
+    public ChatController(AgentscopeBrowserUseAgent agent) {
         this.agent = agent;
     }
 

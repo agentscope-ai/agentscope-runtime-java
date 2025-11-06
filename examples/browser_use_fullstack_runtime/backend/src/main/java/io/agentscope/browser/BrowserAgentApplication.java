@@ -1,6 +1,7 @@
 package io.agentscope.browser;
 
-import io.agentscope.browser.agent.AgentscopeBrowseruseAgent;
+import io.agentscope.browser.agent.AgentscopeBrowserUseAgent;
+import io.agentscope.runtime.engine.Runner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -24,15 +25,21 @@ public class BrowserAgentApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(BrowserAgentApplication.class);
 
-    private static AgentscopeBrowseruseAgent agentInstance;
+    private static AgentscopeBrowserUseAgent agentInstance;
 
     @Bean
-    public AgentscopeBrowseruseAgent agentscopeBrowseruseAgent() throws Exception {
-        logger.info("Creating AgentscopeBrowseruseAgent bean...");
-        agentInstance = new AgentscopeBrowseruseAgent();
+    public AgentscopeBrowserUseAgent agentscopeBrowseruseAgent() throws Exception {
+        logger.info("Creating AgentscopeBrowserUseAgent bean...");
+        agentInstance = new AgentscopeBrowserUseAgent();
         agentInstance.connect();
-        logger.info("AgentscopeBrowseruseAgent bean created and connected");
+        logger.info("AgentscopeBrowserUseAgent bean created and connected");
         return agentInstance;
+    }
+
+    @Bean
+    public Runner agentRunner(AgentscopeBrowserUseAgent agent) {
+        logger.info("Exposing Runner bean for A2A protocol");
+        return agent.getRunner();
     }
 
     @PreDestroy
