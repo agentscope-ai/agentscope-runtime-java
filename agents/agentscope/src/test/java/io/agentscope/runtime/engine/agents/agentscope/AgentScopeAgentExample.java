@@ -1,4 +1,4 @@
-package runtime.domain.tools.service.example;
+package io.agentscope.runtime.engine.agents.agentscope;
 
 
 import io.agentscope.core.ReActAgent;
@@ -6,7 +6,6 @@ import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.model.DashScopeChatModel; 
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
