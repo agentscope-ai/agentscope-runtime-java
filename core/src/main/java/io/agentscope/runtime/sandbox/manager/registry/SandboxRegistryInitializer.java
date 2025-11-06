@@ -60,6 +60,7 @@ public class SandboxRegistryInitializer {
         tryRegisterClass(BFCLSandbox.class.getName());
         tryRegisterClass(WebShopSandbox.class.getName());
         tryRegisterClass(APPWorldSandbox.class.getName());
+        tryRegisterClass(GuiSandbox.class.getName());
         logger.info("Built-in sandbox classes registered");
     }
 

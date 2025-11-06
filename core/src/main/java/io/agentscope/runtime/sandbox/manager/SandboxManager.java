@@ -519,6 +519,8 @@ public class SandboxManager implements AutoCloseable {
                 .version(imageName)
                 .build();
 
+        logger.info("Container Model: "+ containerModel);
+
         containerClient.startContainer(containerId);
         return containerModel;
     }
