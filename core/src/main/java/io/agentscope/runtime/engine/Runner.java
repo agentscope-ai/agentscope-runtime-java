@@ -7,6 +7,7 @@ import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ public class Runner {
         }
         this.contextManager = builder.contextManager == null ? new ContextManager() : builder.contextManager;
         this.agent = builder.agent;
-        this.environmentManager = builder.environmentManager;
+        this.environmentManager = builder.environmentManager == null ? new DefaultEnvironmentManager(): builder.environmentManager;
     }
 
 

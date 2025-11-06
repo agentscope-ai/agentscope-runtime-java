@@ -15,6 +15,7 @@
  */
 package io.agentscope.runtime.protocol.a2a.controller;
 
+import io.a2a.server.ServerCallContext;
 import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.a2a.AgentHandlerConfiguration;
@@ -39,7 +40,6 @@ import io.a2a.spec.StreamingJSONRPCRequest;
 import io.a2a.spec.TaskResubscriptionRequest;
 import io.a2a.spec.UnsupportedOperationError;
 import io.a2a.util.Utils;
-import io.agentscope.runtime.protocol.a2a.ServerCallContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.reactivestreams.FlowAdapters;
 import org.springframework.http.MediaType;
@@ -54,6 +54,7 @@ import reactor.core.publisher.Flux;
 import java.time.Duration;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.Flow;
 import java.util.logging.Logger;
@@ -73,16 +74,15 @@ public class A2aController {
     @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
     @ResponseBody
     public Object handleRequest(@RequestBody String body, HttpServletRequest httpRequest) {
-        // Build context if needed in future handlers
-        buildServerCallContext(httpRequest);
+        ServerCallContext context =  buildServerCallContext(httpRequest);
         boolean streaming = isStreamingRequest(body);
-        Object result = null;
+        Object result;
         try {
             if (streaming) {
-                result = handleStreamRequest(body);
+                result = handleStreamRequest(body, context);
                 logger.info("Handling streaming request, returning SSE Flux");
             } else {
-                result = handleNonStreamRequest(body);
+                result = handleNonStreamRequest(body, context);
                 logger.info("Handling non-streaming request, returning JSON response");
             }
         } catch (JsonProcessingException e) {
@@ -92,7 +92,7 @@ public class A2aController {
         return result;
     }
 
-    private static boolean isStreamingRequest(String requestBody) {
+    private boolean isStreamingRequest(String requestBody) {
         try {
             JsonNode node = Utils.OBJECT_MAPPER.readTree(requestBody);
             JsonNode method = node != null ? node.get("method") : null;
@@ -103,13 +103,13 @@ public class A2aController {
         }
     }
 
-    private Flux<ServerSentEvent<String>> handleStreamRequest(String body) throws JsonProcessingException {
+    private Flux<ServerSentEvent<String>> handleStreamRequest(String body, ServerCallContext context) throws JsonProcessingException {
         StreamingJSONRPCRequest<?> request = Utils.OBJECT_MAPPER.readValue(body, StreamingJSONRPCRequest.class);
         Flow.Publisher<? extends JSONRPCResponse<?>> publisher;
         if (request instanceof SendStreamingMessageRequest req) {
-            publisher = jsonRpcHandler.onMessageSendStream(req);
+            publisher = jsonRpcHandler.onMessageSendStream(req, context);
         } else if (request instanceof TaskResubscriptionRequest req) {
-            publisher = jsonRpcHandler.onResubscribeToTask(req);
+            publisher = jsonRpcHandler.onResubscribeToTask(req, context);
         } else {
             return Flux.just(createErrorSSE(generateErrorResponse(request, new UnsupportedOperationError())));
         }
@@ -153,28 +153,28 @@ public class A2aController {
         }
     }
 
-    private JSONRPCResponse<?> handleNonStreamRequest(String body) throws JsonProcessingException {
+    private JSONRPCResponse<?> handleNonStreamRequest(String body, ServerCallContext context) throws JsonProcessingException {
         NonStreamingJSONRPCRequest<?> request = Utils.OBJECT_MAPPER.readValue(body, NonStreamingJSONRPCRequest.class);
         if (request instanceof GetTaskRequest req) {
-            return jsonRpcHandler.onGetTask(req);
+            return jsonRpcHandler.onGetTask(req, context);
         } else if (request instanceof SendMessageRequest req) {
-            return jsonRpcHandler.onMessageSend(req);
+            return jsonRpcHandler.onMessageSend(req, context);
         } else if (request instanceof CancelTaskRequest req) {
-            return jsonRpcHandler.onCancelTask(req);
+            return jsonRpcHandler.onCancelTask(req, context);
         } else if (request instanceof GetTaskPushNotificationConfigRequest req) {
-            return jsonRpcHandler.getPushNotificationConfig(req);
+            return jsonRpcHandler.getPushNotificationConfig(req, context);
         } else if (request instanceof SetTaskPushNotificationConfigRequest req) {
-            return jsonRpcHandler.setPushNotificationConfig(req);
+            return jsonRpcHandler.setPushNotificationConfig(req, context);
         } else if (request instanceof ListTaskPushNotificationConfigRequest req) {
-            return jsonRpcHandler.listPushNotificationConfig(req);
+            return jsonRpcHandler.listPushNotificationConfig(req, context);
         } else if (request instanceof DeleteTaskPushNotificationConfigRequest req) {
-            return jsonRpcHandler.deletePushNotificationConfig(req);
+            return jsonRpcHandler.deletePushNotificationConfig(req, context);
         } else {
             return generateErrorResponse(request, new UnsupportedOperationError());
         }
     }
 
-    private static ServerCallContext buildServerCallContext(HttpServletRequest httpRequest) {
+    private ServerCallContext buildServerCallContext(HttpServletRequest httpRequest) {
         Map<String, Object> state = new HashMap<>();
         Enumeration<String> headerNames = httpRequest.getHeaderNames();
         while (headerNames.hasMoreElements()) {
@@ -182,10 +182,10 @@ public class A2aController {
             String headerValue = httpRequest.getHeader(headerName);
             state.put(headerName, headerValue);
         }
-        return new ServerCallContext(null, state);
+        return new ServerCallContext(null, state, new HashSet<>());
     }
 
-    private static JSONRPCErrorResponse generateErrorResponse(JSONRPCRequest<?> request, JSONRPCError error) {
+    private JSONRPCErrorResponse generateErrorResponse(JSONRPCRequest<?> request, JSONRPCError error) {
         return new JSONRPCErrorResponse(request.getId(), error);
     }
 
