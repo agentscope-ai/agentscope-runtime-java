@@ -192,17 +192,11 @@ SaaAgent saaAgent = SaaAgent.builder()
         .build();
 ```
 
-8. **向Runner中注册Agent实例：**
-
-```java
-runner.registerAgent(saaAgent);
-```
-
 9. **一键式部署为A2A应用：**
 
 ```java
-LocalDeployManager deployManager = new LocalDeployManager();
-deployManager.deployStreaming();
+LocalDeployManager deployManager = LocalDeployManager.builder().build();
+deployManager.deploy(runner);
 ```
 
 使用SpringBoot进行部署，因此对于自定义配置，需要在resources文件夹中进行修改，如修改端口等，目前是默认10001

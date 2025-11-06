@@ -16,7 +16,10 @@ import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMe
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 
 
 /**
@@ -103,12 +106,15 @@ public class AgentScopeAgentDeployExample {
 
             AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder().agent(agent).build();
 
+            SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().build());
+            EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
+
             Runner runner = Runner.builder()
                     .agent(agentScopeAgent)
                     .contextManager(contextManager)
-                    .environmentManager(new DefaultEnvironmentManager())
+                    .environmentManager(environmentManager)
                     .build();
-            new LocalDeployManager().deploy(runner);
+            LocalDeployManager.builder().port(10001).build().deploy(runner);
 
         } catch (Exception e) {
             e.printStackTrace();

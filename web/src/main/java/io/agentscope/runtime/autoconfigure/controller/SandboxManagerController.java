@@ -15,6 +15,8 @@
  */
 package io.agentscope.runtime.autoconfigure.controller;
 
+import io.agentscope.runtime.engine.Runner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -45,6 +47,10 @@ public class SandboxManagerController {
     private static final Logger logger = Logger.getLogger(SandboxManagerController.class.getName());
 
     private final Map<String, MethodInfo> endpointRegistry = new HashMap<>();
+
+    @Autowired
+    private Runner runner;
+
 
     @PostConstruct
     public void registerEndpoints() {
@@ -123,7 +129,7 @@ public class SandboxManagerController {
             RequestMethod httpMethod) {
 
         // Todo: fix this
-        SandboxManager sandboxManager = new SandboxManager();
+        SandboxManager sandboxManager = runner.getEnvironmentManager().getSandboxManager();
 
         logger.info("Handling " + httpMethod + " request for path: " + path);
 

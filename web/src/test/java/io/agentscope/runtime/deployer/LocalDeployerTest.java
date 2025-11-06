@@ -37,7 +37,7 @@ public class LocalDeployerTest {
 
     @BeforeEach
     void setUp() {
-        localDeployManager = new LocalDeployManager();
+        localDeployManager = LocalDeployManager.builder().build();
         initializeContextManager();
         initializeRunner();
     }
