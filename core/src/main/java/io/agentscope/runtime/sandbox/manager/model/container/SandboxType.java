@@ -28,7 +28,8 @@ public enum SandboxType {
     WEBSHOP("webshop"),
     PYTHON("python"),
     NODE("node"),
-    JAVA("java");
+    JAVA("java"),
+    GUI("gui");
 
     private final String typeName;
 

@@ -20,6 +20,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.Executors;
 
+import io.a2a.server.tasks.*;
 import io.a2a.spec.AgentCapabilities;
 import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.Runner;
@@ -28,10 +29,6 @@ import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.events.InMemoryQueueManager;
 import io.a2a.server.requesthandlers.DefaultRequestHandler;
 import io.a2a.server.requesthandlers.RequestHandler;
-import io.a2a.server.tasks.BasePushNotificationSender;
-import io.a2a.server.tasks.InMemoryPushNotificationConfigStore;
-import io.a2a.server.tasks.InMemoryTaskStore;
-import io.a2a.server.tasks.PushNotificationConfigStore;
 import io.a2a.spec.AgentCard;
 
 public class AgentHandlerConfiguration {
@@ -134,7 +131,8 @@ public class AgentHandlerConfiguration {
 
     public static RequestHandler requestHandler(AgentExecutor agentExecutor) {
         PushNotificationConfigStore pushConfigStore = new InMemoryPushNotificationConfigStore();
-        return new DefaultRequestHandler(agentExecutor, new InMemoryTaskStore(), new InMemoryQueueManager(),
+        InMemoryTaskStore inMemoryTaskStore = new InMemoryTaskStore();
+        return new DefaultRequestHandler(agentExecutor, inMemoryTaskStore, new InMemoryQueueManager(inMemoryTaskStore),
                 pushConfigStore, new BasePushNotificationSender(pushConfigStore), Executors.newCachedThreadPool());
     }
 }

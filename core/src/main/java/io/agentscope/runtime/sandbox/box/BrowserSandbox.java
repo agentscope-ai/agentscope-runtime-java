@@ -31,8 +31,10 @@ import java.util.Map;
 )
 public class BrowserSandbox extends Sandbox {
     
+    private String baseUrl;
+    
     public BrowserSandbox(SandboxManager managerApi, String userId, String sessionId) {
-        this(managerApi, userId, sessionId, 3000);
+        this(managerApi, userId, sessionId, 3000, null);
     }
     
     public BrowserSandbox(
@@ -40,7 +42,28 @@ public class BrowserSandbox extends Sandbox {
             String userId,
             String sessionId,
             int timeout) {
+        this(managerApi, userId, sessionId, timeout, null);
+    }
+    
+    public BrowserSandbox(
+            SandboxManager managerApi,
+            String userId,
+            String sessionId,
+            int timeout,
+            String baseUrl) {
         super(managerApi, userId, sessionId, SandboxType.BROWSER, timeout);
+        this.baseUrl = baseUrl;
+    }
+    
+    /**
+     * Get the desktop URL for VNC access.
+     * This method provides GUI mixin functionality.
+     *
+     * @return The desktop URL for VNC access
+     * @throws RuntimeException if sandbox is not healthy
+     */
+    public String getDesktopUrl() {
+        return GuiMixin.getDesktopUrl(managerApi, sandboxId, baseUrl);
     }
     
     public String navigate(String url) {
