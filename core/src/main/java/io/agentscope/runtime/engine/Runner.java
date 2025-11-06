@@ -29,7 +29,7 @@ public class Runner {
         }
         this.contextManager = builder.contextManager == null ? new ContextManager() : builder.contextManager;
         this.agent = builder.agent;
-        this.environmentManager = builder.environmentManager == null ? new DefaultEnvironmentManager(): builder.environmentManager;
+        this.environmentManager = builder.environmentManager;
     }
 
 
