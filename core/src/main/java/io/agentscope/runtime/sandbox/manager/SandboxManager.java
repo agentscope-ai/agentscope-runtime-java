@@ -29,6 +29,7 @@ import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryService;
 import io.agentscope.runtime.sandbox.manager.remote.RemoteHttpClient;
 import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
+import io.agentscope.runtime.sandbox.manager.remote.RequestMethod;
 import io.agentscope.runtime.sandbox.manager.util.*;
 
 import java.nio.file.Paths;
@@ -230,7 +231,7 @@ public class SandboxManager implements AutoCloseable {
             Map<String, Object> requestData = new HashMap<>();
             requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/createFromPool",
                     requestData,
                     "data"
@@ -311,7 +312,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/createFromPool",
                     requestData,
                     "data"
@@ -370,7 +371,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("storagePath", storagePath);
             requestData.put("environment", environment);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/createContainer",
                     requestData,
                     "data"
@@ -581,7 +582,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
             remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/startSandbox",
                     requestData,
                     "data"
@@ -616,7 +617,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
             remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/stopSandbox",
                     requestData,
                     "data"
@@ -705,7 +706,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/getSandboxStatus",
                     requestData,
                     "data"
@@ -755,7 +756,7 @@ public class SandboxManager implements AutoCloseable {
             Map<String, Object> requestData = new HashMap<>();
             requestData.put("identity", identity);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/getInfo",
                     requestData,
                     "data"
@@ -811,7 +812,7 @@ public class SandboxManager implements AutoCloseable {
             Map<String, Object> requestData = new HashMap<>();
             requestData.put("identity", identity);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/release",
                     requestData,
                     "data"
@@ -990,7 +991,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("sessionId", sessionId);
             requestData.put("toolType", toolType);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/listTools",
                     requestData,
                     "data"
@@ -1022,7 +1023,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("toolName", toolName);
             requestData.put("arguments", arguments);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/callTool",
                     requestData,
                     "data"
@@ -1050,7 +1051,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("serverConfigs", serverConfigs);
             requestData.put("overwrite", overwrite);
             Object result = remoteHttpClient.makeRequest(
-                    org.springframework.web.bind.annotation.RequestMethod.POST,
+                    RequestMethod.POST,
                     "/addMcpServers",
                     requestData,
                     "data"

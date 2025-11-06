@@ -1,21 +1,20 @@
 package io.agentscope.runtime.engine;
 
-import io.agentscope.runtime.engine.agents.BaseAgent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
-import io.agentscope.runtime.engine.schemas.agent.*;
-import io.agentscope.runtime.engine.service.EnvironmentManager;
-import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
+import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.context.Session;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-public class Runner implements AutoCloseable {
+public class Runner {
     private final Agent agent;
     private final ContextManager contextManager;
     private final EnvironmentManager environmentManager;
@@ -23,19 +22,15 @@ public class Runner implements AutoCloseable {
     // Todo: The current stream property has been completely set to true
     private final boolean stream = true;
 
-    public Runner(BaseAgent agent, ContextManager contextManager, EnvironmentManager environmentManager) {
-        this.agent = agent;
-        this.contextManager = contextManager == null ? new ContextManager() : contextManager;
-        this.environmentManager = environmentManager;
+    private Runner(RunnerBuilder builder) {
+        if(builder.agent == null){
+            throw new IllegalArgumentException("Agent has to be initialized!");
+        }
+        this.contextManager = builder.contextManager == null ? new ContextManager() : builder.contextManager;
+        this.agent = builder.agent;
+        this.environmentManager = builder.environmentManager;
     }
 
-    public Runner(BaseAgent agent, ContextManager contextManager) {
-        this(agent, contextManager , null);
-    }
-
-    public Runner(BaseAgent agent) {
-        this(agent, null);
-    }
 
     public Flux<Event> streamQuery(AgentRequest request) {
         return this.streamQueryInstance(request);
@@ -228,8 +223,32 @@ public class Runner implements AutoCloseable {
         return contextManager;
     }
 
-    @Override
-    public void close() {
+    public static RunnerBuilder builder() {
+        return new RunnerBuilder();
+    }
 
+    public static class RunnerBuilder {
+        private Agent agent;
+        private ContextManager contextManager;
+        private EnvironmentManager environmentManager;
+
+        public RunnerBuilder agent(Agent agent) {
+            this.agent = agent;
+            return this;
+        }
+
+        public RunnerBuilder contextManager(ContextManager contextManager) {
+            this.contextManager = contextManager;
+            return this;
+        }
+
+        public RunnerBuilder environmentManager(EnvironmentManager environmentManager) {
+            this.environmentManager = environmentManager;
+            return this;
+        }
+
+        public Runner build() {
+            return new Runner(this);
+        }
     }
 }
