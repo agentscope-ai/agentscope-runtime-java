@@ -1,21 +1,17 @@
 package io.agentscope.browser.agent;
 
-import com.alibaba.cloud.ai.agent.Agent;
-import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.alibaba.cloud.ai.graph.agent.Builder;
-import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.alibaba.cloud.ai.graph.exception.GraphStateException;
-
-import io.agentscope.browser.constants.Prompts;
+import io.agentscope.core.ReActAgent;
+import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
+import io.agentscope.core.memory.InMemoryMemory;
+import io.agentscope.core.model.GenerateOptions;
+import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.engine.agents.saa.SaaAgent;
-import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
+import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
+import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
-import io.agentscope.runtime.engine.memory.persistence.session.RedisSessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
@@ -25,6 +21,8 @@ import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.AgentRunClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
@@ -33,7 +31,6 @@ import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.tool.ToolCallback;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -44,15 +41,13 @@ import java.util.Optional;
 /**
  * AgentScope browser use agent implementation in Java
  */
-public class AgentscopeBrowseruseAgent {
+public class AgentscopeBrowserUseAgent {
 
-    private static final Logger logger = LoggerFactory.getLogger(AgentscopeBrowseruseAgent.class);
+    private static final Logger logger = LoggerFactory.getLogger(AgentscopeBrowserUseAgent.class);
 
     private static final String USER_ID = "user_1";
     private static final String SESSION_ID = "session_001";  // Using a fixed ID for simplicity
 
-    private List<ToolCallback> tools;
-    private SaaAgent agent;
     private Runner runner;
     private ContextManager contextManager;
     private EnvironmentManager environmentManager;
@@ -60,49 +55,14 @@ public class AgentscopeBrowseruseAgent {
     private SessionHistoryService sessionHistoryService;
     private String browserWebSocketUrl;
 
-    public AgentscopeBrowseruseAgent() {
-        initializeTools();
-    }
-
-    private void initializeTools() {
-        // Initialize all browser tools
-        this.tools = new ArrayList<>();
-
-        // Base tools
-        tools.add(ToolcallsInit.RunShellCommandTool());
-        tools.add(ToolcallsInit.RunPythonCodeTool());
-
-        // Browser tools
-        tools.add(ToolcallsInit.BrowserCloseTool());
-        tools.add(ToolcallsInit.BrowserResizeTool());
-        tools.add(ToolcallsInit.BrowserConsoleMessagesTool());
-        tools.add(ToolcallsInit.BrowserHandleDialogTool());
-        tools.add(ToolcallsInit.BrowserFileUploadTool());
-        tools.add(ToolcallsInit.BrowserPressKeyTool());
-        tools.add(ToolcallsInit.BrowserNavigateTool());
-        tools.add(ToolcallsInit.BrowserNavigateBackTool());
-        tools.add(ToolcallsInit.BrowserNavigateForwardTool());
-        tools.add(ToolcallsInit.BrowserNetworkRequestsTool());
-        tools.add(ToolcallsInit.BrowserPdfSaveTool());
-        tools.add(ToolcallsInit.BrowserTakeScreenshotTool());
-        tools.add(ToolcallsInit.BrowserSnapshotTool());
-        tools.add(ToolcallsInit.BrowserClickTool());
-        tools.add(ToolcallsInit.BrowserDragTool());
-        tools.add(ToolcallsInit.BrowserHoverTool());
-        tools.add(ToolcallsInit.BrowserTypeTool());
-        tools.add(ToolcallsInit.BrowserSelectOptionTool());
-        tools.add(ToolcallsInit.BrowserTabListTool());
-        tools.add(ToolcallsInit.BrowserTabNewTool());
-        tools.add(ToolcallsInit.BrowserTabSelectTool());
-        tools.add(ToolcallsInit.BrowserTabCloseTool());
-        tools.add(ToolcallsInit.BrowserWaitForTool());
+    public AgentscopeBrowserUseAgent() {
     }
 
     /**
      * Connect and initialize the agent
      */
     public void connect() throws Exception {
-        logger.info("Initializing AgentscopeBrowseruseAgent...");
+        logger.info("Initializing AgentscopeBrowserUseAgent...");
 
         // Initialize session history service
         sessionHistoryService = new InMemorySessionHistoryService();
@@ -113,15 +73,32 @@ public class AgentscopeBrowseruseAgent {
 
         // Initialize context manager
         contextManager = new ContextManager(
-            ContextComposer.class,
-            sessionHistoryService,
-            memoryService
+                ContextComposer.class,
+                sessionHistoryService,
+                memoryService
         );
         contextManager.start().get();
 
-        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(KubernetesClientConfig.builder().build()).build());
-//        SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().containerDeployment(new DockerClientConfig(true, "127.0.0.1", 64352, null)).build());
-        environmentManager = new DefaultEnvironmentManager(sandboxManager);
+//        AgentRun, Kubernetes, Docker are supported to run sandboxes. When not configured, use Docker as default choice.
+//        BaseClientConfig clientConfig = AgentRunClientConfig.builder()
+//                .agentRunAccessKeyId(System.getenv("AGENT_RUN_ACCESS_KEY_ID"))
+//                .agentRunAccountId(System.getenv("AGENT_RUN_ACCOUNT_ID"))
+//                .agentRunAccessKeySecret(System.getenv("AGENT_RUN_ACCESS_KEY_SECRET"))
+//                .build();
+
+//        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+
+        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .containerDeployment(clientConfig)
+                .build();
+
+        SandboxManager sandboxManager = new SandboxManager(managerConfig);
+        EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
+
+        Toolkit toolkit = new Toolkit();
+        toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
+        toolkit.registerTool(ToolkitInit.BrowserNavigateTool());
 
         // Initialize chat model
         String apiKey = System.getenv("DASHSCOPE_API_KEY");
@@ -134,16 +111,31 @@ public class AgentscopeBrowseruseAgent {
         }
 
         // Create SaaAgent
-        agent = SaaAgent.builder()
-                .agent(createOrignalAgentBuilder(apiKey))
+        ReActAgent.Builder agentBuilder =
+                ReActAgent.builder()
+                        .name("Assistant")
+                        .sysPrompt("You are a helpful AI assistant. Be friendly and concise.")
+                        .model(
+                                io.agentscope.core.model.DashScopeChatModel.builder()
+                                        .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                                        .modelName("qwen-plus")
+                                        .stream(true)
+                                        .enableThinking(true)
+                                        .formatter(new DashScopeChatFormatter())
+                                        .defaultOptions(
+                                                GenerateOptions.builder()
+                                                        .thinkingBudget(1024)
+                                                        .build())
+                                        .build())
+                        .memory(new InMemoryMemory())
+                        .toolkit(toolkit);
+
+        AgentScopeAgent agent = AgentScopeAgent.builder()
+                .agent(agentBuilder)
                 .build();
 
         // Initialize runner
-        runner = Runner.builder()
-                .agent(agent)
-                .contextManager(contextManager)
-                .environmentManager(environmentManager)
-                .build();
+        runner = Runner.builder().agent(agent).contextManager(contextManager).environmentManager(environmentManager).build();
 
         // Get browser WebSocket URL
         try {
@@ -162,24 +154,7 @@ public class AgentscopeBrowseruseAgent {
             browserWebSocketUrl = "";
         }
 
-        logger.info("AgentscopeBrowseruseAgent initialized successfully");
-    }
-
-    private com.alibaba.cloud.ai.graph.agent.Builder createOrignalAgentBuilder(String apiKey) throws GraphStateException {
-        DashScopeApi dashScopeApi = DashScopeApi.builder()
-                .apiKey(apiKey)
-                .build();
-
-        DashScopeChatModel chatModel = DashScopeChatModel.builder()
-                .dashScopeApi(dashScopeApi)
-                .build();
-
-        // Create ReactAgent
-        return ReactAgent.builder()
-                .name("Friday")
-                .tools(tools)
-                .model(chatModel)
-                .systemPrompt(Prompts.SYSTEM_PROMPT);
+        logger.info("AgentscopeBrowserUseAgent initialized successfully");
     }
 
     public Flux<Message> chatSimple(String userMessage) {
@@ -256,7 +231,7 @@ public class AgentscopeBrowseruseAgent {
      * Close and cleanup resources
      */
     public void close() throws Exception {
-        logger.info("Closing AgentscopeBrowseruseAgent...");
+        logger.info("Closing AgentscopeBrowserUseAgent...");
 
         if (memoryService != null) {
             memoryService.stop().get();
@@ -273,7 +248,12 @@ public class AgentscopeBrowseruseAgent {
             logger.warn("Failed to cleanup sandboxes: {}", e.getMessage());
         }
 
-        logger.info("AgentscopeBrowseruseAgent closed");
+        logger.info("AgentscopeBrowserUseAgent closed");
+    }
+
+    public Runner getRunner() {
+        return this.runner;
     }
 }
+
 
