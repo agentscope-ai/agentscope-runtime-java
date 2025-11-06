@@ -87,7 +87,11 @@ public class ToolCallRunnerStreamTest {
                     .agent(builder)
                     .build();
 
-            Runner runner = new Runner(saaAgent, contextManager, environmentManager);
+            Runner runner = Runner.builder()
+                    .agent(saaAgent)
+                    .contextManager(contextManager)
+                    .environmentManager(environmentManager)
+                    .build();
 
             AgentRequest request = createAgentRequest("Calculate the 10th Fibonacci number using Python for me", null, null);
 

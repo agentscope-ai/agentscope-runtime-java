@@ -147,7 +147,11 @@ public class SaaAgentMCPSandboxExample {
                             // Create AgentRequest
                             AgentRequest request = createAgentRequest("Get current time for me.", null, null);
 
-                            Runner runner = new Runner(saaAgent, contextManager, environmentManager);
+                            Runner runner = Runner.builder()
+                                    .agent(saaAgent)
+                                    .contextManager(contextManager)
+                                    .environmentManager(environmentManager)
+                                    .build();
 
                             // Execute the agent and handle the response stream
                             Flux<Event> eventStream = runner.streamQuery(request);

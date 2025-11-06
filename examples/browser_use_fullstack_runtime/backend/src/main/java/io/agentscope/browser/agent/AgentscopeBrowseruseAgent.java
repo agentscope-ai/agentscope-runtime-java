@@ -139,7 +139,11 @@ public class AgentscopeBrowseruseAgent {
                 .build();
 
         // Initialize runner
-        runner = new Runner(agent, contextManager, environmentManager);
+        runner = Runner.builder()
+                .agent(agent)
+                .contextManager(contextManager)
+                .environmentManager(environmentManager)
+                .build();
 
         // Get browser WebSocket URL
         try {

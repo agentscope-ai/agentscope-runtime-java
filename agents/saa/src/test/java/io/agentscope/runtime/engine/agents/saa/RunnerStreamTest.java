@@ -81,7 +81,10 @@ public class RunnerStreamTest {
                     .agent(builder)
                     .build();
 
-            Runner runner = new Runner(saaAgent, contextManager);
+            Runner runner = Runner.builder()
+                    .agent(saaAgent)
+                    .contextManager(contextManager)
+                    .build();
 
             AgentRequest request = createAgentRequest("Please write a prose about West Lake", null, null);
 

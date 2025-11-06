@@ -108,7 +108,11 @@ public class McpCallRunnerStreamTest {
                     .agent(builder)
                     .build();
 
-            Runner runner = new Runner(saaAgent, contextManager, environmentManager);
+            Runner runner = Runner.builder()
+                    .agent(saaAgent)
+                    .contextManager(contextManager)
+                    .environmentManager(environmentManager)
+                    .build();
 
             AgentRequest request = createAgentRequest("Tell me the time in New York", null, null);
 
