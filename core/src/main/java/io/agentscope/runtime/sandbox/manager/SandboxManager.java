@@ -224,26 +224,7 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Container pool initialization complete. Pool size: " + poolQueue.size());
     }
 
-    @RemoteWrapper
     public ContainerModel createFromPool(SandboxType sandboxType) {
-        if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
-            logger.info("Remote mode: forwarding createFromPool to remote server");
-            Map<String, Object> requestData = new HashMap<>();
-            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
-            Object result = remoteHttpClient.makeRequest(
-                    RequestMethod.POST,
-                    "/createFromPool",
-                    requestData,
-                    "data"
-            );
-            if (result instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> resultMap = (Map<String, Object>) result;
-                return ContainerModel.fromMap(resultMap);
-            }
-            return null;
-        }
-
         if (sandboxType != defaultType) {
             logger.info("Requested type " + sandboxType + " differs from pool type " + defaultType + ", creating directly");
             return createContainer(sandboxType, null, null, null);

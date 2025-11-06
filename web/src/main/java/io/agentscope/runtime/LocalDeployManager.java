@@ -15,42 +15,39 @@
  */
 package io.agentscope.runtime;
 
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
-
-import java.util.List;
-import java.util.logging.Logger;
-
 import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.DeployManager;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.Protocol;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.GenericApplicationContext;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
 
 public class LocalDeployManager implements DeployManager {
     Logger logger = Logger.getLogger(LocalDeployManager.class.getName());
 
     private ConfigurableApplicationContext applicationContext;
 
-    private String endpointName;
-    private String host;
-    private int port;
-    private List<Protocol> protocols;
+    private final String endpointName;
+    private final String host;
+    private final int port;
+    private final List<Protocol> protocols;
 
-    public LocalDeployManager() {
-        this("", 0, "", List.of(Protocol.A2A));
-    }
-
-    public LocalDeployManager(String host, int port, String endpointName, List<Protocol> protocols) {
-        this.endpointName = endpointName;
-        this.host = host;
-        this.port = port;
-        this.protocols = protocols;
+    private LocalDeployManager(LocalDeployerManagerBuilder builder) {
+        this.endpointName = builder.endpointName;
+        this.host = builder.host;
+        this.port = builder.port;
+        this.protocols = builder.protocols;
     }
 
     @Override
@@ -60,11 +57,20 @@ public class LocalDeployManager implements DeployManager {
             return;
         }
 
+        Map<String, Object> serverProps = new HashMap<>();
+        if (this.port > 0) {
+            serverProps.put("server.port", this.port);
+        }
+        if (this.host != null && !this.host.isBlank()) {
+            serverProps.put("server.address", this.host);
+        }
+
         logger.info("Starting streaming deployment for endpoint: " + endpointName);
 
         this.applicationContext = new SpringApplicationBuilder()
                 .sources(LocalDeployConfig.class)
                 .web(WebApplicationType.SERVLET)
+                .properties(serverProps)
                 .initializers((GenericApplicationContext ctx) -> {
                     // Register Runner instance as a bean
                     ctx.registerBean(Runner.class, () -> runner);
@@ -101,8 +107,43 @@ public class LocalDeployManager implements DeployManager {
     @Configuration
     @EnableAutoConfiguration
     @ComponentScan(basePackages = {
-        "io.agentscope.runtime.autoconfigure"
+            "io.agentscope.runtime.autoconfigure"
     })
     public static class LocalDeployConfig {
+    }
+
+    public static LocalDeployerManagerBuilder builder(){
+        return new LocalDeployerManagerBuilder();
+    }
+
+    public static class LocalDeployerManagerBuilder {
+        private String endpointName;
+        private String host;
+        private int port = 8080;
+        private List<Protocol> protocols = List.of(Protocol.A2A);
+
+        public LocalDeployerManagerBuilder endpointName(String endpointName) {
+            this.endpointName = endpointName;
+            return this;
+        }
+
+        public LocalDeployerManagerBuilder host(String host) {
+            this.host = host;
+            return this;
+        }
+
+        public LocalDeployerManagerBuilder port(int port) {
+            this.port = port;
+            return this;
+        }
+
+        public LocalDeployerManagerBuilder protocols(List<Protocol> protocols) {
+            this.protocols = protocols;
+            return this;
+        }
+
+        public LocalDeployManager build() {
+            return new LocalDeployManager(this);
+        }
     }
 }

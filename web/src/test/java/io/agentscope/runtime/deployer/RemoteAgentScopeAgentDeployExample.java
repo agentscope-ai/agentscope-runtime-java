@@ -2,31 +2,35 @@ package io.agentscope.runtime.deployer;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.alibaba.cloud.ai.graph.agent.Builder;
-import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-
-import java.util.List;
-
+import io.agentscope.core.ReActAgent;
+import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
+import io.agentscope.core.memory.InMemoryMemory;
+import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.LocalDeployManager;
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.engine.agents.saa.SaaAgent;
+import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
+import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
-import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
+import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
  */
-public class SaaAgentDeployExample {
+public class RemoteAgentScopeAgentDeployExample {
 
     private DashScopeChatModel chatModel;
     private ContextManager contextManager;
 
-    public SaaAgentDeployExample() {
+    public RemoteAgentScopeAgentDeployExample() {
         // Initialize DashScope ChatModel
         initializeChatModel();
 
@@ -78,22 +82,40 @@ public class SaaAgentDeployExample {
      */
     public void basicExample() {
         try {
-            // Create ReactAgent Builder
-           Builder builder = ReactAgent.builder()
-                    .name("saa_agent")
-                    .model(chatModel)
-                    .tools(List.of(ToolcallsInit.RunPythonCodeTool()));
 
-            // Create SaaAgent using the ReactAgent Builder
-            SaaAgent saaAgent = SaaAgent.builder()
-                    .agent(builder)
-                    .build();
+            Toolkit toolkit = new Toolkit();
+            toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
+            toolkit.registerTool(ToolkitInit.BrowserNavigateTool());
+
+            ReActAgent.Builder agent =
+                    ReActAgent.builder()
+                            .name("WebAgent")
+                            .sysPrompt(
+                                    "You are a helpful AI assistant. Provide clear and concise"
+                                            + " answers.")
+                            .toolkit(toolkit)
+                            .memory(new InMemoryMemory())
+                            .model(
+                                    io.agentscope.core.model.DashScopeChatModel.builder()
+                                            .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                                            .modelName("qwen-plus")
+                                            .stream(true) // Enable streaming
+                                            .enableThinking(true)
+                                            .formatter(new DashScopeChatFormatter())
+                                            .build());
+
+            AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder().agent(agent).build();
+
+            ManagerConfig managerConfig = ManagerConfig.builder().baseUrl("http://localhost:10001/").build();
+            SandboxManager sandboxManager = new SandboxManager(managerConfig);
+            EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
             Runner runner = Runner.builder()
-                    .agent(saaAgent)
+                    .agent(agentScopeAgent)
                     .contextManager(contextManager)
+                    .environmentManager(environmentManager)
                     .build();
-            LocalDeployManager.builder().build().deploy(runner);
+            LocalDeployManager.builder().port(10002).build().deploy(runner);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -110,7 +132,7 @@ public class SaaAgentDeployExample {
             System.exit(1);
         }
 
-        SaaAgentDeployExample example = new SaaAgentDeployExample();
+        RemoteAgentScopeAgentDeployExample example = new RemoteAgentScopeAgentDeployExample();
 
         try {
             example.basicExample();
