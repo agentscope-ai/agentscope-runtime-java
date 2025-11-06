@@ -89,7 +89,10 @@ public class SaaAgentDeployExample {
                     .agent(builder)
                     .build();
 
-            Runner runner = new Runner(saaAgent, contextManager);
+            Runner runner = Runner.builder()
+                    .agent(saaAgent)
+                    .contextManager(contextManager)
+                    .build();
             new LocalDeployManager().deploy(runner);
 
         } catch (Exception e) {

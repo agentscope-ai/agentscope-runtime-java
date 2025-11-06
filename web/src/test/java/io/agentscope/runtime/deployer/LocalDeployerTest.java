@@ -74,7 +74,10 @@ public class LocalDeployerTest {
                 .agent(builder)
                 .build();
 
-        this.runner = new Runner(saaAgent, contextManager);
+        this.runner = Runner.builder()
+                .agent(saaAgent)
+                .contextManager(contextManager)
+                .build();
     }
 
     private void initializeContextManager() {

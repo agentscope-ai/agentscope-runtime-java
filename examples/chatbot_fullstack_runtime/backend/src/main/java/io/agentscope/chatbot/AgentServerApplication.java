@@ -88,8 +88,10 @@ public class AgentServerApplication {
                 .build();
 
         // Create runner
-        Runner runner = new Runner(contextManager);
-        runner.registerAgent(saaAgent);
+        Runner runner = Runner.builder()
+                .agent(saaAgent)
+                .contextManager(contextManager)
+                .build();
 
         logger.info("✅ Agent Runner initialized successfully");
 
