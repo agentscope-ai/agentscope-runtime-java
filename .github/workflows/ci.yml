@@ -23,6 +23,18 @@ jobs:
           java-version: '17'
           cache: maven
 
+      - name: Clone and install agentscope-java
+        run: |
+          git clone --depth=1 https://github.com/agentscope-ai/agentscope-java.git
+          cd agentscope-java
+          mvn clean install -DskipTests
+
+      - name: Clone and install spring-ai-alibaba
+        run: |
+          git clone --depth=1 https://github.com/alibaba/spring-ai-alibaba.git
+          cd spring-ai-alibaba
+          mvn clean install -DskipTests
+
       - name: Maven license check
         run: mvn -B -ntp org.apache.rat:apache-rat-plugin:0.16:check
 
