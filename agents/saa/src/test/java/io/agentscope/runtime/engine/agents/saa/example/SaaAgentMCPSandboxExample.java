@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
 
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.saa.SaaAgent;
-import io.agentscope.runtime.engine.agents.saa.tools.MCPToolExecutor;
-import io.agentscope.runtime.engine.agents.saa.tools.McpConfigConverter;
+import io.agentscope.runtime.engine.agents.saa.tools.mcp.MCPToolExecutor;
+import io.agentscope.runtime.sandbox.tools.McpConfigConverter;
 import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;

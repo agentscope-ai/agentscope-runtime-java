@@ -55,6 +55,8 @@ public class AgentscopeBrowserUseAgent {
     private MemoryService memoryService;
     private SessionHistoryService sessionHistoryService;
     private String browserWebSocketUrl;
+    private String baseUrl;
+    private String runtimeToken;
     private final BrowserAgentApplication.RunnerHolder runnerHolder;
 
     public AgentscopeBrowserUseAgent(BrowserAgentApplication.RunnerHolder runnerHolder) {
@@ -100,7 +102,6 @@ public class AgentscopeBrowserUseAgent {
         this.environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
         Toolkit toolkit = new Toolkit();
-        toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
         toolkit.registerTool(ToolkitInit.BrowserNavigateTool());
 
         // Initialize chat model
@@ -120,7 +121,7 @@ public class AgentscopeBrowserUseAgent {
                         .sysPrompt("You are a helpful AI assistant. Be friendly and concise.")
                         .model(
                                 io.agentscope.core.model.DashScopeChatModel.builder()
-                                        .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                                        .apiKey(apiKey)
                                         .modelName("qwen-plus")
                                         .stream(true)
                                         .enableThinking(true)
@@ -142,21 +143,29 @@ public class AgentscopeBrowserUseAgent {
         // Set runner to the holder so it can be accessed as a bean
         runnerHolder.setRunner(runner);
 
-        // Get browser WebSocket URL
+        // Get browser WebSocket URL and VNC info
         try {
             // Connect to browser sandbox
             ContainerModel sandboxInfo = environmentManager.getSandboxManager().getSandbox(SandboxType.BROWSER, USER_ID, SESSION_ID);
 
             if (sandboxInfo != null ) {
                 browserWebSocketUrl = sandboxInfo.getFrontBrowserWS();
+                baseUrl = sandboxInfo.getBaseUrl();
+                runtimeToken = sandboxInfo.getRuntimeToken();
                 logger.info("Browser WebSocket URL: {}", browserWebSocketUrl);
+                logger.info("Base URL: {}", baseUrl);
+                logger.info("Runtime Token: {}", runtimeToken);
             } else {
                 browserWebSocketUrl = "";
-                logger.warn("No browser WebSocket URL found");
+                baseUrl = "";
+                runtimeToken = "";
+                logger.warn("No browser sandbox info found");
             }
         } catch (Exception e) {
-            logger.warn("Failed to get browser WebSocket URL: {}", e.getMessage());
+            logger.warn("Failed to get browser sandbox info: {}", e.getMessage());
             browserWebSocketUrl = "";
+            baseUrl = "";
+            runtimeToken = "";
         }
 
         logger.info("AgentscopeBrowserUseAgent initialized successfully");
@@ -199,16 +208,17 @@ public class AgentscopeBrowserUseAgent {
         // Convert chat messages to agent request format
         List<Message> convertedMessages = new ArrayList<>();
 
-        for (Map<String, String> chatMessage : chatMessages) {
-            Message message = new Message();
-            message.setRole(chatMessage.get("role"));
+        Message message = new Message();
+        message.setRole(chatMessages.get(chatMessages.size()-1).get("role"));
 
-            TextContent textContent = new TextContent();
-            textContent.setText(chatMessage.get("content"));
-            message.setContent(List.of(textContent));
+        TextContent textContent = new TextContent();
+        textContent.setText(chatMessages.get(chatMessages.size()-1).get("content"));
+        message.setContent(List.of(textContent));
 
-            convertedMessages.add(message);
-        }
+        convertedMessages.add(message);
+
+        System.out.println("Converted: ");
+        System.out.println(convertedMessages);
 
         // Create agent request
         AgentRequest request = new AgentRequest();
@@ -230,6 +240,20 @@ public class AgentscopeBrowserUseAgent {
      */
     public String getBrowserWebSocketUrl() {
         return browserWebSocketUrl;
+    }
+
+    /**
+     * Get base URL
+     */
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    /**
+     * Get runtime token
+     */
+    public String getRuntimeToken() {
+        return runtimeToken;
     }
 
     /**

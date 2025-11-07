@@ -5,8 +5,62 @@ import io.agentscope.runtime.engine.agents.agentscope.tools.base.AsBasePythonRun
 import io.agentscope.runtime.engine.agents.agentscope.tools.base.AsBaseShellRunner;
 import io.agentscope.runtime.engine.agents.agentscope.tools.browser.*;
 import io.agentscope.runtime.engine.agents.agentscope.tools.fs.*;
+import io.agentscope.runtime.engine.agents.agentscope.tools.mcp.AsMCPTool;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.tools.MCPTool;
+import io.agentscope.runtime.sandbox.tools.McpConfigConverter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.logging.Logger;
 
 public class ToolkitInit {
+    private static final Logger logger = Logger.getLogger(ToolkitInit.class.getName());
+
+    public static List<AgentTool> getAllTools() {
+        return List.of(
+                RunPythonCodeTool(),
+                RunShellCommandTool(),
+                ReadFileTool(),
+                ReadMultipleFilesTool(),
+                WriteFileTool(),
+                EditFileTool(),
+                CreateDirectoryTool(),
+                ListDirectoryTool(),
+                DirectoryTreeTool(),
+                MoveFileTool(),
+                SearchFilesTool(),
+                GetFileInfoTool(),
+                ListAllowedDirectoriesTool(),
+                BrowserNavigateTool(),
+                BrowserClickTool(),
+                BrowserTypeTool(),
+                BrowserTakeScreenshotTool(),
+                BrowserSnapshotTool(),
+                BrowserTabNewTool(),
+                BrowserTabSelectTool(),
+                BrowserTabCloseTool(),
+                BrowserWaitForTool(),
+                BrowserResizeTool(),
+                BrowserCloseTool(),
+                BrowserConsoleMessagesTool(),
+                BrowserHandleDialogTool(),
+                BrowserFileUploadTool(),
+                BrowserPressKeyTool(),
+                BrowserNavigateBackTool(),
+                BrowserNavigateForwardTool(),
+                BrowserNetworkRequestsTool(),
+                BrowserPdfSaveTool(),
+                BrowserDragTool(),
+                BrowserHoverTool(),
+                BrowserSelectOptionTool(),
+                BrowserTabListTool()
+        );
+    }
+
     // Base tools
     public static AgentTool RunPythonCodeTool() {
         return new AsBasePythonRunner();
@@ -152,5 +206,137 @@ public class ToolkitInit {
 
     public static AgentTool SearchFilesTool() {
         return new AsFsSearchFiles();
+    }
+
+    public static List<AgentTool> getMcpTools(String serverConfigs,
+                                              SandboxType sandboxType,
+                                              SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
+    }
+
+    public static List<AgentTool> getMcpTools(Map<String, Object> serverConfigs,
+                                              SandboxType sandboxType,
+                                              SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
+    }
+
+    public static List<AgentTool> getMcpTools(String serverConfigs,
+                                              SandboxType sandboxType,
+                                              SandboxManager sandboxManager,
+                                              Set<String> whitelist,
+                                              Set<String> blacklist) {
+        McpConfigConverter converter = McpConfigConverter.builder()
+                .serverConfigs(serverConfigs)
+                .sandboxType(sandboxType)
+                .sandboxManager(sandboxManager)
+                .whitelist(whitelist)
+                .blacklist(blacklist)
+                .build();
+
+        return buildMcpAgentTools(converter);
+    }
+
+    public static List<AgentTool> getMcpTools(Map<String, Object> serverConfigs,
+                                              SandboxType sandboxType,
+                                              SandboxManager sandboxManager,
+                                              Set<String> whitelist,
+                                              Set<String> blacklist) {
+        McpConfigConverter converter = McpConfigConverter.builder()
+                .serverConfigs(serverConfigs)
+                .sandboxType(sandboxType)
+                .sandboxManager(sandboxManager)
+                .whitelist(whitelist)
+                .blacklist(blacklist)
+                .build();
+
+        return buildMcpAgentTools(converter);
+    }
+
+    public static List<AgentTool> getMcpTools(String serverConfigs,
+                                              SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, null, sandboxManager, null, null);
+    }
+
+    public static List<AgentTool> getMcpTools(Map<String, Object> serverConfigs,
+                                              SandboxManager sandboxManager) {
+        return getMcpTools(serverConfigs, null, sandboxManager, null, null);
+    }
+
+    public static List<AgentTool> getAllToolsWithMcp(String mcpServerConfigs,
+                                                     SandboxType sandboxType,
+                                                     SandboxManager sandboxManager) {
+        List<AgentTool> allTools = new ArrayList<>(getAllTools());
+
+        if (mcpServerConfigs != null && !mcpServerConfigs.trim().isEmpty()) {
+            try {
+                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
+                allTools.addAll(mcpTools);
+                logger.info(String.format("Added %d MCP tools to the toolkit", mcpTools.size()));
+            } catch (Exception e) {
+                logger.warning("Failed to add MCP tools: " + e.getMessage());
+            }
+        }
+
+        return allTools;
+    }
+
+    public static List<AgentTool> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
+                                                     SandboxType sandboxType,
+                                                     SandboxManager sandboxManager) {
+        List<AgentTool> allTools = new ArrayList<>(getAllTools());
+
+        if (mcpServerConfigs != null && !mcpServerConfigs.isEmpty()) {
+            try {
+                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
+                allTools.addAll(mcpTools);
+                logger.info(String.format("Added %d MCP tools to the toolkit", mcpTools.size()));
+            } catch (Exception e) {
+                logger.warning("Failed to add MCP tools: " + e.getMessage());
+            }
+        }
+
+        return allTools;
+    }
+
+    public static List<MCPTool> createMcpToolInstances(String serverConfigs,
+                                                       SandboxType sandboxType,
+                                                       SandboxManager sandboxManager) {
+        McpConfigConverter converter = McpConfigConverter.builder()
+                .serverConfigs(serverConfigs)
+                .sandboxType(sandboxType)
+                .sandboxManager(sandboxManager)
+                .build();
+
+        return converter.toBuiltinTools();
+    }
+
+    public static List<MCPTool> createMcpToolInstances(Map<String, Object> serverConfigs,
+                                                       SandboxType sandboxType,
+                                                       SandboxManager sandboxManager) {
+        McpConfigConverter converter = McpConfigConverter.builder()
+                .serverConfigs(serverConfigs)
+                .sandboxType(sandboxType)
+                .sandboxManager(sandboxManager)
+                .build();
+
+        return converter.toBuiltinTools();
+    }
+
+    private static List<AgentTool> buildMcpAgentTools(McpConfigConverter converter) {
+        try {
+            logger.info("Creating MCP tools from server configuration");
+
+            List<MCPTool> mcpTools = converter.toBuiltinTools();
+            List<AgentTool> agentTools = new ArrayList<>(mcpTools.size());
+            for (MCPTool mcpTool : mcpTools) {
+                agentTools.add(new AsMCPTool(mcpTool));
+            }
+
+            logger.info(String.format("Created %d MCP tools", agentTools.size()));
+            return agentTools;
+        } catch (Exception e) {
+            logger.severe("Failed to create MCP tools: " + e.getMessage());
+            throw new RuntimeException("Failed to create MCP tools", e);
+        }
     }
 }

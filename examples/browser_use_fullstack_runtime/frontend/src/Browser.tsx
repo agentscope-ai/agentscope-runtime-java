@@ -308,7 +308,7 @@ const Browser: React.FC<BrowserProps> = ({ webSocketUrl, activeKey }) => {
     if (!tab) return;
     const canvas = tab.canvasRef.current;
     if (!canvas) return;
-    // 鼠标事件
+    // Mouse events
     const getScaledCoordinates = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       const scaleX = tab.currentImageWidth / rect.width;

@@ -101,6 +101,25 @@
                     <target>17</target>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>io.agentscope.AgentScopeDeployExample</mainClass>
+                </configuration>
+            </plugin>
+
+            <!-- Docker Build Plugin -->
+            <plugin>
+                <groupId>io.agentscope</groupId>
+                <artifactId>docker-build-maven-plugin</artifactId>
+                <version>0.1.0-SNAPSHOT</version>
+                <configuration>
+                    <configFile>docker-build.yml</configFile>
+                    <port>10001</port>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

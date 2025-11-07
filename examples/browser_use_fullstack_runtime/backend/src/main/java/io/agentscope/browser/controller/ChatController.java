@@ -46,6 +46,8 @@ public class ChatController {
             return Flux.error(new IllegalArgumentException("No messages provided"));
         }
 
+
+
         return agent.chat(messages)
                 .flatMap(message -> {
                     if (message == null || message.getContent() == null || message.getContent().isEmpty()) {
@@ -60,6 +62,7 @@ public class ChatController {
                             String text = textContent.getText();
                             if (text != null && !text.isEmpty()) {
                                 responseBuilder.append(text);
+                                System.out.println(text);
                             }
                         } else if (item instanceof DataContent dataContent) {
                             Map<String, Object> data = dataContent.getData();
@@ -139,16 +142,18 @@ public class ChatController {
     public ResponseEntity<Map<String, String>> getEnvInfo() {
         logger.info("Received env_info request");
 
-        String wsUrl = agent.getBrowserWebSocketUrl();
+        String baseUrl = agent.getBaseUrl();
+        String runtimeToken = agent.getRuntimeToken();
 
-        if (wsUrl != null && !wsUrl.isEmpty()) {
+        if (baseUrl != null && !baseUrl.isEmpty() && runtimeToken != null && !runtimeToken.isEmpty()) {
             Map<String, String> response = new HashMap<>();
-            response.put("url", wsUrl);
-            logger.info("Returning WebSocket URL: {}", wsUrl);
+            response.put("baseUrl", baseUrl);
+            response.put("runtimeToken", runtimeToken);
+            logger.info("Returning baseUrl: {}, runtimeToken: {}", baseUrl, runtimeToken);
             return ResponseEntity.ok(response);
         } else {
             Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", "WebSocket connection failed");
+            errorResponse.put("error", "Browser sandbox not available");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
