@@ -1,5 +1,6 @@
 package io.agentscope.browser.agent;
 
+import io.agentscope.browser.BrowserAgentApplication;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
@@ -54,8 +55,10 @@ public class AgentscopeBrowserUseAgent {
     private MemoryService memoryService;
     private SessionHistoryService sessionHistoryService;
     private String browserWebSocketUrl;
+    private final BrowserAgentApplication.RunnerHolder runnerHolder;
 
-    public AgentscopeBrowserUseAgent() {
+    public AgentscopeBrowserUseAgent(BrowserAgentApplication.RunnerHolder runnerHolder) {
+        this.runnerHolder = runnerHolder;
     }
 
     /**
@@ -94,7 +97,7 @@ public class AgentscopeBrowserUseAgent {
                 .build();
 
         SandboxManager sandboxManager = new SandboxManager(managerConfig);
-        EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
+        this.environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
         Toolkit toolkit = new Toolkit();
         toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
@@ -136,6 +139,8 @@ public class AgentscopeBrowserUseAgent {
 
         // Initialize runner
         runner = Runner.builder().agent(agent).contextManager(contextManager).environmentManager(environmentManager).build();
+        // Set runner to the holder so it can be accessed as a bean
+        runnerHolder.setRunner(runner);
 
         // Get browser WebSocket URL
         try {
@@ -249,10 +254,6 @@ public class AgentscopeBrowserUseAgent {
         }
 
         logger.info("AgentscopeBrowserUseAgent closed");
-    }
-
-    public Runner getRunner() {
-        return this.runner;
     }
 }
 

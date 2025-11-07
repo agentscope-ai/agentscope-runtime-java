@@ -27,19 +27,43 @@ public class BrowserAgentApplication {
 
     private static AgentscopeBrowserUseAgent agentInstance;
 
+    /**
+     * Runner holder to allow AgentscopeBrowserUseAgent to modify the runner instance
+     */
+    public static class RunnerHolder {
+        private Runner runner;
+
+        public Runner getRunner() {
+            return runner;
+        }
+
+        public void setRunner(Runner runner) {
+            this.runner = runner;
+        }
+    }
+
+    private final RunnerHolder runnerHolder = new RunnerHolder();
+    
     @Bean
-    public AgentscopeBrowserUseAgent agentscopeBrowseruseAgent() throws Exception {
+    public RunnerHolder runnerHolder() {
+        logger.info("Creating RunnerHolder bean");
+        return runnerHolder;
+    }
+
+    @Bean
+    public AgentscopeBrowserUseAgent agentscopeBrowserUseAgent(RunnerHolder runnerHolder) throws Exception {
         logger.info("Creating AgentscopeBrowserUseAgent bean...");
-        agentInstance = new AgentscopeBrowserUseAgent();
+        agentInstance = new AgentscopeBrowserUseAgent(runnerHolder);
         agentInstance.connect();
         logger.info("AgentscopeBrowserUseAgent bean created and connected");
         return agentInstance;
     }
 
     @Bean
-    public Runner agentRunner(AgentscopeBrowserUseAgent agent) {
+    @org.springframework.context.annotation.DependsOn("agentscopeBrowserUseAgent")
+    public Runner agentRunner(RunnerHolder runnerHolder) {
         logger.info("Exposing Runner bean for A2A protocol");
-        return agent.getRunner();
+        return runnerHolder.getRunner();
     }
 
     @PreDestroy

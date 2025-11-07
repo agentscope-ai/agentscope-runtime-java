@@ -1,10 +1,10 @@
 # Browser Use Backend - Java Implementation
 
-This is the Java implementation of the browser use backend, equivalent to the Python version in the `backend` folder.
+This is the Java implementation of the browser use backend.
 
 ## Overview
 
-This Java backend provides the same HTTP API endpoints as the Python version, allowing the frontend to interact with the AgentScope browser agent seamlessly.
+This Java backend exposes the same HTTP API endpoints as the Python version. By including the spring-boot-starter-runtime-a2a dependency and registering runners as Spring beans, the application gains support for A2A protocol calls—enabling seamless interaction between the frontend and the AgentScope browser agent.
 
 ## Project Structure
 
@@ -50,7 +50,7 @@ export AI_DASHSCOPE_API_KEY=your_api_key_here
 First, ensure the parent project is built:
 
 ```bash
-cd /Users/ken/aliware/agentscope/agentscope-runtime-java
+cd agentscope-runtime-java
 mvn clean install -DskipTests
 ```
 
@@ -75,7 +75,7 @@ mvn spring-boot:run
 java -jar target/browser-agent-backend-1.0.0.jar
 ```
 
-The service will start on **port 9000** by default.
+The service will start on **port 8080** by default.
 
 ## API Endpoints
 
@@ -113,6 +113,44 @@ The service will start on **port 9000** by default.
 
 Returns the WebSocket URL for the browser visualization.
 
+### 3. A2A Completions(Streaming)
+
+**Endpoint:**
+
+`POST a2a/`
+
+**Request:**
+
+```json
+{
+    "method": "message/stream",
+    "id": "2d2b4dc8-8ea2-437b-888d-3aaf3a8239dc",
+    "jsonrpc": "2.0",
+    "params": {
+        "message": {
+            "role": "user",
+            "kind": "message",
+            "contextId": "testContext",
+            "metadata":{
+                "userId": "testUser",
+                "sessionId": "testSession"
+            },
+            "parts": [
+                {
+                    "text": "Visit www.google.com and search for AgentScope",
+                    "kind": "text"
+                }
+            ],
+            "messageId": "c4911b64c8404b7a8bf7200dd225b152"
+        }
+    }
+}
+```
+
+**Response:** Server-Sent Events (SSE) stream with A2A-protocol format
+
+
+
 ## Key Differences from Python Version
 
 1. **Framework**: Uses Spring Boot instead of Quart
@@ -125,7 +163,7 @@ Returns the WebSocket URL for the browser visualization.
 
 The Java backend is **fully compatible** with the existing React frontend. No frontend changes are required. Simply:
 
-1. Start the Java backend on port 9000
+1. Start the Java backend on port 8080
 2. Start the frontend on port 3000
 3. The frontend will automatically connect to the backend
 
@@ -145,11 +183,11 @@ logging:
 
 ### Port Already in Use
 
-If port 9000 is already in use, you can change it in `application.yml`:
+If port 8080 is already in use, you can change it in `application.yml`:
 
 ```yaml
 server:
-  port: 9001  # Use a different port
+  port: 9000  # Use a different port
 ```
 
 Then update the frontend configuration accordingly.
@@ -170,14 +208,14 @@ docker ps
 
 ## Comparison with Python Backend
 
-| Feature | Python Backend | Java Backend |
-|---------|---------------|--------------|
-| Framework | Quart (Async Flask) | Spring Boot |
-| Language | Python 3.11+ | Java 17+ |
-| Streaming | Async generators | Reactor Flux |
-| Port | 9000 | 9000 |
-| API Compatibility | OpenAI-like SSE | OpenAI-like SSE |
-| Browser Tools | agentscope_runtime | agentscope-runtime-java |
+| Feature | Python Backend | Java Backend                       |
+|---------|---------------|------------------------------------|
+| Framework | Quart (Async Flask) | Spring Boot                        |
+| Language | Python 3.11+ | Java 17+                           |
+| Streaming | Async generators | Reactor Flux                       |
+| Port | 9000 | 9000                               |
+| API Compatibility | OpenAI-like SSE | OpenAI-like SSE & A2A-protocol SSE |
+| Browser Tools | agentscope_runtime | agentscope-runtime-java            |
 
 Both implementations provide **identical HTTP APIs** and can be used interchangeably with the frontend.
 

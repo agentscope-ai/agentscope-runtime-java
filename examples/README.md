@@ -1,10 +1,10 @@
-> 作者：薛惠天
+> Author: Xue Huitian
 >
 
-### 分步教程
-1. **初始化运行时的上下文管理器：**
+### Step-by-Step Tutorial
+1. **Initialize the Runtime Context Manager:**
 
-AgentScope Runtime Java目前内置了基于内存的上下文管理器
+AgentScope Runtime Java currently has a built-in in-memory context manager
 
 ```java
 private void initializeContextManager() {
@@ -28,17 +28,11 @@ private void initializeContextManager() {
 }
 ```
 
-2. **初始化Runner：**
+2. **(Optional) Initialize ManagerConfig:**
 
-```java
-Runner runner = new Runner(contextManager);
-```
+ManagerConfig is a configuration class used to initialize the sandbox manager. By default, it uses in-memory management for sandbox lifecycle, local Docker for sandbox deployment, and local file system without user-specified files.
 
-3. **（可选）初始化ManagerConfig：**
-
-ManagerConfig是用于初始化沙箱管理器的配置类，默认使用内存管理沙箱生命周期，使用本地Docker部署沙箱，使用本地文件系统且没有用户指定的文件。
-
-**可选配置1：使用redis替换内存管理沙箱生命周期**
+**Optional Configuration 1: Use Redis to replace in-memory management for sandbox lifecycle**
 
 ```java
 RedisManagerConfig redisConfig = RedisManagerConfig.builder()
@@ -50,19 +44,19 @@ RedisManagerConfig redisConfig = RedisManagerConfig.builder()
         .build();
 ```
 
-**可选配置2：配置文件下载初始化**
+**Optional Configuration 2: Configure file download initialization**
 
-用户可以指定沙箱在启动的时候下载哪些文件，在指定storagePath属性后，沙箱在启动的时候会首先将storagePath的文件首先下载到指定的挂载路径上，在销毁沙箱之后将挂载路径的文件再拷贝回storagePath，文件会挂载在代码执行的根路径的`sessions_mount_dir`文件夹之中，会每次创建一个随机的sessionId文件夹
+Users can specify which files the sandbox should download when starting. After specifying the storagePath property, the sandbox will first download files from storagePath to the specified mount path when starting, and copy files from the mount path back to storagePath after destroying the sandbox. Files will be mounted in the `sessions_mount_dir` folder at the root path of code execution, and a random sessionId folder will be created each time.
 
-+ **使用本地文件系统作为storagePath：**
++ **Use local file system as storagePath:**
 
 ```java
 LocalFileSystemConfig localConfig = LocalFileSystemConfig.builder()
-        .storageFolderPath("要拷贝的源文件夹路径")
+        .storageFolderPath("path to the source folder to copy")
         .build();
 ```
 
-+ **使用OSS作为存储介质：**
++ **Use OSS as storage medium:**
 
 ```java
 OssConfig ossConfig = OssConfig.builder()
@@ -70,13 +64,15 @@ OssConfig ossConfig = OssConfig.builder()
         .ossAccessKeyId(ossAccessKeyId)
         .ossAccessKeySecret(ossAccessKeySecret)
         .ossBucketName(ossBucketName)
-        .storageFolderPath("OSS的文件夹名称")
+        .storageFolderPath("OSS folder name")
         .build();
 ```
 
-**可选配置3：使用docker或k8s来作为容器管理框架**
+**Optional Configuration 3: Use Docker, K8s, or AgentRun as container management framework**
 
-默认使用docker，要使用k8s，需要配置一个KubernetesClientConfig，参数如果传空的话，会直接使用本地的默认k8s环境
+Docker is used by default. To use K8s, you need to configure a KubernetesClientConfig. If parameters are passed as empty, it will directly use the local default K8s environment. To use Alibaba Cloud FC AgentRun, you need to configure three required parameters: `AGENT_RUN_ACCESS_KEY_ID`, `AGENT_RUN_ACCOUNT_ID`, and `AGENT_RUN_ACCESS_KEY_SECRET`.
+
+* **Use K8s as container management framework**
 
 ```java
 BaseClientConfig clientConfig = KubernetesClientConfig.builder()
@@ -84,17 +80,27 @@ BaseClientConfig clientConfig = KubernetesClientConfig.builder()
         .build();
 ```
 
-**可选配置4：容器池的大小**
+* **Use AgentRun as container management framework**
 
-**可选配置5：可以使用的端口序列**
+```Java
+BaseClientConfig clientConfig = AgentRunClientConfig.builder()
+        .agentRunAccessKeyId(System.getenv("AGENT_RUN_ACCESS_KEY_ID"))
+        .agentRunAccountId(System.getenv("AGENT_RUN_ACCOUNT_ID"))
+        .agentRunAccessKeySecret(System.getenv("AGENT_RUN_ACCESS_KEY_SECRET"))
+        .build();
+```
 
-默认使用49152到59152端口，用户可以配置自定义端口range：
+**Optional Configuration 4: Container pool size**
+
+**Optional Configuration 5: Available port range**
+
+By default, ports 49152 to 59152 are used. Users can configure a custom port range:
 
 ```java
 PortRange portRange = new PortRange(49152, 59152);
 ```
 
-**使用刚才的自定义配置初始化managerConfig：**
+**Initialize managerConfig with the custom configurations above:**
 
 ```java
 ManagerConfig config = new ManagerConfig.Builder()
@@ -106,34 +112,23 @@ ManagerConfig config = new ManagerConfig.Builder()
                     .build();
 ```
 
-4. **创建runner：**
+3. **Create a native Spring AI Alibaba agent:**
 
-```java
-Runner runner = new Runner(contextManager);
-```
++ **Initialize tools to be called**
+    - **Built-in tools:**
 
-5. **注册managerConfig：**
+AgentScope Runtime Java provides three sandboxes: the base sandbox provides code execution and terminal command execution functionality, the file system sandbox provides file management functionality, and the browser sandbox provides built-in browser functionality. Tools have been initialized in ToolsInit and wrapped as ToolCallBack compatible with SAA, which can be called directly. Below is an example:
 
-```java
-runner.registerManagerConfig(config);
-```
-
-6. **创建原生Spring AI Alibaba agent：**
-+ **初始化要调用的工具**
-    - **内置工具：**
-
-AgentScope Runtime Java提供了三个沙箱，基础沙箱提供代码执行和终端命令执行功能，文件系统沙箱提供文件管理功能，浏览器沙箱提供内置浏览器功能，工具已经在ToolsInit被初始化完成包装为SAA可以直接兼容的ToolCallBack，直接调用即可，下面是一个示例
-
-    - 对于不需要沙箱执行的工具，直接创建SAA的ToolCallBack类型工具即可
-    - 对于需要沙箱执行的工具，分为内置的工具以及添加的自定义mcp工具两种
+    - For tools that don't require sandbox execution, directly create SAA's ToolCallBack type tools
+    - For tools that require sandbox execution, there are two types: built-in tools and custom MCP tools
 
 ```java
 ToolsInit.RunPythonCodeTool()
 ```
 
-    - **MCP工具：**
-
-	AgentScope Runtime Java提供了将沙箱作为stdio类型的mcp server的功能，执行方式如下：
+    - **MCP tools:**
+    
+    AgentScope Runtime Java provides the functionality to use sandboxes as stdio-type MCP servers. The execution method is as follows:
 
 ```java
 String mcpServerConfig = """
@@ -155,9 +150,9 @@ List<ToolCallback> mcpTools = ToolsInit.getMcpTools(
                     Runner.getSandboxManager());
 ```
 
-通过配置mcpServerConfig，并制定sandboxManager和沙箱类型，可以直接创建为SAA可以直接兼容的ToolCallBack List
+By configuring mcpServerConfig and specifying sandboxManager and sandbox type, you can directly create a ToolCallBack List compatible with SAA.
 
-用户也可以使用`McpConfigConverter`来构建MCP Tools
+Users can also use `McpConfigConverter` to build MCP Tools
 
 ```java
 McpConfigConverter converter = McpConfigConverter.builder()
@@ -173,35 +168,42 @@ List<ToolCallback> toolCallbacks = mcpToolInstances.stream()
         .toList();
 ```
 
-+ **创建Spring AI Alibaba Agent：**
++ **Create Spring AI Alibaba Agent:**
 
 ```java
 Builder builder = ReactAgent.builder()
         .name("saa_agent")
         .tools(toolCallbacks)
         .model(chatModel);
-
-ReactAgent reactAgent = builder.build();
 ```
 
-7. **将Spring AI Alibaba Agent包装为AgentScope Runtime Java提供的SaaAgent：**
+4. **Wrap Spring AI Alibaba Agent as SaaAgent provided by AgentScope Runtime Java:**
 
 ```java
 SaaAgent saaAgent = SaaAgent.builder()
-        .agentBuilder(reactAgent)
+        .agentBuilder(builder)
         .build();
 ```
 
-9. **一键式部署为A2A应用：**
+5. **Create and initialize Runner**
+
+When initializing Runner, `agent` is a required attribute, and an exception will be thrown if it is not assigned. When using sandbox tools, the `environmentManager` attribute must also be added.
 
 ```java
-LocalDeployManager deployManager = LocalDeployManager.builder().build();
-deployManager.deploy(runner);
+SandboxManager sandboxManager = new SandboxManager(managerConfig);
+EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
+        Runner runner = Runner.builder().agent(agent).contextManager(contextManager).environmentManager(environmentManager).build();
 ```
 
-使用SpringBoot进行部署，因此对于自定义配置，需要在resources文件夹中进行修改，如修改端口等，目前是默认10001
+6. **One-click deployment as A2A application:**
 
-10. **从终端访问部署的A2A应用：**
+```java
+LocalDeployManager.builder().port(10001).build().deploy(runner);
+```
+
+Deployment uses SpringBoot, with port defaulting to `8080` and host defaulting to `localhost`. For custom configuration, you need to pass relevant configuration information during build.
+
+7. **Access the deployed A2A application from terminal:**
 
 ```shell
 curl --location --request POST 'http://localhost:10001/a2a/' \
@@ -225,7 +227,7 @@ curl --location --request POST 'http://localhost:10001/a2a/' \
             },
             "parts": [
                 {
-                    "text": "你好，给我用python计算一下第十个斐波那契数",
+                    "text": "Hello, please calculate the 10th Fibonacci number using Python",
                     "kind": "text"
                 }
             ],
@@ -235,206 +237,10 @@ curl --location --request POST 'http://localhost:10001/a2a/' \
 }'
 ```
 
-这里是让Agent去调用基础沙箱执行python代码
+This makes the Agent call the base sandbox to execute Python code.
 
-如果替换成询问当前时间，Agent会去访问沙箱中部署的mcp工具，并获取到当前时间
+If replaced with asking for the current time, the Agent will access the MCP tool deployed in the sandbox and get the current time.
 
-返回的格式为标准的A2A流式响应
+The returned format is a standard A2A streaming response.
 
-### 完整示例
-```java
-import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-import com.alibaba.cloud.ai.graph.agent.Builder;
-import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.alibaba.cloud.ai.graph.exception.GraphStateException;
-import io.agentscope.runtime.autoconfig.deployer.LocalDeployManager;
-import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.engine.agents.saa.SaaAgent;
-import io.agentscope.runtime.engine.memory.context.ContextComposer;
-import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
-import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
-import io.agentscope.runtime.engine.memory.service.MemoryService;
-import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.RedisManagerConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.manager.model.fs.LocalFileSystemConfig;
-import io.agentscope.runtime.sandbox.manager.model.fs.OssConfig;
-import io.agentscope.runtime.sandbox.tools.ToolsInit;
-import org.springframework.ai.tool.ToolCallback;
-
-import java.util.List;
-
-public class CompleteAgentExample {
-
-    private DashScopeChatModel chatModel;
-    private ContextManager contextManager;
-
-    private String ossEndpoint;
-    private String ossAccessKeyId;
-    private String ossAccessKeySecret;
-    private String ossBucketName;
-
-    public CompleteAgentExample() {
-        initializeChatModel();
-        initializeOssConfig();
-        initializeContextManager();
-    }
-
-    public void initializeOssConfig() {
-        ossEndpoint = System.getenv("OSS_ENDPOINT");
-        ossAccessKeyId = System.getenv("OSS_ACCESS_KEY_ID");
-        ossAccessKeySecret = System.getenv("OSS_ACCESS_KEY_SECRET");
-        ossBucketName = System.getenv("OSS_BUCKET_NAME");
-    }
-
-    private void initializeChatModel() {
-        // Create DashScopeApi instance using the API key from environment variable
-        DashScopeApi dashScopeApi = DashScopeApi.builder()
-                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-                .build();
-
-        // Create DashScope ChatModel instance
-        this.chatModel = DashScopeChatModel.builder()
-                .dashScopeApi(dashScopeApi)
-                .build();
-    }
-
-    private void initializeContextManager() {
-        try {
-            // Create SessionHistoryService for managing conversation history
-            SessionHistoryService sessionHistoryService = new InMemorySessionHistoryService();
-
-            // Create MemoryService for managing agent memory
-            MemoryService memoryService = new InMemoryMemoryService();
-
-            // Create ContextManager with the required services
-            this.contextManager = new ContextManager(
-                    ContextComposer.class,
-                    sessionHistoryService,
-                    memoryService);
-
-            // Start the context manager services
-            sessionHistoryService.start().get();
-            memoryService.start().get();
-            this.contextManager.start().get();
-
-            System.out.println("ContextManager and its services initialized successfully");
-        } catch (Exception e) {
-            System.err.println("Failed to initialize ContextManager services: " + e.getMessage());
-            throw new RuntimeException("ContextManager initialization failed", e);
-        }
-    }
-
-    public ManagerConfig buildManagerConfig() {
-        // 使用本地文件系统示例
-        LocalFileSystemConfig localConfig = LocalFileSystemConfig.builder()
-                .storageFolderPath(System.getenv("STORAGE_PATH"))
-                .build();
-
-        // 使用OSS示例
-        OssConfig ossConfig = OssConfig.builder()
-                .ossEndpoint(ossEndpoint)
-                .ossAccessKeyId(ossAccessKeyId)
-                .ossAccessKeySecret(ossAccessKeySecret)
-                .ossBucketName(ossBucketName)
-                .storageFolderPath("folder")
-                .build();
-
-        // 使用redis管理容器池示例
-        RedisManagerConfig redisConfig = RedisManagerConfig.builder()
-                .redisServer("localhost")
-                .redisPort(6379)
-                .redisDb(0)
-                .redisPortKey("_persist_test_ports")
-                .redisContainerPoolKey("_persist_test_pool")
-                .build();
-
-        return new ManagerConfig.Builder()
-                .poolSize(0)
-                .fileSystemConfig(ossConfig)
-                // 配置端口映射示例
-                .portRange(9000, 10000)
-                .redisConfig(redisConfig)
-                .build();
-    }
-
-
-    public void runExample() throws GraphStateException {
-        Runner runner = new Runner(contextManager);
-        runner.registerManagerConfig(buildManagerConfig());
-
-        System.out.println("=== SaaAgent example Using custom MCP server ===");
-
-        String mcpServerConfig = """
-                           {
-                    "mcpServers": {
-                        "time": {
-                            "command": "uvx",
-                            "args": [
-                                "mcp-server-time",
-                                "--local-timezone=America/New_York"
-                            ]
-                        }
-                    }
-                }
-                """;
-
-        List<ToolCallback> mcpTools = ToolsInit.getMcpTools(
-                mcpServerConfig,
-                SandboxType.BASE,
-                Runner.getSandboxManager());
-
-        System.out.println("Created " + mcpTools.size() + " MCP tools");
-        mcpTools.forEach(tool -> System.out.println("  - " + tool));
-
-        System.out.println("Built " + mcpTools.size() + " ToolCallbacks");
-
-        List<ToolCallback> tools = mcpTools;
-
-        tools.add(ToolsInit.RunPythonCodeTool());
-
-        Builder builder = ReactAgent.builder()
-                .name("saa_agent")
-                .tools(tools)
-                .model(chatModel);
-
-        ReactAgent reactAgent = builder.build();
-
-        // Create SaaAgent using the ReactAgent Builder
-        SaaAgent saaAgent = SaaAgent.builder()
-                .agentBuilder(reactAgent)
-                .build();
-
-
-        runner.registerAgent(saaAgent);
-        runner.registerContextManager(contextManager);
-
-        LocalDeployManager deployManager = new LocalDeployManager();
-        deployManager.deployStreaming();
-    }
-
-    public static void main(String[] args) {
-        if (System.getenv("AI_DASHSCOPE_API_KEY") == null) {
-            System.err.println("Please set the AI_DASHSCOPE_API_KEY environment variable");
-            System.exit(1);
-        }
-
-        if (System.getenv("STORAGE_PATH") == null) {
-            System.err.println("Please set the STORAGE_PATH environment variable");
-            System.exit(1);
-        }
-
-        CompleteAgentExample example = new CompleteAgentExample();
-
-        try {
-            example.runExample();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-}
-```
-
+#### Complete examples can be found in examples/simple_agent_use_examples

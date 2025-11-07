@@ -11,7 +11,7 @@ import Browser from "./Browser";
 const { Content, Footer } = Layout;
 
 const REACT_APP_API_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:9000";
+  process.env.REACT_APP_API_URL || "http://localhost:8080";
 const BACKEND_URL = REACT_APP_API_URL + "/v1/chat/completions";
 const BACKEND_WS_URL = REACT_APP_API_URL + "/env_info";
 const DEFAULT_MODEL = "qwen-max";
