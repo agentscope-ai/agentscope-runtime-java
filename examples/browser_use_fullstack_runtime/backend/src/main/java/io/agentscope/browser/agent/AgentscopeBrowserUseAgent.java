@@ -1,5 +1,22 @@
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.agentscope.browser.agent;
 
+import io.agentscope.browser.BrowserAgentApplication;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
@@ -54,8 +71,12 @@ public class AgentscopeBrowserUseAgent {
     private MemoryService memoryService;
     private SessionHistoryService sessionHistoryService;
     private String browserWebSocketUrl;
+    private String baseUrl;
+    private String runtimeToken;
+    private final BrowserAgentApplication.RunnerHolder runnerHolder;
 
-    public AgentscopeBrowserUseAgent() {
+    public AgentscopeBrowserUseAgent(BrowserAgentApplication.RunnerHolder runnerHolder) {
+        this.runnerHolder = runnerHolder;
     }
 
     /**
@@ -94,10 +115,9 @@ public class AgentscopeBrowserUseAgent {
                 .build();
 
         SandboxManager sandboxManager = new SandboxManager(managerConfig);
-        EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
+        this.environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
         Toolkit toolkit = new Toolkit();
-        toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
         toolkit.registerTool(ToolkitInit.BrowserNavigateTool());
 
         // Initialize chat model
@@ -117,7 +137,7 @@ public class AgentscopeBrowserUseAgent {
                         .sysPrompt("You are a helpful AI assistant. Be friendly and concise.")
                         .model(
                                 io.agentscope.core.model.DashScopeChatModel.builder()
-                                        .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                                        .apiKey(apiKey)
                                         .modelName("qwen-plus")
                                         .stream(true)
                                         .enableThinking(true)
@@ -136,22 +156,32 @@ public class AgentscopeBrowserUseAgent {
 
         // Initialize runner
         runner = Runner.builder().agent(agent).contextManager(contextManager).environmentManager(environmentManager).build();
+        // Set runner to the holder so it can be accessed as a bean
+        runnerHolder.setRunner(runner);
 
-        // Get browser WebSocket URL
+        // Get browser WebSocket URL and VNC info
         try {
             // Connect to browser sandbox
             ContainerModel sandboxInfo = environmentManager.getSandboxManager().getSandbox(SandboxType.BROWSER, USER_ID, SESSION_ID);
 
             if (sandboxInfo != null ) {
                 browserWebSocketUrl = sandboxInfo.getFrontBrowserWS();
+                baseUrl = sandboxInfo.getBaseUrl();
+                runtimeToken = sandboxInfo.getRuntimeToken();
                 logger.info("Browser WebSocket URL: {}", browserWebSocketUrl);
+                logger.info("Base URL: {}", baseUrl);
+                logger.info("Runtime Token: {}", runtimeToken);
             } else {
                 browserWebSocketUrl = "";
-                logger.warn("No browser WebSocket URL found");
+                baseUrl = "";
+                runtimeToken = "";
+                logger.warn("No browser sandbox info found");
             }
         } catch (Exception e) {
-            logger.warn("Failed to get browser WebSocket URL: {}", e.getMessage());
+            logger.warn("Failed to get browser sandbox info: {}", e.getMessage());
             browserWebSocketUrl = "";
+            baseUrl = "";
+            runtimeToken = "";
         }
 
         logger.info("AgentscopeBrowserUseAgent initialized successfully");
@@ -194,16 +224,17 @@ public class AgentscopeBrowserUseAgent {
         // Convert chat messages to agent request format
         List<Message> convertedMessages = new ArrayList<>();
 
-        for (Map<String, String> chatMessage : chatMessages) {
-            Message message = new Message();
-            message.setRole(chatMessage.get("role"));
+        Message message = new Message();
+        message.setRole(chatMessages.get(chatMessages.size()-1).get("role"));
 
-            TextContent textContent = new TextContent();
-            textContent.setText(chatMessage.get("content"));
-            message.setContent(List.of(textContent));
+        TextContent textContent = new TextContent();
+        textContent.setText(chatMessages.get(chatMessages.size()-1).get("content"));
+        message.setContent(List.of(textContent));
 
-            convertedMessages.add(message);
-        }
+        convertedMessages.add(message);
+
+        System.out.println("Converted: ");
+        System.out.println(convertedMessages);
 
         // Create agent request
         AgentRequest request = new AgentRequest();
@@ -228,6 +259,20 @@ public class AgentscopeBrowserUseAgent {
     }
 
     /**
+     * Get base URL
+     */
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    /**
+     * Get runtime token
+     */
+    public String getRuntimeToken() {
+        return runtimeToken;
+    }
+
+    /**
      * Close and cleanup resources
      */
     public void close() throws Exception {
@@ -249,10 +294,6 @@ public class AgentscopeBrowserUseAgent {
         }
 
         logger.info("AgentscopeBrowserUseAgent closed");
-    }
-
-    public Runner getRunner() {
-        return this.runner;
     }
 }
 

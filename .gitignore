@@ -87,3 +87,17 @@ deploy/
 # Coverage reports
 coverage/
 jacoco/
+
+
+# react projects
+node_modules/
+
+/build
+/dist
+/.vite
+/.react
+
+/.cache
+/.parcel-cache
+
+*.db

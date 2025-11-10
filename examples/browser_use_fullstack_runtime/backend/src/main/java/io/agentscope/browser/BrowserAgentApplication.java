@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.agentscope.browser;
 
 import io.agentscope.browser.agent.AgentscopeBrowserUseAgent;
@@ -27,19 +43,43 @@ public class BrowserAgentApplication {
 
     private static AgentscopeBrowserUseAgent agentInstance;
 
+    /**
+     * Runner holder to allow AgentscopeBrowserUseAgent to modify the runner instance
+     */
+    public static class RunnerHolder {
+        private Runner runner;
+
+        public Runner getRunner() {
+            return runner;
+        }
+
+        public void setRunner(Runner runner) {
+            this.runner = runner;
+        }
+    }
+
+    private final RunnerHolder runnerHolder = new RunnerHolder();
+    
     @Bean
-    public AgentscopeBrowserUseAgent agentscopeBrowseruseAgent() throws Exception {
+    public RunnerHolder runnerHolder() {
+        logger.info("Creating RunnerHolder bean");
+        return runnerHolder;
+    }
+
+    @Bean
+    public AgentscopeBrowserUseAgent agentscopeBrowserUseAgent(RunnerHolder runnerHolder) throws Exception {
         logger.info("Creating AgentscopeBrowserUseAgent bean...");
-        agentInstance = new AgentscopeBrowserUseAgent();
+        agentInstance = new AgentscopeBrowserUseAgent(runnerHolder);
         agentInstance.connect();
         logger.info("AgentscopeBrowserUseAgent bean created and connected");
         return agentInstance;
     }
 
     @Bean
-    public Runner agentRunner(AgentscopeBrowserUseAgent agent) {
+    @org.springframework.context.annotation.DependsOn("agentscopeBrowserUseAgent")
+    public Runner agentRunner(RunnerHolder runnerHolder) {
         logger.info("Exposing Runner bean for A2A protocol");
-        return agent.getRunner();
+        return runnerHolder.getRunner();
     }
 
     @PreDestroy

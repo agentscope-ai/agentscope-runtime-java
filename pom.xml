@@ -545,6 +545,48 @@
                     <skip>${maven.deploy.skip}</skip>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <version>0.16</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*.md</exclude>
+                        <exclude>**/*.adoc</exclude>
+                        <exclude>**/*.txt</exclude>
+                        <exclude>**/*.xml</exclude>
+                        <exclude>**/*.yml</exclude>
+                        <exclude>**/*.yaml</exclude>
+                        <exclude>**/*.json</exclude>
+                        <exclude>**/*.properties</exclude>
+                        <exclude>**/*.conf</exclude>
+                        <exclude>**/*.ini</exclude>
+                        <exclude>**/*.log</exclude>
+                        <exclude>**/*.svg</exclude>
+                        <exclude>**/*.png</exclude>
+                        <exclude>**/*.jpg</exclude>
+                        <exclude>**/*.jpeg</exclude>
+                        <exclude>**/*.gif</exclude>
+                        <exclude>**/*.ico</exclude>
+                        <exclude>**/*.pdf</exclude>
+                        <exclude>**/*.zip</exclude>
+                        <exclude>**/*.tar</exclude>
+                        <exclude>**/*.tar.gz</exclude>
+                        <exclude>**/*.tgz</exclude>
+                        <exclude>**/*.jar</exclude>
+                        <exclude>**/*.class</exclude>
+                        <exclude>**/*.so</exclude>
+                        <exclude>**/*.dll</exclude>
+                        <exclude>**/*.dylib</exclude>
+                        <exclude>**/target/**</exclude>
+                        <exclude>**/.git/**</exclude>
+                        <exclude>**/.idea/**</exclude>
+                        <exclude>**/.vscode/**</exclude>
+                        <exclude>**/node_modules/**</exclude>
+                        <exclude>src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

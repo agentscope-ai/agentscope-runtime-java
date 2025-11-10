@@ -1,17 +1,31 @@
-import React, { useState, useRef, useEffect } from "react"; // 添加 useEffect
-import { Layout, theme } from "antd";
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import { Input, List } from "antd";
+import React, { useState, useRef, useEffect } from "react";
+import { Layout, Input, Avatar, Spin, Typography, Card } from "antd";
 import type { InputRef } from "antd";
+import { SendOutlined, RobotOutlined, UserOutlined } from "@ant-design/icons";
+import ReactMarkdown from "react-markdown";
+import "./App.css";
 
-import { Image, Avatar, Spin } from "antd";
-import { Flex } from "antd";
-import Browser from "./Browser";
-
-const { Content, Footer } = Layout;
+const { Content } = Layout;
+const { Text } = Typography;
 
 const REACT_APP_API_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:9000";
+  process.env.REACT_APP_API_URL || "http://localhost:8080";
 const BACKEND_URL = REACT_APP_API_URL + "/v1/chat/completions";
 const BACKEND_WS_URL = REACT_APP_API_URL + "/env_info";
 const DEFAULT_MODEL = "qwen-max";
@@ -32,21 +46,16 @@ type ChatMessage = {
   sender: string;
   site: SiteItem[];
 }[];
-const { Search } = Input;
 
 const App: React.FC = () => {
   const inputRef = useRef<InputRef>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const [webSocketUrl, setWebSocketUrl] = useState("");
+  const [vncUrl, setVncUrl] = useState("");
   const handleFocus = () => {
     if (inputRef.current) {
       inputRef.current.select();
     }
   };
-  const [collapsed, setCollapsed] = useState(false);
-  const {
-    token: { colorBgContainer, borderRadiusLG },
-  } = theme.useToken();
   const [messages, setMessages] = useState<ChatMessage>([
     {
       message: "Hello, I'm the assistant! Ask me anything!",
@@ -57,7 +66,7 @@ const App: React.FC = () => {
   ]);
   const [isTyping, setIsTyping] = useState(false);
 
-  async function get_ws() {
+  async function getVncInfo() {
     const response = await fetch(BACKEND_WS_URL, {
       method: "GET",
       headers: {
@@ -68,18 +77,21 @@ const App: React.FC = () => {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    if (!response.body) {
-      throw new Error("ReadableStream not found in response.");
-    }
 
     const data = await response.json();
     console.log(data);
-    setWebSocketUrl(data.url);
+    if (data.baseUrl && data.runtimeToken) {
+      // Replace /fastapi with /vnc/vnc_lite.html and append password param
+      const baseVncPath = data.baseUrl.replace("/fastapi", "/vnc/vnc_lite.html");
+      // URL-encode password and append to URL params
+      const encodedPassword = encodeURIComponent(data.runtimeToken);
+      const vncUrl = `${baseVncPath}?password=${encodedPassword}`;
+      setVncUrl(vncUrl);
+    }
   }
 
   const handleSend = async (message: string) => {
-    await get_ws();
-    setCollapsed(true);
+    await getVncInfo();
     if (message.trim() === "") {
       return;
     }
@@ -190,76 +202,123 @@ const App: React.FC = () => {
   }, [messages]);
 
   return (
-    <Layout
-      style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
-    >
-      <Content style={{ padding: "0 48px", flex: 1 }}>
-        <div
-          style={{
-            background: colorBgContainer,
-            minHeight: 600,
-            padding: 24,
-            borderRadius: borderRadiusLG,
-          }}
-        >
-          <Flex vertical={true} gap={"large"}>
-            <Flex gap={"large"} style={{ marginBottom: 30 }}>
-              <Image
-                width={48}
-                src="logo512.png"
-                onClick={() => {
-                  window.location.reload();
-                }}
-                style={{ cursor: "pointer" }}
-              />
-              <Search
-                ref={inputRef}
-                placeholder=""
-                allowClear
-                enterButton="Search"
-                size="large"
-                onSearch={handleSend}
-                onFocus={handleFocus}
-              />
-            </Flex>
-            <Flex gap={"large"}>
-              <Flex vertical={true} style={{ width: 500 }} gap={"large"}>
-                {collapsed && (
-                  <List
-                    size="large"
-                    bordered
-                    dataSource={messages.slice(1)}
-                    style={{ color: "black" }}
-                    renderItem={(item) => (
-                      <List.Item>
-                        <List.Item.Meta
-                          avatar={
-                            <Avatar
-                              src={
-                                item.sender === "user"
-                                  ? "user_avatar.svg"
-                                  : "logo512.png"
+    <Layout className="app-layout">
+      <Content className="app-content">
+        <div className="app-container">
+          <div className="chat-section">
+            <div className="chat-header">
+              <div className="logo-section">
+                <img
+                  src="logo512.png"
+                  alt="Logo"
+                  className="app-logo"
+                  onClick={() => window.location.reload()}
+                />
+                <Text className="app-title">AgentScope Browser Assistant</Text>
+              </div>
+            </div>
+
+            <div className="messages-container" ref={listRef}>
+              {messages.map((item, index) => (
+                <div
+                  key={index}
+                  className={`message-wrapper ${
+                    item.sender === "user" ? "user-message" : "assistant-message"
+                  }`}
+                >
+                  <div className="message-content">
+                    <Avatar
+                      className="message-avatar"
+                      size={40}
+                      icon={
+                        item.sender === "user" ? (
+                          <UserOutlined />
+                        ) : (
+                          <RobotOutlined />
+                        )
+                      }
+                      src={
+                        item.sender === "user"
+                          ? "user_avatar.svg"
+                          : "logo512.png"
+                      }
+                    />
+                    <Card className="message-card" variant="outlined">
+                      <div className="message-text">
+                        {item.sender === "assistant" ? (
+                          <ReactMarkdown>{item.message}</ReactMarkdown>
+                        ) : (
+                          <Text>{item.message}</Text>
+                        )}
+                        {isTyping &&
+                          item === messages[messages.length - 1] && (
+                            <Spin
+                              size="small"
+                              style={{ marginLeft: 8 }}
+                              indicator={
+                                <span className="typing-indicator">
+                                  <span></span>
+                                  <span></span>
+                                  <span></span>
+                                </span>
                               }
                             />
-                          }
-                          title={item.sender}
-                          description={item["message"]}
-                        />
-                        {isTyping && item === messages[messages.length - 1] && (
-                          <Spin />
-                        )}
-                      </List.Item>
-                    )}
-                  />
-                )}
-              </Flex>
+                          )}
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-              <Browser webSocketUrl={webSocketUrl} activeKey={"3"} />
-            </Flex>
-          </Flex>
+            <div className="input-section">
+              <Input
+                ref={inputRef}
+                className="chat-input"
+                placeholder="Type your message here..."
+                size="large"
+                onPressEnter={(e) => {
+                  e.preventDefault();
+                  handleSend((e.target as HTMLInputElement).value);
+                  (e.target as HTMLInputElement).value = "";
+                }}
+                onFocus={handleFocus}
+                suffix={
+                  <SendOutlined
+                    className="send-icon"
+                    onClick={() => {
+                      if (inputRef.current?.input?.value) {
+                        handleSend(inputRef.current.input.value);
+                        inputRef.current.input.value = "";
+                      }
+                    }}
+                  />
+                }
+              />
+            </div>
+          </div>
+
+          <div className="browser-section">
+            {vncUrl ? (
+              <div className="vnc-container">
+                <div className="vnc-iframe-wrapper">
+                  <iframe
+                    src={vncUrl}
+                    className="vnc-iframe"
+                    title="VNC Browser"
+                    allow="clipboard-read; clipboard-write"
+                    scrolling="no"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="vnc-placeholder">
+                <Text type="secondary">Waiting for browser sandbox to initialize...</Text>
+              </div>
+            )}
+          </div>
         </div>
       </Content>
-      <Footer style={{ textAlign: "center" }}></Footer>
     </Layout>
   );
 };

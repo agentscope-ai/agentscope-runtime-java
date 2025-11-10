@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Clone and install agentscope-java
+        run: |
+          git clone --depth=1 https://github.com/agentscope-ai/agentscope-java.git
+          cd agentscope-java
+          mvn clean install -DskipTests
+
+      - name: Clone and install spring-ai-alibaba
+        run: |
+          git clone --depth=1 https://github.com/alibaba/spring-ai-alibaba.git
+          cd spring-ai-alibaba
+          mvn clean install -DskipTests
+
+      - name: Maven license check
+        run: mvn -B -ntp org.apache.rat:apache-rat-plugin:0.16:check
+
+      - name: Maven Checkstyle
+        run: mvn -B -ntp checkstyle:check
+
+      - name: Run unit tests
+        run: mvn -B -ntp test
