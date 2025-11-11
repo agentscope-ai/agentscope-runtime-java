@@ -156,9 +156,9 @@ public class KubernetesClient extends BaseClient {
 
     @Override
     public ContainerCreateResult createContainer(String containerName, String imageName,
-                                  List<String> ports,
-                                  List<VolumeBinding> volumeBindings,
-                                  Map<String, String> environment, Map<String, Object> runtimeConfig) {
+                                                 List<String> ports,
+                                                 List<VolumeBinding> volumeBindings,
+                                                 Map<String, String> environment, Map<String, Object> runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Kubernetes client is not connected");
         }
@@ -183,7 +183,7 @@ public class KubernetesClient extends BaseClient {
 
             List<String> exposedPorts = new ArrayList<>();
             String serviceIp = "localhost";
-            
+
             if (!portMapping.isEmpty()) {
                 V1Service service = createLoadBalancerServiceObject(serviceName, deploymentName, portMapping);
                 V1Service createdService = coreApi.createNamespacedService(namespace, service).execute();
@@ -191,12 +191,12 @@ public class KubernetesClient extends BaseClient {
                         ", ports: " + createdService.getSpec().getPorts().stream()
                         .map(p -> p.getPort() + "->" + p.getTargetPort())
                         .toList());
-                
+
                 // Get exposed ports from portMapping
                 for (Integer port : portMapping.values()) {
                     exposedPorts.add(String.valueOf(port));
                 }
-                
+
                 // Try to get LoadBalancer External IP (preferred)
                 try {
                     String externalIP = waitForLoadBalancerExternalIP(deploymentName, 60);
@@ -245,7 +245,7 @@ public class KubernetesClient extends BaseClient {
             throw new RuntimeException("Failed to create container", e);
         }
     }
-    
+
     /**
      * Get the IP of the node where the pod is running
      */
@@ -254,17 +254,17 @@ public class KubernetesClient extends BaseClient {
             V1PodList podList = coreApi.listNamespacedPod(namespace)
                     .labelSelector("app=" + podName)
                     .execute();
-            
+
             if (podList.getItems().isEmpty()) {
                 return null;
             }
-            
+
             V1Pod pod = podList.getItems().get(0);
             String nodeName = pod.getSpec().getNodeName();
             if (nodeName == null) {
                 return null;
             }
-            
+
             V1Node node = coreApi.readNode(nodeName).execute();
             if (node.getStatus() != null && node.getStatus().getAddresses() != null) {
                 for (V1NodeAddress address : node.getStatus().getAddresses()) {
@@ -278,7 +278,7 @@ public class KubernetesClient extends BaseClient {
                     }
                 }
             }
-            
+
             return null;
         } catch (Exception e) {
             logger.warning("Failed to get pod node IP: " + e.getMessage());
@@ -395,7 +395,7 @@ public class KubernetesClient extends BaseClient {
         List<V1VolumeMount> volumeMounts = new ArrayList<>();
         List<V1Volume> volumes = new ArrayList<>();
 
-        volumeBindings=null;
+        volumeBindings = null;
         if (volumeBindings != null && !volumeBindings.isEmpty()) {
             for (int i = 0; i < volumeBindings.size(); i++) {
                 VolumeBinding binding = volumeBindings.get(i);
