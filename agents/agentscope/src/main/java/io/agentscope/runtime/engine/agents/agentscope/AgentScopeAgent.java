@@ -118,12 +118,7 @@ public class AgentScopeAgent extends BaseAgent {
                 return null;
             }
 
-            MsgRole role = convertRole(message.getRole());
-            if (role == null) {
-                return null;
-            }
-
-            Msg.Builder builder = Msg.builder().role(role);
+            Msg.Builder builder = Msg.builder().role(MsgRole.USER);
 
             if (message.getContent() != null && !message.getContent().isEmpty()) {
                 List<ContentBlock> contentBlocks = new ArrayList<>();
@@ -312,7 +307,7 @@ public class AgentScopeAgent extends BaseAgent {
     }
 
     @Override
-    protected Flux<Event> execute(Context context, boolean stream) {
+    protected Flux<Event> execute(Context context) {
         return Flux.create(sink -> {
             try {
                 if (agentScopeBuilder == null) {
@@ -344,111 +339,70 @@ public class AgentScopeAgent extends BaseAgent {
 
                 // Create initial response message
                 Message textMessage = new Message();
-                textMessage.setType(MessageType.MESSAGE.name());
-                textMessage.setRole("assistant");
+                textMessage.setType(MessageType.ASSISTANT);
                 textMessage.setStatus(RunStatus.IN_PROGRESS);
                 sink.next(textMessage);
+                AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, agentScopeBuilder);
+                adapter.initialize();
 
-                if (stream) {
-                    AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, agentScopeBuilder);
-                    adapter.initialize();
+                Agent agentScopeAgent = adapter.getAgent();
 
-                    Agent agentScopeAgent = adapter.getAgent();
+                StreamOptions streamOptions = StreamOptions.builder()
+                        .eventTypes(EventType.REASONING, EventType.TOOL_RESULT)
+                        .incremental(true)
+                        .build();
 
-                    StreamOptions streamOptions = StreamOptions.builder()
-                            .eventTypes(EventType.REASONING, EventType.TOOL_RESULT)
-                            .incremental(true)
-                            .build();
+                agentScopeAgent.stream(userMsg, streamOptions)
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .subscribe(
+                                event -> {
+                                    try {
+                                        String delta = streamResponseProcessor.apply(event.getMessage());
+                                        TextContent deltaContent = new TextContent();
+                                        deltaContent.setText(delta);
+                                        deltaContent.setDelta(true);
+                                        Message deltaMessage = new Message();
 
-                    agentScopeAgent.stream(userMsg, streamOptions)
-                            .subscribeOn(Schedulers.boundedElastic())
-                            .subscribe(
-                                    event -> {
-                                        try {
-                                            String delta = streamResponseProcessor.apply(event.getMessage());
-                                            if (delta != null && !delta.isEmpty()) {
-                                                TextContent deltaContent = new TextContent();
-                                                deltaContent.setText(delta);
-                                                deltaContent.setDelta(true);
-                                                Message deltaMessage = new Message();
-                                                deltaMessage.setType(MessageType.MESSAGE.name());
-                                                deltaMessage.setRole("assistant");
-                                                deltaMessage.setStatus(RunStatus.IN_PROGRESS);
-                                                deltaMessage.setContent(List.of(deltaContent));
-                                                sink.next(deltaMessage);
+                                        for(var contentBlock: event.getMessage().getContent()){
+                                            if(contentBlock instanceof ToolUseBlock){
+                                                deltaMessage.setType(MessageType.TOOL_CALL);
                                             }
-                                        } catch (Exception e) {
-                                            logger.severe("Error processing stream event: " + e.getMessage());
+                                            else if(contentBlock instanceof ToolResultBlock){
+                                                deltaMessage.setType(MessageType.TOOL_RESPONSE);
+                                            }
                                         }
-                                    },
-                                    error -> {
-                                        logger.severe("Agent stream error: " + error.getMessage());
-                                        Message errorMessage = new Message();
-                                        errorMessage.setType(MessageType.MESSAGE.name());
-                                        errorMessage.setRole("assistant");
-                                        errorMessage.setStatus(RunStatus.FAILED);
-                                        TextContent errorContent = new TextContent();
-                                        errorContent.setText("Error: " + error.getMessage());
-                                        errorMessage.setContent(List.of(errorContent));
-                                        sink.next(errorMessage);
-                                        sink.error(error);
-                                    },
-                                    () -> {
-                                        Message completedMessage = new Message();
-                                        completedMessage.setType(MessageType.MESSAGE.name());
-                                        completedMessage.setRole("assistant");
-                                        completedMessage.setStatus(RunStatus.COMPLETED);
-                                        sink.next(completedMessage);
-                                        sink.complete();
+
+                                        deltaMessage.setStatus(RunStatus.IN_PROGRESS);
+                                        deltaMessage.setContent(List.of(deltaContent));
+                                        sink.next(deltaMessage);
+                                    } catch (Exception e) {
+                                        logger.severe("Error processing stream event: " + e.getMessage());
                                     }
-                            );
-
-                } else {
-                    AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, agentScopeBuilder);
-                    adapter.initialize();
-
-                    // Get the agent from builder
-                    Agent agentScopeAgent = adapter.getAgent();
-
-                    agentScopeAgent.call(userMsg)
-                            .subscribeOn(Schedulers.boundedElastic())
-                            .subscribe(
-                                    result -> {
-                                        try {
-                                            String content = responseProcessor.apply(result);
-
-                                            TextContent textContent = new TextContent();
-                                            textContent.setText(content);
-                                            textContent.setDelta(false);
-                                            textMessage.setContent(List.of(textContent));
-                                            textMessage.setStatus(RunStatus.COMPLETED);
-                                            sink.next(textMessage);
-                                            sink.complete();
-                                        } catch (Exception e) {
-                                            logger.severe("Error processing response: " + e.getMessage());
-                                            sink.error(e);
-                                        }
-                                    },
-                                    error -> {
-                                        logger.severe("Agent call error: " + error.getMessage());
-                                        Message errorMessage = new Message();
-                                        errorMessage.setType(MessageType.MESSAGE.name());
-                                        errorMessage.setRole("assistant");
-                                        errorMessage.setStatus(RunStatus.FAILED);
-                                        TextContent errorContent = new TextContent();
-                                        errorContent.setText("Error: " + error.getMessage());
-                                        errorMessage.setContent(List.of(errorContent));
-                                        sink.next(errorMessage);
-                                        sink.error(error);
-                                    }
-                            );
-                }
+                                },
+                                error -> {
+                                    logger.severe("Agent stream error: " + error.getMessage());
+                                    Message errorMessage = new Message();
+                                    errorMessage.setType(MessageType.ASSISTANT);
+                                    errorMessage.setStatus(RunStatus.FAILED);
+                                    TextContent errorContent = new TextContent();
+                                    errorContent.setText("Error: " + error.getMessage());
+                                    errorMessage.setContent(List.of(errorContent));
+                                    sink.next(errorMessage);
+                                    sink.error(error);
+                                },
+                                () -> {
+                                    Message completedMessage = new Message();
+                                    completedMessage.setType(MessageType.ASSISTANT);
+                                    completedMessage.setStatus(RunStatus.COMPLETED);
+                                    sink.next(completedMessage);
+                                    sink.complete();
+                                }
+                        );
 
             } catch (Exception e) {
                 logger.severe("Error in execute: " + e.getMessage());
                 Message errorMessage = new Message();
-                errorMessage.setType(MessageType.MESSAGE.name());
-                errorMessage.setRole("assistant");
+                errorMessage.setType(MessageType.ASSISTANT);
                 errorMessage.setStatus(RunStatus.FAILED);
                 TextContent errorContent = new TextContent();
                 errorContent.setText("Error: " + e.getMessage());

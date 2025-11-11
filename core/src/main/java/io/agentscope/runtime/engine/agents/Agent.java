@@ -35,7 +35,7 @@ public interface Agent {
      * @param context execution context
      * @return event stream
      */
-    CompletableFuture<Flux<Event>> runAsync(Context context, boolean stream);
+    CompletableFuture<Flux<Event>> runAsync(Context context);
     
     /**
      * Set pre-execution callback

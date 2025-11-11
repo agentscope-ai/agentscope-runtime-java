@@ -18,7 +18,6 @@ package io.agentscope.runtime.engine.memory.persistence.memory.service;
 
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 
 import java.util.*;
@@ -171,17 +170,14 @@ public class InMemoryMemoryService implements MemoryService {
         if (message == null || message.getContent() == null) {
             return null;
         }
-        
-        if (message.getType() == MessageType.MESSAGE) {
-            return message.getContent().stream()
-                    .filter(content -> "text".equals(content.getType()))
-                    .map(MessageContent::getText)
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse(null);
-        }
-        
-        return null;
+
+        // Todo: TEST ME
+        return message.getContent().stream()
+                .filter(content -> "text".equals(content.getType()))
+                .map(MessageContent::getText)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("");
     }
     
 }

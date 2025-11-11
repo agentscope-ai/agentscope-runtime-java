@@ -68,7 +68,6 @@ public class Runner {
                 if (memorySession.getMessages() != null) {
                     for (io.agentscope.runtime.engine.memory.model.Message memoryMsg : memorySession.getMessages()) {
                         io.agentscope.runtime.engine.schemas.agent.Message agentMsg = new io.agentscope.runtime.engine.schemas.agent.Message();
-                        agentMsg.setRole(memoryMsg.getType() == io.agentscope.runtime.engine.memory.model.MessageType.USER ? "user" : "assistant");
 
                         List<io.agentscope.runtime.engine.schemas.agent.Content> content = new ArrayList<>();
                         if (memoryMsg.getContent() != null) {
@@ -96,7 +95,7 @@ public class Runner {
                     context.setCurrentMessages(request.getInput());
                 }
 
-                CompletableFuture<Flux<Event>> agentFuture = this.agent.runAsync(context, this.stream);
+                CompletableFuture<Flux<Event>> agentFuture = this.agent.runAsync(context);
 
                 agentFuture.thenAccept(eventFlux -> {
                     StringBuilder aiResponse = new StringBuilder();
@@ -105,7 +104,8 @@ public class Runner {
                                 sink.next(event);
                                 // Collect AI response content
                                 if (event instanceof Message message) {
-                                    if (MessageType.MESSAGE.name().equals(message.getType()) &&
+                                    // Todo: FIX ME
+                                    if (MessageType.ASSISTANT.equals(message.getType()) &&
                                             "completed".equals(message.getStatus())) {
                                         if (message.getContent() != null && !message.getContent().isEmpty()) {
                                             Content content = message.getContent().get(0);

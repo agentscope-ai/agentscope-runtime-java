@@ -19,21 +19,8 @@ package io.agentscope.runtime.engine.memory.model;
  * Message type enumeration
  */
 public enum MessageType {
-    CHUNK,
-    MESSAGE,
-    SYSTEM,
     USER,
     ASSISTANT,
-    FUNCTION_CALL,
-    FUNCTION_CALL_OUTPUT,
-    PLUGIN_CALL,
-    PLUGIN_CALL_OUTPUT,
-    COMPONENT_CALL,
-    COMPONENT_CALL_OUTPUT,
-    MCP_LIST_TOOLS,
-    MCP_APPROVAL_REQUEST,
-    MCP_TOOL_CALL,
-    MCP_APPROVAL_RESPONSE,
-    HEARTBEAT,
-    ERROR
+    TOOL_CALL,
+    TOOL_RESPONSE
 }

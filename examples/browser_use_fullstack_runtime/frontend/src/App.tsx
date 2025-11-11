@@ -45,6 +45,7 @@ type ChatMessage = {
   think: string;
   sender: string;
   site: SiteItem[];
+  status?: string;
 }[];
 
 const App: React.FC = () => {
@@ -62,6 +63,7 @@ const App: React.FC = () => {
       sender: "assistant",
       think: "",
       site: [],
+      status: undefined,
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
@@ -100,6 +102,7 @@ const App: React.FC = () => {
       sender: "user",
       think: "",
       site: [],
+      status: undefined,
     };
 
     const newMessages = [...messages, newMessage];
@@ -152,6 +155,7 @@ const App: React.FC = () => {
         sender: "assistant",
         think: "",
         site: [],
+        status: undefined,
       },
     ]);
     while (true) {
@@ -169,8 +173,22 @@ const App: React.FC = () => {
 
         try {
           const parsed = JSON.parse(line.split("data: ")[1]);
-          const content = parsed.choices[0]?.delta?.content || "";
-          if (content) {
+          const delta = parsed.choices[0]?.delta || {};
+          const content = delta.content || "";
+          const messageType = delta.messageType;
+          
+          if (messageType === "TOOL_CALL" || messageType === "TOOL_RESPONSE") {
+            setMessages((prevMessages) => [
+              ...prevMessages.slice(0, -1),
+              {
+                ...prevMessages[prevMessages.length - 1],
+                message: prevMessages[prevMessages.length - 1].message,
+                sender: "assistant",
+                site: [],
+                status: messageType,
+              },
+            ]);
+          } else if (content) {
             setMessages((prevMessages) => [
               ...prevMessages.slice(0, -1),
               {
@@ -179,6 +197,7 @@ const App: React.FC = () => {
                   prevMessages[prevMessages.length - 1].message + content,
                 sender: "assistant",
                 site: [],
+                status: undefined,
               },
             ]);
           }
@@ -249,6 +268,31 @@ const App: React.FC = () => {
                           <ReactMarkdown>{item.message}</ReactMarkdown>
                         ) : (
                           <Text>{item.message}</Text>
+                        )}
+                        {}
+                        {item.status === "TOOL_CALL" && (
+                          <div style={{ 
+                            marginTop: 8, 
+                            padding: 8, 
+                            backgroundColor: "#e6f7ff", 
+                            borderRadius: 4,
+                            color: "#1890ff",
+                            fontSize: 14
+                          }}>
+                            🔧 Calling Tools...
+                          </div>
+                        )}
+                        {item.status === "TOOL_RESPONSE" && (
+                          <div style={{ 
+                            marginTop: 8, 
+                            padding: 8, 
+                            backgroundColor: "#f6ffed", 
+                            borderRadius: 4,
+                            color: "#52c41a",
+                            fontSize: 14
+                          }}>
+                            ✅ Tool Call Completes
+                          </div>
                         )}
                         {isTyping &&
                           item === messages[messages.length - 1] && (

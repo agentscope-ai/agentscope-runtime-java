@@ -33,6 +33,9 @@ import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHi
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
+import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
@@ -107,6 +110,7 @@ public class SaaAgentDeployExample {
 
             Runner runner = Runner.builder()
                     .agent(saaAgent)
+                    .environmentManager(new DefaultEnvironmentManager(new SandboxManager(ManagerConfig.builder().build())))
                     .contextManager(contextManager)
                     .build();
             LocalDeployManager.builder().build().deploy(runner);

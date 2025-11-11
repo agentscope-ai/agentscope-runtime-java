@@ -506,7 +506,6 @@ public class Mem0MemoryService implements MemoryService {
         return switch (type) {
             case USER -> "user";
             case ASSISTANT -> "assistant";
-            case SYSTEM -> "system";
             default -> "user";
         };
     }
@@ -519,16 +518,13 @@ public class Mem0MemoryService implements MemoryService {
             return "";
         }
 
-        if (message.getType() == MessageType.MESSAGE) {
-            return message.getContent().stream()
-                    .filter(content -> "text".equals(content.getType()))
-                    .map(MessageContent::getText)
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse("");
-        }
-
-        return "";
+        // Todo: TEST ME
+        return message.getContent().stream()
+                .filter(content -> "text".equals(content.getType()))
+                .map(MessageContent::getText)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("");
     }
 
     /**
@@ -586,7 +582,8 @@ public class Mem0MemoryService implements MemoryService {
      */
     private Message createMessageFromMemoryText(String memoryText, JsonNode memoryNode) {
         Message message = new Message();
-        message.setType(MessageType.MESSAGE);
+        // Todo: TEST ME
+        message.setType(MessageType.USER);
 
         MessageContent content = new MessageContent("text", memoryText);
         message.setContent(Collections.singletonList(content));

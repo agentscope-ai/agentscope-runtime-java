@@ -23,6 +23,7 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
+import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
@@ -163,7 +164,7 @@ public class ToolCallRunnerStreamTest {
 
         // Create message
         Message message = new Message();
-        message.setRole("user");
+        message.setType(MessageType.USER);
         message.setContent(List.of(textContent));
 
         // Set input messages
@@ -180,7 +181,6 @@ public class ToolCallRunnerStreamTest {
     private void handleEvent(Event event) {
         if (event instanceof Message message) {
             System.out.println("Event - Type: " + message.getType() +
-                    ", Role: " + message.getRole() +
                     ", Status: " + message.getStatus());
 
             if (message.getContent() != null && !message.getContent().isEmpty()) {

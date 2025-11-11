@@ -27,6 +27,7 @@ import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
+import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
@@ -107,9 +108,9 @@ public class AgentscopeBrowserUseAgent {
 //                .agentRunAccessKeySecret(System.getenv("AGENT_RUN_ACCESS_KEY_SECRET"))
 //                .build();
 
-//        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
 
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+//        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
                 .containerDeployment(clientConfig)
                 .build();
@@ -192,7 +193,7 @@ public class AgentscopeBrowserUseAgent {
         List<Message> convertedMessages = new ArrayList<>();
 
         Message message = new Message();
-        message.setRole("user");
+        message.setType(MessageType.USER);
 
         TextContent textContent = new TextContent();
         textContent.setText(userMessage);
@@ -225,7 +226,7 @@ public class AgentscopeBrowserUseAgent {
         List<Message> convertedMessages = new ArrayList<>();
 
         Message message = new Message();
-        message.setRole(chatMessages.get(chatMessages.size()-1).get("role"));
+        message.setType(MessageType.USER);
 
         TextContent textContent = new TextContent();
         textContent.setText(chatMessages.get(chatMessages.size()-1).get("content"));

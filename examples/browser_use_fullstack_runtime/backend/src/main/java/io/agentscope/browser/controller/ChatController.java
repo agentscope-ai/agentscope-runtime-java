@@ -17,6 +17,7 @@
 package io.agentscope.browser.controller;
 
 import io.agentscope.browser.agent.AgentscopeBrowserUseAgent;
+import io.agentscope.runtime.engine.memory.model.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.Content;
 import io.agentscope.runtime.engine.schemas.agent.DataContent;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
@@ -66,8 +67,20 @@ public class ChatController {
 
         return agent.chat(messages)
                 .flatMap(message -> {
-                    if (message == null || message.getContent() == null || message.getContent().isEmpty()) {
-                        return Flux.just(simpleYield("", "content"));
+                    if (message == null) {
+                        return Flux.just(simpleYield("", "content", null));
+                    }
+
+                    // Get message type
+                    MessageType messageType = message.getType();
+                    
+                    // If it's TOOL_CALL or TOOL_RESPONSE, send status update only (no content)
+                    if (messageType == MessageType.TOOL_CALL || messageType == MessageType.TOOL_RESPONSE) {
+                        return Flux.just(simpleYield("", "content", messageType.name()));
+                    }
+
+                    if (message.getContent() == null || message.getContent().isEmpty()) {
+                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null));
                     }
 
                     List<Content> contentList = message.getContent();
@@ -91,14 +104,14 @@ public class ChatController {
 
                     String response = responseBuilder.toString();
                     if (!response.isEmpty()) {
-                        return Flux.just(simpleYield(response, "content"));
+                        return Flux.just(simpleYield(response, "content", messageType != null ? messageType.name() : null));
                     } else {
-                        return Flux.just(simpleYield("", "content"));
+                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null));
                     }
                 })
                 .onErrorResume(error -> {
                     logger.error("Error during chat completion", error);
-                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content"));
+                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content", null));
                 });
     }
 
@@ -115,8 +128,20 @@ public class ChatController {
         return agent.chatSimple(userMessage)
                 .flatMap(message -> {
                     System.out.println("Received message: " + message);
-                    if (message == null || message.getContent() == null || message.getContent().isEmpty()) {
-                        return Flux.just(simpleYield("", "content"));
+                    if (message == null) {
+                        return Flux.just(simpleYield("", "content", null));
+                    }
+
+                    // Get message type
+                    MessageType messageType = message.getType();
+                    
+                    // If it's TOOL_CALL or TOOL_RESPONSE, send status update only (no content)
+                    if (messageType == MessageType.TOOL_RESPONSE || messageType == MessageType.TOOL_CALL) {
+                        return Flux.just(simpleYield("", "content", messageType.name()));
+                    }
+
+                    if (message.getContent() == null || message.getContent().isEmpty()) {
+                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null));
                     }
 
                     List<Content> contentList = message.getContent();
@@ -139,14 +164,14 @@ public class ChatController {
 
                     String response = responseBuilder.toString();
                     if (!response.isEmpty()) {
-                        return Flux.just(simpleYield(response, "content"));
+                        return Flux.just(simpleYield(response, "content", messageType != null ? messageType.name() : null));
                     } else {
-                        return Flux.just(simpleYield("", "content"));
+                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null));
                     }
                 })
                 .onErrorResume(error -> {
                     logger.error("Error during chat completion", error);
-                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content"));
+                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content", null));
                 });
     }
 
@@ -177,8 +202,8 @@ public class ChatController {
     /**
      * Format response as SSE (Server-Sent Events) compatible string
      */
-    private String simpleYield(String content, String ctype) {
-        Map<String, Object> response = wrapAsOpenAIResponse(content, content, ctype);
+    private String simpleYield(String content, String ctype, String messageType) {
+        Map<String, Object> response = wrapAsOpenAIResponse(content, content, ctype, messageType);
 
         try {
             // Use simple JSON formatting
@@ -193,7 +218,7 @@ public class ChatController {
     /**
      * Wrap content as OpenAI-compatible response
      */
-    private Map<String, Object> wrapAsOpenAIResponse(String textContent, String cardContent, String ctype) {
+    private Map<String, Object> wrapAsOpenAIResponse(String textContent, String cardContent, String ctype, String messageType) {
         String contentType;
 
         contentType = switch (ctype) {
@@ -205,6 +230,10 @@ public class ChatController {
         Map<String, Object> delta = new HashMap<>();
         delta.put(contentType, textContent);
         delta.put("cards", cardContent);
+        // Add messageType to delta if present
+        if (messageType != null) {
+            delta.put("messageType", messageType);
+        }
 
         Map<String, Object> choice = new HashMap<>();
         choice.put("delta", delta);

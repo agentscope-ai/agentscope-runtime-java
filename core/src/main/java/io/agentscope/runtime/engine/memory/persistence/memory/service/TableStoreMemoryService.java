@@ -359,16 +359,13 @@ public class TableStoreMemoryService implements MemoryService {
             return "";
         }
 
-        if (message.getType() == MessageType.MESSAGE) {
-            return message.getContent().stream()
-                    .filter(content -> "text".equals(content.getType()))
-                    .map(MessageContent::getText)
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse("");
-        }
-
-        return "";
+        // Todo: TEST ME
+        return message.getContent().stream()
+                .filter(content -> "text".equals(content.getType()))
+                .map(MessageContent::getText)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("");
     }
 }
 
