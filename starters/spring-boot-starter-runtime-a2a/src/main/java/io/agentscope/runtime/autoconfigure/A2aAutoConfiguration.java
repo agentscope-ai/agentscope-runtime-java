@@ -15,6 +15,8 @@
  */
 package io.agentscope.runtime.autoconfigure;
 
+import io.agentscope.runtime.protocol.ProtocolConfig;
+import io.agentscope.runtime.protocol.a2a.A2aProtocolConfig;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -23,7 +25,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ComponentScan(value = {"io.agentscope.runtime.autoconfigure",
         "io.agentscope.runtime.protocol.a2a"})
-@EnableConfigurationProperties(A2aCommonProperties.class)
+@EnableConfigurationProperties({A2aCommonProperties.class, A2aAgentCardProperties.class})
 public class A2aAutoConfiguration {
 
     @Bean
@@ -31,4 +33,23 @@ public class A2aAutoConfiguration {
         return new DeployProperties(properties.getServerPort(), properties.getServerAddress(), properties.getEndpointName());
     }
 
+    @Bean
+    public ProtocolConfig a2aProtocolConfig(A2aAgentCardProperties properties) {
+        A2aProtocolConfig.Builder builder = new A2aProtocolConfig.Builder();
+        return builder.name(properties.getName())
+                .description(properties.getDescription())
+                .url(properties.getUrl())
+                .provider(properties.getProvider())
+                .version(properties.getVersion())
+                .documentationUrl(properties.getDocumentationUrl())
+                .defaultInputModes(properties.getDefaultInputModes())
+                .defaultOutputModes(properties.getDefaultOutputModes())
+                .skills(properties.getSkills())
+                .supportsAuthenticatedExtendedCard(properties.isSupportsAuthenticatedExtendedCard())
+                .securitySchemes(properties.getSecuritySchemes())
+                .security(properties.getSecurity())
+                .iconUrl(properties.getIconUrl())
+                .additionalInterfaces(properties.getAdditionalInterfaces())
+                .build();
+    }
 }

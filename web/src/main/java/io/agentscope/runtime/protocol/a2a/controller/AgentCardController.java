@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.agentscope.runtime.protocol.a2a.controller;
 
 import io.a2a.spec.AgentCard;
-import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.a2a.AgentHandlerConfiguration;
 import io.agentscope.runtime.protocol.a2a.JSONRPCHandler;
-
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,15 +29,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/")
 public class AgentCardController {
 
-	private final JSONRPCHandler jsonRpcHandler;
+    private final JSONRPCHandler jsonRpcHandler;
 
-	public AgentCardController(Runner runner, DeployProperties serverConfig) {
-		this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner, serverConfig).jsonrpcHandler();
-	}
+    public AgentCardController(Runner runner, AgentCard agentCard) {
+        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner, agentCard).jsonrpcHandler();
+    }
 
-	@GetMapping(value = "/.well-known/agent.json", produces = MediaType.APPLICATION_JSON_VALUE)
-	public AgentCard getAgentCard() {
-		return jsonRpcHandler.getAgentCard();
-	}
+    @GetMapping(value = "/.well-known/agent.json", produces = MediaType.APPLICATION_JSON_VALUE)
+    public AgentCard getAgentCard() {
+        return jsonRpcHandler.getAgentCard();
+    }
 
 }
