@@ -68,19 +68,57 @@ public class ChatController {
         return agent.chat(messages)
                 .flatMap(message -> {
                     if (message == null) {
-                        return Flux.just(simpleYield("", "content", null));
+                        return Flux.just(simpleYield("", "content", null, null, null, null));
                     }
 
                     // Get message type
                     MessageType messageType = message.getType();
                     
-                    // If it's TOOL_CALL or TOOL_RESPONSE, send status update only (no content)
+                    // If it's TOOL_CALL or TOOL_RESPONSE, extract tool information
                     if (messageType == MessageType.TOOL_CALL || messageType == MessageType.TOOL_RESPONSE) {
-                        return Flux.just(simpleYield("", "content", messageType.name()));
+                        String toolName = null;
+                        String toolId = null;
+                        String toolInput = null;
+                        String toolResult = null;
+                        
+                        // Extract tool information from content
+                        if (message.getContent() != null && !message.getContent().isEmpty()) {
+                            for (Content item : message.getContent()) {
+                                if (item instanceof TextContent textContent) {
+                                    String text = textContent.getText();
+                                    if (text != null && !text.isEmpty()) {
+                                        Map<String, String> toolInfo = parseToolInfo(text);
+                                        if (toolInfo != null) {
+                                            toolName = (String)toolInfo.get("toolName");
+                                            toolId = (String)toolInfo.get("toolId");
+                                            if (messageType == MessageType.TOOL_CALL) {
+                                                toolInput = toolInfo.get("toolInput").toString();
+                                            } else {
+                                                toolResult = toolInfo.get("toolResult").toString();
+                                            }
+                                        }
+                                    }
+                                } else if (item instanceof DataContent dataContent) {
+                                    Map<String, Object> data = dataContent.getData();
+                                    if (data != null) {
+                                        toolName = data.containsKey("name") ? String.valueOf(data.get("name")) : null;
+                                        toolId = data.containsKey("id") ? String.valueOf(data.get("id")) : null;
+                                        if (messageType == MessageType.TOOL_CALL) {
+                                            toolInput = data.containsKey("input") ? String.valueOf(data.get("input")) : null;
+                                        } else {
+                                            toolResult = data.containsKey("result") ? String.valueOf(data.get("result")) : null;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        return Flux.just(simpleYield("", "content", messageType.name(), toolName, toolId, 
+                                messageType == MessageType.TOOL_CALL ? toolInput : toolResult));
                     }
 
                     if (message.getContent() == null || message.getContent().isEmpty()) {
-                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null));
+                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null, null, null, null));
                     }
 
                     List<Content> contentList = message.getContent();
@@ -104,14 +142,14 @@ public class ChatController {
 
                     String response = responseBuilder.toString();
                     if (!response.isEmpty()) {
-                        return Flux.just(simpleYield(response, "content", messageType != null ? messageType.name() : null));
+                        return Flux.just(simpleYield(response, "content", messageType != null ? messageType.name() : null, null, null, null));
                     } else {
-                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null));
+                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null, null, null, null));
                     }
                 })
                 .onErrorResume(error -> {
                     logger.error("Error during chat completion", error);
-                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content", null));
+                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content", null, null, null, null));
                 });
     }
 
@@ -129,19 +167,55 @@ public class ChatController {
                 .flatMap(message -> {
                     System.out.println("Received message: " + message);
                     if (message == null) {
-                        return Flux.just(simpleYield("", "content", null));
+                        return Flux.just(simpleYield("", "content", null, null, null, null));
                     }
 
                     // Get message type
                     MessageType messageType = message.getType();
                     
-                    // If it's TOOL_CALL or TOOL_RESPONSE, send status update only (no content)
-                    if (messageType == MessageType.TOOL_RESPONSE || messageType == MessageType.TOOL_CALL) {
-                        return Flux.just(simpleYield("", "content", messageType.name()));
+                    if (messageType == MessageType.TOOL_CALL || messageType == MessageType.TOOL_RESPONSE) {
+                        String toolName = null;
+                        String toolId = null;
+                        String toolInput = null;
+                        String toolResult = null;
+                        
+                        if (message.getContent() != null && !message.getContent().isEmpty()) {
+                            for (Content item : message.getContent()) {
+                                if (item instanceof TextContent textContent) {
+                                    String text = textContent.getText();
+                                    if (text != null && !text.isEmpty()) {
+                                        Map<String, String> toolInfo = parseToolInfo(text);
+                                        if (toolInfo != null) {
+                                            toolName = (String)toolInfo.get("toolName");
+                                            toolId = (String)toolInfo.get("toolId");
+                                            if (messageType == MessageType.TOOL_CALL) {
+                                                toolInput = toolInfo.get("toolInput").toString();
+                                            } else {
+                                                toolResult = toolInfo.get("toolResult").toString();
+                                            }
+                                        }
+                                    }
+                                } else if (item instanceof DataContent dataContent) {
+                                    Map<String, Object> data = dataContent.getData();
+                                    if (data != null) {
+                                        toolName = data.containsKey("name") ? String.valueOf(data.get("name")) : null;
+                                        toolId = data.containsKey("id") ? String.valueOf(data.get("id")) : null;
+                                        if (messageType == MessageType.TOOL_CALL) {
+                                            toolInput = "";
+                                        } else {
+                                            toolResult = "";
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        return Flux.just(simpleYield("", "content", messageType.name(), toolName, toolId, 
+                                messageType == MessageType.TOOL_CALL ? toolInput : toolResult));
                     }
 
                     if (message.getContent() == null || message.getContent().isEmpty()) {
-                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null));
+                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null, null, null, null));
                     }
 
                     List<Content> contentList = message.getContent();
@@ -164,14 +238,14 @@ public class ChatController {
 
                     String response = responseBuilder.toString();
                     if (!response.isEmpty()) {
-                        return Flux.just(simpleYield(response, "content", messageType != null ? messageType.name() : null));
+                        return Flux.just(simpleYield(response, "content", messageType != null ? messageType.name() : null, null, null, null));
                     } else {
-                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null));
+                        return Flux.just(simpleYield("", "content", messageType != null ? messageType.name() : null, null, null, null));
                     }
                 })
                 .onErrorResume(error -> {
                     logger.error("Error during chat completion", error);
-                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content", null));
+                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content", null, null, null, null));
                 });
     }
 
@@ -202,8 +276,8 @@ public class ChatController {
     /**
      * Format response as SSE (Server-Sent Events) compatible string
      */
-    private String simpleYield(String content, String ctype, String messageType) {
-        Map<String, Object> response = wrapAsOpenAIResponse(content, content, ctype, messageType);
+    private String simpleYield(String content, String ctype, String messageType, String toolName, String toolId, String toolData) {
+        Map<String, Object> response = wrapAsOpenAIResponse(content, content, ctype, messageType, toolName, toolId, toolData);
 
         try {
             // Use simple JSON formatting
@@ -218,7 +292,7 @@ public class ChatController {
     /**
      * Wrap content as OpenAI-compatible response
      */
-    private Map<String, Object> wrapAsOpenAIResponse(String textContent, String cardContent, String ctype, String messageType) {
+    private Map<String, Object> wrapAsOpenAIResponse(String textContent, String cardContent, String ctype, String messageType, String toolName, String toolId, String toolData) {
         String contentType;
 
         contentType = switch (ctype) {
@@ -233,6 +307,20 @@ public class ChatController {
         // Add messageType to delta if present
         if (messageType != null) {
             delta.put("messageType", messageType);
+        }
+        // Add tool information if present
+        if (toolName != null) {
+            delta.put("toolName", toolName);
+        }
+        if (toolId != null) {
+            delta.put("toolId", toolId);
+        }
+        if (toolData != null) {
+            if (MessageType.TOOL_CALL.name().equals(messageType)) {
+                delta.put("toolInput", toolData);
+            } else if (MessageType.TOOL_RESPONSE.name().equals(messageType)) {
+                delta.put("toolResult", toolData);
+            }
         }
 
         Map<String, Object> choice = new HashMap<>();
@@ -307,6 +395,40 @@ public class ChatController {
                   .replace("\n", "\\n")
                   .replace("\r", "\\r")
                   .replace("\t", "\\t");
+    }
+
+    /**
+     * Parse tool information from Map string format: {toolName=..., toolId=..., toolInput=...} or {toolName=..., toolId=..., result=...}
+     */
+    private Map<String, String> parseToolInfo(String mapString) {
+        if (mapString == null || !mapString.startsWith("{") || !mapString.endsWith("}")) {
+            return null;
+        }
+
+        Map<String, String> result = new HashMap<>();
+        try {
+            // Remove outer braces
+            String content = mapString.substring(1, mapString.length() - 1).trim();
+            if (content.isEmpty()) {
+                return result;
+            }
+
+            // Split by comma, but be careful with commas inside values
+            String[] pairs = content.split(",");
+            for (String pair : pairs) {
+                String[] keyValue = pair.split("=", 2);
+                if (keyValue.length == 2) {
+                    String key = keyValue[0].trim();
+                    String value = keyValue[1].trim();
+                    result.put(key, value);
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to parse tool info from string: " + mapString, e);
+            return null;
+        }
+
+        return result;
     }
 }
 

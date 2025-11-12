@@ -21,6 +21,7 @@ package io.agentscope.runtime.engine.memory.model;
 public enum MessageType {
     USER,
     ASSISTANT,
+    THINKING,
     TOOL_CALL,
     TOOL_RESPONSE
 }

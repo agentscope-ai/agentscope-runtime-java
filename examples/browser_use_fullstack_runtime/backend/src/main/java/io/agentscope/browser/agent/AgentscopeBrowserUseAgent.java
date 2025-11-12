@@ -108,9 +108,9 @@ public class AgentscopeBrowserUseAgent {
 //                .agentRunAccessKeySecret(System.getenv("AGENT_RUN_ACCESS_KEY_SECRET"))
 //                .build();
 
-        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+//        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
 
-//        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
                 .containerDeployment(clientConfig)
                 .build();

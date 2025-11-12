@@ -46,6 +46,10 @@ type ChatMessage = {
   sender: string;
   site: SiteItem[];
   status?: string;
+  toolName?: string;
+  toolId?: string;
+  toolInput?: string;
+  toolResult?: string;
 }[];
 
 const App: React.FC = () => {
@@ -57,13 +61,17 @@ const App: React.FC = () => {
       inputRef.current.select();
     }
   };
-  const [messages, setMessages] = useState<ChatMessage>([
+    const [messages, setMessages] = useState<ChatMessage>([
     {
       message: "Hello, I'm the assistant! Ask me anything!",
       sender: "assistant",
       think: "",
       site: [],
       status: undefined,
+      toolName: undefined,
+      toolId: undefined,
+      toolInput: undefined,
+      toolResult: undefined,
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
@@ -103,6 +111,10 @@ const App: React.FC = () => {
       think: "",
       site: [],
       status: undefined,
+      toolName: undefined,
+      toolId: undefined,
+      toolInput: undefined,
+      toolResult: undefined,
     };
 
     const newMessages = [...messages, newMessage];
@@ -156,6 +168,10 @@ const App: React.FC = () => {
         think: "",
         site: [],
         status: undefined,
+        toolName: undefined,
+        toolId: undefined,
+        toolInput: undefined,
+        toolResult: undefined,
       },
     ]);
     while (true) {
@@ -186,6 +202,10 @@ const App: React.FC = () => {
                 sender: "assistant",
                 site: [],
                 status: messageType,
+                toolName: delta.toolName,
+                toolId: delta.toolId,
+                toolInput: delta.toolInput,
+                toolResult: delta.toolResult,
               },
             ]);
           } else if (content) {
@@ -273,25 +293,55 @@ const App: React.FC = () => {
                         {item.status === "TOOL_CALL" && (
                           <div style={{ 
                             marginTop: 8, 
-                            padding: 8, 
+                            padding: 12, 
                             backgroundColor: "#e6f7ff", 
                             borderRadius: 4,
                             color: "#1890ff",
                             fontSize: 14
                           }}>
-                            🔧 Calling Tools...
+                            <div style={{ fontWeight: "bold", marginBottom: 8 }}>
+                              🔧 Calling Tool: {item.toolName || "Unknown"}
+                            </div>
+                            {item.toolId && (
+                              <div style={{ fontSize: 12, marginBottom: 4, opacity: 0.8 }}>
+                                Tool ID: {item.toolId}
+                              </div>
+                            )}
+                            {item.toolInput && (
+                              <div style={{ fontSize: 12, marginTop: 8, padding: 8, backgroundColor: "rgba(255,255,255,0.5)", borderRadius: 4 }}>
+                                <div style={{ fontWeight: "bold", marginBottom: 4 }}>Input:</div>
+                                <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                  {item.toolInput}
+                                </pre>
+                              </div>
+                            )}
                           </div>
                         )}
                         {item.status === "TOOL_RESPONSE" && (
                           <div style={{ 
                             marginTop: 8, 
-                            padding: 8, 
+                            padding: 12, 
                             backgroundColor: "#f6ffed", 
                             borderRadius: 4,
                             color: "#52c41a",
                             fontSize: 14
                           }}>
-                            ✅ Tool Call Completes
+                            <div style={{ fontWeight: "bold", marginBottom: 8 }}>
+                              ✅ Tool Call Complete: {item.toolName || "Unknown"}
+                            </div>
+                            {item.toolId && (
+                              <div style={{ fontSize: 12, marginBottom: 4, opacity: 0.8 }}>
+                                Tool ID: {item.toolId}
+                              </div>
+                            )}
+                            {item.toolResult && (
+                              <div style={{ fontSize: 12, marginTop: 8, padding: 8, backgroundColor: "rgba(255,255,255,0.5)", borderRadius: 4 }}>
+                                <div style={{ fontWeight: "bold", marginBottom: 4 }}>Result:</div>
+                                <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                  {item.toolResult}
+                                </pre>
+                              </div>
+                            )}
                           </div>
                         )}
                         {isTyping &&
