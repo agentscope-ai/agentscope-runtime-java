@@ -17,7 +17,7 @@
 package io.agentscope.runtime.engine.agents.agentscope;
 
 import io.agentscope.core.ReActAgent;
-import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
+import io.agentscope.core.formatter.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.Toolkit;

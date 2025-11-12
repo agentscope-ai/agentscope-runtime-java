@@ -27,7 +27,21 @@ import java.util.concurrent.CompletableFuture;
  * Corresponds to the Agent class in base_agent.py of the Python version
  */
 public interface Agent {
-    
+
+    /**
+     * Get name of Agent.
+     *
+     * @return agent name
+     */
+    String getName();
+
+    /**
+     * Get description of Agent.
+     *
+     * @return agent description
+     */
+    String getDescription();
+
     /**
      * Execute Agent asynchronously
      * Corresponds to the run_async method of the Python version
