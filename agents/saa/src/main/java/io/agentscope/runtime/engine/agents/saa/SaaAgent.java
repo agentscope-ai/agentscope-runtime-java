@@ -274,7 +274,25 @@ public class SaaAgent extends BaseAgent {
         this.responseProcessor = responseProcessor != null ? responseProcessor : this::defaultResponseProcessor;
         this.streamResponseProcessor = streamResponseProcessor != null ? streamResponseProcessor : this::defaultStreamResponseProcessor;
     }
-
+    
+    @Override
+    public String getName() {
+        try {
+            return originalAgentBuilder.build().name();
+        } catch (GraphStateException ignored) {
+            return "";
+        }
+    }
+    
+    @Override
+    public String getDescription() {
+        try {
+            return originalAgentBuilder.build().description();
+        } catch (GraphStateException ignored) {
+            return "";
+        }
+    }
+    
     @Override
     protected Flux<Event> execute(Context context) {
         return Flux.create(sink -> {

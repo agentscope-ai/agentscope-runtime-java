@@ -299,7 +299,17 @@ public class AgentScopeAgent extends BaseAgent {
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;
         this.streamResponseProcessor = streamResponseProcessor != null ? streamResponseProcessor : this::defaultStreamResponseProcessor;
     }
-
+    
+    @Override
+    public String getName() {
+        return agentScopeBuilder.build().getName();
+    }
+    
+    @Override
+    public String getDescription() {
+        return agentScopeBuilder.build().getName();
+    }
+    
     @Override
     protected Flux<Event> execute(Context context) {
         return Flux.create(sink -> {

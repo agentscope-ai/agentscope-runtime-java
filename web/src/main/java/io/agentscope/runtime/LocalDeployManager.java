@@ -19,6 +19,7 @@ import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.DeployManager;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.Protocol;
+import io.agentscope.runtime.protocol.ProtocolConfig;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -42,12 +43,14 @@ public class LocalDeployManager implements DeployManager {
     private final String host;
     private final int port;
     private final List<Protocol> protocols;
+    private final List<ProtocolConfig> protocolConfigs;
 
     private LocalDeployManager(LocalDeployerManagerBuilder builder) {
         this.endpointName = builder.endpointName;
         this.host = builder.host;
         this.port = builder.port;
         this.protocols = builder.protocols;
+        this.protocolConfigs = builder.protocolConfigs;
     }
 
     @Override
@@ -78,9 +81,16 @@ public class LocalDeployManager implements DeployManager {
                     ctx.registerBean(DeployProperties.class, () -> new DeployProperties(port, host, endpointName));
                     // Scan additional packages based on protocols
                     ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(ctx);
+                    Map<Protocol, ProtocolConfig> protocolConfigMap = null != protocolConfigs ? protocolConfigs.stream()
+                            .collect(HashMap::new, (map, config) -> map.put(config.type(), config), HashMap::putAll)
+                            : Map.of();
                     for (Protocol protocol : protocols) {
                         String packageName = "io.agentscope.runtime.protocol." + protocol.name().toLowerCase();
                         scanner.scan(packageName);
+                        if (protocolConfigMap.containsKey(protocol)) {
+                            ProtocolConfig protocolConfig = protocolConfigMap.get(protocol);
+                            ctx.registerBean(protocolConfig.name(), ProtocolConfig.class, () -> protocolConfig);
+                        }
                     }
                 })
                 .run();
@@ -121,6 +131,7 @@ public class LocalDeployManager implements DeployManager {
         private String host;
         private int port = 8080;
         private List<Protocol> protocols = List.of(Protocol.A2A);
+        private List<ProtocolConfig> protocolConfigs = List.of();
 
         public LocalDeployerManagerBuilder endpointName(String endpointName) {
             this.endpointName = endpointName;
@@ -139,6 +150,11 @@ public class LocalDeployManager implements DeployManager {
 
         public LocalDeployerManagerBuilder protocols(List<Protocol> protocols) {
             this.protocols = protocols;
+            return this;
+        }
+        
+        public LocalDeployerManagerBuilder protocolConfigs(List<ProtocolConfig> protocolConfigs) {
+            this.protocolConfigs = protocolConfigs;
             return this;
         }
 

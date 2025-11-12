@@ -13,42 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.agentscope.runtime.protocol.a2a.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.a2a.server.ServerCallContext;
-import io.agentscope.runtime.autoconfigure.DeployProperties;
+import io.a2a.spec.*;
+import io.a2a.util.Utils;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.a2a.AgentHandlerConfiguration;
 import io.agentscope.runtime.protocol.a2a.JSONRPCHandler;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import io.a2a.spec.CancelTaskRequest;
-import io.a2a.spec.DeleteTaskPushNotificationConfigRequest;
-import io.a2a.spec.GetTaskPushNotificationConfigRequest;
-import io.a2a.spec.GetTaskRequest;
-import io.a2a.spec.JSONParseError;
-import io.a2a.spec.JSONRPCError;
-import io.a2a.spec.JSONRPCErrorResponse;
-import io.a2a.spec.JSONRPCRequest;
-import io.a2a.spec.JSONRPCResponse;
-import io.a2a.spec.ListTaskPushNotificationConfigRequest;
-import io.a2a.spec.NonStreamingJSONRPCRequest;
-import io.a2a.spec.SendMessageRequest;
-import io.a2a.spec.SendStreamingMessageRequest;
-import io.a2a.spec.SetTaskPushNotificationConfigRequest;
-import io.a2a.spec.StreamingJSONRPCRequest;
-import io.a2a.spec.TaskResubscriptionRequest;
-import io.a2a.spec.UnsupportedOperationError;
-import io.a2a.util.Utils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.reactivestreams.FlowAdapters;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
@@ -67,14 +47,15 @@ public class A2aController {
 
     private final JSONRPCHandler jsonRpcHandler;
 
-    public A2aController(Runner runner, DeployProperties properties) {
-        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner, properties).jsonrpcHandler();
+    public A2aController(Runner runner, AgentCard agentCard) {
+        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner, agentCard).jsonrpcHandler();
     }
 
-    @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
+    @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE,
+            MediaType.TEXT_EVENT_STREAM_VALUE})
     @ResponseBody
     public Object handleRequest(@RequestBody String body, HttpServletRequest httpRequest) {
-        ServerCallContext context =  buildServerCallContext(httpRequest);
+        ServerCallContext context = buildServerCallContext(httpRequest);
         boolean streaming = isStreamingRequest(body);
         Object result;
         try {
@@ -103,7 +84,8 @@ public class A2aController {
         }
     }
 
-    private Flux<ServerSentEvent<String>> handleStreamRequest(String body, ServerCallContext context) throws JsonProcessingException {
+    private Flux<ServerSentEvent<String>> handleStreamRequest(String body, ServerCallContext context)
+            throws JsonProcessingException {
         StreamingJSONRPCRequest<?> request = Utils.OBJECT_MAPPER.readValue(body, StreamingJSONRPCRequest.class);
         Flow.Publisher<? extends JSONRPCResponse<?>> publisher;
         if (request instanceof SendStreamingMessageRequest req) {
@@ -114,26 +96,21 @@ public class A2aController {
             return Flux.just(createErrorSSE(generateErrorResponse(request, new UnsupportedOperationError())));
         }
 
-        return Flux.from(FlowAdapters.toPublisher(publisher))
-                .map(this::convertToSSE)
+        return Flux.from(FlowAdapters.toPublisher(publisher)).map(this::convertToSSE)
                 .delaySubscription(Duration.ofMillis(10));
     }
 
     private ServerSentEvent<String> convertToSSE(JSONRPCResponse<?> response) {
         try {
             String data = Utils.OBJECT_MAPPER.writeValueAsString(response);
-            ServerSentEvent.Builder<String> builder = ServerSentEvent.<String>builder()
-                    .data(data)
-                    .event("jsonrpc");
+            ServerSentEvent.Builder<String> builder = ServerSentEvent.<String>builder().data(data).event("jsonrpc");
             if (response.getId() != null) {
                 builder.id(response.getId().toString());
             }
             return builder.build();
         } catch (Exception e) {
             logger.severe("Error converting response to SSE: " + e.getMessage());
-            return ServerSentEvent.<String>builder()
-                    .data("{\"error\":\"Internal conversion error\"}")
-                    .event("error")
+            return ServerSentEvent.<String>builder().data("{\"error\":\"Internal conversion error\"}").event("error")
                     .build();
         }
     }
@@ -141,19 +118,14 @@ public class A2aController {
     private ServerSentEvent<String> createErrorSSE(JSONRPCResponse<?> errorResponse) {
         try {
             String data = Utils.OBJECT_MAPPER.writeValueAsString(errorResponse);
-            return ServerSentEvent.<String>builder()
-                    .data(data)
-                    .event("error")
-                    .build();
+            return ServerSentEvent.<String>builder().data(data).event("error").build();
         } catch (Exception e) {
-            return ServerSentEvent.<String>builder()
-                    .data("{\"error\":\"Internal error\"}")
-                    .event("error")
-                    .build();
+            return ServerSentEvent.<String>builder().data("{\"error\":\"Internal error\"}").event("error").build();
         }
     }
 
-    private JSONRPCResponse<?> handleNonStreamRequest(String body, ServerCallContext context) throws JsonProcessingException {
+    private JSONRPCResponse<?> handleNonStreamRequest(String body, ServerCallContext context)
+            throws JsonProcessingException {
         NonStreamingJSONRPCRequest<?> request = Utils.OBJECT_MAPPER.readValue(body, NonStreamingJSONRPCRequest.class);
         if (request instanceof GetTaskRequest req) {
             return jsonRpcHandler.onGetTask(req, context);

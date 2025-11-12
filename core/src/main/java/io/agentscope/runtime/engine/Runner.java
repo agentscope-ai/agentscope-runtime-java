@@ -48,7 +48,6 @@ public class Runner {
         this.environmentManager = builder.environmentManager;
     }
 
-
     public Flux<Event> streamQuery(AgentRequest request) {
         return this.streamQueryInstance(request);
     }
@@ -239,7 +238,11 @@ public class Runner {
     public ContextManager getContextManager() {
         return contextManager;
     }
-
+    
+    public Agent getAgent() {
+        return agent;
+    }
+    
     public static RunnerBuilder builder() {
         return new RunnerBuilder();
     }
