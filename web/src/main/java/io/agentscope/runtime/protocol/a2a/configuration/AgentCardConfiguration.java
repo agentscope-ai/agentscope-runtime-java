@@ -38,21 +38,25 @@ public class AgentCardConfiguration {
 
     private AgentCard createAgentCard(NetworkUtils networkUtils, Agent agent, A2aProtocolConfig a2aConfig) {
         AgentCapabilities capabilities = createDefaultCapabilities();
-        String dynamicUrl = StringUtils.isEmpty(a2aConfig.url()) ? networkUtils.getServerUrl("/a2a/") : a2aConfig.url();
-        return new AgentCard.Builder().name(StringUtils.isEmpty(a2aConfig.name()) ? agent.getName() : a2aConfig.name())
-                .description(
-                        StringUtils.isEmpty(a2aConfig.description()) ? agent.getDescription() : a2aConfig.description())
-                .url(dynamicUrl).provider(a2aConfig.provider())
-                .version(StringUtils.isEmpty(a2aConfig.version()) ? "1.0.0" : a2aConfig.version())
-                .documentationUrl(a2aConfig.documentationUrl()).capabilities(capabilities).defaultInputModes(
-                        null != a2aConfig.defaultInputModes() ? a2aConfig.defaultInputModes() : List.of("text"))
-                .defaultOutputModes(
-                        null != a2aConfig.defaultOutputModes() ? a2aConfig.defaultOutputModes() : List.of("text"))
-                .skills(null != a2aConfig.skills() ? a2aConfig.skills() : List.of())
-                .supportsAuthenticatedExtendedCard(a2aConfig.supportsAuthenticatedExtendedCard())
-                .securitySchemes(a2aConfig.securitySchemes()).security(a2aConfig.security())
-                .iconUrl(a2aConfig.iconUrl()).additionalInterfaces(a2aConfig.additionalInterfaces())
-                .preferredTransport(TransportProtocol.JSONRPC.name()).protocolVersion("0.3.0").build();
+        String dynamicUrl = StringUtils.isEmpty(a2aConfig.getUrl()) ? networkUtils.getServerUrl("/a2a/") : a2aConfig.getUrl();
+        return new AgentCard.Builder().name(StringUtils.isEmpty(a2aConfig.getName()) ? agent.getName() : a2aConfig.getName())
+                .description(StringUtils.isEmpty(a2aConfig.getDescription()) ? agent.getDescription() : a2aConfig.getDescription())
+                .url(dynamicUrl)
+                .provider(a2aConfig.getProvider())
+                .version(StringUtils.isEmpty(a2aConfig.getVersion()) ? "1.0.0" : a2aConfig.getVersion())
+                .documentationUrl(a2aConfig.getDocumentationUrl())
+                .capabilities(capabilities)
+                .defaultInputModes(null != a2aConfig.getDefaultInputModes() ? a2aConfig.getDefaultInputModes() : List.of("text"))
+                .defaultOutputModes(null != a2aConfig.getDefaultOutputModes() ? a2aConfig.getDefaultOutputModes() : List.of("text"))
+                .skills(null != a2aConfig.getSkills() ? a2aConfig.getSkills() : List.of())
+                .supportsAuthenticatedExtendedCard(a2aConfig.isSupportsAuthenticatedExtendedCard())
+                .securitySchemes(a2aConfig.getSecuritySchemes())
+                .security(a2aConfig.getSecurity())
+                .iconUrl(a2aConfig.getIconUrl())
+                .additionalInterfaces(a2aConfig.getAdditionalInterfaces())
+                .preferredTransport(TransportProtocol.JSONRPC.name())
+                .protocolVersion("0.3.0")
+                .build();
     }
 
     private static AgentCapabilities createDefaultCapabilities() {
