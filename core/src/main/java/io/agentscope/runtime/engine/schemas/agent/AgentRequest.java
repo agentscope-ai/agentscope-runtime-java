@@ -16,6 +16,8 @@
 
 package io.agentscope.runtime.engine.schemas.agent;
 
+import io.agentscope.runtime.engine.schemas.message.Message;
+
 import java.util.List;
 
 /**

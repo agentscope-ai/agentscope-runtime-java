@@ -1,5 +1,7 @@
 package io.agentscope.runtime.engine.schemas.agent;
 
+import io.agentscope.runtime.engine.schemas.message.MessageType;
+
 import java.util.HashMap;
 import java.util.Map;
 

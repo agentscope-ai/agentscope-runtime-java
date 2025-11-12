@@ -21,7 +21,7 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.agent.Builder;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import org.springframework.ai.tool.ToolCallback;
 
 import java.util.ArrayList;
@@ -43,9 +43,9 @@ import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHi
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.schemas.message.Event;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;

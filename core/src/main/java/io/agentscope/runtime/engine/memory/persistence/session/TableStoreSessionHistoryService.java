@@ -21,9 +21,10 @@ import com.aliyun.openservices.tablestore.agent.model.Metadata;
 import com.aliyun.openservices.tablestore.agent.model.MetaType;
 import com.aliyun.openservices.tablestore.agent.util.Pair;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.Content;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 
@@ -268,7 +269,8 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
         String textContent = message.getContent() != null ?
                 message.getContent().stream()
                         .filter(content -> "text".equals(content.getType()))
-                        .map(MessageContent::getText)
+                        .filter(content -> content instanceof TextContent)
+                        .map(content -> ((TextContent) content).getText())
                         .filter(Objects::nonNull)
                         .findFirst()
                         .orElse("") : "";
@@ -320,16 +322,16 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
         try {
             String contentJson = metadata.getString("content_json");
             if (contentJson != null) {
-                List<MessageContent> content = OBJECT_MAPPER.readValue(
+                List<Content> content = OBJECT_MAPPER.readValue(
                         contentJson,
-                        OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, MessageContent.class)
+                        OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, TextContent.class)
                 );
                 message.setContent(content);
             } else {
                 // Fallback to plain text content
                 String textContent = tablestoreMessage.getContent();
                 if (textContent != null && !textContent.isEmpty()) {
-                    MessageContent mc = new MessageContent();
+                    TextContent mc = new TextContent();
                     mc.setType("text");
                     mc.setText(textContent);
                     message.setContent(Collections.singletonList(mc));

@@ -18,7 +18,7 @@ import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
-import io.agentscope.runtime.engine.schemas.agent.Event;
+import io.agentscope.runtime.engine.schemas.message.Event;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;

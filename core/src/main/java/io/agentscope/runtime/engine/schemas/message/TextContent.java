@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.engine.schemas.agent;
+package io.agentscope.runtime.engine.schemas.message;
 
 /**
  * Text content class

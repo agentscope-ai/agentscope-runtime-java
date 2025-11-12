@@ -18,10 +18,11 @@ package io.agentscope.runtime.engine;
 
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.*;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.context.Session;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import reactor.core.publisher.Flux;
 
@@ -64,17 +65,17 @@ public class Runner {
                 // Convert history message types
 
                 // Todo: Specific implementation of memory module
-                List<io.agentscope.runtime.engine.schemas.agent.Message> convertedMessages = new ArrayList<>();
+                List<Message> convertedMessages = new ArrayList<>();
                 if (memorySession.getMessages() != null) {
-                    for (io.agentscope.runtime.engine.memory.model.Message memoryMsg : memorySession.getMessages()) {
-                        io.agentscope.runtime.engine.schemas.agent.Message agentMsg = new io.agentscope.runtime.engine.schemas.agent.Message();
+                    for (Message memoryMsg : memorySession.getMessages()) {
+                        Message agentMsg = new Message();
 
-                        List<io.agentscope.runtime.engine.schemas.agent.Content> content = new ArrayList<>();
+                        List<Content> content = new ArrayList<>();
                         if (memoryMsg.getContent() != null) {
-                            for (io.agentscope.runtime.engine.memory.model.MessageContent msgContent : memoryMsg.getContent()) {
-                                io.agentscope.runtime.engine.schemas.agent.TextContent textContent = new io.agentscope.runtime.engine.schemas.agent.TextContent();
-                                textContent.setText(msgContent.getText());
-                                content.add(textContent);
+                            for (Content msgContent : memoryMsg.getContent()) {
+                                if(msgContent instanceof TextContent textContent){
+                                    content.add(textContent);
+                                }
                             }
                         }
                         agentMsg.setContent(content);
@@ -190,19 +191,19 @@ public class Runner {
             Session memorySession = getOrCreateSession(context.getUserId(), context.getSession().getUserId());
 
             // Create a list of messages to be saved
-            List<io.agentscope.runtime.engine.memory.model.Message> messagesToSave = new ArrayList<>();
+            List<Message> messagesToSave = new ArrayList<>();
 
             // Add user messages
             if (context.getCurrentMessages() != null) {
-                for (io.agentscope.runtime.engine.schemas.agent.Message userMessage : context.getCurrentMessages()) {
-                    io.agentscope.runtime.engine.memory.model.Message memoryMessage = new io.agentscope.runtime.engine.memory.model.Message();
-                    memoryMessage.setType(io.agentscope.runtime.engine.schemas.agent.MessageType.USER);
+                for (Message userMessage : context.getCurrentMessages()) {
+                    Message memoryMessage = new Message();
+                    memoryMessage.setType(io.agentscope.runtime.engine.schemas.message.MessageType.USER);
 
-                    List<io.agentscope.runtime.engine.memory.model.MessageContent> content = new ArrayList<>();
+                    List<Content> content = new ArrayList<>();
                     if (userMessage.getContent() != null) {
-                        for (io.agentscope.runtime.engine.schemas.agent.Content msgContent : userMessage.getContent()) {
-                            if (msgContent instanceof io.agentscope.runtime.engine.schemas.agent.TextContent textContent) {
-                                content.add(new io.agentscope.runtime.engine.memory.model.MessageContent("text", textContent.getText()));
+                        for (Content msgContent : userMessage.getContent()) {
+                            if (msgContent instanceof TextContent textContent) {
+                                content.add(new TextContent(textContent.getText()));
                             }
                         }
                     }
@@ -213,11 +214,11 @@ public class Runner {
 
             // Add AI reply message
             if (aiResponse != null && !aiResponse.isEmpty()) {
-                io.agentscope.runtime.engine.memory.model.Message aiMessage = new io.agentscope.runtime.engine.memory.model.Message();
-                aiMessage.setType(io.agentscope.runtime.engine.schemas.agent.MessageType.ASSISTANT);
+                Message aiMessage = new Message();
+                aiMessage.setType(io.agentscope.runtime.engine.schemas.message.MessageType.ASSISTANT);
 
-                List<io.agentscope.runtime.engine.memory.model.MessageContent> content = new ArrayList<>();
-                content.add(new io.agentscope.runtime.engine.memory.model.MessageContent("text", aiResponse));
+                List<Content> content = new ArrayList<>();
+                content.add(new TextContent(aiResponse));
                 aiMessage.setContent(content);
                 messagesToSave.add(aiMessage);
             }

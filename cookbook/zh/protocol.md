@@ -373,7 +373,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 
 public class Message extends Event {
     private String id;

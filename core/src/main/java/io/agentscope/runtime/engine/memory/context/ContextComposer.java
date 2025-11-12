@@ -15,7 +15,7 @@
  */
 package io.agentscope.runtime.engine.memory.context;
 
-import io.agentscope.runtime.engine.memory.model.Message;
+import io.agentscope.runtime.engine.schemas.message.Message;
 import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;

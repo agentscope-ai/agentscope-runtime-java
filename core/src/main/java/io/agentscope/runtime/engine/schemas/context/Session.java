@@ -16,7 +16,7 @@
 package io.agentscope.runtime.engine.schemas.context;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.agentscope.runtime.engine.memory.model.Message;
+import io.agentscope.runtime.engine.schemas.message.Message;
 
 import java.util.ArrayList;
 import java.util.List;

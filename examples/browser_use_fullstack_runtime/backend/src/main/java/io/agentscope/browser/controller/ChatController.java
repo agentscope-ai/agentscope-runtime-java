@@ -17,10 +17,10 @@
 package io.agentscope.browser.controller;
 
 import io.agentscope.browser.agent.AgentscopeBrowserUseAgent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
-import io.agentscope.runtime.engine.schemas.agent.Content;
-import io.agentscope.runtime.engine.schemas.agent.DataContent;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
+import io.agentscope.runtime.engine.schemas.message.Content;
+import io.agentscope.runtime.engine.schemas.message.DataContent;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;

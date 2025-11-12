@@ -19,10 +19,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.Content;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -521,7 +522,8 @@ public class Mem0MemoryService implements MemoryService {
         // Todo: TEST ME
         return message.getContent().stream()
                 .filter(content -> "text".equals(content.getType()))
-                .map(MessageContent::getText)
+                .filter(content -> content instanceof TextContent)
+                .map(content -> ((TextContent) content).getText())
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse("");
@@ -585,7 +587,7 @@ public class Mem0MemoryService implements MemoryService {
         // Todo: TEST ME
         message.setType(MessageType.USER);
 
-        MessageContent content = new MessageContent("text", memoryText);
+        Content content = new TextContent(memoryText);
         message.setContent(Collections.singletonList(content));
 
         // Add metadata

@@ -18,7 +18,7 @@ package io.agentscope.runtime.engine.agents;
 
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.schemas.context.Context;
-import io.agentscope.runtime.engine.schemas.agent.Event;
+import io.agentscope.runtime.engine.schemas.message.Event;
 
 import java.util.ArrayList;
 import java.util.HashMap;

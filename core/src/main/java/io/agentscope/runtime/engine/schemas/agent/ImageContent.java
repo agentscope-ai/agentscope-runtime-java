@@ -16,6 +16,9 @@
 
 package io.agentscope.runtime.engine.schemas.agent;
 
+import io.agentscope.runtime.engine.schemas.message.Content;
+import io.agentscope.runtime.engine.schemas.message.ContentType;
+
 /**
  * Image content class
  * Corresponds to the ImageContent class in agent_schemas.py of the Python version

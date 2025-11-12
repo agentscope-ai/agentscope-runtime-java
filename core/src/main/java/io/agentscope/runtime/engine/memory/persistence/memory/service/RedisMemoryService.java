@@ -15,12 +15,12 @@
  */
 package io.agentscope.runtime.engine.memory.persistence.memory.service;
 
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.HashOperations;
 
@@ -273,7 +273,8 @@ public class RedisMemoryService implements MemoryService {
         // Todo: TEST ME
         return message.getContent().stream()
                 .filter(content -> "text".equals(content.getType()))
-                .map(MessageContent::getText)
+                .filter(content -> content instanceof TextContent)
+                .map(content -> ((TextContent) content).getText())
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse("");

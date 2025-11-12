@@ -223,9 +223,7 @@ try {
 
 ```java
 import io.agentscope.runtime.engine.schemas.context.Session;
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -322,9 +320,7 @@ try {
 #### 添加消息
 
 ```java
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -413,9 +409,7 @@ public interface MemoryService extends Service {
 ```java
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -617,7 +611,7 @@ try {
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

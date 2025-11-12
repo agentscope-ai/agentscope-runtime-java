@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.engine.schemas.agent;
+package io.agentscope.runtime.engine.schemas.message;
+
+import io.agentscope.runtime.engine.schemas.agent.ImageContent;
+import io.agentscope.runtime.engine.schemas.agent.RunStatus;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class Message extends Event {
@@ -26,6 +30,7 @@ public class Message extends Event {
     private MessageType type = MessageType.ASSISTANT;
     private List<Content> content;
     private TokenUsage tokenUsage;
+    private Map<String, Object> metadata;
 
     public Message() {
         super();
@@ -109,5 +114,13 @@ public class Message extends Event {
             return new DataContent(data.getData());
         }
         return original;
+    }
+
+    public Map<String, Object> getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(Map<String, Object> metadata) {
+        this.metadata = metadata;
     }
 }

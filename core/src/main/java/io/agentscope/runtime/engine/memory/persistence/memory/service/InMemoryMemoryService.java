@@ -16,9 +16,9 @@
 package io.agentscope.runtime.engine.memory.persistence.memory.service;
 
 
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -174,7 +174,8 @@ public class InMemoryMemoryService implements MemoryService {
         // Todo: TEST ME
         return message.getContent().stream()
                 .filter(content -> "text".equals(content.getType()))
-                .map(MessageContent::getText)
+                .filter(content -> content instanceof TextContent)
+                .map(content -> ((TextContent) content).getText())
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse("");

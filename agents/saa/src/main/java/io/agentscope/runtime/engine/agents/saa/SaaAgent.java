@@ -24,7 +24,7 @@ import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.agents.AgentCallback;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 
 import com.alibaba.cloud.ai.graph.agent.flow.builder.FlowAgentBuilder;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
@@ -34,9 +34,9 @@ import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.schemas.context.Context;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.schemas.message.Event;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import io.agentscope.runtime.engine.schemas.agent.RunStatus;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -307,7 +307,6 @@ public class SaaAgent extends BaseAgent {
 
                                 TextContent textContent = new TextContent();
                                 textContent.setText(contentPart);
-                                textContent.setDelta(true);
                                 Message deltaMessage = new Message();
 
                                 if (part instanceof StreamingOutput) {
@@ -342,7 +341,6 @@ public class SaaAgent extends BaseAgent {
                         logger.info("Stream completed with content length: " + contentBuilder.length());
                         TextContent textContent = new TextContent();
                         textContent.setText(contentBuilder.toString());
-                        textContent.setDelta(false);
                         textMessage.setContent(List.of(textContent));
 
                         textMessage.setStatus(RunStatus.COMPLETED);

@@ -225,7 +225,7 @@ Each session is represented by a `Session` object:
 import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -324,7 +324,7 @@ try {
 ```java
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -415,7 +415,7 @@ import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMe
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -617,7 +617,7 @@ try {
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

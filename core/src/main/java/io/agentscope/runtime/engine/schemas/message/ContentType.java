@@ -14,32 +14,20 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.engine.schemas.agent;
-
-import java.util.Map;
+package io.agentscope.runtime.engine.schemas.message;
 
 /**
- * Data content class
- * Corresponds to the DataContent class in agent_schemas.py of the Python version
+ * Content type constant class
+ * Corresponds to the ContentType class in agent_schemas.py of the Python version
  */
-public class DataContent extends Content {
+public class ContentType {
     
-    private Map<String, Object> data;
+    public static final String TEXT = "text";
+    public static final String DATA = "data";
+    public static final String IMAGE = "image";
+    public static final String AUDIO = "audio";
     
-    public DataContent() {
-        super(ContentType.DATA);
-    }
-    
-    public DataContent(Map<String, Object> data) {
-        super(ContentType.DATA);
-        this.data = data;
-    }
-    
-    public Map<String, Object> getData() {
-        return data;
-    }
-    
-    public void setData(Map<String, Object> data) {
-        this.data = data;
+    private ContentType() {
+        // Utility class, instantiation not allowed
     }
 }
