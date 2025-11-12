@@ -13,28 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.agentscope.runtime.engine.schemas.context;
 
-import io.agentscope.runtime.engine.schemas.agent.Message;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.agentscope.runtime.engine.memory.model.Message;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Session class, represents a conversation session
+ * Contains conversation history, including all messages, uniquely identified by ID
+ */
 public class Session {
     
+    @JsonProperty("id")
     private String id;
+    
+    @JsonProperty("user_id")
     private String userId;
+    
+    @JsonProperty("messages")
     private List<Message> messages;
     
-    public Session() {
+    public Session() {}
+    
+    public Session(String id, String userId) {
+        this.id = id;
+        this.userId = userId;
         this.messages = new ArrayList<>();
     }
     
-    public Session(String id, String userId) {
-        this();
+    public Session(String id, String userId, List<Message> messages) {
         this.id = id;
         this.userId = userId;
+        this.messages = messages;
     }
     
     public String getId() {
@@ -58,33 +71,6 @@ public class Session {
     }
     
     public void setMessages(List<Message> messages) {
-        this.messages = messages != null ? messages : new ArrayList<>();
-    }
-    
-    /**
-     * Add message
-     */
-    public void addMessage(Message message) {
-        if (this.messages == null) {
-            this.messages = new ArrayList<>();
-        }
-        this.messages.add(message);
-    }
-
-    /**
-     * Get last message
-     */
-    public Message getLastMessage() {
-        if (messages == null || messages.isEmpty()) {
-            return null;
-        }
-        return messages.get(messages.size() - 1);
-    }
-
-    /**
-     * Get message count
-     */
-    public int getMessageCount() {
-        return messages == null ? 0 : messages.size();
+        this.messages = messages;
     }
 }

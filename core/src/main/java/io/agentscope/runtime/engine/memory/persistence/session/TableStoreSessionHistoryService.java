@@ -23,8 +23,8 @@ import com.aliyun.openservices.tablestore.agent.util.Pair;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
-import io.agentscope.runtime.engine.memory.model.Session;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
+import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 
 import java.util.*;

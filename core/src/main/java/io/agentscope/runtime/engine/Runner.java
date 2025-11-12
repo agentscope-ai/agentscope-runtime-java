@@ -18,7 +18,7 @@ package io.agentscope.runtime.engine;
 
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.context.Session;
@@ -56,7 +56,7 @@ public class Runner {
         return Flux.create(sink -> {
             try {
                 // Get or create Session
-                io.agentscope.runtime.engine.memory.model.Session memorySession = getOrCreateSession(request.getUserId(), request.getSessionId());
+                Session memorySession = getOrCreateSession(request.getUserId(), request.getSessionId());
 
                 Session session = new Session();
                 session.setId(memorySession.getId());
@@ -167,7 +167,7 @@ public class Runner {
     /**
      * Get or create Session
      */
-    private io.agentscope.runtime.engine.memory.model.Session getOrCreateSession(String userId, String sessionId) {
+    private Session getOrCreateSession(String userId, String sessionId) {
         try {
             return this.contextManager.composeSession(userId, sessionId).join();
         } catch (Exception e) {
@@ -176,7 +176,7 @@ public class Runner {
                 return this.contextManager.getSessionHistoryService().createSession(userId, Optional.of(sessionId)).join();
             } catch (Exception ex) {
                 // If creation fails, return a temporary Session
-                return new io.agentscope.runtime.engine.memory.model.Session(sessionId, userId, new ArrayList<>());
+                return new Session(sessionId, userId, new ArrayList<>());
             }
         }
     }
@@ -187,7 +187,7 @@ public class Runner {
     private void saveConversationHistory(Context context, String aiResponse) {
         try {
             // Get current session
-            io.agentscope.runtime.engine.memory.model.Session memorySession = getOrCreateSession(context.getUserId(), context.getSession().getUserId());
+            Session memorySession = getOrCreateSession(context.getUserId(), context.getSession().getUserId());
 
             // Create a list of messages to be saved
             List<io.agentscope.runtime.engine.memory.model.Message> messagesToSave = new ArrayList<>();
@@ -196,7 +196,7 @@ public class Runner {
             if (context.getCurrentMessages() != null) {
                 for (io.agentscope.runtime.engine.schemas.agent.Message userMessage : context.getCurrentMessages()) {
                     io.agentscope.runtime.engine.memory.model.Message memoryMessage = new io.agentscope.runtime.engine.memory.model.Message();
-                    memoryMessage.setType(io.agentscope.runtime.engine.memory.model.MessageType.USER);
+                    memoryMessage.setType(io.agentscope.runtime.engine.schemas.agent.MessageType.USER);
 
                     List<io.agentscope.runtime.engine.memory.model.MessageContent> content = new ArrayList<>();
                     if (userMessage.getContent() != null) {
@@ -214,7 +214,7 @@ public class Runner {
             // Add AI reply message
             if (aiResponse != null && !aiResponse.isEmpty()) {
                 io.agentscope.runtime.engine.memory.model.Message aiMessage = new io.agentscope.runtime.engine.memory.model.Message();
-                aiMessage.setType(io.agentscope.runtime.engine.memory.model.MessageType.ASSISTANT);
+                aiMessage.setType(io.agentscope.runtime.engine.schemas.agent.MessageType.ASSISTANT);
 
                 List<io.agentscope.runtime.engine.memory.model.MessageContent> content = new ArrayList<>();
                 content.add(new io.agentscope.runtime.engine.memory.model.MessageContent("text", aiResponse));

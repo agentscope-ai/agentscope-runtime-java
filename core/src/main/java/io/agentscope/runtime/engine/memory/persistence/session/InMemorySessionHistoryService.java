@@ -16,7 +16,7 @@
 package io.agentscope.runtime.engine.memory.persistence.session;
 
 import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.Session;
+import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 
 import java.util.*;

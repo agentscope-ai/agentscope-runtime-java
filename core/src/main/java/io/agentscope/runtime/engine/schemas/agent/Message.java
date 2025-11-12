@@ -16,8 +16,6 @@
 
 package io.agentscope.runtime.engine.schemas.agent;
 
-import io.agentscope.runtime.engine.memory.model.MessageType;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -102,94 +100,12 @@ public class Message extends Event {
         return images;
     }
 
-    public Content addDeltaContent(Content newContent) {
-        if (content == null) {
-            content = new ArrayList<>();
-        }
-
-        if (newContent.getIndex() == null) {
-            Content copy = copyContent(newContent);
-            copy.setDelta(null);
-            copy.setIndex(null);
-            copy.setMsgId(null);
-            content.add(copy);
-
-            newContent.setIndex(content.size() - 1);
-            newContent.setMsgId(this.id);
-            newContent.inProgress();
-            return newContent;
-        }
-
-        if (Boolean.TRUE.equals(newContent.getDelta())) {
-            Content preContent = content.get(newContent.getIndex());
-            String type = preContent.getType();
-
-            if (ContentType.TEXT.equals(type)) {
-                TextContent preText = (TextContent) preContent;
-                TextContent newText = (TextContent) newContent;
-                preText.setText(preText.getText() + newText.getText());
-            }
-
-            if (ContentType.IMAGE.equals(type)) {
-                ImageContent preImage = (ImageContent) preContent;
-                ImageContent newImage = (ImageContent) newContent;
-                preImage.setImageUrl(preImage.getImageUrl() + newImage.getImageUrl());
-            }
-
-            if (ContentType.DATA.equals(type)) {
-                DataContent preData = (DataContent) preContent;
-                DataContent newData = (DataContent) newContent;
-            }
-
-            newContent.setMsgId(this.id);
-            newContent.inProgress();
-            return newContent;
-        }
-
-        return null;
-    }
-
-    public Content contentCompleted(int contentIndex) {
-        if (content == null || contentIndex >= content.size()) {
-            return null;
-        }
-
-        Content contentItem = content.get(contentIndex);
-        Content newContent = copyContent(contentItem);
-        newContent.setDelta(false);
-        newContent.setIndex(contentIndex);
-        newContent.setMsgId(this.id);
-        newContent.completed();
-        return newContent;
-    }
-
-    public Content addContent(Content newContent) {
-        if (content == null) {
-            content = new ArrayList<>();
-        }
-
-        if (newContent.getIndex() == null) {
-            Content copy = copyContent(newContent);
-            content.add(copy);
-
-            newContent.setIndex(content.size() - 1);
-            newContent.setMsgId(this.id);
-            newContent.completed();
-            return newContent;
-        }
-
-        return null;
-    }
-
     private Content copyContent(Content original) {
-        if (original instanceof TextContent) {
-            TextContent text = (TextContent) original;
+        if (original instanceof TextContent text) {
             return new TextContent(text.getText());
-        } else if (original instanceof ImageContent) {
-            ImageContent image = (ImageContent) original;
+        } else if (original instanceof ImageContent image) {
             return new ImageContent(image.getImageUrl());
-        } else if (original instanceof DataContent) {
-            DataContent data = (DataContent) original;
+        } else if (original instanceof DataContent data) {
             return new DataContent(data.getData());
         }
         return original;

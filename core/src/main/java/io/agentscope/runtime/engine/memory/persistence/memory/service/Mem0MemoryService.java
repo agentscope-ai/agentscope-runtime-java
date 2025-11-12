@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpPost;

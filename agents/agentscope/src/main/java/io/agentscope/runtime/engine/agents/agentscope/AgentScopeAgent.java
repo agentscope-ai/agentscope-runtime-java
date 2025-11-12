@@ -26,7 +26,7 @@ import io.agentscope.runtime.engine.agents.AgentCallback;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
 import io.agentscope.runtime.engine.agents.agentscope.tools.AgentScopeSandboxAwareTool;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.sandbox.box.Sandbox;
@@ -353,7 +353,6 @@ public class AgentScopeAgent extends BaseAgent {
                                             StreamResponse delta = streamResponseProcessor.apply(contentBlock);
                                             TextContent deltaContent = new TextContent();
                                             deltaContent.setText(delta.toString());
-                                            deltaContent.setDelta(true);
                                             deltaMessage.setType(delta.type);
                                             deltaMessage.setStatus(RunStatus.IN_PROGRESS);
                                             deltaMessage.setContent(List.of(deltaContent));

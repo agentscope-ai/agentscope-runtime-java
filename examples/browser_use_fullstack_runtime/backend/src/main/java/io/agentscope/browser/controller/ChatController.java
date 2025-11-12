@@ -17,7 +17,7 @@
 package io.agentscope.browser.controller;
 
 import io.agentscope.browser.agent.AgentscopeBrowserUseAgent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.Content;
 import io.agentscope.runtime.engine.schemas.agent.DataContent;
 import io.agentscope.runtime.engine.schemas.agent.TextContent;
@@ -186,12 +186,12 @@ public class ChatController {
                                     if (text != null && !text.isEmpty()) {
                                         Map<String, String> toolInfo = parseToolInfo(text);
                                         if (toolInfo != null) {
-                                            toolName = (String)toolInfo.get("toolName");
-                                            toolId = (String)toolInfo.get("toolId");
+                                            toolName = toolInfo.get("toolName");
+                                            toolId = toolInfo.get("toolId");
                                             if (messageType == MessageType.TOOL_CALL) {
-                                                toolInput = toolInfo.get("toolInput").toString();
+                                                toolInput = toolInfo.get("toolInput");
                                             } else {
-                                                toolResult = toolInfo.get("toolResult").toString();
+                                                toolResult = toolInfo.get("toolResult");
                                             }
                                         }
                                     }

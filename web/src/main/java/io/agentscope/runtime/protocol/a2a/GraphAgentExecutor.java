@@ -21,7 +21,7 @@ import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.*;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.agent.Event;
 import io.agentscope.runtime.engine.schemas.agent.Message;

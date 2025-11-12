@@ -35,9 +35,7 @@ public class TextContent extends Content {
     
     public TextContent(Boolean delta, String text, Integer index) {
         super(ContentType.TEXT);
-        this.setDelta(delta);
         this.text = text;
-        this.setIndex(index);
     }
     
     public String getText() {

@@ -184,7 +184,7 @@ ContextManager customManager = ContextManagerFactory.createCustom(
 
 ```java
 import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.Session;
+import io.agentscope.runtime.engine.schemas.context.Session;
 import java.util.ArrayList;
 import java.util.List;
 

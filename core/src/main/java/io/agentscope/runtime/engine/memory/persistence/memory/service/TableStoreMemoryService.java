@@ -27,7 +27,7 @@ import com.aliyun.openservices.tablestore.agent.model.filter.Filters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 
 import java.util.*;

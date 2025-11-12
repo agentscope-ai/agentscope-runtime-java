@@ -24,7 +24,7 @@ import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.agents.AgentCallback;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
 
 import com.alibaba.cloud.ai.graph.agent.flow.builder.FlowAgentBuilder;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;

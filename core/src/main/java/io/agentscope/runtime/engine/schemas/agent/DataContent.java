@@ -35,13 +35,6 @@ public class DataContent extends Content {
         this.data = data;
     }
     
-    public DataContent(Boolean delta, Map<String, Object> data, Integer index) {
-        super(ContentType.DATA);
-        this.setDelta(delta);
-        this.data = data;
-        this.setIndex(index);
-    }
-    
     public Map<String, Object> getData() {
         return data;
     }

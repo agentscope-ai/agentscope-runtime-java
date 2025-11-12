@@ -24,7 +24,7 @@ import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.MessageType;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
