@@ -14,7 +14,6 @@
 
 This is the Java implementation of [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime/). 
 
-> ⚠️ **Note**: This project is currently experimental and under active development.
 
 </div>
 
@@ -71,7 +70,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
 </dependency>
 ```
 
