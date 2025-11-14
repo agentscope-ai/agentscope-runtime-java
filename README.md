@@ -65,11 +65,18 @@ mvn clean install -DskipTests
 ### Add Dependency
 
 Add the following dependency to your `pom.xml`:
-
+<!-- Add runtime starter dependency -->
 ```xml
 <dependency>
     <groupId>io.agentscope</groupId>
-    <artifactId>agentscope-runtime</artifactId>
+    <artifactId>spring-boot-starter-runtime-a2a</artifactId>
+    <version>0.1.0</version>
+</dependency>
+
+<!-- Add AgentScope Agent adapter dependency -->
+<dependency>
+    <groupId>io.agentscope</groupId>
+    <artifactId>agentscope-runtime-agentscope</artifactId>
     <version>0.1.0</version>
 </dependency>
 ```
