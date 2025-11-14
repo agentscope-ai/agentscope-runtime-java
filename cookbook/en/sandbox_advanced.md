@@ -19,7 +19,7 @@ import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
 import io.agentscope.runtime.engine.schemas.agent.AgentResponse;
-import io.agentscope.runtime.engine.schemas.agent.Event;
+import io.agentscope.runtime.engine.schemas.message.Event;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
@@ -294,6 +294,7 @@ After building, write the image address to `@RegisterSandbox.imageName`.
 - It is recommended to call `LocalDeployManager.shutdown()` before service shutdown and wait for tasks to complete.
 - For long-occupied sandboxes, you can use `SandboxManager.releaseSandbox(...)` to actively release resources.
 - Reasonably configure `poolSize` and `portRange`, and combine with log monitoring (such as container count, port occupancy, Redis queue length) to detect resource leaks early.
+
 
 
 

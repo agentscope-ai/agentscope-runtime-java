@@ -18,7 +18,7 @@ package io.agentscope.runtime.engine.schemas.context;
 
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.agent.Message;
+import io.agentscope.runtime.engine.schemas.message.Message;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
 

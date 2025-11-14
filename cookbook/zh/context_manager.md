@@ -84,7 +84,7 @@ public interface SessionHistoryService extends Service {
 ```java
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
-import io.agentscope.runtime.engine.memory.model.Session;
+import io.agentscope.runtime.engine.schemas.context.Session;
 import java.util.Optional;
 
 // 创建服务实例
@@ -222,10 +222,8 @@ try {
 每个会话由 `Session` 对象表示：
 
 ```java
-import io.agentscope.runtime.engine.memory.model.Session;
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.context.Session;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -253,7 +251,7 @@ System.out.println("Message count: " + session.getMessages().size());
 
 ```java
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
-import io.agentscope.runtime.engine.memory.model.Session;
+import io.agentscope.runtime.engine.schemas.context.Session;
 import java.util.Optional;
 
 InMemorySessionHistoryService sessionHistoryService = new InMemorySessionHistoryService();
@@ -322,9 +320,7 @@ try {
 #### 添加消息
 
 ```java
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -413,9 +409,7 @@ public interface MemoryService extends Service {
 ```java
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -617,7 +611,7 @@ try {
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.model.Message;
 import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -768,7 +762,7 @@ ContextManager customManager = ContextManagerFactory.createCustom(
 
 ```java
 import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.Session;
+import io.agentscope.runtime.engine.schemas.context.Session;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -814,7 +808,7 @@ try {
 
 ```java
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
-import io.agentscope.runtime.engine.memory.model.Session;
+import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.memory.model.Message;
 import java.util.List;
 import java.util.Optional;

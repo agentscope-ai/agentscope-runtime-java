@@ -26,14 +26,15 @@ import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.schemas.message.Event;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
@@ -101,7 +102,7 @@ public class AgentScopeToolExample {
                                                         .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
                                                         .modelName("qwen-plus")
                                                         .stream(true) // Enable streaming
-                                                        .enableThinking(true)
+                                                        .enableThinking(false)
                                                         .formatter(new DashScopeChatFormatter())
                                                         .build());
 
@@ -152,7 +153,7 @@ public class AgentScopeToolExample {
         textContent.setText(text);
 
         Message message = new Message();
-        message.setRole("user");
+        message.setType(MessageType.USER);
         message.setContent(List.of(textContent));
 
         List<Message> inputMessages = new ArrayList<>();
@@ -164,9 +165,15 @@ public class AgentScopeToolExample {
 
     private void handleEvent(Event event) {
         if (event instanceof Message message) {
+            System.out.println("Event - Type: " + message.getType() +
+                    ", Status: " + message.getStatus());
+
             if (message.getContent() != null && !message.getContent().isEmpty()) {
                 TextContent content = (TextContent) message.getContent().get(0);
+                System.out.println("Content: " + content.getText());
             }
+        } else {
+            System.out.println("Received event: " + event.getClass().getSimpleName());
         }
     }
 

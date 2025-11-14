@@ -256,7 +256,7 @@
             <dependency>
                 <groupId>io.agentscope</groupId>
                 <artifactId>agentscope-core</artifactId>
-                <version>0.1.0</version>
+                <version>0.2.0</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.slf4j</groupId>

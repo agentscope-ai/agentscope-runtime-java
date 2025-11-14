@@ -18,7 +18,7 @@ package io.agentscope.runtime.engine.agents;
 
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.schemas.context.Context;
-import io.agentscope.runtime.engine.schemas.agent.Event;
+import io.agentscope.runtime.engine.schemas.message.Event;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,12 +62,12 @@ public abstract class BaseAgent implements Agent {
     }
     
     @Override
-    public CompletableFuture<Flux<Event>> runAsync(Context context, boolean stream) {
+    public CompletableFuture<Flux<Event>> runAsync(Context context) {
         return CompletableFuture.supplyAsync(() -> {
             executeBeforeCallbacks(context);
             
             try {
-                Flux<Event> eventFlux = execute(context, stream);
+                Flux<Event> eventFlux = execute(context);
                 
                 executeAfterCallbacks(context);
                 
@@ -78,7 +78,7 @@ public abstract class BaseAgent implements Agent {
         });
     }
     
-    protected abstract Flux<Event> execute(Context context, boolean stream);
+    protected abstract Flux<Event> execute(Context context);
     
     @Override
     public void setBeforeCallback(AgentCallback callback) {

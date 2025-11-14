@@ -26,12 +26,12 @@ import io.agentscope.runtime.engine.agents.AgentCallback;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
 import io.agentscope.runtime.engine.agents.agentscope.tools.AgentScopeSandboxAwareTool;
-import io.agentscope.runtime.engine.memory.model.MessageType;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
-import io.agentscope.runtime.engine.schemas.agent.RunStatus;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.schemas.message.Event;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
+import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.context.Context;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
@@ -52,8 +52,7 @@ public class AgentScopeAgent extends BaseAgent {
 
     private Builder agentScopeBuilder;
     private Function<Context, Msg> contextAdapter;
-    private Function<Msg, String> responseProcessor;
-    private Function<Msg, String> streamResponseProcessor;
+    private Function<ContentBlock, StreamResponse> streamResponseProcessor;
 
     /**
      * Context adapter that converts runtime engine Context to AgentScope Msg
@@ -118,12 +117,7 @@ public class AgentScopeAgent extends BaseAgent {
                 return null;
             }
 
-            MsgRole role = convertRole(message.getRole());
-            if (role == null) {
-                return null;
-            }
-
-            Msg.Builder builder = Msg.builder().role(role);
+            Msg.Builder builder = Msg.builder().role(MsgRole.USER);
 
             if (message.getContent() != null && !message.getContent().isEmpty()) {
                 List<ContentBlock> contentBlocks = new ArrayList<>();
@@ -186,7 +180,7 @@ public class AgentScopeAgent extends BaseAgent {
             try {
                 // Build agent to access toolkit
                 Agent agentScopeAgent = agentScopeBuilder.build();
-                
+
                 // Try to get toolkit from agent using reflection
                 Field toolkitField = findFieldInHierarchy(agentScopeAgent.getClass(), "toolkit");
                 if (toolkitField == null) {
@@ -231,11 +225,11 @@ public class AgentScopeAgent extends BaseAgent {
                         String sessionId = context.getSession().getId();
                         String userId = context.getSession().getUserId();
 
-                        for (Object tool : tools){
-                            if(tool instanceof AgentScopeSandboxAwareTool sandboxToolAdapter){
+                        for (Object tool : tools) {
+                            if (tool instanceof AgentScopeSandboxAwareTool sandboxToolAdapter) {
                                 SandboxTool sandboxTool = sandboxToolAdapter.getSandboxTool();
                                 Class<?> sandboxClass = sandboxTool.getSandboxClass();
-                                if(sandboxClass == null){
+                                if (sandboxClass == null) {
                                     throw new IllegalStateException("SandboxClass cannot be null for AgentScopeSandboxAwareTool: " + tool.getClass().getName());
                                 }
                                 Sandbox sandbox = (Sandbox) sandboxClass.getConstructor(
@@ -278,22 +272,19 @@ public class AgentScopeAgent extends BaseAgent {
     public AgentScopeAgent() {
         super();
         this.contextAdapter = this::defaultContextAdapter;
-        this.responseProcessor = this::defaultResponseProcessor;
         this.streamResponseProcessor = this::defaultStreamResponseProcessor;
     }
 
     public AgentScopeAgent(Builder agentScopeBuilder) {
-        this(agentScopeBuilder, null, null, null);
+        this(agentScopeBuilder, null, null);
     }
 
     public AgentScopeAgent(Builder agentScopeBuilder,
                            Function<Context, Msg> contextAdapter,
-                           Function<Msg, String> responseProcessor,
-                           Function<Msg, String> streamResponseProcessor) {
+                           Function<ContentBlock, StreamResponse> streamResponseProcessor) {
         super();
         this.agentScopeBuilder = agentScopeBuilder;
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;
-        this.responseProcessor = responseProcessor != null ? responseProcessor : this::defaultResponseProcessor;
         this.streamResponseProcessor = streamResponseProcessor != null ? streamResponseProcessor : this::defaultStreamResponseProcessor;
     }
 
@@ -302,12 +293,10 @@ public class AgentScopeAgent extends BaseAgent {
                            AgentConfig config,
                            Builder agentScopeBuilder,
                            Function<Context, Msg> contextAdapter,
-                           Function<Msg, String> responseProcessor,
-                           Function<Msg, String> streamResponseProcessor) {
+                           Function<ContentBlock, StreamResponse> streamResponseProcessor) {
         super(beforeCallbacks, afterCallbacks, config);
         this.agentScopeBuilder = agentScopeBuilder;
         this.contextAdapter = contextAdapter != null ? contextAdapter : this::defaultContextAdapter;
-        this.responseProcessor = responseProcessor != null ? responseProcessor : this::defaultResponseProcessor;
         this.streamResponseProcessor = streamResponseProcessor != null ? streamResponseProcessor : this::defaultStreamResponseProcessor;
     }
     
@@ -322,7 +311,7 @@ public class AgentScopeAgent extends BaseAgent {
     }
     
     @Override
-    protected Flux<Event> execute(Context context, boolean stream) {
+    protected Flux<Event> execute(Context context) {
         return Flux.create(sink -> {
             try {
                 if (agentScopeBuilder == null) {
@@ -354,111 +343,62 @@ public class AgentScopeAgent extends BaseAgent {
 
                 // Create initial response message
                 Message textMessage = new Message();
-                textMessage.setType(MessageType.MESSAGE.name());
-                textMessage.setRole("assistant");
+                textMessage.setType(MessageType.ASSISTANT);
                 textMessage.setStatus(RunStatus.IN_PROGRESS);
                 sink.next(textMessage);
+                AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, agentScopeBuilder);
+                adapter.initialize();
 
-                if (stream) {
-                    AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, agentScopeBuilder);
-                    adapter.initialize();
+                Agent agentScopeAgent = adapter.getAgent();
 
-                    Agent agentScopeAgent = adapter.getAgent();
+                StreamOptions streamOptions = StreamOptions.builder()
+                        .eventTypes(EventType.REASONING, EventType.TOOL_RESULT)
+                        .incremental(true)
+                        .build();
 
-                    StreamOptions streamOptions = StreamOptions.builder()
-                            .eventTypes(EventType.REASONING, EventType.TOOL_RESULT)
-                            .incremental(true)
-                            .build();
-
-                    agentScopeAgent.stream(userMsg, streamOptions)
-                            .subscribeOn(Schedulers.boundedElastic())
-                            .subscribe(
-                                    event -> {
-                                        try {
-                                            String delta = streamResponseProcessor.apply(event.getMessage());
-                                            if (delta != null && !delta.isEmpty()) {
-                                                TextContent deltaContent = new TextContent();
-                                                deltaContent.setText(delta);
-                                                deltaContent.setDelta(true);
-                                                Message deltaMessage = new Message();
-                                                deltaMessage.setType(MessageType.MESSAGE.name());
-                                                deltaMessage.setRole("assistant");
-                                                deltaMessage.setStatus(RunStatus.IN_PROGRESS);
-                                                deltaMessage.setContent(List.of(deltaContent));
-                                                sink.next(deltaMessage);
-                                            }
-                                        } catch (Exception e) {
-                                            logger.severe("Error processing stream event: " + e.getMessage());
+                agentScopeAgent.stream(userMsg, streamOptions)
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .subscribe(
+                                event -> {
+                                    try {
+                                        for (ContentBlock contentBlock : event.getMessage().getContent()) {
+                                            Message deltaMessage = new Message();
+                                            StreamResponse delta = streamResponseProcessor.apply(contentBlock);
+                                            TextContent deltaContent = new TextContent();
+                                            deltaContent.setText(delta.toString());
+                                            deltaMessage.setType(delta.type);
+                                            deltaMessage.setStatus(RunStatus.IN_PROGRESS);
+                                            deltaMessage.setContent(List.of(deltaContent));
+                                            sink.next(deltaMessage);
                                         }
-                                    },
-                                    error -> {
-                                        logger.severe("Agent stream error: " + error.getMessage());
-                                        Message errorMessage = new Message();
-                                        errorMessage.setType(MessageType.MESSAGE.name());
-                                        errorMessage.setRole("assistant");
-                                        errorMessage.setStatus(RunStatus.FAILED);
-                                        TextContent errorContent = new TextContent();
-                                        errorContent.setText("Error: " + error.getMessage());
-                                        errorMessage.setContent(List.of(errorContent));
-                                        sink.next(errorMessage);
-                                        sink.error(error);
-                                    },
-                                    () -> {
-                                        Message completedMessage = new Message();
-                                        completedMessage.setType(MessageType.MESSAGE.name());
-                                        completedMessage.setRole("assistant");
-                                        completedMessage.setStatus(RunStatus.COMPLETED);
-                                        sink.next(completedMessage);
-                                        sink.complete();
+                                    } catch (Exception e) {
+                                        logger.severe("Error processing stream event: " + e.getMessage());
                                     }
-                            );
-
-                } else {
-                    AgentScopeContextAdapter adapter = new AgentScopeContextAdapter(context, agentScopeBuilder);
-                    adapter.initialize();
-
-                    // Get the agent from builder
-                    Agent agentScopeAgent = adapter.getAgent();
-
-                    agentScopeAgent.call(userMsg)
-                            .subscribeOn(Schedulers.boundedElastic())
-                            .subscribe(
-                                    result -> {
-                                        try {
-                                            String content = responseProcessor.apply(result);
-
-                                            TextContent textContent = new TextContent();
-                                            textContent.setText(content);
-                                            textContent.setDelta(false);
-                                            textMessage.setContent(List.of(textContent));
-                                            textMessage.setStatus(RunStatus.COMPLETED);
-                                            sink.next(textMessage);
-                                            sink.complete();
-                                        } catch (Exception e) {
-                                            logger.severe("Error processing response: " + e.getMessage());
-                                            sink.error(e);
-                                        }
-                                    },
-                                    error -> {
-                                        logger.severe("Agent call error: " + error.getMessage());
-                                        Message errorMessage = new Message();
-                                        errorMessage.setType(MessageType.MESSAGE.name());
-                                        errorMessage.setRole("assistant");
-                                        errorMessage.setStatus(RunStatus.FAILED);
-                                        TextContent errorContent = new TextContent();
-                                        errorContent.setText("Error: " + error.getMessage());
-                                        errorMessage.setContent(List.of(errorContent));
-                                        sink.next(errorMessage);
-                                        sink.error(error);
-                                    }
-                            );
-                }
+                                },
+                                error -> {
+                                    logger.severe("Agent stream error: " + error.getMessage());
+                                    Message errorMessage = new Message();
+                                    errorMessage.setType(MessageType.ASSISTANT);
+                                    errorMessage.setStatus(RunStatus.FAILED);
+                                    TextContent errorContent = new TextContent();
+                                    errorContent.setText("Error: " + error.getMessage());
+                                    errorMessage.setContent(List.of(errorContent));
+                                    sink.next(errorMessage);
+                                    sink.error(error);
+                                },
+                                () -> {
+                                    Message completedMessage = new Message();
+                                    completedMessage.setType(MessageType.ASSISTANT);
+                                    completedMessage.setStatus(RunStatus.COMPLETED);
+                                    sink.next(completedMessage);
+                                    sink.complete();
+                                }
+                        );
 
             } catch (Exception e) {
                 logger.severe("Error in execute: " + e.getMessage());
                 Message errorMessage = new Message();
-                errorMessage.setType(MessageType.MESSAGE.name());
-                errorMessage.setRole("assistant");
+                errorMessage.setType(MessageType.ASSISTANT);
                 errorMessage.setStatus(RunStatus.FAILED);
                 TextContent errorContent = new TextContent();
                 errorContent.setText("Error: " + e.getMessage());
@@ -515,29 +455,27 @@ public class AgentScopeAgent extends BaseAgent {
     /**
      * Default stream response processor - extracts incremental text from AgentScope Msg chunk
      */
-    private String defaultStreamResponseProcessor(Msg msg) {
-        if (msg == null) {
-            return "";
+    private StreamResponse defaultStreamResponseProcessor(ContentBlock contentBlock) {
+        if (contentBlock == null) {
+            return new StreamResponse();
         }
 
-        // For streaming chunks, typically only new content is in the chunk
-        StringBuilder text = new StringBuilder();
-        if (msg.getContent() != null) {
-            for (Object block : msg.getContent()) {
-                if (block instanceof TextBlock textBlock) {
-                    if (textBlock.getText() != null) {
-                        text.append(textBlock.getText());
-                    }
-                } else if (block instanceof ThinkingBlock thinkingBlock) {
-                    // For thinking blocks, include the thinking text
-                    if (thinkingBlock.getThinking() != null) {
-                        text.append(thinkingBlock.getThinking());
-                    }
-                }
+        if (contentBlock instanceof TextBlock textBlock) {
+            return new StreamResponse(textBlock.getText());
+        } else if (contentBlock instanceof ThinkingBlock thinkingBlock) {
+            return new StreamResponse("",thinkingBlock.getThinking(), MessageType.THINKING);
+        }
+        else if (contentBlock instanceof ToolUseBlock toolUseBlock){
+            return new StreamResponse(toolUseBlock.getName(), toolUseBlock.getInput().toString(), MessageType.TOOL_CALL, toolUseBlock.getId());
+        }
+        else if (contentBlock instanceof ToolResultBlock toolResultBlock){
+            String result = "";
+            if(!toolResultBlock.getOutput().isEmpty()){
+                result = toolResultBlock.getOutput().get(0).toString();
             }
+            return new StreamResponse(toolResultBlock.getName(), result, MessageType.TOOL_RESPONSE, toolResultBlock.getId());
         }
-
-        return text.toString();
+        return new StreamResponse();
     }
 
     @Override
@@ -548,7 +486,6 @@ public class AgentScopeAgent extends BaseAgent {
                 this.config,
                 this.agentScopeBuilder,
                 this.contextAdapter,
-                this.responseProcessor,
                 this.streamResponseProcessor
         );
         copy.setKwargs(new HashMap<>(this.kwargs));
@@ -563,8 +500,7 @@ public class AgentScopeAgent extends BaseAgent {
     public static class AgentScopeAgentBuilder {
         private Builder agentScopeBuilder;
         private Function<Context, Msg> contextAdapter;
-        private Function<Msg, String> responseProcessor;
-        private Function<Msg, String> streamResponseProcessor;
+        private Function<ContentBlock, StreamResponse> streamResponseProcessor;
         private AgentConfig config = new AgentConfig();
 
         public AgentScopeAgentBuilder agent(Builder agentScopeBuilder) {
@@ -577,12 +513,7 @@ public class AgentScopeAgent extends BaseAgent {
             return this;
         }
 
-        public AgentScopeAgentBuilder responseProcessor(Function<Msg, String> responseProcessor) {
-            this.responseProcessor = responseProcessor;
-            return this;
-        }
-
-        public AgentScopeAgentBuilder streamResponseProcessor(Function<Msg, String> streamResponseProcessor) {
+        public AgentScopeAgentBuilder streamResponseProcessor(Function<ContentBlock, StreamResponse> streamResponseProcessor) {
             this.streamResponseProcessor = streamResponseProcessor;
             return this;
         }
@@ -593,7 +524,7 @@ public class AgentScopeAgent extends BaseAgent {
         }
 
         public AgentScopeAgent build() {
-            return new AgentScopeAgent(null, null, config, agentScopeBuilder, contextAdapter, responseProcessor, streamResponseProcessor);
+            return new AgentScopeAgent(null, null, config, agentScopeBuilder, contextAdapter, streamResponseProcessor);
         }
     }
 
@@ -611,13 +542,5 @@ public class AgentScopeAgent extends BaseAgent {
 
     public void setContextAdapter(Function<Context, Msg> contextAdapter) {
         this.contextAdapter = contextAdapter;
-    }
-
-    public Function<Msg, String> getResponseProcessor() {
-        return responseProcessor;
-    }
-
-    public void setResponseProcessor(Function<Msg, String> responseProcessor) {
-        this.responseProcessor = responseProcessor;
     }
 }

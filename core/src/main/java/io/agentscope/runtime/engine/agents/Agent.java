@@ -18,7 +18,7 @@ package io.agentscope.runtime.engine.agents;
 
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.schemas.context.Context;
-import io.agentscope.runtime.engine.schemas.agent.Event;
+import io.agentscope.runtime.engine.schemas.message.Event;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -49,7 +49,7 @@ public interface Agent {
      * @param context execution context
      * @return event stream
      */
-    CompletableFuture<Flux<Event>> runAsync(Context context, boolean stream);
+    CompletableFuture<Flux<Event>> runAsync(Context context);
     
     /**
      * Set pre-execution callback

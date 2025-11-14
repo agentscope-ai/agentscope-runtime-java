@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.engine.schemas.agent;
+package io.agentscope.runtime.engine.schemas.message;
 
 import java.util.Map;
 
@@ -33,13 +33,6 @@ public class DataContent extends Content {
     public DataContent(Map<String, Object> data) {
         super(ContentType.DATA);
         this.data = data;
-    }
-    
-    public DataContent(Boolean delta, Map<String, Object> data, Integer index) {
-        super(ContentType.DATA);
-        this.setDelta(delta);
-        this.data = data;
-        this.setIndex(index);
     }
     
     public Map<String, Object> getData() {

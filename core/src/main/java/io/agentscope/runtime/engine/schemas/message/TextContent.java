@@ -14,37 +14,35 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.engine.schemas.agent;
+package io.agentscope.runtime.engine.schemas.message;
 
 /**
- * Error information class
- * Corresponds to the Error class in agent_schemas.py of the Python version
+ * Text content class
+ * Corresponds to the TextContent class in agent_schemas.py of the Python version
  */
-public class Error {
+public class TextContent extends Content {
     
-    private String code;
-    private String message;
+    private String text;
     
-    public Error() {}
-    
-    public Error(String code, String message) {
-        this.code = code;
-        this.message = message;
+    public TextContent() {
+        super(ContentType.TEXT);
     }
     
-    public String getCode() {
-        return code;
+    public TextContent(String text) {
+        super(ContentType.TEXT);
+        this.text = text;
     }
     
-    public void setCode(String code) {
-        this.code = code;
+    public TextContent(Boolean delta, String text, Integer index) {
+        super(ContentType.TEXT);
+        this.text = text;
     }
     
-    public String getMessage() {
-        return message;
+    public String getText() {
+        return text;
     }
     
-    public void setMessage(String message) {
-        this.message = message;
+    public void setText(String text) {
+        this.text = text;
     }
 }

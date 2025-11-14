@@ -45,6 +45,11 @@ type ChatMessage = {
   think: string;
   sender: string;
   site: SiteItem[];
+  status?: string;
+  toolName?: string;
+  toolId?: string;
+  toolInput?: string;
+  toolResult?: string;
 }[];
 
 const App: React.FC = () => {
@@ -56,12 +61,17 @@ const App: React.FC = () => {
       inputRef.current.select();
     }
   };
-  const [messages, setMessages] = useState<ChatMessage>([
+    const [messages, setMessages] = useState<ChatMessage>([
     {
       message: "Hello, I'm the assistant! Ask me anything!",
       sender: "assistant",
       think: "",
       site: [],
+      status: undefined,
+      toolName: undefined,
+      toolId: undefined,
+      toolInput: undefined,
+      toolResult: undefined,
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
@@ -100,6 +110,11 @@ const App: React.FC = () => {
       sender: "user",
       think: "",
       site: [],
+      status: undefined,
+      toolName: undefined,
+      toolId: undefined,
+      toolInput: undefined,
+      toolResult: undefined,
     };
 
     const newMessages = [...messages, newMessage];
@@ -152,6 +167,11 @@ const App: React.FC = () => {
         sender: "assistant",
         think: "",
         site: [],
+        status: undefined,
+        toolName: undefined,
+        toolId: undefined,
+        toolInput: undefined,
+        toolResult: undefined,
       },
     ]);
     while (true) {
@@ -169,8 +189,26 @@ const App: React.FC = () => {
 
         try {
           const parsed = JSON.parse(line.split("data: ")[1]);
-          const content = parsed.choices[0]?.delta?.content || "";
-          if (content) {
+          const delta = parsed.choices[0]?.delta || {};
+          const content = delta.content || "";
+          const messageType = delta.messageType;
+          
+          if (messageType === "TOOL_CALL" || messageType === "TOOL_RESPONSE") {
+            setMessages((prevMessages) => [
+              ...prevMessages.slice(0, -1),
+              {
+                ...prevMessages[prevMessages.length - 1],
+                message: prevMessages[prevMessages.length - 1].message,
+                sender: "assistant",
+                site: [],
+                status: messageType,
+                toolName: delta.toolName,
+                toolId: delta.toolId,
+                toolInput: delta.toolInput,
+                toolResult: delta.toolResult,
+              },
+            ]);
+          } else if (content) {
             setMessages((prevMessages) => [
               ...prevMessages.slice(0, -1),
               {
@@ -179,6 +217,7 @@ const App: React.FC = () => {
                   prevMessages[prevMessages.length - 1].message + content,
                 sender: "assistant",
                 site: [],
+                status: undefined,
               },
             ]);
           }
@@ -249,6 +288,61 @@ const App: React.FC = () => {
                           <ReactMarkdown>{item.message}</ReactMarkdown>
                         ) : (
                           <Text>{item.message}</Text>
+                        )}
+                        {}
+                        {item.status === "TOOL_CALL" && (
+                          <div style={{ 
+                            marginTop: 8, 
+                            padding: 12, 
+                            backgroundColor: "#e6f7ff", 
+                            borderRadius: 4,
+                            color: "#1890ff",
+                            fontSize: 14
+                          }}>
+                            <div style={{ fontWeight: "bold", marginBottom: 8 }}>
+                              🔧 Calling Tool: {item.toolName || "Unknown"}
+                            </div>
+                            {item.toolId && (
+                              <div style={{ fontSize: 12, marginBottom: 4, opacity: 0.8 }}>
+                                Tool ID: {item.toolId}
+                              </div>
+                            )}
+                            {item.toolInput && (
+                              <div style={{ fontSize: 12, marginTop: 8, padding: 8, backgroundColor: "rgba(255,255,255,0.5)", borderRadius: 4 }}>
+                                <div style={{ fontWeight: "bold", marginBottom: 4 }}>Input:</div>
+                                <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                  {item.toolInput}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {item.status === "TOOL_RESPONSE" && (
+                          <div style={{ 
+                            marginTop: 8, 
+                            padding: 12, 
+                            backgroundColor: "#f6ffed", 
+                            borderRadius: 4,
+                            color: "#52c41a",
+                            fontSize: 14
+                          }}>
+                            <div style={{ fontWeight: "bold", marginBottom: 8 }}>
+                              ✅ Tool Call Complete: {item.toolName || "Unknown"}
+                            </div>
+                            {item.toolId && (
+                              <div style={{ fontSize: 12, marginBottom: 4, opacity: 0.8 }}>
+                                Tool ID: {item.toolId}
+                              </div>
+                            )}
+                            {item.toolResult && (
+                              <div style={{ fontSize: 12, marginTop: 8, padding: 8, backgroundColor: "rgba(255,255,255,0.5)", borderRadius: 4 }}>
+                                <div style={{ fontWeight: "bold", marginBottom: 4 }}>Result:</div>
+                                <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                  {item.toolResult}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
                         )}
                         {isTyping &&
                           item === messages[messages.length - 1] && (

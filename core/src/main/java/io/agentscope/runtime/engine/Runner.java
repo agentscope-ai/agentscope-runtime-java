@@ -18,10 +18,11 @@ package io.agentscope.runtime.engine;
 
 import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.message.*;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.context.Context;
 import io.agentscope.runtime.engine.schemas.context.Session;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import reactor.core.publisher.Flux;
 
@@ -55,7 +56,7 @@ public class Runner {
         return Flux.create(sink -> {
             try {
                 // Get or create Session
-                io.agentscope.runtime.engine.memory.model.Session memorySession = getOrCreateSession(request.getUserId(), request.getSessionId());
+                Session memorySession = getOrCreateSession(request.getUserId(), request.getSessionId());
 
                 Session session = new Session();
                 session.setId(memorySession.getId());
@@ -63,18 +64,17 @@ public class Runner {
                 // Convert history message types
 
                 // Todo: Specific implementation of memory module
-                List<io.agentscope.runtime.engine.schemas.agent.Message> convertedMessages = new ArrayList<>();
+                List<Message> convertedMessages = new ArrayList<>();
                 if (memorySession.getMessages() != null) {
-                    for (io.agentscope.runtime.engine.memory.model.Message memoryMsg : memorySession.getMessages()) {
-                        io.agentscope.runtime.engine.schemas.agent.Message agentMsg = new io.agentscope.runtime.engine.schemas.agent.Message();
-                        agentMsg.setRole(memoryMsg.getType() == io.agentscope.runtime.engine.memory.model.MessageType.USER ? "user" : "assistant");
+                    for (Message memoryMsg : memorySession.getMessages()) {
+                        Message agentMsg = new Message();
 
-                        List<io.agentscope.runtime.engine.schemas.agent.Content> content = new ArrayList<>();
+                        List<Content> content = new ArrayList<>();
                         if (memoryMsg.getContent() != null) {
-                            for (io.agentscope.runtime.engine.memory.model.MessageContent msgContent : memoryMsg.getContent()) {
-                                io.agentscope.runtime.engine.schemas.agent.TextContent textContent = new io.agentscope.runtime.engine.schemas.agent.TextContent();
-                                textContent.setText(msgContent.getText());
-                                content.add(textContent);
+                            for (Content msgContent : memoryMsg.getContent()) {
+                                if(msgContent instanceof TextContent textContent){
+                                    content.add(textContent);
+                                }
                             }
                         }
                         agentMsg.setContent(content);
@@ -95,7 +95,7 @@ public class Runner {
                     context.setCurrentMessages(request.getInput());
                 }
 
-                CompletableFuture<Flux<Event>> agentFuture = this.agent.runAsync(context, this.stream);
+                CompletableFuture<Flux<Event>> agentFuture = this.agent.runAsync(context);
 
                 agentFuture.thenAccept(eventFlux -> {
                     StringBuilder aiResponse = new StringBuilder();
@@ -104,7 +104,8 @@ public class Runner {
                                 sink.next(event);
                                 // Collect AI response content
                                 if (event instanceof Message message) {
-                                    if (MessageType.MESSAGE.name().equals(message.getType()) &&
+                                    // Todo: FIX ME
+                                    if (MessageType.ASSISTANT.equals(message.getType()) &&
                                             "completed".equals(message.getStatus())) {
                                         if (message.getContent() != null && !message.getContent().isEmpty()) {
                                             Content content = message.getContent().get(0);
@@ -166,7 +167,7 @@ public class Runner {
     /**
      * Get or create Session
      */
-    private io.agentscope.runtime.engine.memory.model.Session getOrCreateSession(String userId, String sessionId) {
+    private Session getOrCreateSession(String userId, String sessionId) {
         try {
             return this.contextManager.composeSession(userId, sessionId).join();
         } catch (Exception e) {
@@ -175,7 +176,7 @@ public class Runner {
                 return this.contextManager.getSessionHistoryService().createSession(userId, Optional.of(sessionId)).join();
             } catch (Exception ex) {
                 // If creation fails, return a temporary Session
-                return new io.agentscope.runtime.engine.memory.model.Session(sessionId, userId, new ArrayList<>());
+                return new Session(sessionId, userId, new ArrayList<>());
             }
         }
     }
@@ -186,22 +187,22 @@ public class Runner {
     private void saveConversationHistory(Context context, String aiResponse) {
         try {
             // Get current session
-            io.agentscope.runtime.engine.memory.model.Session memorySession = getOrCreateSession(context.getUserId(), context.getSession().getUserId());
+            Session memorySession = getOrCreateSession(context.getUserId(), context.getSession().getUserId());
 
             // Create a list of messages to be saved
-            List<io.agentscope.runtime.engine.memory.model.Message> messagesToSave = new ArrayList<>();
+            List<Message> messagesToSave = new ArrayList<>();
 
             // Add user messages
             if (context.getCurrentMessages() != null) {
-                for (io.agentscope.runtime.engine.schemas.agent.Message userMessage : context.getCurrentMessages()) {
-                    io.agentscope.runtime.engine.memory.model.Message memoryMessage = new io.agentscope.runtime.engine.memory.model.Message();
-                    memoryMessage.setType(io.agentscope.runtime.engine.memory.model.MessageType.USER);
+                for (Message userMessage : context.getCurrentMessages()) {
+                    Message memoryMessage = new Message();
+                    memoryMessage.setType(io.agentscope.runtime.engine.schemas.message.MessageType.USER);
 
-                    List<io.agentscope.runtime.engine.memory.model.MessageContent> content = new ArrayList<>();
+                    List<Content> content = new ArrayList<>();
                     if (userMessage.getContent() != null) {
-                        for (io.agentscope.runtime.engine.schemas.agent.Content msgContent : userMessage.getContent()) {
-                            if (msgContent instanceof io.agentscope.runtime.engine.schemas.agent.TextContent textContent) {
-                                content.add(new io.agentscope.runtime.engine.memory.model.MessageContent("text", textContent.getText()));
+                        for (Content msgContent : userMessage.getContent()) {
+                            if (msgContent instanceof TextContent textContent) {
+                                content.add(new TextContent(textContent.getText()));
                             }
                         }
                     }
@@ -212,11 +213,11 @@ public class Runner {
 
             // Add AI reply message
             if (aiResponse != null && !aiResponse.isEmpty()) {
-                io.agentscope.runtime.engine.memory.model.Message aiMessage = new io.agentscope.runtime.engine.memory.model.Message();
-                aiMessage.setType(io.agentscope.runtime.engine.memory.model.MessageType.ASSISTANT);
+                Message aiMessage = new Message();
+                aiMessage.setType(io.agentscope.runtime.engine.schemas.message.MessageType.ASSISTANT);
 
-                List<io.agentscope.runtime.engine.memory.model.MessageContent> content = new ArrayList<>();
-                content.add(new io.agentscope.runtime.engine.memory.model.MessageContent("text", aiResponse));
+                List<Content> content = new ArrayList<>();
+                content.add(new TextContent(aiResponse));
                 aiMessage.setContent(content);
                 messagesToSave.add(aiMessage);
             }

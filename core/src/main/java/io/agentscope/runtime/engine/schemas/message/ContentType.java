@@ -13,27 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.engine.memory.model;
+
+package io.agentscope.runtime.engine.schemas.message;
 
 /**
- * Message type enumeration
+ * Content type constant class
+ * Corresponds to the ContentType class in agent_schemas.py of the Python version
  */
-public enum MessageType {
-    CHUNK,
-    MESSAGE,
-    SYSTEM,
-    USER,
-    ASSISTANT,
-    FUNCTION_CALL,
-    FUNCTION_CALL_OUTPUT,
-    PLUGIN_CALL,
-    PLUGIN_CALL_OUTPUT,
-    COMPONENT_CALL,
-    COMPONENT_CALL_OUTPUT,
-    MCP_LIST_TOOLS,
-    MCP_APPROVAL_REQUEST,
-    MCP_TOOL_CALL,
-    MCP_APPROVAL_RESPONSE,
-    HEARTBEAT,
-    ERROR
+public class ContentType {
+    
+    public static final String TEXT = "text";
+    public static final String DATA = "data";
+    public static final String IMAGE = "image";
+    public static final String AUDIO = "audio";
+    
+    private ContentType() {
+        // Utility class, instantiation not allowed
+    }
 }

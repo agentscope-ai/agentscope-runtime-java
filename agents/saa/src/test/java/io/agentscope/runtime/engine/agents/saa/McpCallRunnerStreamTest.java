@@ -23,14 +23,15 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.schemas.message.Event;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import io.agentscope.runtime.engine.agents.saa.tools.ToolcallsInit;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
@@ -184,7 +185,7 @@ public class McpCallRunnerStreamTest {
 
         // Create message
         Message message = new Message();
-        message.setRole("user");
+        message.setType(MessageType.USER);
         message.setContent(List.of(textContent));
 
         // Set input messages
@@ -201,7 +202,6 @@ public class McpCallRunnerStreamTest {
     private void handleEvent(Event event) {
         if (event instanceof Message message) {
             System.out.println("Event - Type: " + message.getType() +
-                    ", Role: " + message.getRole() +
                     ", Status: " + message.getStatus());
 
             if (message.getContent() != null && !message.getContent().isEmpty()) {

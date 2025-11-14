@@ -13,21 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package io.agentscope.runtime.engine.schemas.agent;
+package io.agentscope.runtime.engine.schemas.message;
 
 /**
- * Content type constant class
- * Corresponds to the ContentType class in agent_schemas.py of the Python version
+ * Message type enumeration
  */
-public class ContentType {
-    
-    public static final String TEXT = "text";
-    public static final String DATA = "data";
-    public static final String IMAGE = "image";
-    public static final String AUDIO = "audio";
-    
-    private ContentType() {
-        // Utility class, instantiation not allowed
-    }
+public enum MessageType {
+    USER,
+    ASSISTANT,
+    THINKING,
+    TOOL_CALL,
+    TOOL_RESPONSE
 }

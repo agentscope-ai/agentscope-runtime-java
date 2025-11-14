@@ -15,8 +15,8 @@
  */
 package io.agentscope.runtime.engine.memory.service;
 
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.Session;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.context.Session;
 import io.agentscope.runtime.engine.shared.Service;
 
 import java.util.List;

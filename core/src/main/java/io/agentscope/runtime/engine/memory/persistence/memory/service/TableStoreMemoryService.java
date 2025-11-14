@@ -25,10 +25,11 @@ import com.aliyun.openservices.tablestore.agent.model.Response;
 import com.aliyun.openservices.tablestore.agent.model.filter.Filter;
 import com.aliyun.openservices.tablestore.agent.model.filter.Filters;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.agentscope.runtime.engine.memory.model.Message;
-import io.agentscope.runtime.engine.memory.model.MessageContent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.message.Content;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -328,9 +329,9 @@ public class TableStoreMemoryService implements MemoryService {
         try {
             String contentJson = metadata.getString("content");
             if (contentJson != null) {
-                List<MessageContent> content = OBJECT_MAPPER.readValue(
+                List<Content> content = OBJECT_MAPPER.readValue(
                         contentJson,
-                        OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, MessageContent.class)
+                        OBJECT_MAPPER.getTypeFactory().constructCollectionType(List.class, TextContent.class)
                 );
                 message.setContent(content);
             }
@@ -359,16 +360,14 @@ public class TableStoreMemoryService implements MemoryService {
             return "";
         }
 
-        if (message.getType() == MessageType.MESSAGE) {
-            return message.getContent().stream()
-                    .filter(content -> "text".equals(content.getType()))
-                    .map(MessageContent::getText)
-                    .filter(Objects::nonNull)
-                    .findFirst()
-                    .orElse("");
-        }
-
-        return "";
+        // Todo: TEST ME
+        return message.getContent().stream()
+                .filter(content -> "text".equals(content.getType()))
+                .filter(content -> content instanceof TextContent)
+                .map(content -> ((TextContent) content).getText())
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("");
     }
 }
 

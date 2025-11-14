@@ -21,12 +21,13 @@ import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.*;
+import io.agentscope.runtime.engine.schemas.message.*;
 import io.agentscope.runtime.engine.schemas.agent.*;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
+import io.agentscope.runtime.engine.schemas.message.Event;
+import io.agentscope.runtime.engine.schemas.message.Message;
 import reactor.core.publisher.Flux;
 
-
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,7 +59,7 @@ public class GraphAgentExecutor implements AgentExecutor {
         String inputText = getTextFromMessageParts(message);
         AgentRequest agentRequest = new AgentRequest();
         Message agentMessage = new Message();
-        agentMessage.setRole("user");
+        agentMessage.setType(MessageType.USER);
         TextContent tc = new TextContent();
         tc.setText(inputText);
         agentMessage.setContent(List.of(tc));
@@ -124,52 +125,71 @@ public class GraphAgentExecutor implements AgentExecutor {
      * Process streaming output data
      */
     private void processStreamingOutput(Flux<Event> resultFlux, TaskUpdater taskUpdater, StringBuilder accumulatedOutput) {
+        String artifactId = UUID.randomUUID().toString();
         try {
             resultFlux
-                    .doOnSubscribe(s -> logger.info("Subscribed to executeFunction result stream"))
+                    .doOnSubscribe(s -> {
+                        logger.info("Subscribed to executeFunction result stream");
+                        taskUpdater.startWork();
+                    })
                     .doOnNext(output -> {
                         try {
                             if (output instanceof Message m) {
                                 List<Content> contents = m.getContent();
                                 if (contents != null && !contents.isEmpty() && contents.get(0) instanceof TextContent text) {
                                     String content = text.getText();
+                                    Map<String, Object> metaData = new HashMap<>();
+                                    if (m.getType() == MessageType.TOOL_CALL) {
+                                        metaData.put("type", "toolCall");
+                                    } else if (m.getType() == MessageType.TOOL_RESPONSE) {
+                                        metaData.put("type", "toolResponse");
+                                    }
+                                    else{
+                                        metaData.put("type","chunk");
+                                    }
                                     if (content != null && !content.isEmpty()) {
-                                        taskUpdater.startWork(taskUpdater.newAgentMessage(
+
+                                        taskUpdater.addArtifact(
                                                 List.of(new TextPart(content)),
-                                                Map.of()
-                                        ));
+                                                artifactId,
+                                                "agent-response",
+                                                metaData,
+                                                true,
+                                                false
+                                        );
                                         accumulatedOutput.append(content);
-                                        logger.info("Appended content chunk (" + content.length() + "chars), total so far "
+                                        logger.info("Appended content chunk (" + content.length() + " chars), total so far: "
                                                 + accumulatedOutput.length());
                                     }
                                 }
                             }
-                        } catch (Exception e) {
-                            logger.severe("Error occurred while processing single output" + e.getMessage());
+                        } catch (Exception ignored) {
                         }
                     })
                     .doOnComplete(() -> {
                         logger.info("Stream processing completed successfully");
-                        taskUpdater.complete();
+                        io.a2a.spec.Message finalMessage = taskUpdater.newAgentMessage(
+                                List.of(new TextPart(accumulatedOutput.toString())),
+                                Map.of("type", "final_response")
+                        );
+
+                        taskUpdater.complete(finalMessage);
                     })
                     .doOnError(e -> {
-                        logger.severe("Error occurred during streaming processing" + e.getMessage());
-                        taskUpdater.startWork(taskUpdater.newAgentMessage(
-                                List.of(new TextPart("Streaming error occurred: " + e.getMessage())),
+                        io.a2a.spec.Message errorMessage = taskUpdater.newAgentMessage(
+                                List.of(new TextPart("Streaming failed: " + e.getMessage())),
                                 Map.of()
-                        ));
-                        taskUpdater.complete();
+                        );
+                        taskUpdater.fail(errorMessage);
                     })
-                    .doFinally(signal -> logger.info("executeFunction result stream terminated: " + signal))
+                    .doFinally(signal -> logger.info("Stream terminated: " + signal))
                     .blockLast();
 
         } catch (Exception e) {
-            logger.severe("Error in processStreamingOutput" + e.getMessage());
-            taskUpdater.startWork(taskUpdater.newAgentMessage(
-                    List.of(new TextPart("Error processing streaming output: " + e.getMessage())),
+            taskUpdater.fail(taskUpdater.newAgentMessage(
+                    List.of(new TextPart("Critical error: " + e.getMessage())),
                     Map.of()
             ));
-            taskUpdater.complete();
         }
     }
 

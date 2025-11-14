@@ -14,37 +14,41 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.engine.schemas.agent;
+package io.agentscope.runtime.engine.schemas.message;
 
 /**
- * Text content class
- * Corresponds to the TextContent class in agent_schemas.py of the Python version
+ * Content base class
+ * Corresponds to the Content class in agent_schemas.py of the Python version
  */
-public class TextContent extends Content {
+public abstract class Content extends Event {
     
-    private String text;
+    private String type;
+    private String object = "content";
     
-    public TextContent() {
-        super(ContentType.TEXT);
+    public Content() {
+        super();
     }
     
-    public TextContent(String text) {
-        super(ContentType.TEXT);
-        this.text = text;
+    public Content(String type) {
+        super();
+        this.type = type;
     }
     
-    public TextContent(Boolean delta, String text, Integer index) {
-        super(ContentType.TEXT);
-        this.setDelta(delta);
-        this.text = text;
-        this.setIndex(index);
+    public String getType() {
+        return type;
     }
     
-    public String getText() {
-        return text;
+    public void setType(String type) {
+        this.type = type;
     }
     
-    public void setText(String text) {
-        this.text = text;
+    @Override
+    public String getObject() {
+        return object;
+    }
+    
+    @Override
+    public void setObject(String object) {
+        this.object = object;
     }
 }

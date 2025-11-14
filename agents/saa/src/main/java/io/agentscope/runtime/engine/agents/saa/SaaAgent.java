@@ -24,7 +24,7 @@ import io.agentscope.runtime.engine.agents.Agent;
 import io.agentscope.runtime.engine.agents.AgentCallback;
 import io.agentscope.runtime.engine.agents.AgentConfig;
 import io.agentscope.runtime.engine.agents.BaseAgent;
-import io.agentscope.runtime.engine.memory.model.MessageType;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 
 import com.alibaba.cloud.ai.graph.agent.flow.builder.FlowAgentBuilder;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
@@ -34,9 +34,9 @@ import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import reactor.core.publisher.Flux;
 import io.agentscope.runtime.engine.schemas.context.Context;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.schemas.message.Event;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import io.agentscope.runtime.engine.schemas.agent.RunStatus;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -203,9 +203,9 @@ public class SaaAgent extends BaseAgent {
         private org.springframework.ai.chat.messages.Message convertToSpringMessage(Message message) {
             String content = extractTextContent(message);
 
-            if ("user".equals(message.getRole())) {
+            if (message.getType() == MessageType.USER) {
                 return new UserMessage(content);
-            } else if ("assistant".equals(message.getRole())) {
+            } else if (message.getType() == MessageType.ASSISTANT) {
                 return new AssistantMessage(content);
             }
 
@@ -294,7 +294,7 @@ public class SaaAgent extends BaseAgent {
     }
     
     @Override
-    protected Flux<Event> execute(Context context, boolean stream) {
+    protected Flux<Event> execute(Context context) {
         return Flux.create(sink -> {
             try {
                 // Create and initialize context adapter
@@ -303,8 +303,7 @@ public class SaaAgent extends BaseAgent {
 
                 // Create initial response message
                 Message textMessage = new Message();
-                textMessage.setType(MessageType.MESSAGE.name());
-                textMessage.setRole("assistant");
+                textMessage.setType(MessageType.ASSISTANT);
                 textMessage.setStatus(RunStatus.IN_PROGRESS);
 
                 // Emit the initial message as an event
@@ -314,10 +313,10 @@ public class SaaAgent extends BaseAgent {
                 Object processedInput = contextAdapter.apply(context);
 
                 // Invoke Agent with adapted context
-                Object output = invokeAgentWithContext(adapter, processedInput, stream);
+                Object output = invokeAgentWithContext(adapter, processedInput);
                 StringBuilder contentBuilder = new StringBuilder();
 
-                if (stream && output instanceof Flux<?> outputFlux) {
+                if (output instanceof Flux<?> outputFlux) {
                     outputFlux.subscribe(part -> {
                         try {
                             String contentPart = this.streamResponseProcessor.apply(part);
@@ -326,19 +325,16 @@ public class SaaAgent extends BaseAgent {
 
                                 TextContent textContent = new TextContent();
                                 textContent.setText(contentPart);
-                                textContent.setDelta(true);
                                 Message deltaMessage = new Message();
 
                                 if (part instanceof StreamingOutput) {
-                                    deltaMessage.setType(MessageType.CHUNK.name());
-                                    deltaMessage.setRole("assistant");
+                                    deltaMessage.setType(MessageType.ASSISTANT);
                                     deltaMessage.setStatus(RunStatus.IN_PROGRESS);
                                     deltaMessage.setContent(List.of(textContent));
                                     sink.next(deltaMessage);
                                 } else {
                                     // Also emit non-streaming parts as chunks
-                                    deltaMessage.setType(MessageType.CHUNK.name());
-                                    deltaMessage.setRole("assistant");
+                                    deltaMessage.setType(MessageType.ASSISTANT);
                                     deltaMessage.setStatus(RunStatus.IN_PROGRESS);
                                     deltaMessage.setContent(List.of(textContent));
                                     sink.next(deltaMessage);
@@ -351,8 +347,7 @@ public class SaaAgent extends BaseAgent {
                         // Handle error during streaming
                         logger.severe("Streaming error: " + error.getMessage());
                         Message errorMessage = new Message();
-                        errorMessage.setType(MessageType.MESSAGE.name());
-                        errorMessage.setRole("assistant");
+                        errorMessage.setType(MessageType.ASSISTANT);
                         errorMessage.setStatus(RunStatus.FAILED);
                         TextContent errorContent = new TextContent();
                         errorContent.setText("Error: " + error.getMessage());
@@ -364,33 +359,18 @@ public class SaaAgent extends BaseAgent {
                         logger.info("Stream completed with content length: " + contentBuilder.length());
                         TextContent textContent = new TextContent();
                         textContent.setText(contentBuilder.toString());
-                        textContent.setDelta(false);
                         textMessage.setContent(List.of(textContent));
 
                         textMessage.setStatus(RunStatus.COMPLETED);
                         sink.next(textMessage);
                         sink.complete();
                     });
-                } else {
-                    // Apply response processor to process output
-                    String content = responseProcessor.apply(output);
-
-                    // Create text content with delta=false
-                    TextContent textContent = new TextContent();
-                    textContent.setText(content);
-                    textContent.setDelta(false);
-                    textMessage.setContent(List.of(textContent));
-
-                    textMessage.setStatus(RunStatus.COMPLETED);
-                    sink.next(textMessage);
-                    sink.complete();
                 }
 
             } catch (Exception e) {
                 // Create error message
                 Message errorMessage = new Message();
-                errorMessage.setType(MessageType.MESSAGE.name());
-                errorMessage.setRole("assistant");
+                errorMessage.setType(MessageType.ASSISTANT);
                 errorMessage.setStatus(RunStatus.FAILED);
                 TextContent errorContent = new TextContent();
                 errorContent.setText("Error: " + e.getMessage());
@@ -418,6 +398,7 @@ public class SaaAgent extends BaseAgent {
         if (output == null) {
             return "";
         }
+        System.out.println(output);
         if (output instanceof NodeOutput nodeOutput) {
             String nodeName = nodeOutput.node();
             String content;
@@ -473,7 +454,7 @@ public class SaaAgent extends BaseAgent {
     /**
      * Invoke Agent with context - enhanced version that uses context information
      */
-    private Object invokeAgentWithContext(SaaContextAdapter adapter, Object input, boolean stream) {
+    private Object invokeAgentWithContext(SaaContextAdapter adapter, Object input) {
         if (originalAgentBuilder == null) {
             throw new IllegalStateException("Agent Builder is not set");
         }
@@ -490,24 +471,7 @@ public class SaaAgent extends BaseAgent {
                     .addMetadata("user_id", adapter.getContext().getSession().getUserId())
                     .build();
 
-            if (stream) {
-                return agent.stream((UserMessage) adapter.getNewMessage(), runnableConfig);
-            } else {
-                Optional<OverAllState> state = agent.invoke((UserMessage) adapter.getNewMessage(), runnableConfig);
-
-                if (state.isPresent()) {
-                    Optional<Object> messages = state.get().value("messages");
-                    if (messages.isPresent() && messages.get() instanceof List) {
-                        @SuppressWarnings("unchecked")
-                        List<Object> messagesList = (List<Object>) messages.get();
-                        if (!messagesList.isEmpty()) {
-                            return messagesList.get(messagesList.size() - 1);
-                        }
-                    }
-                }
-            }
-
-            return new AssistantMessage("No response generated");
+            return agent.stream((UserMessage) adapter.getNewMessage(), runnableConfig);
         } catch (Exception e) {
             logger.severe("Error invoking Agent: " + e.getMessage());
             throw new RuntimeException("Failed to invoke Agent with context", e);
@@ -527,7 +491,7 @@ public class SaaAgent extends BaseAgent {
      * Convenience method for direct invocation with Context
      */
     public Flux<Event> runWithContext(Context context) {
-        return execute(context, false);
+        return execute(context);
     }
 
     @Override

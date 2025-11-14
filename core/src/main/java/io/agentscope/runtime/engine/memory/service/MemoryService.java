@@ -15,7 +15,7 @@ package io.agentscope.runtime.engine.memory.service;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import io.agentscope.runtime.engine.memory.model.Message;
+import io.agentscope.runtime.engine.schemas.message.Message;
 import io.agentscope.runtime.engine.shared.Service;
 
 import java.util.List;
