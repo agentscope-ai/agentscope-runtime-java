@@ -24,7 +24,7 @@ This is the Java implementation of [AgentScope Runtime](https://github.com/agent
 - **Deployment Infrastructure**: Built-in services for session management, memory, and sandbox environment control
 - **Sandboxed Tool Execution**: Isolated sandboxes ensure safe tool execution without system compromise
 - **Developer Friendly**: Simple deployment with powerful customization options
-- 🚧 **Framework Agnostic**: Not tied to any specific framework. Works seamlessly with popular open-source agent frameworks and custom implementations
+- **Framework Agnostic**: Not tied to any specific framework. Works seamlessly with popular open-source agent frameworks and custom implementations
 - 🚧 **Observability**: Trace and visualize agent operations comprehensively
 
 ---
@@ -55,12 +55,6 @@ Join our community on DingTalk:
 
 - Java 17 or higher
 - Maven 3.6+
-
-### Build from Source
-
-```bash
-mvn clean install -DskipTests
-```
 
 ### Add Dependency
 
