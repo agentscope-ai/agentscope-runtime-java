@@ -17,6 +17,8 @@ package io.agentscope.runtime.autoconfigure;
 
 import io.agentscope.runtime.protocol.ProtocolConfig;
 import io.agentscope.runtime.protocol.a2a.A2aProtocolConfig;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -29,8 +31,19 @@ import org.springframework.context.annotation.Configuration;
 public class A2aAutoConfiguration {
 
     @Bean
-    public DeployProperties deployProperties(A2aCommonProperties properties) {
-        return new DeployProperties(properties.getServerPort(), properties.getServerAddress(), properties.getEndpointName());
+    public DeployProperties deployProperties(A2aCommonProperties properties, ObjectProvider<ServerProperties> serverPropertiesProvider) {
+        DeployProperties result = new DeployProperties();
+        result.setEndpointName(properties.getEndpointName());
+        if (serverPropertiesProvider.getIfAvailable() != null) {
+            ServerProperties serverProperties = serverPropertiesProvider.getIfAvailable();
+            if (null != serverProperties.getPort()) {
+                result.setServerPort(serverProperties.getPort());
+            }
+            if (null != serverProperties.getAddress()) {
+                result.setServerAddress(serverProperties.getAddress().getHostAddress());
+            }
+        }
+        return result;
     }
 
     @Bean
