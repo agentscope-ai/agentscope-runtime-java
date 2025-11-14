@@ -22,26 +22,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties("spring.agentscope.runtime.a2a")
 public class A2aCommonProperties {
-    private int serverPort;
-    private String serverAddress;
     private String endpointName;
 
-    public A2aCommonProperties() {}
-
-    public int getServerPort() {
-        return serverPort;
-    }
-
-    public void setServerPort(int serverPort) {
-        this.serverPort = serverPort;
-    }
-
-    public String getServerAddress() {
-        return serverAddress;
-    }
-
-    public void setServerAddress(String serverAddress) {
-        this.serverAddress = serverAddress;
+    public A2aCommonProperties() {
     }
 
     String getEndpointName() {
