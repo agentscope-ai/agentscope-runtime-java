@@ -16,11 +16,10 @@
 
 package io.agentscope;
 
-import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
+import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.LocalDeployManager;
 import io.agentscope.runtime.engine.Runner;
@@ -43,27 +42,11 @@ import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
  */
 public class AgentScopeDeployExample {
 
-    private DashScopeChatModel chatModel;
     private ContextManager contextManager;
 
     public AgentScopeDeployExample() {
-        // Initialize DashScope ChatModel
-        initializeChatModel();
-
         // Initialize ContextManager (you may need to adapt this based on your actual implementation)
         initializeContextManager();
-    }
-
-    private void initializeChatModel() {
-        // Create DashScopeApi instance using the API key from environment variable
-        DashScopeApi dashScopeApi = DashScopeApi.builder()
-                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-                .build();
-
-        // Create DashScope ChatModel instance
-        this.chatModel = DashScopeChatModel.builder()
-                .dashScopeApi(dashScopeApi)
-                .build();
     }
 
     private void initializeContextManager() {
