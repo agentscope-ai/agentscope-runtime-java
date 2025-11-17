@@ -18,7 +18,7 @@ package io.agentscope.browser.agent;
 
 import io.agentscope.browser.BrowserAgentApplication;
 import io.agentscope.core.ReActAgent;
-import io.agentscope.core.formatter.DashScopeChatFormatter;
+import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.tool.Toolkit;
@@ -27,15 +27,14 @@ import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.schemas.message.MessageType;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.message.Event;
-import io.agentscope.runtime.engine.schemas.message.Message;
-import io.agentscope.runtime.engine.schemas.message.TextContent;
+import io.agentscope.runtime.engine.schemas.agent.Event;
+import io.agentscope.runtime.engine.schemas.agent.Message;
+import io.agentscope.runtime.engine.schemas.agent.TextContent;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
@@ -191,7 +190,7 @@ public class AgentscopeBrowserUseAgent {
         List<Message> convertedMessages = new ArrayList<>();
 
         Message message = new Message();
-        message.setType(MessageType.USER);
+        message.setRole("user");
 
         TextContent textContent = new TextContent();
         textContent.setText(userMessage);
@@ -224,7 +223,7 @@ public class AgentscopeBrowserUseAgent {
         List<Message> convertedMessages = new ArrayList<>();
 
         Message message = new Message();
-        message.setType(MessageType.USER);
+        message.setRole(chatMessages.get(chatMessages.size()-1).get("role"));
 
         TextContent textContent = new TextContent();
         textContent.setText(chatMessages.get(chatMessages.size()-1).get("content"));
