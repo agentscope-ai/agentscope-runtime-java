@@ -277,20 +277,12 @@ public class SaaAgent extends BaseAgent {
     
     @Override
     public String getName() {
-        try {
-            return originalAgentBuilder.build().name();
-        } catch (GraphStateException ignored) {
-            return "";
-        }
+        return originalAgentBuilder.build().name();
     }
     
     @Override
     public String getDescription() {
-        try {
-            return originalAgentBuilder.build().description();
-        } catch (GraphStateException ignored) {
-            return "";
-        }
+        return originalAgentBuilder.build().description();
     }
     
     @Override
