@@ -24,21 +24,21 @@ ReAct（推理与行动）范式使智能体能够将推理轨迹与特定任务
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-core</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- AgentScope Agent -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-agentscope</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- Web部署支持 -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-web</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
 </dependencies>
 ```

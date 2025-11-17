@@ -24,21 +24,21 @@ Add the following dependencies to your `pom.xml` file:
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-core</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- AgentScope Agent -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-agentscope</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- Web Deployment Support -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-web</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
 </dependencies>
 ```

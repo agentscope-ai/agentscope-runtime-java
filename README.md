@@ -64,119 +64,118 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 
 <!-- Add AgentScope Agent adapter dependency -->
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-agentscope</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
 ### Basic Agent Usage Example
 
-The following example demonstrates how to delegate a Spring AI Alibaba ReactAgent using AgentScope Runtime Agent. The complete source code can be found in the [examples](./examples) directory.
+The following example demonstrates how to delegate a AgentScope ReactAgent using AgentScope Runtime Agent. The complete source code can be found in the [examples](./examples) directory.
+
+1. Create Agent
 
 ```java
-public static void main(String[] args) {
-    try {
-        // Create Spring AI Alibaba ReactAgent Builder
-        Builder builder = ReactAgent.builder()
-            .name("saa Agent")
-            .description("saa Agent")
-            .model(chatModel);
+import io.agentscope.core.ReActAgent;
+import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
+import io.agentscope.core.memory.InMemoryMemory;
+import io.agentscope.core.tool.Toolkit;
+import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
+import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
+import io.agentscope.core.model.DashScopeChatModel;
 
-        // Create runtime agent proxy using the ReactAgent Builder
-        SaaAgent saaAgent = SaaAgent.builder()
-            .agent(builder)
-            .build();
+// Create ReActAgent
+ReActAgent.Builder agentBuilder = ReActAgent.builder()
+    .name("Friday")
+    .sysPrompt("You're a helpful assistant named Friday.")
+    .memory(new InMemoryMemory())
+    .model(DashScopeChatModel.builder()
+        .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+        .modelName("qwen-turbo")
+        .stream(true)
+        .enableThinking(true)
+        .formatter(new DashScopeChatFormatter())
+        .build());
 
-        // Create Runner with the SaaAgent
-        Runner runner = Runner.builder()
-            .agent(saaAgent)
-            .contextManager(contextManager)
-            .build();
+// Create Runtime AgentScopeAgent
+AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder()
+    .agent(agentBuilder)
+    .build();
 
-        // Create AgentRequest
-        AgentRequest request = createAgentRequest("Hello, can you tell me a joke?");
-
-        // Execute the agent and handle the response stream
-        Flux<Event> eventStream = runner.streamQuery(request);
-
-        CompletableFuture<Void> completionFuture = new CompletableFuture<>();
-        
-        eventStream.subscribe(
-            this::handleEvent,
-            error -> {
-                System.err.println("Error occurred: " + error.getMessage());
-                completionFuture.completeExceptionally(error);
-            },
-            () -> {
-                System.out.println("Conversation completed.");
-                completionFuture.complete(null);
-            }
-        );
-
-        completionFuture
-            .orTimeout(30, TimeUnit.SECONDS)
-            .exceptionally(throwable -> {
-                System.err.println("Operation failed or timed out: " + throwable.getMessage());
-                return null;
-            })
-            .join();
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
-}
+System.out.println("✅ AgentScope agent created successfully");
 ```
 
-> [!NOTE]
-> The usage method for **AgentScope** is very similar. Please refer to the [examples](./examples) directory for more details.
-
-### Basic Sandbox Usage Example
-
-Developers can configure agents to use specific tools, and the tool execution will be delegated to the sandbox managed by AgentScope Runtime.
+2. Configure Sandbox Manager (Optional but Recommended)
 
 ```java
-Builder builder = ReactAgent.builder()
-    .name("saa Agent")
-    .description("saa Agent")
-    .tools(List.of(ToolcallsInit.RunPythonCodeTool()))
-    .model(chatModel);
+// Create Toolkit
+Toolkit toolkit = new Toolkit();
+toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
+toolkit.registerTool(ToolkitInit.RunShellCommandTool());
 
-SaaAgent saaAgent = SaaAgent.builder()
-    .agent(builder)
-    .build();
+// Add Tools for Agent
+// ...
+agentBuilder.toolkit(toolkit)
+// ...
 
-Runner runner = Runner.builder()
-    .agent(saaAgent)
-    .contextManager(contextManager)
-    .environmentManager(environmentManager)
-    .build();
-
-AgentRequest request = createAgentRequest(
-    "Calculate the 10th Fibonacci number using Python for me", 
-    null, 
-    null
-);
-
-Flux<Event> eventStream = runner.streamQuery(request);
+// Create sandbox manager configuration (using default Docker configuration)
+ManagerConfig managerConfig = ManagerConfig.builder().build();
+// Create environment manager
+EnvironmentManager environmentManager = new DefaultEnvironmentManager(new SandboxManager(managerConfig));
 ```
 
 > [!NOTE]
 > You can also use **Kubernetes** or Alibaba FC platform **AgentRun** to execute sandbox tools. Please refer to [this tutorial](https://runtime.agentscope.io/en/sandbox.html) for more details.
 
+3. Create Runner
+
+The Runner combines the agent, context manager, and environment manager:
+
+```java
+import io.agentscope.runtime.engine.Runner;
+
+Runner runner = Runner.builder()
+    .agent(agentScopeAgent)  // or saaAgent
+    .contextManager(contextManager)
+    .environmentManager(environmentManager)  // Required if using sandbox tools
+    .build();
+
+System.out.println("✅ Runner created successfully");
+```
+
+4. Deploy Agent
+
+Use `LocalDeployManager` to deploy the agent as an A2A service:
+
+```java
+import io.agentscope.runtime.LocalDeployManager;
+
+// Deploy agent (default port 8080)
+LocalDeployManager.builder()
+    .port(8090)
+    .build()
+    .deploy(runner);
+
+System.out.println("✅ Agent deployed successfully on port 8090");
+```
+
+> [!NOTE]
+> The usage method for **Spring AI Alibaba** is very similar. Please refer to the [examples](./examples) directory for more details.
 ---
 
 ## 🔌 Agent Framework Integration
 
-AgentScope Runtime Java implementation can be easily integrated with agent frameworks developed in Java. Currently supported frameworks include:
+AgentScope Runtime Java implementation can be easily integrated with any agent frameworks developed in Java. Currently supported frameworks include:
 
 - **AgentScope Java**
 - **Spring AI Alibaba**
-
+- **Langchain4j and more coming soon...**
 ---
 
 ## 🏗️ Deployment

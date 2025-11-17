@@ -16,32 +16,25 @@
 
 ```xml
 <dependencies>
-    <!-- AgentScope Runtime Core -->
-    <dependency>
-        <groupId>io.agentscope</groupId>
-        <artifactId>agentscope-runtime-core</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
-    </dependency>
-    
     <!-- AgentScope Agent (选择其一) -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-agentscope</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
     
-    <!-- 或 Spring AI Alibaba Agent -->
+    <!-- 或 Spring AI Alibaba Agent (选择其一) -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-saa</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- Web部署支持 -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-web</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.1</version>
     </dependency>
 </dependencies>
 ```
