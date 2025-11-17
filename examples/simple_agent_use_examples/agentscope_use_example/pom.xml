@@ -30,7 +30,7 @@
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope_use_example</artifactId>
     <version>1.0.0</version>
-    <name>Example::Browser Use Backend</name>
+    <name>Example::AgentScope</name>
     <description>Java backend for AgentScope browser use demo</description>
 
     <properties>
