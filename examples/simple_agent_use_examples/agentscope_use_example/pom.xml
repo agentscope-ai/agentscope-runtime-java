@@ -30,7 +30,7 @@
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope_use_example</artifactId>
     <version>1.0.0</version>
-    <name>Example::Browser Use Backend</name>
+    <name>Example::AgentScope</name>
     <description>Java backend for AgentScope browser use demo</description>
 
     <properties>
@@ -44,13 +44,13 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-agentscope</artifactId>
-            <version>0.1.0</version>
+            <version>0.1.1</version>
         </dependency>
 
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-web</artifactId>
-            <version>0.1.0</version>
+            <version>0.1.1</version>
         </dependency>
 
         <!-- Logging -->
@@ -113,16 +113,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Docker Build Plugin -->
-<!--            <plugin>-->
-<!--                <groupId>io.agentscope</groupId>-->
-<!--                <artifactId>docker-build-maven-plugin</artifactId>-->
-<!--                <version>0.1.0-SNAPSHOT</version>-->
-<!--                <configuration>-->
-<!--                    <configFile>docker-build.yml</configFile>-->
-<!--                    <port>10001</port>-->
-<!--                </configuration>-->
-<!--            </plugin>-->
         </plugins>
     </build>
 </project>

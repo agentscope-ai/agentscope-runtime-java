@@ -15,7 +15,7 @@
 AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Maven 依赖使用。
 
 ```{note}
-当前稳定版本：0.1.0
+当前稳定版本：0.1.1
 
 您可以在 [Maven Central](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-core) 上查找和下载所有模块。
 ```
@@ -30,7 +30,7 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-core</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -42,7 +42,7 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-agentscope</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -54,7 +54,7 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-saa</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -66,7 +66,7 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-web</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -78,7 +78,7 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -209,7 +209,7 @@ mvn exec:java -Dexec.mainClass="InstallCheck"
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-core</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -221,42 +221,42 @@ mvn exec:java -Dexec.mainClass="InstallCheck"
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-core</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- AgentScope Agent 集成 -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-agentscope</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- Spring-AI-Alibaba Agent 支持 -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-saa</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- 一键部署 -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-web</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- A2A 集成 -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
 </dependencies>
 ```
 
 ## 版本信息
 
-- **当前稳定版本**：`0.1.0`
+- **当前稳定版本**：`0.1.1`
 - **发布位置**：[Maven Central](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-core)
 - **GroupId**：`io.agentscope`
 

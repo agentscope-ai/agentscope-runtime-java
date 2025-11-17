@@ -30,7 +30,7 @@
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope_use_examples</artifactId>
     <version>1.0.0</version>
-    <name>Example::Browser Use Backend</name>
+    <name>Example::Spring AI Alibaba</name>
     <description>Java backend for AgentScope browser use demo</description>
 
     <properties>
@@ -70,13 +70,13 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-saa</artifactId>
-            <version>0.1.0</version>
+            <version>0.1.1</version>
         </dependency>
 
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-web</artifactId>
-            <version>0.1.0</version>
+            <version>0.1.1</version>
         </dependency>
 
         <!-- Logging -->

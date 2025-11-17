@@ -15,7 +15,7 @@ Ready to get started with AgentScope Runtime Java? This guide will help you quic
 AgentScope Runtime Java has been published to Maven Central, and you can use it directly through Maven dependencies.
 
 ```{note}
-Current stable version: 0.1.0
+Current stable version: 0.1.1
 
 You can find and download all modules on [Maven Central](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-core).
 ```
@@ -30,7 +30,7 @@ Add the core runtime dependency to your `pom.xml`:
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-core</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -42,7 +42,7 @@ If you need to use AgentScope Agent:
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-agentscope</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -54,7 +54,7 @@ If you need to use Spring AI Alibaba Agent (SAA):
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-saa</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -66,7 +66,7 @@ If you need to use one-click deployment:
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-web</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -78,7 +78,7 @@ If you need to use A2A (Agent-to-Agent) protocol:
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -209,7 +209,7 @@ This diagram shows the hierarchy of installation options, starting from the bott
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-core</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -221,42 +221,42 @@ This diagram shows the hierarchy of installation options, starting from the bott
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-core</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- AgentScope Agent Integration -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-agentscope</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- Spring-AI-Alibaba Agent Support -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-saa</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- One-Click Deployment -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>agentscope-runtime-web</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
     
     <!-- A2A Integration -->
     <dependency>
         <groupId>io.agentscope</groupId>
         <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.1</version>
     </dependency>
 </dependencies>
 ```
 
 ## Version Information
 
-- **Current Stable Version**: `0.1.0`
+- **Current Stable Version**: `0.1.1`
 - **Release Location**: [Maven Central](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-core)
 - **GroupId**: `io.agentscope`
 

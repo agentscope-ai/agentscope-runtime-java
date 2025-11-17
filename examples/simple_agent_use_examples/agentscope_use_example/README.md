@@ -16,21 +16,6 @@ A minimal, end-to-end example showing how to build and deploy an intelligent age
 - Java 17+
 - Maven 3.6+
 - Environment variable `AI_DASHSCOPE_API_KEY` (Qwen API key)
-- AgentScope Runtime Java built and installed locally
-
-## Project Structure
-
-```
-agentscope_use_example/
-├── pom.xml
-├── README.md
-└── src/
-    └── main/
-        └── java/
-            └── io/
-                └── agentscope/
-                    └── AgentScopeDeployExample.java
-```
 
 ## Quick Start
 

@@ -30,7 +30,7 @@ AgentScope Runtime Java 的 Sandbox 提供了一个**安全**且**隔离**的环
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-core</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
