@@ -16,8 +16,6 @@
 
 package io.agentscope;
 
-import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
 import io.agentscope.core.memory.InMemoryMemory;
@@ -37,34 +35,18 @@ import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 
-
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
  */
 public class AgentScopeDeployExample {
 
-    private DashScopeChatModel chatModel;
     private ContextManager contextManager;
 
     public AgentScopeDeployExample() {
-        // Initialize DashScope ChatModel
-        initializeChatModel();
-
         // Initialize ContextManager (you may need to adapt this based on your actual implementation)
         initializeContextManager();
     }
 
-    private void initializeChatModel() {
-        // Create DashScopeApi instance using the API key from environment variable
-        DashScopeApi dashScopeApi = DashScopeApi.builder()
-                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-                .build();
-
-        // Create DashScope ChatModel instance
-        this.chatModel = DashScopeChatModel.builder()
-                .dashScopeApi(dashScopeApi)
-                .build();
-    }
 
     private void initializeContextManager() {
         try {
