@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -126,6 +127,7 @@ public class GraphAgentExecutor implements AgentExecutor {
      */
     private void processStreamingOutput(Flux<Event> resultFlux, TaskUpdater taskUpdater, StringBuilder accumulatedOutput) {
         String artifactId = UUID.randomUUID().toString();
+        AtomicBoolean isFirstArtifact = new AtomicBoolean(true);
         try {
             resultFlux
                     .doOnSubscribe(s -> {
@@ -154,7 +156,7 @@ public class GraphAgentExecutor implements AgentExecutor {
                                                 artifactId,
                                                 "agent-response",
                                                 metaData,
-                                                true,
+                                                !isFirstArtifact.getAndSet(false),
                                                 false
                                         );
                                         accumulatedOutput.append(content);
@@ -172,7 +174,6 @@ public class GraphAgentExecutor implements AgentExecutor {
                                 List.of(new TextPart(accumulatedOutput.toString())),
                                 Map.of("type", "final_response")
                         );
-
                         taskUpdater.complete(finalMessage);
                     })
                     .doOnError(e -> {

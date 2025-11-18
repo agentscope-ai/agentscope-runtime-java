@@ -61,12 +61,14 @@ public class A2aProtocolConfig implements ProtocolConfig {
 
     private final List<AgentInterface> additionalInterfaces;
 
+    private final String preferredTransport;
+
     public A2aProtocolConfig(String name, String description, String url, AgentProvider provider, String version,
                              String documentationUrl, List<String> defaultInputModes,
                              List<String> defaultOutputModes, List<AgentSkill> skills,
                              boolean supportsAuthenticatedExtendedCard, Map<String, SecurityScheme> securitySchemes,
                              List<Map<String, List<String>>> security, String iconUrl,
-                             List<AgentInterface> additionalInterfaces) {
+                             List<AgentInterface> additionalInterfaces, String preferredTransport) {
         this.name = name;
         this.description = description;
         this.url = url;
@@ -81,6 +83,7 @@ public class A2aProtocolConfig implements ProtocolConfig {
         this.security = security;
         this.iconUrl = iconUrl;
         this.additionalInterfaces = additionalInterfaces;
+        this.preferredTransport = preferredTransport;
     }
 
     public String getName() {
@@ -139,6 +142,10 @@ public class A2aProtocolConfig implements ProtocolConfig {
         return additionalInterfaces;
     }
 
+    public String getPreferredTransport() {
+        return preferredTransport;
+    }
+
     @Override
     public Protocol type() {
         return Protocol.A2A;
@@ -173,6 +180,8 @@ public class A2aProtocolConfig implements ProtocolConfig {
         protected String iconUrl;
 
         protected List<AgentInterface> additionalInterfaces;
+
+        protected String preferredTransport;
 
         public Builder name(String name) {
             this.name = name;
@@ -244,10 +253,15 @@ public class A2aProtocolConfig implements ProtocolConfig {
             return this;
         }
 
+        public Builder preferredTransport(String preferredTransport) {
+            this.preferredTransport = preferredTransport;
+            return this;
+        }
+
         public A2aProtocolConfig build() {
             return new A2aProtocolConfig(name, description, url, provider, version, documentationUrl, defaultInputModes,
                     defaultOutputModes, skills, supportsAuthenticatedExtendedCard, securitySchemes, security, iconUrl,
-                    additionalInterfaces);
+                    additionalInterfaces, preferredTransport);
         }
     }
 }
