@@ -363,6 +363,7 @@ public class AgentScopeAgent extends BaseAgent {
                                     try {
                                         if (event.isLast()) {
                                             logger.info("Received last event, messageId " +  event.getMessageId() + ", skipping processing.");
+                                            return;
                                         }
                                         for (ContentBlock contentBlock : event.getMessage().getContent()) {
                                             Message deltaMessage = new Message();
