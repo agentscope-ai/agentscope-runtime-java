@@ -29,7 +29,7 @@
 
     <groupId>io.agentscope</groupId>
     <artifactId>docker-build-maven-plugin</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.1.2</version>
     <packaging>maven-plugin</packaging>
 
     <name>Docker Build Maven Plugin</name>
