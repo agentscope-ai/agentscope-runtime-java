@@ -361,6 +361,9 @@ public class AgentScopeAgent extends BaseAgent {
                         .subscribe(
                                 event -> {
                                     try {
+                                        if (event.isLast()) {
+                                            logger.info("Received last event, messageId " +  event.getMessageId() + ", skipping processing.");
+                                        }
                                         for (ContentBlock contentBlock : event.getMessage().getContent()) {
                                             Message deltaMessage = new Message();
                                             StreamResponse delta = streamResponseProcessor.apply(contentBlock);
