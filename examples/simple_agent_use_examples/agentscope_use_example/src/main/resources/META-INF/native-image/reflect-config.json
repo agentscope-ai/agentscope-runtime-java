@@ -1,0 +1,74 @@
+[
+  {
+    "name": "io.agentscope.core.tool.Toolkit",
+    "methods": [
+      {"name": "registerTool", "parameterTypes": ["java.lang.Object"]},
+      {"name": "registerTool", "parameterTypes": ["java.lang.Object", "java.lang.String"]},
+      {"name": "registerTool", "parameterTypes": ["java.lang.Object", "java.lang.String", "io.agentscope.core.tool.RegisteredToolFunction$ExtendedModel"]}
+    ]
+  },
+  {
+    "name": "io.agentscope.core.tool.ToolMethodInvoker",
+    "methods": [
+      {"name": "invokeAsync", "parameterTypes": ["java.lang.Object", "java.lang.reflect.Method", "java.util.Map", "io.agentscope.core.message.ToolUseBlock"]},
+      {"name": "invokeAsync", "parameterTypes": ["java.lang.Object", "java.lang.reflect.Method", "java.util.Map"]}
+    ],
+    "allDeclaredMethods": true,
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "io.agentscope.core.state.StateModuleBase",
+    "fields": [
+      {"name": "moduleMap"},
+      {"name": "attributeMap"}
+    ],
+    "methods": [
+      {"name": "refreshNestedModules"},
+      {"name": "getAttributeValue", "parameterTypes": ["java.lang.String"]},
+      {"name": "setAttributeValue", "parameterTypes": ["java.lang.String", "java.lang.Object"]},
+      {"name": "findField", "parameterTypes": ["java.lang.String"]}
+    ],
+    "allDeclaredFields": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "java.lang.reflect.Method",
+    "methods": [
+      {"name": "setAccessible", "parameterTypes": ["boolean"]},
+      {"name": "invoke", "parameterTypes": ["java.lang.Object", "[Ljava.lang.Object;"]},
+      {"name": "getDeclaredMethods"},
+      {"name": "getParameters"},
+      {"name": "getParameterTypes"},
+      {"name": "getReturnType"},
+      {"name": "getGenericReturnType"}
+    ]
+  },
+  {
+    "name": "java.lang.reflect.Field",
+    "methods": [
+      {"name": "setAccessible", "parameterTypes": ["boolean"]},
+      {"name": "get", "parameterTypes": ["java.lang.Object"]},
+      {"name": "set", "parameterTypes": ["java.lang.Object", "java.lang.Object"]},
+      {"name": "getDeclaredFields"}
+    ]
+  },
+  {
+    "name": "java.lang.reflect.Parameter",
+    "methods": [
+      {"name": "getName"},
+      {"name": "getType"},
+      {"name": "getAnnotation", "parameterTypes": ["java.lang.Class"]}
+    ]
+  },
+  {
+    "name": "java.lang.Class",
+    "methods": [
+      {"name": "getDeclaredMethods"},
+      {"name": "getDeclaredFields"},
+      {"name": "getDeclaredField", "parameterTypes": ["java.lang.String"]},
+      {"name": "getSuperclass"},
+      {"name": "isAssignableFrom", "parameterTypes": ["java.lang.Class"]}
+    ]
+  }
+]
+

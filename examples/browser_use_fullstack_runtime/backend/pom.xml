@@ -97,6 +97,31 @@
         </repository>
     </repositories>
 
+    <profiles>
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>0.9.28</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <imageName>agentscope-core</imageName>
+                            <mainClass>io.agentscope.browser.BrowserAgentApplication</mainClass>
+                            <buildArgs>
+                                <buildArg>--no-fallback</buildArg>
+                                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                                <buildArg>-H:+AllowVMInspection</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <plugin>
@@ -116,6 +141,7 @@
                     <target>17</target>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
 </project>

@@ -82,9 +82,9 @@ public class AgentScopeDeployExample {
         try {
 
             Toolkit toolkit = new Toolkit();
-            toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
-            toolkit.registerTool(ToolkitInit.RunShellCommandTool());
-            toolkit.registerTool(ToolkitInit.BrowserNavigateTool());
+//            toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
+//            toolkit.registerTool(ToolkitInit.RunShellCommandTool());
+//            toolkit.registerTool(ToolkitInit.BrowserNavigateTool());
 
             ReActAgent.Builder agent =
                     ReActAgent.builder()
@@ -104,14 +104,14 @@ public class AgentScopeDeployExample {
                                             .build());
 
             AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder().agent(agent).build();
-
-            SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().build());
-            EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
+//
+//            SandboxManager sandboxManager = new SandboxManager(ManagerConfig.builder().build());
+//            EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
             Runner runner = Runner.builder()
                     .agent(agentScopeAgent)
                     .contextManager(contextManager)
-                    .environmentManager(environmentManager)
+//                    .environmentManager(environmentManager)
                     .build();
 
             LocalDeployManager.builder().port(10001).build().deploy(runner);

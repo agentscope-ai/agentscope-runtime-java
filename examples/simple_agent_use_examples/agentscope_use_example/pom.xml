@@ -113,6 +113,22 @@
                 </configuration>
             </plugin>
 
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+                <version>0.9.28</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <imageName>agentscope-core</imageName>
+                    <mainClass>io.agentscope.AgentScopeDeployExample</mainClass>
+                    <buildArgs>
+                        <buildArg>--no-fallback</buildArg>
+                        <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                        <buildArg>-H:+AllowVMInspection</buildArg>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 </project>

@@ -27,14 +27,15 @@ import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.memory.context.ContextComposer;
 import io.agentscope.runtime.engine.memory.context.ContextManager;
+import io.agentscope.runtime.engine.schemas.message.MessageType;
 import io.agentscope.runtime.engine.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
-import io.agentscope.runtime.engine.schemas.agent.Event;
-import io.agentscope.runtime.engine.schemas.agent.Message;
-import io.agentscope.runtime.engine.schemas.agent.TextContent;
+import io.agentscope.runtime.engine.schemas.message.Event;
+import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.TextContent;
 import io.agentscope.runtime.engine.service.EnvironmentManager;
 import io.agentscope.runtime.engine.service.impl.DefaultEnvironmentManager;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
@@ -112,11 +113,11 @@ public class AgentscopeBrowserUseAgent {
                 .containerDeployment(clientConfig)
                 .build();
 
-        SandboxManager sandboxManager = new SandboxManager(managerConfig);
-        this.environmentManager = new DefaultEnvironmentManager(sandboxManager);
+//        SandboxManager sandboxManager = new SandboxManager(managerConfig);
+//        this.environmentManager = new DefaultEnvironmentManager(sandboxManager);
 
         Toolkit toolkit = new Toolkit();
-        toolkit.registerTool(ToolkitInit.BrowserNavigateTool());
+//        toolkit.registerTool(ToolkitInit.BrowserNavigateTool());
 
         // Initialize chat model
         String apiKey = System.getenv("DASHSCOPE_API_KEY");
@@ -160,21 +161,21 @@ public class AgentscopeBrowserUseAgent {
         // Get browser WebSocket URL and VNC info
         try {
             // Connect to browser sandbox
-            ContainerModel sandboxInfo = environmentManager.getSandboxManager().getSandbox(SandboxType.BROWSER, USER_ID, SESSION_ID);
-
-            if (sandboxInfo != null ) {
-                browserWebSocketUrl = sandboxInfo.getFrontBrowserWS();
-                baseUrl = sandboxInfo.getBaseUrl();
-                runtimeToken = sandboxInfo.getRuntimeToken();
-                logger.info("Browser WebSocket URL: {}", browserWebSocketUrl);
-                logger.info("Base URL: {}", baseUrl);
-                logger.info("Runtime Token: {}", runtimeToken);
-            } else {
-                browserWebSocketUrl = "";
-                baseUrl = "";
-                runtimeToken = "";
-                logger.warn("No browser sandbox info found");
-            }
+//            ContainerModel sandboxInfo = environmentManager.getSandboxManager().getSandbox(SandboxType.BROWSER, USER_ID, SESSION_ID);
+//
+//            if (sandboxInfo != null ) {
+//                browserWebSocketUrl = sandboxInfo.getFrontBrowserWS();
+//                baseUrl = sandboxInfo.getBaseUrl();
+//                runtimeToken = sandboxInfo.getRuntimeToken();
+//                logger.info("Browser WebSocket URL: {}", browserWebSocketUrl);
+//                logger.info("Base URL: {}", baseUrl);
+//                logger.info("Runtime Token: {}", runtimeToken);
+//            } else {
+//                browserWebSocketUrl = "";
+//                baseUrl = "";
+//                runtimeToken = "";
+//                logger.warn("No browser sandbox info found");
+//            }
         } catch (Exception e) {
             logger.warn("Failed to get browser sandbox info: {}", e.getMessage());
             browserWebSocketUrl = "";
@@ -190,7 +191,7 @@ public class AgentscopeBrowserUseAgent {
         List<Message> convertedMessages = new ArrayList<>();
 
         Message message = new Message();
-        message.setRole("user");
+        message.setType(MessageType.USER);
 
         TextContent textContent = new TextContent();
         textContent.setText(userMessage);
@@ -223,7 +224,7 @@ public class AgentscopeBrowserUseAgent {
         List<Message> convertedMessages = new ArrayList<>();
 
         Message message = new Message();
-        message.setRole(chatMessages.get(chatMessages.size()-1).get("role"));
+        message.setType(MessageType.USER);
 
         TextContent textContent = new TextContent();
         textContent.setText(chatMessages.get(chatMessages.size()-1).get("content"));

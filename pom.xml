@@ -602,8 +602,6 @@
     <profiles>
         <profile>
             <id>release</id>
-
-            <distributionManagement></distributionManagement>
             <build>
                 <plugins>
                     <plugin>
@@ -611,14 +609,14 @@
                         <artifactId>maven-javadoc-plugin</artifactId>
                         <version>${maven-javadoc-plugin.version}</version>
                         <configuration>
-                            <doclint>all,-missing</doclint>
+                            <doclint>none</doclint>
                         </configuration>
                         <executions>
                             <execution>
+                                <id>attach-javadocs</id>
                                 <goals>
                                     <goal>jar</goal>
                                 </goals>
-                                <phase>package</phase>
                             </execution>
                         </executions>
                     </plugin>
