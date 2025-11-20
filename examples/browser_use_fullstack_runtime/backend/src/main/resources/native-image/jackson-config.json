@@ -1,0 +1,61 @@
+{
+  "types": [
+    {
+      "name": "io.agentscope.core.message.Msg"
+    },
+    {
+      "name": "io.agentscope.core.message.ContentBlock"
+    },
+    {
+      "name": "io.agentscope.core.message.TextBlock"
+    },
+    {
+      "name": "io.agentscope.core.message.ThinkingBlock"
+    },
+    {
+      "name": "io.agentscope.core.message.ImageBlock"
+    },
+    {
+      "name": "io.agentscope.core.message.AudioBlock"
+    },
+    {
+      "name": "io.agentscope.core.message.VideoBlock"
+    },
+    {
+      "name": "io.agentscope.core.message.ToolUseBlock"
+    },
+    {
+      "name": "io.agentscope.core.message.ToolResultBlock"
+    },
+    {
+      "name": "io.agentscope.core.message.MsgRole"
+    },
+    {
+      "name": "io.agentscope.core.message.Source"
+    },
+    {
+      "name": "io.agentscope.core.state.StateModuleBase"
+    },
+    {
+      "name": "io.agentscope.core.memory.InMemoryMemory"
+    },
+    {
+      "name": "io.agentscope.core.tool.Toolkit"
+    },
+    {
+      "name": "com.fasterxml.jackson.module.jsonSchema.JsonSchema"
+    }
+  ],
+  "proxies": [],
+  "resources": {
+    "includes": [
+      {
+        "pattern": ".*\\.json$"
+      },
+      {
+        "pattern": ".*\\.xml$"
+      }
+    ]
+  }
+}
+

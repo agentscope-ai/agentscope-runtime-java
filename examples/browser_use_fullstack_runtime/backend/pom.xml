@@ -103,12 +103,27 @@
             <build>
                 <plugins>
                     <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <mainClass>io.agentscope.browser.BrowserAgentApplication</mainClass>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>process-aot</id>
+                                <goals>
+                                    <goal>process-aot</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
                         <groupId>org.graalvm.buildtools</groupId>
                         <artifactId>native-maven-plugin</artifactId>
                         <version>0.9.28</version>
                         <extensions>true</extensions>
                         <configuration>
-                            <imageName>agentscope-core</imageName>
+                            <imageName>agentscope-core-demo</imageName>
                             <mainClass>io.agentscope.browser.BrowserAgentApplication</mainClass>
                             <buildArgs>
                                 <buildArg>--no-fallback</buildArg>
@@ -116,6 +131,15 @@
                                 <buildArg>-H:+AllowVMInspection</buildArg>
                             </buildArgs>
                         </configuration>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
