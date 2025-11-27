@@ -18,7 +18,12 @@ package io.agentscope.runtime.protocol.a2a;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.Comparator;
 
 import io.agentscope.runtime.autoconfigure.DeployProperties;
 
@@ -111,16 +116,14 @@ public class NetworkUtils {
      * @throws SocketException network exception
      */
     private String getLocalIpAddress() throws SocketException {
-        Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+        Stream<NetworkInterface> networkInterfaces = NetworkInterface.networkInterfaces();
         
-        while (networkInterfaces.hasMoreElements()) {
-            NetworkInterface networkInterface = networkInterfaces.nextElement();
-            
-            // Skip loopback interfaces and disabled interfaces
-            if (networkInterface.isLoopback() || !networkInterface.isUp()) {
-                continue;
-            }
-            
+        List<NetworkInterface> nis = networkInterfaces
+                                        .filter(this::isValidIpAddress)
+                                        .sorted(Comparator.comparing((n) -> n.getIndex()))
+                                        .collect(Collectors.toList());
+
+        for (NetworkInterface networkInterface : nis) {
             Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
             while (addresses.hasMoreElements()) {
                 InetAddress address = addresses.nextElement();
@@ -139,5 +142,13 @@ public class NetworkUtils {
         
         // If no suitable IP is found, return localhost
         return "localhost";
+    }
+
+    private boolean isValidIpAddress(NetworkInterface n) {
+        try {
+            return n != null && !n.isLoopback() && n.isUp();
+        } catch (SocketException e) {
+            return false;
+        }
     }
 }
