@@ -70,7 +70,7 @@ public class AgentCardConfiguration {
                 .security(a2aConfig.getSecurity())
                 .iconUrl(a2aConfig.getIconUrl())
                 .additionalInterfaces(a2aConfig.getAdditionalInterfaces())
-                .preferredTransport(TransportProtocol.JSONRPC.name())
+                .preferredTransport(StringUtils.isEmpty(a2aConfig.getPreferredTransport()) ? TransportProtocol.JSONRPC.name() : a2aConfig.getPreferredTransport())
                 .protocolVersion("0.3.0")
                 .build();
     }
