@@ -1,0 +1,84 @@
+{
+  "reflection": [
+    {
+      "type": "com.alibaba.dashscope.aigc.generation.GenerationOutput$Choice",
+      "fields": [
+        {
+          "name": "finishReason"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "message"
+        }
+      ],
+      "unsafeAllocated": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.alibaba.dashscope.aigc.generation.GenerationOutputTokenDetails",
+      "fields": [
+        {
+          "name": "reasoningTokens"
+        }
+      ],
+      "unsafeAllocated": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.alibaba.dashscope.aigc.generation.GenerationUsage",
+      "fields": [
+        {
+          "name": "inputTokens"
+        },
+        {
+          "name": "outputTokens"
+        },
+        {
+          "name": "outputTokensDetails"
+        },
+        {
+          "name": "promptTokensDetails"
+        },
+        {
+          "name": "totalTokens"
+        }
+      ],
+      "unsafeAllocated": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.alibaba.dashscope.aigc.generation.GenerationUsage$PromptTokensDetails",
+      "fields": [
+        {
+          "name": "cachedTokens"
+        }
+      ],
+      "unsafeAllocated": true,
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    }
+  ],
+  "resources": [
+  ]
+}
