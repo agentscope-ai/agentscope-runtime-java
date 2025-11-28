@@ -25,22 +25,28 @@ import io.agentscope.runtime.engine.schemas.message.*;
 import io.agentscope.runtime.engine.schemas.agent.*;
 import io.agentscope.runtime.engine.schemas.message.Event;
 import io.agentscope.runtime.engine.schemas.message.Message;
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
 public class GraphAgentExecutor implements AgentExecutor {
     private final Function<AgentRequest, Flux<Event>> executeFunction;
+
+    private final Map<String, Subscription> subscriptions;
+
     Logger logger = Logger.getLogger(GraphAgentExecutor.class.getName());
 
     public GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunction) {
         this.executeFunction = executeFunction;
+        this.subscriptions = new ConcurrentHashMap<>();
     }
 
     private Task new_task(io.a2a.spec.Message request) {
@@ -133,6 +139,7 @@ public class GraphAgentExecutor implements AgentExecutor {
                     .doOnSubscribe(s -> {
                         logger.info("Subscribed to executeFunction result stream");
                         taskUpdater.startWork();
+                        subscriptions.put(taskUpdater.getTaskId(), s);
                     })
                     .doOnNext(output -> {
                         try {
@@ -183,7 +190,10 @@ public class GraphAgentExecutor implements AgentExecutor {
                         );
                         taskUpdater.fail(errorMessage);
                     })
-                    .doFinally(signal -> logger.info("Stream terminated: " + signal))
+                    .doFinally(signal -> {
+                        logger.info("Stream terminated: " + signal);
+                        subscriptions.remove(taskUpdater.getTaskId());
+                    })
                     .blockLast();
 
         } catch (Exception e) {
@@ -206,5 +216,11 @@ public class GraphAgentExecutor implements AgentExecutor {
 
     @Override
     public void cancel(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
+        TaskUpdater taskUpdater = new TaskUpdater(context, eventQueue);
+        if (!subscriptions.containsKey(taskUpdater.getTaskId())) {
+            throw new RuntimeException("Not found Subscription for Task " + taskUpdater.getTaskId());
+        }
+        subscriptions.get(taskUpdater.getTaskId()).cancel();
+        taskUpdater.cancel();
     }
 }
