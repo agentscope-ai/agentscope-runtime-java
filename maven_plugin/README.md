@@ -1,4 +1,4 @@
-# Docker Build Maven Plugin
+# AgentScope Deployer Maven Plugin
 
 A Maven plugin for automatically packaging AgentScope Runtime Java applications into Docker images and optionally deploying them to Kubernetes.
 
@@ -29,10 +29,10 @@ Add the plugin configuration to your Spring Boot project's `pom.xml`:
 ```xml
 <plugin>
     <groupId>io.agentscope</groupId>
-    <artifactId>docker-build-maven-plugin</artifactId>
+    <artifactId>deployer-maven-plugin</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <configuration>
-        <configFile>docker-build.yml</configFile>
+        <configFile>deployer.yml</configFile>
         <port>8080</port>
     </configuration>
 </plugin>
@@ -40,7 +40,7 @@ Add the plugin configuration to your Spring Boot project's `pom.xml`:
 
 ### 3. Create Configuration File
 
-Create a `docker-build.yml` configuration file in the project root directory:
+Create a `deployer.yml` configuration file in the project root directory:
 
 ```yaml
 build:
@@ -67,7 +67,7 @@ kubernetes:
 ### 4. Build Docker Image
 
 ```bash
-mvn clean package docker-build:build
+mvn clean package deployer:build
 ```
 
 Or use directly:
@@ -80,7 +80,7 @@ mvn clean package
 
 ## Configuration
 
-### Configuration File (docker-build.yml)
+### Configuration File (deployer.yml)
 
 #### build Configuration
 
@@ -92,7 +92,9 @@ mvn clean package
 | `port` | Container port | `8080` |
 | `pushToRegistry` | Whether to push to image registry | `false` |
 | `deployToK8s` | Whether to deploy to Kubernetes | `false` |
-| `buildContextDir` | Build context directory | `${project.build.directory}/docker-build` |
+| `deployToModelStudio` | Deploy to ModelStudio | `false` |
+| `deployToAgentRun` | Deploy to AgentRun | `false` |
+| `buildContextDir` | Build context directory | `${project.build.directory}/deployer` |
 | `environment` | Environment variable mapping | `{}` |
 
 #### registry Configuration
@@ -113,22 +115,81 @@ mvn clean package
 | `replicas` | Number of replicas | `1` |
 | `runtimeConfig` | Runtime configuration | `{}` |
 
+#### modelstudio Configuration
+
+| Parameter | Description | Default Value |
+|-----------|-------------|---------------|
+| `region` | ModelStudio region | `cn-beijing` |
+| `endpoint` | API endpoint | `bailian.cn-beijing.aliyuncs.com` |
+| `workspaceId` | Workspace ID | `default` |
+| `accessKeyId` | Bailian AK | - |
+| `accessKeySecret` | Bailian SK | - |
+| `dashscopeApiKey` | Optional DashScope key | - |
+| `telemetryEnabled` | Enable wrapper telemetry | `true` |
+| `deployName` | Agent name in Bailian | `agentscope-runtime` |
+| `agentId` | Update existing agent ID | - |
+| `agentDescription` | Description text | - |
+| `serviceName` | Legacy field for name | `agentscope-runtime` |
+| `functionName` | Legacy field for name | `agentscope-function` |
+| `artifactBucket` | Artifact bucket (if needed) | `agentscope-runtime-fc-artifacts` |
+| `memorySize` | Memory size in MB | `512` |
+| `timeoutSeconds` | Timeout in seconds | `60` |
+| `metadata` | Additional metadata map | `{}` |
+
+#### agentrun Configuration
+
+| Parameter | Description | Default Value |
+|-----------|-------------|---------------|
+| `region` | AgentRun region | `cn-beijing` |
+| `endpoint` | API endpoint | `agentrun.<region>.aliyuncs.com` |
+| `accessKeyId` | AgentRun AK | - |
+| `accessKeySecret` | AgentRun SK | - |
+| `runtimeNamePrefix` | Runtime name prefix | `agentscope-runtime` |
+| `artifactBucket` | OSS bucket for code | `agentscope-runtime-agentrun-artifacts` |
+| `cpu` | CPU cores | `2` |
+| `memorySize` | Memory in MB | `4096` |
+| `timeoutSeconds` | Timeout in seconds | `120` |
+| `executionRoleArn` | Execution role ARN | - |
+| `logProject` | Log service project | - |
+| `logStore` | Log service logstore | - |
+| `networkMode` | `PUBLIC` or `PUBLIC_AND_PRIVATE` | `PUBLIC` |
+| `vpcId` | VPC ID when using private networks | - |
+| `securityGroupId` | Security group ID | - |
+| `vswitchIds` | List of vswitch IDs | `[]` |
+| `sessionConcurrencyLimit` | Per-instance concurrency | `1` |
+| `sessionIdleTimeoutSeconds` | Idle timeout seconds | `600` |
+| `existingRuntimeId` | Update an existing runtime | - |
+| `metadata` | Additional metadata map | `{}` |
+
 ### Command-Line Parameters
 
 All configurations can be overridden via command-line parameters:
 
 ```bash
 # Specify image name and tag
-mvn docker-build:build -Ddocker-build.imageName=my-app -Ddocker-build.imageTag=v1.0.0
+mvn deployer:build -Ddeployer.imageName=my-app -Ddeployer.imageTag=v1.0.0
 
 # Push to registry
-mvn docker-build:build -Ddocker-build.push=true
+mvn deployer:build -Ddeployer.push=true
 
 # Deploy to Kubernetes
-mvn docker-build:build -Ddocker-build.deploy=true -Ddocker-build.k8sNamespace=production
+mvn deployer:build -Ddeployer.deploy=true -Ddeployer.k8sNamespace=production
 
 # Set environment variables
-mvn docker-build:build -Ddocker-build.environment.AI_DASHSCOPE_API_KEY=your-key
+mvn deployer:build -Ddeployer.environment.AI_DASHSCOPE_API_KEY=your-key
+
+# Deploy to ModelStudio
+mvn deployer:build \
+  -Ddeployer.deployToModelStudio=true \
+  -Ddeployer.modelStudioAccessKeyId=xxx \
+  -Ddeployer.modelStudioAccessKeySecret=yyy
+
+# Deploy to AgentRun
+mvn deployer:build \
+  -Ddeployer.deployToAgentRun=true \
+  -Ddeployer.agentRunAccessKeyId=xxx \
+  -Ddeployer.agentRunAccessKeySecret=yyy \
+  -Ddeployer.agentRunBucket=my-agentrun-bucket
 ```
 
 ## Usage Examples
@@ -136,12 +197,12 @@ mvn docker-build:build -Ddocker-build.environment.AI_DASHSCOPE_API_KEY=your-key
 ### Example 1: Build Image Only
 
 ```bash
-mvn clean package docker-build:build
+mvn clean package deployer:build
 ```
 
 ### Example 2: Build and Push to Registry
 
-Configure in `docker-build.yml`:
+Configure in `deployer.yml`:
 
 ```yaml
 build:
@@ -157,12 +218,12 @@ registry:
 Then execute:
 
 ```bash
-mvn clean package docker-build:build
+mvn clean package deployer:build
 ```
 
 ### Example 3: Build and Deploy to Kubernetes
 
-Configure in `docker-build.yml`:
+Configure in `deployer.yml`:
 
 ```yaml
 build:
@@ -176,7 +237,7 @@ kubernetes:
 Then execute:
 
 ```bash
-mvn clean package docker-build:build
+mvn clean package deployer:build
 ```
 
 ### Example 4: Complete Workflow (Build, Push, Deploy)
@@ -273,7 +334,7 @@ Test in the example project:
 
 ```bash
 cd examples/simple_agent_use_examples/agentscope_use_example
-mvn clean package docker-build:build
+mvn clean package deployer:build
 ```
 
 ## License
