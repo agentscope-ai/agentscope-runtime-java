@@ -14,10 +14,7 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -28,11 +25,11 @@
     </parent>
 
     <groupId>io.agentscope</groupId>
-    <artifactId>docker-build-maven-plugin</artifactId>
+    <artifactId>deployer-maven-plugin</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>maven-plugin</packaging>
 
-    <name>Docker Build Maven Plugin</name>
+    <name>AgentScope Deployer Maven Plugin</name>
     <description>Maven plugin to automatically build Docker images and deploy to Kubernetes for Java applications</description>
 
     <properties>
@@ -116,7 +113,6 @@
             <version>${snakeyaml.version}</version>
         </dependency>
 
-
         <!-- Commons Lang3 - updated version for SystemProperties -->
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -135,6 +131,41 @@
             <artifactId>slf4j-simple</artifactId>
             <version>2.0.9</version>
         </dependency>
+
+        <!-- Aliyun OSS SDK (for ModelStudio/AgentRun artifact upload) -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+        </dependency>
+
+        <!-- Aliyun AgentRun Java SDK (align with core module) -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>agentrun20250910</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>alibabacloud-agentrun20250910</artifactId>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.aliyun/bailian20231229 -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>bailian20231229</artifactId>
+            <version>2.6.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>tea-openapi</artifactId>
+            <version>0.3.10</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/com.aliyun/tea-util -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>tea-util</artifactId>
+            <version>0.2.25</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -144,15 +175,15 @@
                 <artifactId>maven-plugin-plugin</artifactId>
                 <version>3.9.0</version>
                 <configuration>
-                    <goalPrefix>docker-build</goalPrefix>
+                    <goalPrefix>deployer</goalPrefix>
                 </configuration>
                 <executions>
                     <execution>
                         <id>default-descriptor</id>
-                        <phase>process-classes</phase>
                         <goals>
                             <goal>descriptor</goal>
                         </goals>
+                        <phase>process-classes</phase>
                     </execution>
                 </executions>
             </plugin>

@@ -115,7 +115,7 @@ public class DockerBuildService {
     /**
      * Push image to registry
      */
-    public void pushImage(String imageName, RegistryConfig registryConfig) throws IOException {
+    public String pushImage(String imageName, RegistryConfig registryConfig) throws IOException {
         if (dockerClient == null) {
             throw new IllegalStateException("Docker client is not initialized");
         }
@@ -152,13 +152,32 @@ public class DockerBuildService {
             
             // Add authentication if provided
             if (registryConfig.getUsername() != null && registryConfig.getPassword() != null) {
+                String registryUrl = registryConfig.getRegistryUrl();
+                // For Docker Hub, use index.docker.io/v1/ as registry address
+                // For other registries, use the provided URL
+                String registryAddress = registryUrl;
+                if (registryUrl != null && (registryUrl.equals("docker.io") || registryUrl.equals("index.docker.io"))) {
+                    registryAddress = "https://index.docker.io/v1/";
+                } else if (registryUrl != null && !registryUrl.startsWith("http://") && !registryUrl.startsWith("https://")) {
+                    // For registries like registry.cn-hangzhou.aliyuncs.com, use https:// prefix
+                    registryAddress = "https://" + registryUrl;
+                }
+                
+                log.info("Authenticating to registry: " + registryAddress + " with username: " + registryConfig.getUsername());
+                
                 AuthConfig authConfig = new AuthConfig()
                         .withUsername(registryConfig.getUsername())
                         .withPassword(registryConfig.getPassword())
-                        .withRegistryAddress(registryConfig.getRegistryUrl());
+                        .withRegistryAddress(registryAddress);
                 pushImageCmd.withAuthConfig(authConfig);
+            } else {
+                log.warn("No authentication credentials provided. Trying to push without authentication...");
+                log.warn("If push fails, please ensure you have configured username and password in deployer.yml");
             }
 
+            final boolean[] hasError = {false};
+            final String[] errorMessage = {null};
+            
             pushImageCmd.exec(new ResultCallback.Adapter<PushResponseItem>() {
                 @Override
                 public void onNext(PushResponseItem item) {
@@ -166,14 +185,61 @@ public class DockerBuildService {
                         log.info("Push progress: " + item.getStatus());
                     }
                     if (item.getErrorDetail() != null) {
-                        log.error("Push error: " + item.getErrorDetail().getMessage());
+                        String error = item.getErrorDetail().getMessage();
+                        log.error("Push error: " + error);
+                        hasError[0] = true;
+                        errorMessage[0] = error;
                     }
                 }
             }).awaitCompletion(5, TimeUnit.MINUTES);
 
+            if (hasError[0]) {
+                String error = errorMessage[0] != null ? errorMessage[0] : "Unknown error";
+                String registryUrl = registryConfig.getRegistryUrl();
+                boolean isPersonalRegistry = registryUrl != null && registryUrl.contains("personal.cr.aliyuncs.com");
+                
+                log.error("=========================================");
+                log.error("镜像推送失败！");
+                log.error("错误信息: " + error);
+                log.error("=========================================");
+                log.error("当前配置：");
+                log.error("1. registry.url: " + registryUrl);
+                log.error("2. registry.username: " + registryConfig.getUsername());
+                log.error("3. registry.namespace: " + registryConfig.getNamespace());
+                log.error("4. 最终镜像名: " + fullImageName);
+                log.error("=========================================");
+                
+                if (isPersonalRegistry) {
+                    log.error("检测到阿里云个人版容器镜像服务！");
+                    log.error("=========================================");
+                    log.error("个人版容器镜像服务注意事项：");
+                    log.error("1. 命名空间通常是用户名，或者可以留空");
+                    log.error("2. 如果使用命名空间，确保在阿里云控制台已创建该命名空间");
+                    log.error("3. 建议尝试以下配置：");
+                    log.error("   - 方案A: 不设置 namespace，镜像名格式: " + registryUrl + "/" + 
+                             imageName.split(":")[0] + ":" + (imageName.contains(":") ? imageName.split(":")[1] : "latest"));
+                    log.error("   - 方案B: namespace 设置为用户名，镜像名格式: " + registryUrl + "/" + 
+                             registryConfig.getUsername() + "/" + imageName.split(":")[0] + ":" + 
+                             (imageName.contains(":") ? imageName.split(":")[1] : "latest"));
+                    log.error("=========================================");
+                }
+                
+                log.error("排查步骤：");
+                log.error("1. 验证登录: docker login " + registryUrl);
+                log.error("2. 检查命名空间: 登录阿里云控制台确认命名空间是否存在");
+                log.error("3. 测试推送: 手动执行以下命令测试推送：");
+                log.error("   docker tag " + imageName + " " + fullImageName);
+                log.error("   docker push " + fullImageName);
+                log.error("4. 如果手动推送成功但工具失败，可能是认证配置问题");
+                log.error("=========================================");
+                throw new IOException("Failed to push image to registry: " + error);
+            }
+
             log.info("Image pushed successfully: " + fullImageName);
+            return fullImageName;
         } catch (Exception e) {
             log.error("Failed to push image", e);
+            log.error("请检查 deployer.yml 中的 registry 配置是否正确");
             throw new IOException("Failed to push image to registry", e);
         }
     }

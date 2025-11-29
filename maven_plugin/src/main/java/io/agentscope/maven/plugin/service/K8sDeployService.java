@@ -18,6 +18,8 @@ package io.agentscope.maven.plugin.service;
 
 import io.agentscope.maven.plugin.config.BuildConfig;
 import io.agentscope.maven.plugin.config.K8sConfig;
+import io.kubernetes.client.custom.IntOrString;
+import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
@@ -27,7 +29,6 @@ import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.Config;
 import org.apache.maven.plugin.logging.Log;
 
-import java.io.File;
 import java.util.*;
 
 /**
@@ -39,214 +40,343 @@ public class K8sDeployService {
     private ApiClient apiClient;
     private AppsV1Api appsApi;
     private CoreV1Api coreApi;
+    private static final int LOAD_BALANCER_WAIT_SECONDS = 60;
+    private boolean connected = false;
+    private static final int DEFAULT_CONTAINER_PORT = 8080;
+    private static final int LOAD_BALANCER_PORT = 80;
 
     public K8sDeployService(Log log) {
         this.log = log;
-        try {
-            initializeK8sClient();
-        } catch (Exception e) {
-            log.warn("Failed to initialize Kubernetes client: " + e.getMessage());
-            log.warn("Make sure kubeconfig is properly configured");
-        }
-    }
-
-    private void initializeK8sClient() throws Exception {
-        if (apiClient == null) {
-            String kubeconfigPath = System.getenv("KUBECONFIG");
-            if (kubeconfigPath != null && !kubeconfigPath.isEmpty()) {
-                apiClient = Config.fromConfig(kubeconfigPath);
-            } else {
-                apiClient = Config.defaultClient();
-            }
-            Configuration.setDefaultApiClient(apiClient);
-            appsApi = new AppsV1Api(apiClient);
-            coreApi = new CoreV1Api(apiClient);
-        }
-    }
-    
-    /**
-     * Initialize with custom kubeconfig path
-     */
-    public void initializeK8sClient(String kubeconfigPath) throws Exception {
-        if (apiClient == null) {
-            if (kubeconfigPath != null && !kubeconfigPath.isEmpty()) {
-                apiClient = Config.fromConfig(kubeconfigPath);
-            } else {
-                apiClient = Config.defaultClient();
-            }
-            Configuration.setDefaultApiClient(apiClient);
-            appsApi = new AppsV1Api(apiClient);
-            coreApi = new CoreV1Api(apiClient);
-        }
     }
 
     /**
-     * Deploy to Kubernetes
+     * Deploy to Kubernetes following SandboxManager's Kubernetes client logic
      */
     public String deploy(String imageName, BuildConfig buildConfig, K8sConfig k8sConfig) throws Exception {
-        if (appsApi == null || coreApi == null) {
-            throw new IllegalStateException("Kubernetes client is not initialized. Please check kubeconfig configuration.");
+        ensureConnected(k8sConfig);
+        if (!connected || appsApi == null || coreApi == null) {
+            throw new IllegalStateException("Kubernetes client is not connected");
         }
 
         String namespace = k8sConfig.getK8sNamespace();
-        String deploymentName = "agent-" + buildConfig.getImageName().toLowerCase().replaceAll("[^a-z0-9-]", "-");
-        int port = buildConfig.getPort();
-        int replicas = k8sConfig.getReplicas();
+        namespace = "default";
+        String deploymentName = buildDeploymentName(buildConfig.getImageName());
+        int containerPort = DEFAULT_CONTAINER_PORT;
+        int servicePort = LOAD_BALANCER_PORT;
 
-        log.info("Deploying to Kubernetes namespace: " + namespace);
+        log.info("Starting deployment to Kubernetes");
+        log.info("Namespace: " + namespace);
         log.info("Deployment name: " + deploymentName);
         log.info("Image: " + imageName);
-        log.info("Replicas: " + replicas);
 
-        // Ensure namespace exists
         ensureNamespace(namespace);
 
-        // Create or update deployment
-        V1Deployment deployment = createDeployment(deploymentName, imageName, port, replicas, 
-                buildConfig.getEnvironment(), k8sConfig.getRuntimeConfig());
-        
-        try {
-            appsApi.createNamespacedDeployment(namespace, deployment).execute();
-            log.info("Deployment created: " + deploymentName);
-        } catch (ApiException e) {
-            if (e.getCode() == 409) {
-                // Deployment already exists, update it
-                log.info("Deployment exists, updating...");
-                appsApi.replaceNamespacedDeployment(deploymentName, namespace, deployment).execute();
-                log.info("Deployment updated: " + deploymentName);
-            } else {
-                throw new Exception("Failed to create deployment", e);
-            }
-        }
+        Map<String, Integer> portMapping = new HashMap<>();
+        portMapping.put(buildConfig.getPort()+"/tcp", 80);
 
-        // Create service
-        V1Service service = createService(deploymentName, port);
-        try {
-            coreApi.createNamespacedService(namespace, service).execute();
-            log.info("Service created: " + deploymentName);
-        } catch (ApiException e) {
-            if (e.getCode() == 409) {
-                // Service already exists, update it
-                log.info("Service exists, updating...");
-                coreApi.replaceNamespacedService(deploymentName, namespace, service).execute();
-                log.info("Service updated: " + deploymentName);
-            } else {
-                throw new Exception("Failed to create service", e);
-            }
-        }
+        // Create or update Deployment
+        V1Deployment deployment = createDeployment(deploymentName, imageName, containerPort,
+                k8sConfig.getReplicas(), buildConfig.getEnvironment(), k8sConfig.getRuntimeConfig());
+        V1Deployment createdDeployment = appsApi.createNamespacedDeployment(namespace, deployment).execute();
+        log.info("Applying deployment..." + createdDeployment.getMetadata().getName());
 
-        // Get service URL
-        String serviceUrl = getServiceUrl(namespace, deploymentName, port);
-        return serviceUrl;
+        // Always create LoadBalancer service mapping 80 -> container port
+        V1Service service = createLoadBalancerService(deploymentName, containerPort, servicePort);
+        upsertService(namespace, deploymentName, service);
+
+        return buildServiceUrl(namespace, deploymentName, servicePort);
+    }
+
+    private void ensureConnected(K8sConfig k8sConfig) {
+        if (connected) {
+            return;
+        }
+        try {
+            String kubeconfigPath = resolveKubeconfig(k8sConfig);
+            if (kubeconfigPath != null && !kubeconfigPath.isEmpty()) {
+                apiClient = Config.fromConfig(kubeconfigPath);
+                log.info("Initializing Kubernetes client with kubeconfig: " + kubeconfigPath);
+            } else {
+                apiClient = Config.defaultClient();
+                log.info("Initializing Kubernetes client with default configuration");
+            }
+            Configuration.setDefaultApiClient(apiClient);
+            appsApi = new AppsV1Api(apiClient);
+            coreApi = new CoreV1Api(apiClient);
+            // connection test
+            coreApi.getAPIResources().execute();
+            connected = true;
+        } catch (Exception e) {
+            log.error("Failed to initialize Kubernetes client", e);
+            connected = false;
+        }
+    }
+
+    private String resolveKubeconfig(K8sConfig config) {
+        if (config != null && config.getKubeconfigPath() != null && !config.getKubeconfigPath().isEmpty()) {
+            return config.getKubeconfigPath();
+        }
+        return System.getenv("KUBECONFIG");
+    }
+
+    private String buildDeploymentName(String imageName) {
+        String base = imageName != null ? imageName : "agent";
+        base = base.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9-]", "-");
+        return base.startsWith("agent-") ? base : "agent-" + base;
     }
 
     private void ensureNamespace(String namespace) throws ApiException {
         try {
             coreApi.readNamespace(namespace).execute();
-            log.debug("Namespace exists: " + namespace);
-        } catch (ApiException e) {
-            if (e.getCode() == 404) {
-                log.info("Creating namespace: " + namespace);
-                V1Namespace ns = new V1Namespace();
-                V1ObjectMeta metadata = new V1ObjectMeta();
-                metadata.setName(namespace);
-                ns.setMetadata(metadata);
+        } catch (ApiException ex) {
+            if (ex.getCode() == 404) {
+                log.info("Namespace not found, creating: " + namespace);
+                V1Namespace ns = new V1Namespace().metadata(new V1ObjectMeta().name(namespace));
                 coreApi.createNamespace(ns).execute();
-                log.info("Namespace created: " + namespace);
             } else {
-                throw e;
+                throw ex;
             }
         }
     }
 
-    private V1Deployment createDeployment(String name, String image, int port, int replicas,
-                                         Map<String, String> environment, Map<String, String> runtimeConfig) {
-        V1Deployment deployment = new V1Deployment();
-        
-        // Metadata
-        V1ObjectMeta metadata = new V1ObjectMeta();
-        metadata.setName(name);
-        metadata.setLabels(Collections.singletonMap("app", name));
-        deployment.setMetadata(metadata);
+    private V1Deployment createDeployment(String name,
+                                          String image,
+                                          int containerPort,
+                                          int replicas,
+                                          Map<String, String> environment,
+                                          Map<String, String> runtimeConfig) {
+        Map<String, String> labels = Collections.singletonMap("app", name);
 
-        // Spec
-        V1DeploymentSpec spec = new V1DeploymentSpec();
-        spec.setReplicas(replicas);
+        V1Container container = new V1Container()
+                .name(name)
+                .image(image)
+                .imagePullPolicy("IfNotPresent")
+                .ports(Collections.singletonList(new V1ContainerPort().containerPort(containerPort)));
 
-        // Selector
-        V1LabelSelector selector = new V1LabelSelector();
-        selector.setMatchLabels(Collections.singletonMap("app", name));
-        spec.setSelector(selector);
-
-        // Template
-        V1PodTemplateSpec template = new V1PodTemplateSpec();
-        V1ObjectMeta podMetadata = new V1ObjectMeta();
-        podMetadata.setLabels(Collections.singletonMap("app", name));
-        template.setMetadata(podMetadata);
-
-        // Pod spec
-        V1PodSpec podSpec = new V1PodSpec();
-        
-        // Container
-        V1Container container = new V1Container();
-        container.setName(name);
-        container.setImage(image);
-        container.setImagePullPolicy("IfNotPresent");
-
-        // Ports
-        V1ContainerPort containerPort = new V1ContainerPort();
-        containerPort.setContainerPort(port);
-        container.setPorts(Collections.singletonList(containerPort));
-
-        // Environment variables
         if (environment != null && !environment.isEmpty()) {
             List<V1EnvVar> envVars = new ArrayList<>();
-            for (Map.Entry<String, String> entry : environment.entrySet()) {
-                V1EnvVar envVar = new V1EnvVar();
-                envVar.setName(entry.getKey());
-                envVar.setValue(entry.getValue());
-                envVars.add(envVar);
-            }
+            environment.forEach((k, v) -> envVars.add(new V1EnvVar().name(k).value(v)));
             container.setEnv(envVars);
         }
 
-        podSpec.setContainers(Collections.singletonList(container));
-        template.setSpec(podSpec);
-        spec.setTemplate(template);
-        deployment.setSpec(spec);
+        if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
+            applyRuntimeConfig(container, runtimeConfig);
+        }
 
-        return deployment;
+        V1PodSpec podSpec = new V1PodSpec().containers(Collections.singletonList(container));
+        if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
+            applyRuntimeConfigToPodSpec(podSpec, runtimeConfig);
+        }
+
+        V1PodTemplateSpec template = new V1PodTemplateSpec()
+                .metadata(new V1ObjectMeta().labels(labels))
+                .spec(podSpec);
+
+        V1DeploymentSpec spec = new V1DeploymentSpec()
+                .replicas(Math.max(replicas, 1))
+                .selector(new V1LabelSelector().matchLabels(labels))
+                .template(template);
+
+        return new V1Deployment()
+                .metadata(new V1ObjectMeta().name(name).labels(labels))
+                .spec(spec);
     }
 
-    private V1Service createService(String name, int port) {
-        V1Service service = new V1Service();
-        
-        // Metadata
-        V1ObjectMeta metadata = new V1ObjectMeta();
-        metadata.setName(name);
-        metadata.setLabels(Collections.singletonMap("app", name));
-        service.setMetadata(metadata);
-
-        // Spec
-        V1ServiceSpec spec = new V1ServiceSpec();
-        spec.setType("ClusterIP");
-        spec.setSelector(Collections.singletonMap("app", name));
-
-        // Ports
-        V1ServicePort servicePort = new V1ServicePort();
-        servicePort.setPort(port);
-        servicePort.setTargetPort(new io.kubernetes.client.custom.IntOrString(port));
-        servicePort.setProtocol("TCP");
-        spec.setPorts(Collections.singletonList(servicePort));
-
-        service.setSpec(spec);
-        return service;
+    private void upsertDeployment(String namespace, String name, V1Deployment deployment) throws Exception {
+        try {
+            appsApi.createNamespacedDeployment(namespace, deployment).execute();
+            log.info("Deployment created: " + name);
+        } catch (ApiException ex) {
+            if (ex.getCode() == 409) {
+                log.info("Deployment exists, updating: " + name);
+                appsApi.replaceNamespacedDeployment(name, namespace, deployment).execute();
+                log.info("Deployment updated: " + name);
+            } else {
+                throw new Exception("Failed to apply deployment", ex);
+            }
+        }
     }
 
-    private String getServiceUrl(String namespace, String serviceName, int port) {
-        // In a real scenario, you might want to get the actual service IP
-        // For now, return a placeholder URL
+    private V1Service createLoadBalancerService(String name, int targetPort, int servicePort) {
+        Map<String, String> selector = Collections.singletonMap("app", name);
+        V1ServicePort port = new V1ServicePort()
+                .name("http")
+                .protocol("TCP")
+                .port(servicePort)
+                .targetPort(new IntOrString(targetPort));
+
+        V1ServiceSpec spec = new V1ServiceSpec()
+                .type("LoadBalancer")
+                .selector(selector)
+                .ports(Collections.singletonList(port));
+
+        return new V1Service()
+                .metadata(new V1ObjectMeta().name(name).labels(selector))
+                .spec(spec);
+    }
+
+    private void upsertService(String namespace, String name, V1Service service) throws Exception {
+        try {
+            coreApi.createNamespacedService(namespace, service).execute();
+            log.info("Service created: " + name);
+        } catch (ApiException ex) {
+            if (ex.getCode() == 409) {
+                log.info("Service exists, updating: " + name);
+                coreApi.replaceNamespacedService(name, namespace, service).execute();
+                log.info("Service updated: " + name);
+            } else {
+                throw new Exception("Failed to apply service", ex);
+            }
+        }
+    }
+
+    private String buildServiceUrl(String namespace, String serviceName, int port) {
+        try {
+            String lbIp = waitForLoadBalancer(namespace, serviceName, LOAD_BALANCER_WAIT_SECONDS);
+            if (lbIp != null && !lbIp.isEmpty()) {
+                return "http://" + lbIp + ":" + port;
+            }
+        } catch (Exception e) {
+            log.warn("LoadBalancer IP not ready: " + e.getMessage());
+        }
+
+        try {
+            V1Service service = coreApi.readNamespacedService(serviceName, namespace).execute();
+            if (service.getSpec() != null && service.getSpec().getClusterIP() != null) {
+                return "http://" + service.getSpec().getClusterIP() + ":" + port;
+            }
+        } catch (Exception e) {
+            log.warn("Failed to read service info: " + e.getMessage());
+        }
+
         return String.format("http://%s.%s.svc.cluster.local:%d", serviceName, namespace, port);
+    }
+
+    private String waitForLoadBalancer(String namespace, String serviceName, int timeoutSeconds)
+            throws ApiException, InterruptedException {
+        long start = System.currentTimeMillis();
+        long timeoutMs = timeoutSeconds * 1000L;
+
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            V1Service service = coreApi.readNamespacedService(serviceName, namespace).execute();
+            if (service.getStatus() != null
+                    && service.getStatus().getLoadBalancer() != null
+                    && service.getStatus().getLoadBalancer().getIngress() != null
+                    && !service.getStatus().getLoadBalancer().getIngress().isEmpty()) {
+
+                V1LoadBalancerIngress ingress = service.getStatus().getLoadBalancer().getIngress().get(0);
+                if (ingress.getIp() != null && !ingress.getIp().isEmpty()) {
+                    return ingress.getIp();
+                }
+                if (ingress.getHostname() != null && !ingress.getHostname().isEmpty()) {
+                    return ingress.getHostname();
+                }
+            }
+            Thread.sleep(2000);
+        }
+        return null;
+    }
+
+    private void applyRuntimeConfig(V1Container container, Map<String, String> runtimeConfig) {
+        V1ResourceRequirements resources = container.getResources();
+        if (resources == null) {
+            resources = new V1ResourceRequirements();
+        }
+
+        Map<String, Quantity> limits = resources.getLimits();
+        Map<String, Quantity> requests = resources.getRequests();
+        if (limits == null) {
+            limits = new HashMap<>();
+        }
+        if (requests == null) {
+            requests = new HashMap<>();
+        }
+
+        String memLimit = runtimeConfig.get("mem_limit");
+        if (memLimit != null) {
+            Long bytes = parseMemoryLimit(memLimit);
+            if (bytes != null) {
+                Quantity quantity = new Quantity(String.valueOf(bytes));
+                limits.put("memory", quantity);
+                requests.put("memory", quantity);
+            }
+        }
+
+        String nanoCpus = runtimeConfig.get("nano_cpus");
+        if (nanoCpus != null) {
+            Long nanos = parseNanoCpus(nanoCpus);
+            if (nanos != null) {
+                long milli = nanos / 1_000_000;
+                Quantity quantity = new Quantity(milli + "m");
+                limits.put("cpu", quantity);
+                requests.put("cpu", quantity);
+            }
+        }
+
+        if (parseBoolean(runtimeConfig.get("enable_gpu"))) {
+            Quantity gpuQuantity = new Quantity("1");
+            limits.put("nvidia.com/gpu", gpuQuantity);
+            requests.put("nvidia.com/gpu", gpuQuantity);
+        }
+
+        resources.setLimits(limits);
+        resources.setRequests(requests);
+        container.setResources(resources);
+    }
+
+    private void applyRuntimeConfigToPodSpec(V1PodSpec podSpec, Map<String, String> runtimeConfig) {
+        if (parseBoolean(runtimeConfig.get("enable_gpu"))) {
+            Map<String, String> selector = podSpec.getNodeSelector();
+            if (selector == null) {
+                selector = new HashMap<>();
+            }
+            selector.putIfAbsent("accelerator", "nvidia-gpu");
+            podSpec.setNodeSelector(selector);
+        }
+    }
+
+    private Long parseMemoryLimit(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            String normalized = value.trim().toLowerCase(Locale.ROOT);
+            String numberPart = normalized.replaceAll("[^0-9.]", "");
+            String unitPart = normalized.replaceAll("[0-9.]", "");
+            double numeric = Double.parseDouble(numberPart);
+
+            return switch (unitPart) {
+                case "k", "kb" -> (long) (numeric * 1024);
+                case "m", "mb" -> (long) (numeric * 1024 * 1024);
+                case "g", "gb" -> (long) (numeric * 1024 * 1024 * 1024);
+                case "t", "tb" -> (long) (numeric * 1024 * 1024 * 1024 * 1024);
+                case "" -> (long) numeric;
+                default -> null;
+            };
+        } catch (Exception e) {
+            log.warn("Failed to parse memory limit: " + value);
+            return null;
+        }
+    }
+
+    private Long parseNanoCpus(String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ex) {
+            log.warn("Failed to parse nano CPUs: " + value);
+            return null;
+        }
+    }
+
+    private boolean parseBoolean(String value) {
+        if (value == null) {
+            return false;
+        }
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        return "true".equals(normalized) || "1".equals(normalized) || "yes".equals(normalized);
     }
 }
 
