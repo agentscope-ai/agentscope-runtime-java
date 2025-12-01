@@ -29,9 +29,11 @@ public class BuildConfig {
     private int port = 8080;
     private boolean pushToRegistry = false;
     private boolean deployToK8s = false;
-    private String buildContextDir = "/tmp/docker-build";
-    private int buildTimeout = 600; // 10 minutes
-    private int pushTimeout = 300; // 5 minutes
+    private boolean deployToModelStudio = false;
+    private boolean deployToAgentRun = false;
+    private String buildContextDir = "/tmp/deployer";
+    private int buildTimeout = 600;
+    private int pushTimeout = 300;
     private boolean cleanupAfterBuild = true;
     private Map<String, String> environment = new HashMap<>();
 
@@ -81,6 +83,22 @@ public class BuildConfig {
 
     public void setDeployToK8s(boolean deployToK8s) {
         this.deployToK8s = deployToK8s;
+    }
+
+    public boolean isDeployToModelStudio() {
+        return deployToModelStudio;
+    }
+
+    public void setDeployToModelStudio(boolean deployToModelStudio) {
+        this.deployToModelStudio = deployToModelStudio;
+    }
+
+    public boolean isDeployToAgentRun() {
+        return deployToAgentRun;
+    }
+
+    public void setDeployToAgentRun(boolean deployToAgentRun) {
+        this.deployToAgentRun = deployToAgentRun;
     }
 
     public String getBuildContextDir() {

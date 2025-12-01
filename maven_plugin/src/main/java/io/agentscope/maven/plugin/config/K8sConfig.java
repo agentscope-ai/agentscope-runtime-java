@@ -23,8 +23,8 @@ import java.util.Map;
  * Kubernetes deployment configuration
  */
 public class K8sConfig {
-    private String k8sNamespace = "agentscope-runtime";
-    private String kubeconfigPath;
+    private String k8sNamespace = "default";
+    private String kubeconfigPath = System.getProperty("user.home") + "/.kube/config";
     private int replicas = 1;
     private Map<String, String> runtimeConfig = new HashMap<>();
 
