@@ -30,7 +30,7 @@ import java.util.Map;
  *
  * @author xiweng.yy
  */
-@ConfigurationProperties("spring.agentscope.runtime.a2a.card")
+@ConfigurationProperties(Constants.A2A_SERVER_CARD_PREFIX)
 public class A2aAgentCardProperties {
 
     private String name;
