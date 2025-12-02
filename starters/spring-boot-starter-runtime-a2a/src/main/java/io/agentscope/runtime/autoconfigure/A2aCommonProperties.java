@@ -20,7 +20,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Server configuration for deployment
  */
-@ConfigurationProperties("spring.agentscope.runtime.a2a")
+@ConfigurationProperties(Constants.A2A_SERVER_PREFIX)
 public class A2aCommonProperties {
     private String endpointName;
 
