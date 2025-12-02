@@ -50,6 +50,11 @@
             <organizationUrl>https://aliyun.com</organizationUrl>
         </developer>
     </developers>
+    <scm>
+        <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>
+        <developerConnection>git@github.com:agentscope-ai/agentscope-runtime-java.git</developerConnection>
+        <url>https://github.com/agentscope-ai/agentscope-runtime-java</url>
+    </scm>
 
     <dependencies>
 

@@ -59,7 +59,7 @@
     </scm>
 
     <properties>
-        <revision>0.1.2</revision>
+        <revision>0.1.3</revision>
 
         <a2a-sdk.version>0.3.2.Final</a2a-sdk.version>
         <spring-boot.version>3.4.5</spring-boot.version>
@@ -611,7 +611,7 @@
                         <artifactId>maven-javadoc-plugin</artifactId>
                         <version>${maven-javadoc-plugin.version}</version>
                         <configuration>
-                            <doclint>all,-missing</doclint>
+                            <doclint>none</doclint>
                         </configuration>
                         <executions>
                             <execution>
