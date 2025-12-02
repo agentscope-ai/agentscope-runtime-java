@@ -16,6 +16,7 @@
 package io.agentscope.runtime.engine.agents.saa.tools;
 
 import io.agentscope.runtime.engine.agents.saa.tools.mcp.MCPToolExecutor;
+import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.McpConfigConverter;
 import org.springframework.ai.tool.ToolCallback;
 
@@ -72,99 +73,100 @@ import io.agentscope.runtime.sandbox.tools.MCPTool;
 public class ToolcallsInit {
     public static Logger logger =  Logger.getLogger(ToolcallsInit.class.getName());
 
-    public static List<ToolCallback> getAllTools() {
+    public static List<ToolCallback> getAllTools(Sandbox sandbox) {
         return List.of(
-                RunPythonCodeTool(),
-                RunShellCommandTool(),
-                ReadFileTool(),
-                ReadMultipleFilesTool(),
-                WriteFileTool(),
-                EditFileTool(),
-                CreateDirectoryTool(),
-                ListDirectoryTool(),
-                DirectoryTreeTool(),
-                MoveFileTool(),
-                SearchFilesTool(),
-                GetFileInfoTool(),
-                ListAllowedDirectoriesTool(),
-                BrowserNavigateTool(),
-                BrowserClickTool(),
-                BrowserTypeTool(),
-                BrowserTakeScreenshotTool(),
-                BrowserSnapshotTool(),
-                BrowserTabNewTool(),
-                BrowserTabSelectTool(),
-                BrowserTabCloseTool(),
-                BrowserWaitForTool(),
-                BrowserResizeTool(),
-                BrowserCloseTool(),
-                BrowserConsoleMessagesTool(),
-                BrowserHandleDialogTool(),
-                BrowserFileUploadTool(),
-                BrowserPressKeyTool(),
-                BrowserNavigateBackTool(),
-                BrowserNavigateForwardTool(),
-                BrowserNetworkRequestsTool(),
-                BrowserPdfSaveTool(),
-                BrowserDragTool(),
-                BrowserHoverTool(),
-                BrowserSelectOptionTool(),
-                BrowserTabListTool()
+                RunPythonCodeTool(sandbox),
+                RunShellCommandTool(sandbox),
+                ReadFileTool(sandbox),
+                ReadMultipleFilesTool(sandbox),
+                WriteFileTool(sandbox),
+                EditFileTool(sandbox),
+                CreateDirectoryTool(sandbox),
+                ListDirectoryTool(sandbox),
+                DirectoryTreeTool(sandbox),
+                MoveFileTool(sandbox),
+                SearchFilesTool(sandbox),
+                GetFileInfoTool(sandbox),
+                ListAllowedDirectoriesTool(sandbox),
+                BrowserNavigateTool(sandbox),
+                BrowserClickTool(sandbox),
+                BrowserTypeTool(sandbox),
+                BrowserTakeScreenshotTool(sandbox),
+                BrowserSnapshotTool(sandbox),
+                BrowserTabNewTool(sandbox),
+                BrowserTabSelectTool(sandbox),
+                BrowserTabCloseTool(sandbox),
+                BrowserWaitForTool(sandbox),
+                BrowserResizeTool(sandbox),
+                BrowserCloseTool(sandbox),
+                BrowserConsoleMessagesTool(sandbox),
+                BrowserHandleDialogTool(sandbox),
+                BrowserFileUploadTool(sandbox),
+                BrowserPressKeyTool(sandbox),
+                BrowserNavigateBackTool(sandbox),
+                BrowserNavigateForwardTool(sandbox),
+                BrowserNetworkRequestsTool(sandbox),
+                BrowserPdfSaveTool(sandbox),
+                BrowserDragTool(sandbox),
+                BrowserHoverTool(sandbox),
+                BrowserSelectOptionTool(sandbox),
+                BrowserTabListTool(sandbox)
         );
     }
 
     /**
      * Get corresponding ToolCallback based on tool name
      * @param toolName tool name
+     * @param sandbox sandbox instance
      * @return ToolCallback instance, returns null if not found
      */
-    public static ToolCallback getToolByName(String toolName) {
+    public static ToolCallback getToolByName(String toolName, Sandbox sandbox) {
         if (toolName == null || toolName.trim().isEmpty()) {
             return null;
         }
 
         return switch (toolName.toLowerCase().trim()) {
             // Base tools
-            case "runpython", "run_python", "python" -> RunPythonCodeTool();
-            case "runshell", "run_shell", "shell" -> RunShellCommandTool();
+            case "runpython", "run_python", "python" -> RunPythonCodeTool(sandbox);
+            case "runshell", "run_shell", "shell" -> RunShellCommandTool(sandbox);
             
             // File system tools
-            case "readfile", "read_file", "fs_read" -> ReadFileTool();
-            case "readmultiplefiles", "read_multiple_files", "fs_read_multiple" -> ReadMultipleFilesTool();
-            case "writefile", "write_file", "fs_write" -> WriteFileTool();
-            case "editfile", "edit_file", "fs_edit" -> EditFileTool();
-            case "createdirectory", "create_directory", "fs_create_dir" -> CreateDirectoryTool();
-            case "listdirectory", "list_directory", "fs_list" -> ListDirectoryTool();
-            case "directorytree", "directory_tree", "fs_tree" -> DirectoryTreeTool();
-            case "movefile", "move_file", "fs_move" -> MoveFileTool();
-            case "searchfiles", "search_files", "fs_search" -> SearchFilesTool();
-            case "getfileinfo", "get_file_info", "fs_info" -> GetFileInfoTool();
-            case "listalloweddirectories", "list_allowed_directories", "fs_allowed" -> ListAllowedDirectoriesTool();
+            case "readfile", "read_file", "fs_read" -> ReadFileTool(sandbox);
+            case "readmultiplefiles", "read_multiple_files", "fs_read_multiple" -> ReadMultipleFilesTool(sandbox);
+            case "writefile", "write_file", "fs_write" -> WriteFileTool(sandbox);
+            case "editfile", "edit_file", "fs_edit" -> EditFileTool(sandbox);
+            case "createdirectory", "create_directory", "fs_create_dir" -> CreateDirectoryTool(sandbox);
+            case "listdirectory", "list_directory", "fs_list" -> ListDirectoryTool(sandbox);
+            case "directorytree", "directory_tree", "fs_tree" -> DirectoryTreeTool(sandbox);
+            case "movefile", "move_file", "fs_move" -> MoveFileTool(sandbox);
+            case "searchfiles", "search_files", "fs_search" -> SearchFilesTool(sandbox);
+            case "getfileinfo", "get_file_info", "fs_info" -> GetFileInfoTool(sandbox);
+            case "listalloweddirectories", "list_allowed_directories", "fs_allowed" -> ListAllowedDirectoriesTool(sandbox);
             
             // Browser tools
-            case "browsernavigate", "browser_navigate", "browser_nav" -> BrowserNavigateTool();
-            case "browserclick", "browser_click" -> BrowserClickTool();
-            case "browsertype", "browser_type" -> BrowserTypeTool();
-            case "browsertakescreenshot", "browser_take_screenshot", "browser_screenshot" -> BrowserTakeScreenshotTool();
-            case "browsersnapshot", "browser_snapshot" -> BrowserSnapshotTool();
-            case "browsertabnew", "browser_tab_new" -> BrowserTabNewTool();
-            case "browsertabselect", "browser_tab_select" -> BrowserTabSelectTool();
-            case "browsertabclose", "browser_tab_close" -> BrowserTabCloseTool();
-            case "browserwaitfor", "browser_wait_for" -> BrowserWaitForTool();
-            case "browserresize", "browser_resize" -> BrowserResizeTool();
-            case "browserclose", "browser_close" -> BrowserCloseTool();
-            case "browserconsolemessages", "browser_console_messages" -> BrowserConsoleMessagesTool();
-            case "browserhandledialog", "browser_handle_dialog" -> BrowserHandleDialogTool();
-            case "browserfileupload", "browser_file_upload" -> BrowserFileUploadTool();
-            case "browserpresskey", "browser_press_key" -> BrowserPressKeyTool();
-            case "browsernavigateback", "browser_navigate_back" -> BrowserNavigateBackTool();
-            case "browsernavigateforward", "browser_navigate_forward" -> BrowserNavigateForwardTool();
-            case "browsernetworkrequests", "browser_network_requests" -> BrowserNetworkRequestsTool();
-            case "browserpdfsave", "browser_pdf_save" -> BrowserPdfSaveTool();
-            case "browserdrag", "browser_drag" -> BrowserDragTool();
-            case "browserhover", "browser_hover" -> BrowserHoverTool();
-            case "browserselectoption", "browser_select_option" -> BrowserSelectOptionTool();
-            case "browsertablist", "browser_tab_list" -> BrowserTabListTool();
+            case "browsernavigate", "browser_navigate", "browser_nav" -> BrowserNavigateTool(sandbox);
+            case "browserclick", "browser_click" -> BrowserClickTool(sandbox);
+            case "browsertype", "browser_type" -> BrowserTypeTool(sandbox);
+            case "browsertakescreenshot", "browser_take_screenshot", "browser_screenshot" -> BrowserTakeScreenshotTool(sandbox);
+            case "browsersnapshot", "browser_snapshot" -> BrowserSnapshotTool(sandbox);
+            case "browsertabnew", "browser_tab_new" -> BrowserTabNewTool(sandbox);
+            case "browsertabselect", "browser_tab_select" -> BrowserTabSelectTool(sandbox);
+            case "browsertabclose", "browser_tab_close" -> BrowserTabCloseTool(sandbox);
+            case "browserwaitfor", "browser_wait_for" -> BrowserWaitForTool(sandbox);
+            case "browserresize", "browser_resize" -> BrowserResizeTool(sandbox);
+            case "browserclose", "browser_close" -> BrowserCloseTool(sandbox);
+            case "browserconsolemessages", "browser_console_messages" -> BrowserConsoleMessagesTool(sandbox);
+            case "browserhandledialog", "browser_handle_dialog" -> BrowserHandleDialogTool(sandbox);
+            case "browserfileupload", "browser_file_upload" -> BrowserFileUploadTool(sandbox);
+            case "browserpresskey", "browser_press_key" -> BrowserPressKeyTool(sandbox);
+            case "browsernavigateback", "browser_navigate_back" -> BrowserNavigateBackTool(sandbox);
+            case "browsernavigateforward", "browser_navigate_forward" -> BrowserNavigateForwardTool(sandbox);
+            case "browsernetworkrequests", "browser_network_requests" -> BrowserNetworkRequestsTool(sandbox);
+            case "browserpdfsave", "browser_pdf_save" -> BrowserPdfSaveTool(sandbox);
+            case "browserdrag", "browser_drag" -> BrowserDragTool(sandbox);
+            case "browserhover", "browser_hover" -> BrowserHoverTool(sandbox);
+            case "browserselectoption", "browser_select_option" -> BrowserSelectOptionTool(sandbox);
+            case "browsertablist", "browser_tab_list" -> BrowserTabListTool(sandbox);
             
             default -> {
                 logger.severe("Unknown tool name: " + toolName);
@@ -173,211 +175,283 @@ public class ToolcallsInit {
         };
     }
 
-    public static List<ToolCallback> getToolsByName(List<String> toolNames) {
+    public static List<ToolCallback> getToolsByName(List<String> toolNames, Sandbox sandbox) {
         if (toolNames == null || toolNames.isEmpty()) {
             return List.of();
         }
 
         return toolNames.stream()
-                .map(ToolcallsInit::getToolByName)
+                .map(toolName -> getToolByName(toolName, sandbox))
                 .filter(tool -> tool != null)
                 .toList();
     }
 
-    public static List<ToolCallback> getBaseTools() {
+    public static List<ToolCallback> getBaseTools(Sandbox sandbox) {
         return List.of(
-                RunPythonCodeTool(),
-                RunShellCommandTool()
+                RunPythonCodeTool(sandbox),
+                RunShellCommandTool(sandbox)
         );
     }
 
-    public static List<ToolCallback> getFileSystemTools() {
+    public static List<ToolCallback> getFileSystemTools(Sandbox sandbox) {
         return List.of(
-                ReadFileTool(),
-                ReadMultipleFilesTool(),
-                WriteFileTool(),
-                EditFileTool(),
-                CreateDirectoryTool(),
-                ListDirectoryTool(),
-                DirectoryTreeTool(),
-                MoveFileTool(),
-                SearchFilesTool(),
-                GetFileInfoTool(),
-                ListAllowedDirectoriesTool()
+                ReadFileTool(sandbox),
+                ReadMultipleFilesTool(sandbox),
+                WriteFileTool(sandbox),
+                EditFileTool(sandbox),
+                CreateDirectoryTool(sandbox),
+                ListDirectoryTool(sandbox),
+                DirectoryTreeTool(sandbox),
+                MoveFileTool(sandbox),
+                SearchFilesTool(sandbox),
+                GetFileInfoTool(sandbox),
+                ListAllowedDirectoriesTool(sandbox)
         );
     }
 
-    public static List<ToolCallback> getBrowserTools() {
+    public static List<ToolCallback> getBrowserTools(Sandbox sandbox) {
         return List.of(
-                BrowserNavigateTool(),
-                BrowserClickTool(),
-                BrowserTypeTool(),
-                BrowserTakeScreenshotTool(),
-                BrowserSnapshotTool(),
-                BrowserTabNewTool(),
-                BrowserTabSelectTool(),
-                BrowserTabCloseTool(),
-                BrowserWaitForTool(),
-                BrowserResizeTool(),
-                BrowserCloseTool(),
-                BrowserConsoleMessagesTool(),
-                BrowserHandleDialogTool(),
-                BrowserFileUploadTool(),
-                BrowserPressKeyTool(),
-                BrowserNavigateBackTool(),
-                BrowserNavigateForwardTool(),
-                BrowserNetworkRequestsTool(),
-                BrowserPdfSaveTool(),
-                BrowserDragTool(),
-                BrowserHoverTool(),
-                BrowserSelectOptionTool(),
-                BrowserTabListTool()
+                BrowserNavigateTool(sandbox),
+                BrowserClickTool(sandbox),
+                BrowserTypeTool(sandbox),
+                BrowserTakeScreenshotTool(sandbox),
+                BrowserSnapshotTool(sandbox),
+                BrowserTabNewTool(sandbox),
+                BrowserTabSelectTool(sandbox),
+                BrowserTabCloseTool(sandbox),
+                BrowserWaitForTool(sandbox),
+                BrowserResizeTool(sandbox),
+                BrowserCloseTool(sandbox),
+                BrowserConsoleMessagesTool(sandbox),
+                BrowserHandleDialogTool(sandbox),
+                BrowserFileUploadTool(sandbox),
+                BrowserPressKeyTool(sandbox),
+                BrowserNavigateBackTool(sandbox),
+                BrowserNavigateForwardTool(sandbox),
+                BrowserNetworkRequestsTool(sandbox),
+                BrowserPdfSaveTool(sandbox),
+                BrowserDragTool(sandbox),
+                BrowserHoverTool(sandbox),
+                BrowserSelectOptionTool(sandbox),
+                BrowserTabListTool(sandbox)
         );
     }
 
-    public static ToolCallback RunPythonCodeTool() {
-        return new BasePythonRunner().buildTool();
+    public static ToolCallback RunPythonCodeTool(Sandbox sandbox) {
+        BasePythonRunner basePythonRunner = new BasePythonRunner();
+        basePythonRunner.setSandbox(sandbox);
+        return basePythonRunner.buildTool();
     }
 
-    public static ToolCallback RunShellCommandTool() {
-        return new BaseShellRunner().buildTool();
+    public static ToolCallback RunShellCommandTool(Sandbox sandbox) {
+        BaseShellRunner baseShellRunner = new BaseShellRunner();
+        baseShellRunner.setSandbox(sandbox);
+        return baseShellRunner.buildTool();
     }
 
-    public static ToolCallback ReadFileTool() {
-        return new FsFileReader().buildTool();
+    public static ToolCallback ReadFileTool(Sandbox sandbox) {
+        FsFileReader fsFileReader = new FsFileReader();
+        fsFileReader.setSandbox(sandbox);
+        return fsFileReader.buildTool();
     }
 
-    public static ToolCallback ReadMultipleFilesTool() {
-        return new FsMultiFileReader().buildTool();
+    public static ToolCallback ReadMultipleFilesTool(Sandbox sandbox) {
+        FsMultiFileReader fsMultiFileReader = new FsMultiFileReader();
+        fsMultiFileReader.setSandbox(sandbox);
+        return fsMultiFileReader.buildTool();
     }
 
-    public static ToolCallback WriteFileTool() {
-        return new FsFileWriter().buildTool();
+    public static ToolCallback WriteFileTool(Sandbox sandbox) {
+        FsFileWriter fsFileWriter = new FsFileWriter();
+        fsFileWriter.setSandbox(sandbox);
+        return fsFileWriter.buildTool();
     }
 
-    public static ToolCallback EditFileTool() {
-        return new FsFileEditor().buildTool();
+    public static ToolCallback EditFileTool(Sandbox sandbox) {
+        FsFileEditor fsFileEditor = new FsFileEditor();
+        fsFileEditor.setSandbox(sandbox);
+        return fsFileEditor.buildTool();
     }
 
-    public static ToolCallback CreateDirectoryTool() {
-        return new FsDirectoryCreator().buildTool();
+    public static ToolCallback CreateDirectoryTool(Sandbox sandbox) {
+        FsDirectoryCreator fsDirectoryCreator = new FsDirectoryCreator();
+        fsDirectoryCreator.setSandbox(sandbox);
+        return fsDirectoryCreator.buildTool();
     }
 
-    public static ToolCallback ListDirectoryTool() {
-        return new FsDirectoryLister().buildTool();
+    public static ToolCallback ListDirectoryTool(Sandbox sandbox) {
+        FsDirectoryLister fsDirectoryLister = new FsDirectoryLister();
+        fsDirectoryLister.setSandbox(sandbox);
+        return fsDirectoryLister.buildTool();
     }
 
-    public static ToolCallback DirectoryTreeTool() {
-        return new FsTreeBuilder().buildTool();
+    public static ToolCallback DirectoryTreeTool(Sandbox sandbox) {
+        FsTreeBuilder fsTreeBuilder = new FsTreeBuilder();
+        fsTreeBuilder.setSandbox(sandbox);
+        return fsTreeBuilder.buildTool();
     }
 
-    public static ToolCallback MoveFileTool() {
-        return new FsFileMover().buildTool();
+    public static ToolCallback MoveFileTool(Sandbox sandbox) {
+        FsFileMover fsFileMover = new FsFileMover();
+        fsFileMover.setSandbox(sandbox);
+        return fsFileMover.buildTool();
     }
 
-    public static ToolCallback SearchFilesTool() {
-        return new FsFileSearcher().buildTool();
+    public static ToolCallback SearchFilesTool(Sandbox sandbox) {
+        FsFileSearcher fsFileSearcher = new FsFileSearcher();
+        fsFileSearcher.setSandbox(sandbox);
+        return fsFileSearcher.buildTool();
     }
 
-    public static ToolCallback GetFileInfoTool() {
-        return new FsFileInfoRetriever().buildTool();
+    public static ToolCallback GetFileInfoTool(Sandbox sandbox) {
+        FsFileInfoRetriever fsFileInfoRetriever = new FsFileInfoRetriever();
+        fsFileInfoRetriever.setSandbox(sandbox);
+        return fsFileInfoRetriever.buildTool();
     }
 
-    public static ToolCallback ListAllowedDirectoriesTool() {
-        return new FsAllowedDirectoriesLister().buildTool();
+    public static ToolCallback ListAllowedDirectoriesTool(Sandbox sandbox) {
+        FsAllowedDirectoriesLister fsAllowedDirectoriesLister = new FsAllowedDirectoriesLister();
+        fsAllowedDirectoriesLister.setSandbox(sandbox);
+        return fsAllowedDirectoriesLister.buildTool();
     }
 
     // Browser tools
-    public static ToolCallback BrowserNavigateTool() {
-        return new BrowserNavigator().buildTool();
+    public static ToolCallback BrowserNavigateTool(Sandbox sandbox) {
+        BrowserNavigator browserNavigator = new BrowserNavigator();
+        browserNavigator.setSandbox(sandbox);
+        return browserNavigator.buildTool();
     }
 
-    public static ToolCallback BrowserClickTool() {
-        return new BrowserClicker().buildTool();
+    public static ToolCallback BrowserClickTool(Sandbox sandbox) {
+        BrowserClicker browserClicker = new BrowserClicker();
+        browserClicker.setSandbox(sandbox);
+        return browserClicker.buildTool();
     }
 
-    public static ToolCallback BrowserTypeTool() {
-        return new BrowserTyper().buildTool();
+    public static ToolCallback BrowserTypeTool(Sandbox sandbox) {
+        BrowserTyper browserTyper = new BrowserTyper();
+        browserTyper.setSandbox(sandbox);
+        return browserTyper.buildTool();
     }
 
-    public static ToolCallback BrowserTakeScreenshotTool() {
-        return new BrowserScreenshotTaker().buildTool();
+    public static ToolCallback BrowserTakeScreenshotTool(Sandbox sandbox) {
+        BrowserScreenshotTaker browserScreenshotTaker = new BrowserScreenshotTaker();
+        browserScreenshotTaker.setSandbox(sandbox);
+        return browserScreenshotTaker.buildTool();
     }
 
-    public static ToolCallback BrowserSnapshotTool() {
-        return new BrowserSnapshotTaker().buildTool();
+    public static ToolCallback BrowserSnapshotTool(Sandbox sandbox) {
+        BrowserSnapshotTaker browserSnapshotTaker = new BrowserSnapshotTaker();
+        browserSnapshotTaker.setSandbox(sandbox);
+        return browserSnapshotTaker.buildTool();
     }
 
-    public static ToolCallback BrowserTabNewTool() {
-        return new BrowserTabCreator().buildTool();
+    public static ToolCallback BrowserTabNewTool(Sandbox sandbox) {
+        BrowserTabCreator browserTabCreator = new BrowserTabCreator();
+        browserTabCreator.setSandbox(sandbox);
+        return browserTabCreator.buildTool();
     }
 
-    public static ToolCallback BrowserTabSelectTool() {
-        return new BrowserTabSelector().buildTool();
+    public static ToolCallback BrowserTabSelectTool(Sandbox sandbox) {
+        BrowserTabSelector browserTabSelector = new BrowserTabSelector();
+        browserTabSelector.setSandbox(sandbox);
+        return browserTabSelector.buildTool();
     }
 
-    public static ToolCallback BrowserTabCloseTool() {
-        return new BrowserTabCloser().buildTool();
+    public static ToolCallback BrowserTabCloseTool(Sandbox sandbox) {
+        BrowserTabCloser browserTabCloser = new BrowserTabCloser();
+        browserTabCloser.setSandbox(sandbox);
+        return browserTabCloser.buildTool();
     }
 
-    public static ToolCallback BrowserWaitForTool() {
-        return new BrowserWaiter().buildTool();
+    public static ToolCallback BrowserWaitForTool(Sandbox sandbox) {
+        BrowserWaiter browserWaiter = new BrowserWaiter();
+        browserWaiter.setSandbox(sandbox);
+        return browserWaiter.buildTool();
     }
 
-    public static ToolCallback BrowserResizeTool() {
-        return new BrowserWindowResizer().buildTool();
+    public static ToolCallback BrowserResizeTool(Sandbox sandbox) {
+        BrowserWindowResizer browserWindowResizer = new BrowserWindowResizer();
+        browserWindowResizer.setSandbox(sandbox);
+        return browserWindowResizer.buildTool();
     }
 
-    public static ToolCallback BrowserCloseTool() {
-        return new BrowserCloser().buildTool();
+    public static ToolCallback BrowserCloseTool(Sandbox sandbox) {
+        BrowserCloser browserCloser = new BrowserCloser();
+        browserCloser.setSandbox(sandbox);
+        return browserCloser.buildTool();
     }
 
-    public static ToolCallback BrowserConsoleMessagesTool() {
-        return new BrowserConsoleMessagesRetriever().buildTool();
+    public static ToolCallback BrowserConsoleMessagesTool(Sandbox sandbox) {
+        BrowserConsoleMessagesRetriever browserConsoleMessagesRetriever = new BrowserConsoleMessagesRetriever();
+        browserConsoleMessagesRetriever.setSandbox(sandbox);
+        return browserConsoleMessagesRetriever.buildTool();
     }
 
-    public static ToolCallback BrowserHandleDialogTool() {
-        return new BrowserDialogHandler().buildTool();
+    public static ToolCallback BrowserHandleDialogTool(Sandbox sandbox) {
+        BrowserDialogHandler browserDialogHandler = new BrowserDialogHandler();
+        browserDialogHandler.setSandbox(sandbox);
+        return browserDialogHandler.buildTool();
     }
 
-    public static ToolCallback BrowserFileUploadTool() {
-        return new BrowserFileUploader().buildTool();
+    public static ToolCallback BrowserFileUploadTool(Sandbox sandbox) {
+        BrowserFileUploader browserFileUploader = new BrowserFileUploader();
+        browserFileUploader.setSandbox(sandbox);
+        return browserFileUploader.buildTool();
     }
 
-    public static ToolCallback BrowserPressKeyTool() {
-        return new BrowserKeyPresser().buildTool();
+    public static ToolCallback BrowserPressKeyTool(Sandbox sandbox) {
+        BrowserKeyPresser browserKeyPresser = new BrowserKeyPresser();
+        browserKeyPresser.setSandbox(sandbox);
+        return browserKeyPresser.buildTool();
     }
 
-    public static ToolCallback BrowserNavigateBackTool() {
-        return new BrowserBackNavigator().buildTool();
+    public static ToolCallback BrowserNavigateBackTool(Sandbox sandbox) {
+        BrowserBackNavigator browserBackNavigator = new BrowserBackNavigator();
+        browserBackNavigator.setSandbox(sandbox);
+        return browserBackNavigator.buildTool();
     }
 
-    public static ToolCallback BrowserNavigateForwardTool() {
-        return new BrowserForwardNavigator().buildTool();
+    public static ToolCallback BrowserNavigateForwardTool(Sandbox sandbox) {
+        BrowserForwardNavigator browserForwardNavigator = new BrowserForwardNavigator();
+        browserForwardNavigator.setSandbox(sandbox);
+        return browserForwardNavigator.buildTool();
     }
 
-    public static ToolCallback BrowserNetworkRequestsTool() {
-        return new BrowserNetworkRequestsRetriever().buildTool();
+    public static ToolCallback BrowserNetworkRequestsTool(Sandbox sandbox) {
+        BrowserNetworkRequestsRetriever browserNetworkRequestsRetriever = new BrowserNetworkRequestsRetriever();
+        browserNetworkRequestsRetriever.setSandbox(sandbox);
+        return browserNetworkRequestsRetriever.buildTool();
     }
 
-    public static ToolCallback BrowserPdfSaveTool() {
-        return new BrowserPdfSaver().buildTool();
+    public static ToolCallback BrowserPdfSaveTool(Sandbox sandbox) {
+        BrowserPdfSaver browserPdfSaver = new BrowserPdfSaver();
+        browserPdfSaver.setSandbox(sandbox);
+        return browserPdfSaver.buildTool();
     }
 
-    public static ToolCallback BrowserDragTool() {
-        return new BrowserDragger().buildTool();
+    public static ToolCallback BrowserDragTool(Sandbox sandbox) {
+        BrowserDragger browserDragger = new BrowserDragger();
+        browserDragger.setSandbox(sandbox);
+        return browserDragger.buildTool();
     }
 
-    public static ToolCallback BrowserHoverTool() {
-        return new BrowserHoverer().buildTool();
+    public static ToolCallback BrowserHoverTool(Sandbox sandbox) {
+        BrowserHoverer browserHoverer = new BrowserHoverer();
+        browserHoverer.setSandbox(sandbox);
+        return browserHoverer.buildTool();
     }
 
-    public static ToolCallback BrowserSelectOptionTool() {
-        return new BrowserOptionSelector().buildTool();
+    public static ToolCallback BrowserSelectOptionTool(Sandbox sandbox) {
+        BrowserOptionSelector browserOptionSelector = new BrowserOptionSelector();
+        browserOptionSelector.setSandbox(sandbox);
+        return browserOptionSelector.buildTool();
     }
 
-    public static ToolCallback BrowserTabListTool() {
-        return new BrowserTabLister().buildTool();
+    public static ToolCallback BrowserTabListTool(Sandbox sandbox) {
+        BrowserTabLister browserTabLister = new BrowserTabLister();
+        browserTabLister.setSandbox(sandbox);
+        return browserTabLister.buildTool();
     }
 
     public static List<ToolCallback> getMcpTools(String serverConfigs,
@@ -468,8 +542,9 @@ public class ToolcallsInit {
 
     public static List<ToolCallback> getAllToolsWithMcp(String mcpServerConfigs,
                                                        SandboxType sandboxType,
-                                                       SandboxManager sandboxManager) {
-        List<ToolCallback> allTools = new ArrayList<>(getAllTools());
+                                                       SandboxManager sandboxManager,
+                                                       Sandbox sandbox) {
+        List<ToolCallback> allTools = new ArrayList<>(getAllTools(sandbox));
         
         if (mcpServerConfigs != null && !mcpServerConfigs.trim().isEmpty()) {
             try {
@@ -486,8 +561,9 @@ public class ToolcallsInit {
 
     public static List<ToolCallback> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
                                                        SandboxType sandboxType,
-                                                       SandboxManager sandboxManager) {
-        List<ToolCallback> allTools = new ArrayList<>(getAllTools());
+                                                       SandboxManager sandboxManager,
+                                                       Sandbox sandbox) {
+        List<ToolCallback> allTools = new ArrayList<>(getAllTools(sandbox));
         
         if (mcpServerConfigs != null && !mcpServerConfigs.isEmpty()) {
             try {

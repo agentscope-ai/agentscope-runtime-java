@@ -18,6 +18,8 @@ package io.agentscope.runtime.engine.agents.agentscope.tools;
 
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.tool.AgentTool;
+import io.agentscope.core.tool.ToolCallParam;
+import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
 import reactor.core.publisher.Mono;
 
@@ -51,9 +53,18 @@ public abstract class AgentScopeSandboxAwareTool<T extends SandboxTool> implemen
         return null;
     }
 
+    @Override
+    public Mono<ToolResultBlock> callAsync(ToolCallParam param) {
+        return callAsync(param.getInput());
+    }
+
     public abstract Mono<ToolResultBlock> callAsync(Map<String, Object> input);
 
     public SandboxTool getSandboxTool() {
         return sandboxTool;
+    }
+
+    public void setSandbox(Sandbox sandbox) {
+       this.sandboxTool.setSandbox(sandbox);
     }
 }

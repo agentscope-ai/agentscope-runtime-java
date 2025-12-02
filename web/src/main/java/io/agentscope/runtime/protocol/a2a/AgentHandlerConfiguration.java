@@ -35,7 +35,7 @@ public class AgentHandlerConfiguration {
     private final JSONRPCHandler jsonrpcHandler;
 
     public AgentHandlerConfiguration(Runner runner, AgentCard agentCard) {
-        this(new GraphAgentExecutor(runner::streamQuery), agentCard);
+        this(new GraphAgentExecutor(runner), agentCard);
     }
 
     protected AgentHandlerConfiguration(AgentExecutor agentExecutor, AgentCard agentCard) {

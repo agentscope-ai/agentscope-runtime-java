@@ -1,274 +1,284 @@
-/*
- * Copyright 2025 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package io.agentscope.runtime.engine;
 
-import io.agentscope.runtime.engine.agents.Agent;
-import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.schemas.message.*;
-import io.agentscope.runtime.engine.schemas.agent.*;
-import io.agentscope.runtime.engine.schemas.context.Context;
-import io.agentscope.runtime.engine.schemas.context.Session;
-import io.agentscope.runtime.engine.schemas.message.MessageType;
-import io.agentscope.runtime.engine.service.EnvironmentManager;
+import io.agentscope.runtime.adapters.AgentAdapter;
+import io.agentscope.runtime.adapters.MessageAdapter;
+import io.agentscope.runtime.adapters.StreamAdapter;
+import io.agentscope.runtime.engine.schemas.AgentRequest;
+import io.agentscope.runtime.engine.schemas.AgentResponse;
+import io.agentscope.runtime.engine.schemas.Error;
+import io.agentscope.runtime.engine.schemas.Event;
+import io.agentscope.runtime.engine.schemas.Message;
+import io.agentscope.runtime.engine.schemas.RunStatus;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Runner class that proxies calls to AgentAdapter.
+ * 
+ * <p>This class corresponds to the Runner class in runner.py of the Python version.
+ * It acts as a proxy to AgentAdapter, managing the lifecycle and query processing.</p>
+ * 
+ * <p>Key responsibilities:</p>
+ * <ul>
+ *   <li>Delegate lifecycle methods (init, start, stop, shutdown) to AgentAdapter</li>
+ *   <li>Process stream queries by delegating to AgentAdapter</li>
+ *   <li>Manage health status</li>
+ *   <li>Handle sequence numbers for events</li>
+ * </ul>
+ */
 public class Runner {
-    private final Agent agent;
-    private final ContextManager contextManager;
-    private final EnvironmentManager environmentManager;
-
-    // Todo: The current stream property has been completely set to true
-    private final boolean stream = true;
-
-    private Runner(RunnerBuilder builder) {
-        if(builder.agent == null){
-            throw new IllegalArgumentException("Agent has to be initialized!");
+    private static final Logger logger = LoggerFactory.getLogger(Runner.class);
+    
+    private final AgentAdapter adapter;
+    private volatile boolean health = false;
+    private final AtomicInteger sequenceGenerator = new AtomicInteger(0);
+    
+    /**
+     * Constructor with AgentAdapter.
+     * 
+     * @param adapter the AgentAdapter instance to proxy
+     */
+    public Runner(AgentAdapter adapter) {
+        if (adapter == null) {
+            throw new IllegalArgumentException("AgentAdapter cannot be null");
         }
-        this.contextManager = builder.contextManager == null ? new ContextManager() : builder.contextManager;
-        this.agent = builder.agent;
-        this.environmentManager = builder.environmentManager;
+        this.adapter = adapter;
     }
-
-    public Flux<Event> streamQuery(AgentRequest request) {
-        return this.streamQueryInstance(request);
+    
+    /**
+     * Initialize the runner by calling the adapter's init method.
+     * 
+     * @return a CompletableFuture that completes when initialization is done
+     */
+    public CompletableFuture<Void> init() {
+        return adapter.init();
     }
-
-    public Flux<Event> streamQueryInstance(AgentRequest request) {
-        return Flux.create(sink -> {
-            try {
-                // Get or create Session
-                Session memorySession = getOrCreateSession(request.getUserId(), request.getSessionId());
-
-                Session session = new Session();
-                session.setId(memorySession.getId());
-                session.setUserId(memorySession.getUserId());
-                // Convert history message types
-
-                // Todo: Specific implementation of memory module
-                List<Message> convertedMessages = new ArrayList<>();
-                if (memorySession.getMessages() != null) {
-                    for (Message memoryMsg : memorySession.getMessages()) {
-                        Message agentMsg = new Message();
-
-                        List<Content> content = new ArrayList<>();
-                        if (memoryMsg.getContent() != null) {
-                            for (Content msgContent : memoryMsg.getContent()) {
-                                if(msgContent instanceof TextContent textContent){
-                                    content.add(textContent);
-                                }
-                            }
-                        }
-                        agentMsg.setContent(content);
-                        convertedMessages.add(agentMsg);
-                    }
-                }
-                session.setMessages(convertedMessages);
-
-                Context context = new Context();
-                context.setUserId(request.getUserId());
-                context.setSession(session);
-                context.setRequest(request);
-                context.setAgent(this.agent);
-                context.setContextManager(this.contextManager);
-                context.setEnvironmentManager(this.environmentManager);
-
-                if (request.getInput() != null && !request.getInput().isEmpty()) {
-                    context.setCurrentMessages(request.getInput());
-                }
-
-                CompletableFuture<Flux<Event>> agentFuture = this.agent.runAsync(context);
-
-                agentFuture.thenAccept(eventFlux -> {
-                    StringBuilder aiResponse = new StringBuilder();
-                    eventFlux.subscribe(
-                            event -> {
-                                sink.next(event);
-                                // Collect AI response content
-                                if (event instanceof Message message) {
-                                    // Todo: FIX ME
-                                    if (MessageType.ASSISTANT.equals(message.getType()) &&
-                                            "completed".equals(message.getStatus())) {
-                                        if (message.getContent() != null && !message.getContent().isEmpty()) {
-                                            Content content = message.getContent().get(0);
-                                            if (content instanceof TextContent textContent) {
-                                                String text = textContent.getText();
-                                                // Extract plain text content, removing ChatResponse wrapper
-                                                String cleanText = extractCleanText(text);
-                                                aiResponse.append(cleanText);
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            sink::error,
-                            () -> {
-                                // After the conversation is complete, save the history message to ContextManager
-                                saveConversationHistory(context, aiResponse.toString());
-                                sink.complete();
-                            }
-                    );
-                }).exceptionally(throwable -> {
-                    sink.error(throwable);
-                    return null;
-                });
-
-            } catch (Exception e) {
-                sink.error(e);
-            }
+    
+    /**
+     * Start the runner by calling the adapter's start method.
+     * 
+     * <p>This method corresponds to Runner.start() in the Python version.
+     * After this method completes, the runner is ready to process queries.</p>
+     * 
+     * @return a CompletableFuture that completes when the runner is started
+     */
+    public CompletableFuture<Void> start() {
+        return adapter.start().thenRun(() -> {
+            this.health = true;
+            logger.info("[Runner] Runner started successfully");
         });
     }
-
+    
     /**
-     * Extract plain text content from ChatResponse object
+     * Stop the runner by calling the adapter's stop method.
+     * 
+     * <p>This method corresponds to Runner.stop() in the Python version.</p>
+     * 
+     * @return a CompletableFuture that completes when the runner is stopped
      */
-    private String extractCleanText(String text) {
-        if (text == null || text.isEmpty()) {
-            return "";
-        }
-
-        // If the text contains the complete object information of ChatResponse, try to extract the textContent from it
-        if (text.contains("textContent=")) {
-            int start = text.indexOf("textContent=") + 12;
-            int end = text.indexOf(",", start);
-            if (end == -1) end = text.indexOf("}", start);
-            if (end == -1) end = text.length();
-
-            String extracted = text.substring(start, end).trim();
-            // Remove possible quotes
-            if (extracted.startsWith("\"") && extracted.endsWith("\"")) {
-                extracted = extracted.substring(1, extracted.length() - 1);
-            }
-            return extracted;
-        }
-
-        // If it is already plain text, return it directly
-        return text;
+    public CompletableFuture<Void> stop() {
+        return adapter.stop().thenRun(() -> {
+            this.health = false;
+            logger.info("[Runner] Runner stopped");
+        });
     }
-
+    
     /**
-     * Get or create Session
+     * Shutdown the runner by calling the adapter's shutdown method.
+     * 
+     * <p>This method corresponds to Runner.stop() calling shutdown_handler in the Python version.</p>
+     * 
+     * @return a CompletableFuture that completes when shutdown is done
      */
-    private Session getOrCreateSession(String userId, String sessionId) {
-        try {
-            return this.contextManager.composeSession(userId, sessionId).join();
-        } catch (Exception e) {
-            // If the Session does not exist, create it through ContextManager
-            try {
-                return this.contextManager.getSessionHistoryService().createSession(userId, Optional.of(sessionId)).join();
-            } catch (Exception ex) {
-                // If creation fails, return a temporary Session
-                return new Session(sessionId, userId, new ArrayList<>());
-            }
-        }
+    public CompletableFuture<Void> shutdown() {
+        return adapter.shutdown().thenRun(() -> {
+            this.health = false;
+            logger.info("[Runner] Runner shutdown completed");
+        });
     }
-
+    
     /**
-     * Save conversation history to ContextManager
+     * Stream query by delegating to the adapter.
+     * 
+     * <p>This method corresponds to Runner.stream_query() in the Python version.
+     * It processes the agent request and returns a reactive stream of events with sequence numbers.</p>
+     * 
+     * <p>The implementation follows the Python version's logic:</p>
+     * <ol>
+     *   <li>Check framework type is allowed</li>
+     *   <li>Check runner health status</li>
+     *   <li>Create initial response and yield it</li>
+     *   <li>Set in-progress status and yield it</li>
+     *   <li>Assign session ID and user ID</li>
+     *   <li>Delegate to adapter's streamQuery (which handles query_handler and stream_adapter)</li>
+     *   <li>Collect completed messages into response</li>
+     *   <li>Handle errors</li>
+     *   <li>Extract token usage</li>
+     *   <li>Yield completed response</li>
+     * </ol>
+     * 
+     * @param request the agent request
+     * @return a Flux of Event objects with sequence numbers
+     * @throws IllegalStateException if the runner is not healthy or framework type is invalid
+     * @throws RuntimeException if framework type is invalid or not set
      */
-    private void saveConversationHistory(Context context, String aiResponse) {
-        try {
-            // Get current session
-            Session memorySession = getOrCreateSession(context.getUserId(), context.getSession().getUserId());
+    public Flux<Event> streamQuery(AgentRequest request) {
+        String frameworkType = adapter.getFrameworkType();
 
-            // Create a list of messages to be saved
-            List<Message> messagesToSave = new ArrayList<>();
-
-            // Add user messages
-            if (context.getCurrentMessages() != null) {
-                for (Message userMessage : context.getCurrentMessages()) {
-                    Message memoryMessage = new Message();
-                    memoryMessage.setType(io.agentscope.runtime.engine.schemas.message.MessageType.USER);
-
-                    List<Content> content = new ArrayList<>();
-                    if (userMessage.getContent() != null) {
-                        for (Content msgContent : userMessage.getContent()) {
-                            if (msgContent instanceof TextContent textContent) {
-                                content.add(new TextContent(textContent.getText()));
-                            }
+        if (!health) {
+            throw new IllegalStateException(
+                "Runner has not been started. Please call 'runner.start()' or use 'async with Runner()' before calling 'streamQuery'."
+            );
+        }
+        
+        // Ensure session ID and user ID are set 
+        if (request.getSessionId() == null || request.getSessionId().isEmpty()) {
+            request.setSessionId(UUID.randomUUID().toString());
+        }
+        if (request.getUserId() == null || request.getUserId().isEmpty()) {
+            request.setUserId(request.getSessionId());
+        }
+        
+        // Create initial response 
+        AgentResponse response = new AgentResponse(request.getId());
+        response.setSessionId(request.getSessionId());
+        
+        // Initial response with created status 
+        Flux<Event> initialResponse = Flux.just(
+            withSequenceNumber(response.created())
+        );
+        
+        // Set to in-progress status 
+        Flux<Event> inProgressResponse = Flux.just(
+            withSequenceNumber(response.inProgress())
+        );
+        
+        // Track if an error occurred
+        AtomicBoolean hasError = new AtomicBoolean(false);
+        
+        // Get MessageAdapter and StreamAdapter from adapter
+        // This matches Python version's logic where adapters are selected based on framework_type
+        MessageAdapter messageAdapter = adapter.getMessageAdapter();
+        StreamAdapter streamAdapter = adapter.getStreamAdapter();
+        
+        if (streamAdapter == null) {
+            throw new RuntimeException(
+                String.format("StreamAdapter is not available for framework type '%s'", frameworkType)
+            );
+        }
+        
+        // Convert request messages using MessageAdapter 
+        Object frameworkMessages = messageAdapter.messageToFrameworkMsg(request.getInput());
+        
+        // Call adapter.streamQuery() to get raw framework stream
+        // Note: adapter.streamQuery() returns raw framework stream, not converted Event stream
+        // The adapter should internally use the converted framework messages (messages parameter)
+        Flux<Object> rawFrameworkStream = adapter.streamQuery(request, frameworkMessages)
+            .cast(Object.class); // Cast to Object to handle different framework stream types
+        
+        // Apply StreamAdapter to convert framework stream to runtime Event stream
+        // Note: StreamAdapter returns Flux<Event> which can contain both Message and Content
+        Flux<Event> eventStream = streamAdapter.adaptFrameworkStream(rawFrameworkStream);
+        
+        // Add sequence numbers to events
+        Flux<Event> adapterStream = eventStream
+            .map(this::withSequenceNumber)
+            .doOnNext(event -> {
+                // Collect completed messages into response 
+                if (event instanceof Message message) {
+                    if (RunStatus.COMPLETED.equals(message.getStatus()) 
+                        && "message".equals(message.getObject())) {
+                        response.addNewMessage(message);
+                    }
+                }
+            })
+            .onErrorResume(throwable -> {
+                // Handle errors similar to Python version
+                // In Python version, error handling yields failed response and returns immediately
+                hasError.set(true);
+                logger.error("Error happens in `query_handler`: {}", throwable.getMessage(), throwable);
+                Error error = new Error();
+                error.setCode("500");
+                error.setMessage("Error happens in `query_handler`: " + throwable.getMessage());
+                // Return only the failed response, matching Python version's return after yield
+                return Flux.just(withSequenceNumber(response.failed(error)));
+            });
+        
+        // Combine initial events with adapter stream, then complete with final response
+        // This matches Python version's flow: initial -> in_progress -> stream -> completed
+        return Flux.concat(
+            initialResponse,
+            inProgressResponse,
+            adapterStream
+        ).concatWith(
+            // Only execute if stream completed successfully (no error)
+            // This matches Python version's logic: if error occurred, return immediately (no further processing)
+            Flux.defer(() -> {
+                // If error occurred, don't process further (matches Python version's return)
+                if (hasError.get() || RunStatus.FAILED.equals(response.getStatus())) {
+                    return Flux.empty();
+                }
+                
+                // Extract token usage from last message 
+                try {
+                    if (response.getOutput() != null && !response.getOutput().isEmpty()) {
+                        Message lastMessage = response.getOutput().get(response.getOutput().size() - 1);
+                        if (lastMessage.getUsage() != null) {
+                            response.setUsage(lastMessage.getUsage());
                         }
                     }
-                    memoryMessage.setContent(content);
-                    messagesToSave.add(memoryMessage);
+                } catch (IndexOutOfBoundsException e) {
+                    // Avoid empty message error (corresponds to Python version's IndexError handling)
+                    logger.debug("Could not extract usage: {}", e.getMessage());
                 }
-            }
-
-            // Add AI reply message
-            if (aiResponse != null && !aiResponse.isEmpty()) {
-                Message aiMessage = new Message();
-                aiMessage.setType(io.agentscope.runtime.engine.schemas.message.MessageType.ASSISTANT);
-
-                List<Content> content = new ArrayList<>();
-                content.add(new TextContent(aiResponse));
-                aiMessage.setContent(content);
-                messagesToSave.add(aiMessage);
-            }
-
-            // Save to ContextManager
-            this.contextManager.append(memorySession, messagesToSave).join();
-
-        } catch (Exception e) {
-            // Log the error but do not interrupt the process
-            e.printStackTrace();
-        }
-    }
-
-    public EnvironmentManager getEnvironmentManager() {
-        return environmentManager;
-    }
-
-    public ContextManager getContextManager() {
-        return contextManager;
+                
+                // Yield completed response 
+                return Flux.just(withSequenceNumber(response.completed()));
+            })
+        );
     }
     
-    public Agent getAgent() {
-        return agent;
+    /**
+     * Add sequence number to an event.
+     * 
+     * @param event the event to add sequence number to
+     * @return the event with sequence number set
+     */
+    private Event withSequenceNumber(Event event) {
+        event.setSequenceNumber(sequenceGenerator.incrementAndGet());
+        return event;
     }
     
-    public static RunnerBuilder builder() {
-        return new RunnerBuilder();
+    /**
+     * Check if the runner is healthy.
+     * 
+     * @return true if healthy, false otherwise
+     */
+    public boolean isHealthy() {
+        return health && adapter.isHealthy();
+    }
+    
+    /**
+     * Get the underlying adapter.
+     * 
+     * @return the AgentAdapter instance
+     */
+    public AgentAdapter getAdapter() {
+        return adapter;
     }
 
-    public static class RunnerBuilder {
-        private Agent agent;
-        private ContextManager contextManager;
-        private EnvironmentManager environmentManager;
-
-        public RunnerBuilder agent(Agent agent) {
-            this.agent = agent;
-            return this;
-        }
-
-        public RunnerBuilder contextManager(ContextManager contextManager) {
-            this.contextManager = contextManager;
-            return this;
-        }
-
-        public RunnerBuilder environmentManager(EnvironmentManager environmentManager) {
-            this.environmentManager = environmentManager;
-            return this;
-        }
-
-        public Runner build() {
-            return new Runner(this);
-        }
+    /** FIXME
+     */
+    public SandboxManager getSandboxManager() {
+        return null;
     }
+    
 }
+

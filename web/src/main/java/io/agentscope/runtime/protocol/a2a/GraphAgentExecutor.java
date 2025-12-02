@@ -21,31 +21,34 @@ import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.*;
-import io.agentscope.runtime.engine.schemas.message.*;
-import io.agentscope.runtime.engine.schemas.agent.*;
-import io.agentscope.runtime.engine.schemas.message.Event;
-import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.Runner;
+import io.agentscope.runtime.engine.schemas.AgentRequest;
+import io.agentscope.runtime.engine.schemas.Content;
+import io.agentscope.runtime.engine.schemas.MessageType;
+import io.agentscope.runtime.engine.schemas.TextContent;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
+
+import io.agentscope.runtime.engine.schemas.Message;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.logging.Logger;
 
 public class GraphAgentExecutor implements AgentExecutor {
-    private final Function<AgentRequest, Flux<Event>> executeFunction;
+    private final Runner runner;
 
     private final Map<String, Subscription> subscriptions;
 
     Logger logger = Logger.getLogger(GraphAgentExecutor.class.getName());
 
-    public GraphAgentExecutor(Function<AgentRequest, Flux<Event>> executeFunction) {
-        this.executeFunction = executeFunction;
+    public GraphAgentExecutor(Runner runner) {
+        this.runner = runner;
         this.subscriptions = new ConcurrentHashMap<>();
     }
 
@@ -66,7 +69,7 @@ public class GraphAgentExecutor implements AgentExecutor {
         String inputText = getTextFromMessageParts(message);
         AgentRequest agentRequest = new AgentRequest();
         Message agentMessage = new Message();
-        agentMessage.setType(MessageType.USER);
+        agentMessage.setType(MessageType.MESSAGE);
         TextContent tc = new TextContent();
         tc.setText(inputText);
         agentMessage.setContent(List.of(tc));
@@ -80,7 +83,7 @@ public class GraphAgentExecutor implements AgentExecutor {
     public void execute(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
         try {
             AgentRequest agentRequest = buildAgentRequest(context);
-            Flux<Event> resultFlux = executeFunction.apply(agentRequest);
+            Flux<Event> resultFlux = runner.streamQuery(agentRequest);
             Task task = context.getTask();
             if (task == null) {
                 task = new_task(context.getMessage());
@@ -148,9 +151,9 @@ public class GraphAgentExecutor implements AgentExecutor {
                                 if (contents != null && !contents.isEmpty() && contents.get(0) instanceof TextContent text) {
                                     String content = text.getText();
                                     Map<String, Object> metaData = new HashMap<>();
-                                    if (m.getType() == MessageType.TOOL_CALL) {
+                                    if (Objects.equals(m.getType(), MessageType.FUNCTION_CALL)) {
                                         metaData.put("type", "toolCall");
-                                    } else if (m.getType() == MessageType.TOOL_RESPONSE) {
+                                    } else if (Objects.equals(m.getType(), MessageType.FUNCTION_CALL_OUTPUT)) {
                                         metaData.put("type", "toolResponse");
                                     }
                                     else{

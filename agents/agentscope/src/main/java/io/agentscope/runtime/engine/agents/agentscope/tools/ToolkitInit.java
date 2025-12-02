@@ -22,6 +22,7 @@ import io.agentscope.runtime.engine.agents.agentscope.tools.base.AsBaseShellRunn
 import io.agentscope.runtime.engine.agents.agentscope.tools.browser.*;
 import io.agentscope.runtime.engine.agents.agentscope.tools.fs.*;
 import io.agentscope.runtime.engine.agents.agentscope.tools.mcp.AsMCPTool;
+import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
@@ -36,192 +37,264 @@ import java.util.logging.Logger;
 public class ToolkitInit {
     private static final Logger logger = Logger.getLogger(ToolkitInit.class.getName());
 
-    public static List<AgentTool> getAllTools() {
+    public static List<AgentTool> getAllTools(Sandbox sandbox) {
         return List.of(
-                RunPythonCodeTool(),
-                RunShellCommandTool(),
-                ReadFileTool(),
-                ReadMultipleFilesTool(),
-                WriteFileTool(),
-                EditFileTool(),
-                CreateDirectoryTool(),
-                ListDirectoryTool(),
-                DirectoryTreeTool(),
-                MoveFileTool(),
-                SearchFilesTool(),
-                GetFileInfoTool(),
-                ListAllowedDirectoriesTool(),
-                BrowserNavigateTool(),
-                BrowserClickTool(),
-                BrowserTypeTool(),
-                BrowserTakeScreenshotTool(),
-                BrowserSnapshotTool(),
-                BrowserTabNewTool(),
-                BrowserTabSelectTool(),
-                BrowserTabCloseTool(),
-                BrowserWaitForTool(),
-                BrowserResizeTool(),
-                BrowserCloseTool(),
-                BrowserConsoleMessagesTool(),
-                BrowserHandleDialogTool(),
-                BrowserFileUploadTool(),
-                BrowserPressKeyTool(),
-                BrowserNavigateBackTool(),
-                BrowserNavigateForwardTool(),
-                BrowserNetworkRequestsTool(),
-                BrowserPdfSaveTool(),
-                BrowserDragTool(),
-                BrowserHoverTool(),
-                BrowserSelectOptionTool(),
-                BrowserTabListTool()
+                RunPythonCodeTool(sandbox),
+                RunShellCommandTool(sandbox),
+                ReadFileTool(sandbox),
+                ReadMultipleFilesTool(sandbox),
+                WriteFileTool(sandbox),
+                EditFileTool(sandbox),
+                CreateDirectoryTool(sandbox),
+                ListDirectoryTool(sandbox),
+                DirectoryTreeTool(sandbox),
+                MoveFileTool(sandbox),
+                SearchFilesTool(sandbox),
+                GetFileInfoTool(sandbox),
+                ListAllowedDirectoriesTool(sandbox),
+                BrowserNavigateTool(sandbox),
+                BrowserClickTool(sandbox),
+                BrowserTypeTool(sandbox),
+                BrowserTakeScreenshotTool(sandbox),
+                BrowserSnapshotTool(sandbox),
+                BrowserTabNewTool(sandbox),
+                BrowserTabSelectTool(sandbox),
+                BrowserTabCloseTool(sandbox),
+                BrowserWaitForTool(sandbox),
+                BrowserResizeTool(sandbox),
+                BrowserCloseTool(sandbox),
+                BrowserConsoleMessagesTool(sandbox),
+                BrowserHandleDialogTool(sandbox),
+                BrowserFileUploadTool(sandbox),
+                BrowserPressKeyTool(sandbox),
+                BrowserNavigateBackTool(sandbox),
+                BrowserNavigateForwardTool(sandbox),
+                BrowserNetworkRequestsTool(sandbox),
+                BrowserPdfSaveTool(sandbox),
+                BrowserDragTool(sandbox),
+                BrowserHoverTool(sandbox),
+                BrowserSelectOptionTool(sandbox),
+                BrowserTabListTool(sandbox)
         );
     }
 
     // Base tools
-    public static AgentTool RunPythonCodeTool() {
-        return new AsBasePythonRunner();
+    public static AgentTool RunPythonCodeTool(Sandbox sandbox) {
+        AsBasePythonRunner asBasePythonRunner = new AsBasePythonRunner();
+        asBasePythonRunner.setSandbox(sandbox);
+        return asBasePythonRunner;
     }
 
-    public static AgentTool RunShellCommandTool() {
-        return new AsBaseShellRunner();
+    public static AgentTool RunShellCommandTool(Sandbox sandbox) {
+        AsBaseShellRunner asBaseShellRunner = new AsBaseShellRunner();
+        asBaseShellRunner.setSandbox(sandbox);
+        return asBaseShellRunner;
     }
 
     // Browser tools
-    public static AgentTool BrowserNavigateTool() {
-        return new AsBrowserNavigator();
+    public static AgentTool BrowserNavigateTool(Sandbox sandbox) {
+        AsBrowserNavigator asBrowserNavigator = new AsBrowserNavigator();
+        asBrowserNavigator.setSandbox(sandbox);
+        return asBrowserNavigator;
     }
 
-    public static AgentTool BrowserClickTool() {
-        return new AsBrowserClicker();
+    public static AgentTool BrowserClickTool(Sandbox sandbox) {
+        AsBrowserClicker asBrowserClicker = new AsBrowserClicker();
+        asBrowserClicker.setSandbox(sandbox);
+        return asBrowserClicker;
     }
 
-    public static AgentTool BrowserTypeTool() {
-        return new AsBrowserTyper();
+    public static AgentTool BrowserTypeTool(Sandbox sandbox) {
+        AsBrowserTyper asBrowserTyper = new AsBrowserTyper();
+        asBrowserTyper.setSandbox(sandbox);
+        return asBrowserTyper;
     }
 
-    public static AgentTool BrowserSnapshotTool() {
-        return new AsBrowserSnapshotTaker();
+    public static AgentTool BrowserSnapshotTool(Sandbox sandbox) {
+        AsBrowserSnapshotTaker asBrowserSnapshotTaker = new AsBrowserSnapshotTaker();
+        asBrowserSnapshotTaker.setSandbox(sandbox);
+        return asBrowserSnapshotTaker;
     }
 
-    public static AgentTool BrowserTakeScreenshotTool() {
-        return new AsBrowserScreenshotTaker();
+    public static AgentTool BrowserTakeScreenshotTool(Sandbox sandbox) {
+        AsBrowserScreenshotTaker asBrowserScreenshotTaker = new AsBrowserScreenshotTaker();
+        asBrowserScreenshotTaker.setSandbox(sandbox);
+        return asBrowserScreenshotTaker;
     }
 
-    public static AgentTool BrowserCloseTool() {
-        return new AsBrowserCloser();
+    public static AgentTool BrowserCloseTool(Sandbox sandbox) {
+        AsBrowserCloser asBrowserCloser = new AsBrowserCloser();
+        asBrowserCloser.setSandbox(sandbox);
+        return asBrowserCloser;
     }
 
-    public static AgentTool BrowserHoverTool() {
-        return new AsBrowserHoverer();
+    public static AgentTool BrowserHoverTool(Sandbox sandbox) {
+        AsBrowserHoverer asBrowserHoverer = new AsBrowserHoverer();
+        asBrowserHoverer.setSandbox(sandbox);
+        return asBrowserHoverer;
     }
 
-    public static AgentTool BrowserDragTool() {
-        return new AsBrowserDragger();
+    public static AgentTool BrowserDragTool(Sandbox sandbox) {
+        AsBrowserDragger asBrowserDragger = new AsBrowserDragger();
+        asBrowserDragger.setSandbox(sandbox);
+        return asBrowserDragger;
     }
 
-    public static AgentTool BrowserConsoleMessagesTool() {
-        return new AsBrowserConsoleMessagesRetriever();
+    public static AgentTool BrowserConsoleMessagesTool(Sandbox sandbox) {
+        AsBrowserConsoleMessagesRetriever asBrowserConsoleMessagesRetriever = new AsBrowserConsoleMessagesRetriever();
+        asBrowserConsoleMessagesRetriever.setSandbox(sandbox);
+        return asBrowserConsoleMessagesRetriever;
     }
 
-    public static AgentTool BrowserFileUploadTool() {
-        return new AsBrowserFileUploader();
+    public static AgentTool BrowserFileUploadTool(Sandbox sandbox) {
+        AsBrowserFileUploader asBrowserFileUploader = new AsBrowserFileUploader();
+        asBrowserFileUploader.setSandbox(sandbox);
+        return asBrowserFileUploader;
     }
 
-    public static AgentTool BrowserHandleDialogTool() {
-        return new AsBrowserDialogHandler();
+    public static AgentTool BrowserHandleDialogTool(Sandbox sandbox) {
+        AsBrowserDialogHandler asBrowserDialogHandler = new AsBrowserDialogHandler();
+        asBrowserDialogHandler.setSandbox(sandbox);
+        return asBrowserDialogHandler;
     }
 
-    public static AgentTool BrowserNavigateBackTool() {
-        return new AsBrowserBackNavigator();
+    public static AgentTool BrowserNavigateBackTool(Sandbox sandbox) {
+        AsBrowserBackNavigator asBrowserBackNavigator = new AsBrowserBackNavigator();
+        asBrowserBackNavigator.setSandbox(sandbox);
+        return asBrowserBackNavigator;
     }
 
-    public static AgentTool BrowserNavigateForwardTool() {
-        return new AsBrowserForwardNavigator();
+    public static AgentTool BrowserNavigateForwardTool(Sandbox sandbox) {
+        AsBrowserForwardNavigator asBrowserForwardNavigator = new AsBrowserForwardNavigator();
+        asBrowserForwardNavigator.setSandbox(sandbox);
+        return asBrowserForwardNavigator;
     }
 
-    public static AgentTool BrowserNetworkRequestsTool() {
-        return new AsBrowserNetworkRequestsRetriever();
+    public static AgentTool BrowserNetworkRequestsTool(Sandbox sandbox) {
+        AsBrowserNetworkRequestsRetriever asBrowserNetworkRequestsRetriever = new AsBrowserNetworkRequestsRetriever();
+        asBrowserNetworkRequestsRetriever.setSandbox(sandbox);
+        return asBrowserNetworkRequestsRetriever;
     }
 
-    public static AgentTool BrowserPdfSaveTool() {
-        return new AsBrowserPdfSaver();
+    public static AgentTool BrowserPdfSaveTool(Sandbox sandbox) {
+        AsBrowserPdfSaver asBrowserPdfSaver = new AsBrowserPdfSaver();
+        asBrowserPdfSaver.setSandbox(sandbox);
+        return asBrowserPdfSaver;
     }
 
-    public static AgentTool BrowserPressKeyTool() {
-        return new AsBrowserKeyPresser();
+    public static AgentTool BrowserPressKeyTool(Sandbox sandbox) {
+        AsBrowserKeyPresser asBrowserKeyPresser = new AsBrowserKeyPresser();
+        asBrowserKeyPresser.setSandbox(sandbox);
+        return asBrowserKeyPresser;
     }
 
-    public static AgentTool BrowserResizeTool() {
-        return new AsBrowserResizer();
+    public static AgentTool BrowserResizeTool(Sandbox sandbox) {
+        AsBrowserResizer asBrowserResizer = new AsBrowserResizer();
+        asBrowserResizer.setSandbox(sandbox);
+        return asBrowserResizer;
     }
 
-    public static AgentTool BrowserSelectOptionTool() {
-        return new AsBrowserOptionSelector();
+    public static AgentTool BrowserSelectOptionTool(Sandbox sandbox) {
+        AsBrowserOptionSelector asBrowserOptionSelector = new AsBrowserOptionSelector();
+        asBrowserOptionSelector.setSandbox(sandbox);
+        return asBrowserOptionSelector;
     }
 
-    public static AgentTool BrowserTabCloseTool() {
-        return new AsBrowserTabCloser();
+    public static AgentTool BrowserTabCloseTool(Sandbox sandbox) {
+        AsBrowserTabCloser asBrowserTabCloser = new AsBrowserTabCloser();
+        asBrowserTabCloser.setSandbox(sandbox);
+        return asBrowserTabCloser;
     }
 
-    public static AgentTool BrowserTabListTool() {
-        return new AsBrowserTabLister();
+    public static AgentTool BrowserTabListTool(Sandbox sandbox) {
+        AsBrowserTabLister asBrowserTabLister = new AsBrowserTabLister();
+        asBrowserTabLister.setSandbox(sandbox);
+        return asBrowserTabLister;
     }
 
-    public static AgentTool BrowserTabNewTool() {
-        return new AsBrowserTabCreator();
+    public static AgentTool BrowserTabNewTool(Sandbox sandbox) {
+        AsBrowserTabCreator asBrowserTabCreator = new AsBrowserTabCreator();
+        asBrowserTabCreator.setSandbox(sandbox);
+        return asBrowserTabCreator;
     }
 
-    public static AgentTool BrowserTabSelectTool() {
-        return new AsBrowserTabSelector();
+    public static AgentTool BrowserTabSelectTool(Sandbox sandbox) {
+        AsBrowserTabSelector asBrowserTabSelector = new AsBrowserTabSelector();
+        asBrowserTabSelector.setSandbox(sandbox);
+        return asBrowserTabSelector;
     }
 
-    public static AgentTool BrowserWaitForTool() {
-        return new AsBrowserWaiter();
+    public static AgentTool BrowserWaitForTool(Sandbox sandbox) {
+        AsBrowserWaiter asBrowserWaiter = new AsBrowserWaiter();
+        asBrowserWaiter.setSandbox(sandbox);
+        return asBrowserWaiter;
     }
 
     // Filesystem tools
-    public static AgentTool ReadFileTool() {
-        return new AsFsReadFile();
+    public static AgentTool ReadFileTool(Sandbox sandbox) {
+        AsFsReadFile asFsReadFile = new AsFsReadFile();
+        asFsReadFile.setSandbox(sandbox);
+        return asFsReadFile;
     }
 
-    public static AgentTool WriteFileTool() {
-        return new AsFsWriteFile();
+    public static AgentTool WriteFileTool(Sandbox sandbox) {
+        AsFsWriteFile asFsWriteFile = new AsFsWriteFile();
+        asFsWriteFile.setSandbox(sandbox);
+        return asFsWriteFile;
     }
 
-    public static AgentTool ListDirectoryTool() {
-        return new AsFsListDirectory();
+    public static AgentTool ListDirectoryTool(Sandbox sandbox) {
+        AsFsListDirectory asFsListDirectory = new AsFsListDirectory();
+        asFsListDirectory.setSandbox(sandbox);
+        return asFsListDirectory;
     }
 
-    public static AgentTool CreateDirectoryTool() {
-        return new AsFsCreateDirectory();
+    public static AgentTool CreateDirectoryTool(Sandbox sandbox) {
+        AsFsCreateDirectory asFsCreateDirectory = new AsFsCreateDirectory();
+        asFsCreateDirectory.setSandbox(sandbox);
+        return asFsCreateDirectory;
     }
 
-    public static AgentTool DirectoryTreeTool() {
-        return new AsFsDirectoryTree();
+    public static AgentTool DirectoryTreeTool(Sandbox sandbox) {
+        AsFsDirectoryTree asFsDirectoryTree = new AsFsDirectoryTree();
+        asFsDirectoryTree.setSandbox(sandbox);
+        return asFsDirectoryTree;
     }
 
-    public static AgentTool EditFileTool() {
-        return new AsFsEditFile();
+    public static AgentTool EditFileTool(Sandbox sandbox) {
+        AsFsEditFile asFsEditFile = new AsFsEditFile();
+        asFsEditFile.setSandbox(sandbox);
+        return asFsEditFile;
     }
 
-    public static AgentTool GetFileInfoTool() {
-        return new AsFsGetFileInfo();
+    public static AgentTool GetFileInfoTool(Sandbox sandbox) {
+        AsFsGetFileInfo asFsGetFileInfo = new AsFsGetFileInfo();
+        asFsGetFileInfo.setSandbox(sandbox);
+        return asFsGetFileInfo;
     }
 
-    public static AgentTool ListAllowedDirectoriesTool() {
-        return new AsFsListAllowedDirectories();
+    public static AgentTool ListAllowedDirectoriesTool(Sandbox sandbox) {
+        AsFsListAllowedDirectories asFsListAllowedDirectories = new AsFsListAllowedDirectories();
+        asFsListAllowedDirectories.setSandbox(sandbox);
+        return asFsListAllowedDirectories;
     }
 
-    public static AgentTool MoveFileTool() {
-        return new AsFsMoveFile();
+    public static AgentTool MoveFileTool(Sandbox sandbox) {
+        AsFsMoveFile asFsMoveFile = new AsFsMoveFile();
+        asFsMoveFile.setSandbox(sandbox);
+        return asFsMoveFile;
     }
 
-    public static AgentTool ReadMultipleFilesTool() {
-        return new AsFsReadMultipleFiles();
+    public static AgentTool ReadMultipleFilesTool(Sandbox sandbox) {
+        AsFsReadMultipleFiles asFsReadMultipleFiles = new AsFsReadMultipleFiles();
+        asFsReadMultipleFiles.setSandbox(sandbox);
+        return asFsReadMultipleFiles;
     }
 
-    public static AgentTool SearchFilesTool() {
-        return new AsFsSearchFiles();
+    public static AgentTool SearchFilesTool(Sandbox sandbox) {
+        AsFsSearchFiles asFsSearchFiles = new AsFsSearchFiles();
+        asFsSearchFiles.setSandbox(sandbox);
+        return asFsSearchFiles;
     }
 
     public static List<AgentTool> getMcpTools(String serverConfigs,
@@ -278,41 +351,41 @@ public class ToolkitInit {
         return getMcpTools(serverConfigs, null, sandboxManager, null, null);
     }
 
-    public static List<AgentTool> getAllToolsWithMcp(String mcpServerConfigs,
-                                                     SandboxType sandboxType,
-                                                     SandboxManager sandboxManager) {
-        List<AgentTool> allTools = new ArrayList<>(getAllTools());
+//    public static List<AgentTool> getAllToolsWithMcp(String mcpServerConfigs,
+//                                                     SandboxType sandboxType,
+//                                                     SandboxManager sandboxManager) {
+//        List<AgentTool> allTools = new ArrayList<>(getAllTools());
+//
+//        if (mcpServerConfigs != null && !mcpServerConfigs.trim().isEmpty()) {
+//            try {
+//                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
+//                allTools.addAll(mcpTools);
+//                logger.info(String.format("Added %d MCP tools to the toolkit", mcpTools.size()));
+//            } catch (Exception e) {
+//                logger.warning("Failed to add MCP tools: " + e.getMessage());
+//            }
+//        }
+//
+//        return allTools;
+//    }
 
-        if (mcpServerConfigs != null && !mcpServerConfigs.trim().isEmpty()) {
-            try {
-                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
-                allTools.addAll(mcpTools);
-                logger.info(String.format("Added %d MCP tools to the toolkit", mcpTools.size()));
-            } catch (Exception e) {
-                logger.warning("Failed to add MCP tools: " + e.getMessage());
-            }
-        }
-
-        return allTools;
-    }
-
-    public static List<AgentTool> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
-                                                     SandboxType sandboxType,
-                                                     SandboxManager sandboxManager) {
-        List<AgentTool> allTools = new ArrayList<>(getAllTools());
-
-        if (mcpServerConfigs != null && !mcpServerConfigs.isEmpty()) {
-            try {
-                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
-                allTools.addAll(mcpTools);
-                logger.info(String.format("Added %d MCP tools to the toolkit", mcpTools.size()));
-            } catch (Exception e) {
-                logger.warning("Failed to add MCP tools: " + e.getMessage());
-            }
-        }
-
-        return allTools;
-    }
+//    public static List<AgentTool> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
+//                                                     SandboxType sandboxType,
+//                                                     SandboxManager sandboxManager) {
+//        List<AgentTool> allTools = new ArrayList<>(getAllTools());
+//
+//        if (mcpServerConfigs != null && !mcpServerConfigs.isEmpty()) {
+//            try {
+//                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
+//                allTools.addAll(mcpTools);
+//                logger.info(String.format("Added %d MCP tools to the toolkit", mcpTools.size()));
+//            } catch (Exception e) {
+//                logger.warning("Failed to add MCP tools: " + e.getMessage());
+//            }
+//        }
+//
+//        return allTools;
+//    }
 
     public static List<MCPTool> createMcpToolInstances(String serverConfigs,
                                                        SandboxType sandboxType,
