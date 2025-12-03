@@ -5,6 +5,8 @@ import io.agentscope.core.memory.Memory;
 import io.agentscope.core.state.StateModuleBase;
 import io.agentscope.runtime.adapters.agentscope.AgentScopeMessageAdapter;
 import io.agentscope.runtime.engine.schemas.Message;
+import io.agentscope.runtime.engine.schemas.Session;
+import io.agentscope.runtime.engine.services.memory.service.SessionHistoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -48,15 +51,13 @@ import java.util.concurrent.CompletableFuture;
 public class MemoryAdapter extends StateModuleBase implements Memory {
     private static final Logger logger = LoggerFactory.getLogger(MemoryAdapter.class);
     
-    // TODO: Replace with actual SessionHistoryService interface when available
-    // For now, using a placeholder interface
-    private final SessionHistoryServiceInterface service;
+    private final SessionHistoryService service;
     private final String userId;
     private final String sessionId;
     private final AgentScopeMessageAdapter messageAdapter;
     
     // Cached session to avoid repeated lookups
-    private SessionInterface session;
+    private Session session;
     
     /**
      * Creates a new AgentScopeMemoryAdapter.
@@ -66,7 +67,7 @@ public class MemoryAdapter extends StateModuleBase implements Memory {
      * @param sessionId The session ID linked to this memory
      */
     public MemoryAdapter(
-            SessionHistoryServiceInterface service,
+            SessionHistoryService service,
             String userId,
             String sessionId) {
         super();
@@ -85,16 +86,18 @@ public class MemoryAdapter extends StateModuleBase implements Memory {
     /**
      * Ensures the session exists in the backend.
      * This method checks and creates the session if needed.
+     * For sync purposes, we always reload from backend to stay in sync.
      */
     private CompletableFuture<Void> ensureSession() {
         return service.getSession(userId, sessionId)
-            .thenCompose(s -> {
-                if (s == null) {
-                    return service.createSession(userId, sessionId)
-                        .thenAccept(created -> this.session = created);
-                } else {
-                    this.session = s;
+            .thenCompose(optionalSession -> {
+                if (optionalSession.isPresent()) {
+                    // Always reload from backend to stay in sync (matching Python version)
+                    this.session = optionalSession.get();
                     return CompletableFuture.completedFuture(null);
+                } else {
+                    return service.createSession(userId, Optional.of(sessionId))
+                        .thenAccept(created -> this.session = created);
                 }
             });
     }
@@ -119,15 +122,20 @@ public class MemoryAdapter extends StateModuleBase implements Memory {
     
     @Override
     public List<Msg> getMessages() {
-        // Ensure session exists
+        // Ensure session exists and reload from backend for sync purposes
+        // (matching Python version's behavior of always reloading)
         ensureSession().join();
         
         if (session == null) {
             return new ArrayList<>();
         }
         
-        // Get messages from session
+        // Get messages from session (always fresh from backend)
         List<Message> runtimeMessages = session.getMessages();
+        
+        if (runtimeMessages == null || runtimeMessages.isEmpty()) {
+            return new ArrayList<>();
+        }
         
         // Convert runtime Messages to AgentScope Msgs
         Object agentscopeMsgs = messageAdapter.messageToFrameworkMsg(runtimeMessages);
@@ -139,6 +147,8 @@ public class MemoryAdapter extends StateModuleBase implements Memory {
         } else if (agentscopeMsgs instanceof Msg) {
             return List.of((Msg) agentscopeMsgs);
         } else {
+            logger.warn("Unexpected message conversion result type: {}", 
+                      agentscopeMsgs != null ? agentscopeMsgs.getClass().getName() : "null");
             return new ArrayList<>();
         }
     }
@@ -195,28 +205,5 @@ public class MemoryAdapter extends StateModuleBase implements Memory {
         // No-op as state is persisted in service
     }
     
-    // ========== Placeholder Interfaces ==========
-    // TODO: Replace with actual runtime service interfaces when available
-    
-    /**
-     * Placeholder interface for SessionHistoryService.
-     * This should be replaced with the actual service interface from runtime.
-     */
-    public interface SessionHistoryServiceInterface {
-        CompletableFuture<SessionInterface> getSession(String userId, String sessionId);
-        CompletableFuture<SessionInterface> createSession(String userId, String sessionId);
-        CompletableFuture<Void> deleteSession(String userId, String sessionId);
-        CompletableFuture<Void> appendMessage(SessionInterface session, List<Message> messages);
-    }
-    
-    /**
-     * Placeholder interface for Session.
-     * This should be replaced with the actual Session class from runtime.
-     */
-    public interface SessionInterface {
-        String getId();
-        String getUserId();
-        List<Message> getMessages();
-    }
 }
 

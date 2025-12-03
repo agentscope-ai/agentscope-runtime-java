@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import io.agentscope.runtime.LocalDeployManager;
 import io.agentscope.runtime.adapters.AgentAdapter;
 import io.agentscope.runtime.engine.DeployManager;
 import io.agentscope.runtime.engine.Runner;
+import io.agentscope.runtime.protocol.ProtocolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,46 +42,25 @@ public class AgentApp {
     private static final Logger logger = LoggerFactory.getLogger(AgentApp.class);
     
     private final AgentAdapter adapter;
-    private Runner runner;
+    private volatile Runner runner;
     private DeployManager deployManager;
     
     // Configuration
-    private String endpointPath = "/process";
+    private String endpointPath;
     private String host = "0.0.0.0";
     private int port = 8090;
     private boolean stream = true;
     private String responseType = "sse";
-    private Class<?> requestModel = io.agentscope.runtime.engine.schemas.AgentRequest.class;
-    private Runnable beforeStart;
-    private Runnable afterFinish;
-    private boolean enableEmbeddedWorker = false;
-    
-    // Lifecycle handlers (corresponds to Python's @app.init(), @app.query(), @app.shutdown())
-    private Runnable initHandler;
-    private java.util.function.Function<Map<String, Object>, Object> queryHandler;
-    private Runnable shutdownHandler;
-    private String frameworkType; // Framework type for query handler (agentscope, autogen, agno, langgraph)
-    
+
     private List<EndpointInfo> customEndpoints = new ArrayList<>();
-    private List<Object> protocolAdapters = new ArrayList<>();
-    
-    /**
-     * Constructor with AgentAdapter.
-     * 
-     * @param adapter the AgentAdapter instance to use
-     */
-    public AgentApp(AgentAdapter adapter) {
-        this(adapter, null, null);
-    }
-    
+    private List<ProtocolConfig> protocolConfigs;
+
     /**
      * Constructor with AgentAdapter and Celery configuration.
      * 
      * @param adapter the AgentAdapter instance to use
-     * @param brokerUrl the Celery broker URL
-     * @param backendUrl the Celery backend URL
      */
-    public AgentApp(AgentAdapter adapter, String brokerUrl, String backendUrl) {
+    public AgentApp(AgentAdapter adapter) {
         if (adapter == null) {
             throw new IllegalArgumentException("AgentAdapter cannot be null");
         }
@@ -89,7 +68,7 @@ public class AgentApp {
         
         // Initialize protocol adapters (simplified)
         // In real implementation, these would be actual adapter instances
-        this.protocolAdapters = new ArrayList<>();
+        this.protocolConfigs = new ArrayList<>();
     }
     
     /**
@@ -166,7 +145,7 @@ public class AgentApp {
      * 
      * @return this AgentApp instance for method chaining
      */
-    public AgentApp buildRunner() {
+    public synchronized AgentApp buildRunner() {
         if (this.runner == null) {
             this.runner = new Runner(adapter);
             logger.info("[AgentApp] Runner built with adapter framework type: {}", adapter.getFrameworkType());
@@ -180,32 +159,9 @@ public class AgentApp {
      * @return the Runner instance, or null if not built yet
      */
     public Runner getRunner() {
-        buildRunner();
         return runner;
     }
-    
-    /**
-     * Register an initialization handler.
-     * 
-     * <p>This method corresponds to the @app.init() decorator in Python's AgentApp.
-     * The handler will be called during application startup, before the runner starts.</p>
-     * 
-     * <p>Usage example:</p>
-     * <pre>{@code
-     * AgentApp app = new AgentApp(adapter);
-     * app.init(() -> {
-     *     // Initialize resources, connect to services, etc.
-     *     logger.info("Application initialized");
-     * });
-     * }</pre>
-     * 
-     * @param handler the initialization handler (can be null)
-     * @return this AgentApp instance for method chaining
-     */
-    public AgentApp init(Runnable handler) {
-        this.initHandler = handler;
-        return this;
-    }
+
     
     /**
      * Register a query handler with optional framework type.
@@ -213,7 +169,7 @@ public class AgentApp {
      * <p>This method corresponds to the @app.query(framework="agentscope") decorator 
      * in Python's AgentApp. The handler will be called to process agent queries.</p>
      * 
-     * <p>Supported framework types: "agentscope", "autogen", "agno", "langgraph"</p>
+     * <p>Supported framework types: "agentscope", "saa"</p>
      * 
      * <p>Usage example:</p>
      * <pre>{@code
@@ -235,15 +191,13 @@ public class AgentApp {
         }
         
         // Validate framework type (corresponds to Python's allowed_frameworks check)
-        List<String> allowedFrameworks = Arrays.asList("agentscope", "autogen", "agno", "langgraph");
+        List<String> allowedFrameworks = Arrays.asList("agentscope", "saa");
         if (!allowedFrameworks.contains(framework.toLowerCase())) {
             throw new IllegalArgumentException(
                 String.format("framework must be one of %s", allowedFrameworks)
             );
         }
-        
-        this.frameworkType = framework.toLowerCase();
-        this.queryHandler = handler;
+
         return this;
     }
     
@@ -258,57 +212,6 @@ public class AgentApp {
     }
     
     /**
-     * Register a shutdown handler.
-     * 
-     * <p>This method corresponds to the @app.shutdown() decorator in Python's AgentApp.
-     * The handler will be called during application shutdown, after the runner stops.</p>
-     * 
-     * <p>Usage example:</p>
-     * <pre>{@code
-     * AgentApp app = new AgentApp(adapter);
-     * app.shutdown(() -> {
-     *     // Clean up resources, close connections, etc.
-     *     logger.info("Application shutting down");
-     * });
-     * }</pre>
-     * 
-     * @param handler the shutdown handler (can be null)
-     * @return this AgentApp instance for method chaining
-     */
-    public AgentApp shutdown(Runnable handler) {
-        this.shutdownHandler = handler;
-        return this;
-    }
-    
-    /**
-     * Set the before_start callback.
-     * 
-     * <p>This corresponds to the before_start parameter in Python's AgentApp.
-     * The callback will be called before the FastAPI server starts.</p>
-     * 
-     * @param beforeStart the callback to execute before server starts
-     * @return this AgentApp instance for method chaining
-     */
-    public AgentApp beforeStart(Runnable beforeStart) {
-        this.beforeStart = beforeStart;
-        return this;
-    }
-    
-    /**
-     * Set the after_finish callback.
-     * 
-     * <p>This corresponds to the after_finish parameter in Python's AgentApp.
-     * The callback will be called after the FastAPI server finishes.</p>
-     * 
-     * @param afterFinish the callback to execute after server finishes
-     * @return this AgentApp instance for method chaining
-     */
-    public AgentApp afterFinish(Runnable afterFinish) {
-        this.afterFinish = afterFinish;
-        return this;
-    }
-    
-    /**
      * Initialize the application by initializing the adapter.
      * 
      * <p>This method corresponds to calling init_handler in the Python version.
@@ -316,19 +219,8 @@ public class AgentApp {
      * 
      * @return a CompletableFuture that completes when initialization is done
      */
-    public CompletableFuture<Void> init() {
-        buildRunner();
-        
-        // Call registered init handler if exists (corresponds to Python's init_handler call)
-        if (initHandler != null) {
-            try {
-                initHandler.run();
-            } catch (Exception e) {
-                logger.warn("[AgentApp] Exception in init handler: {}", e.getMessage(), e);
-            }
-        }
-        
-        return runner.init();
+    public void init() {
+        runner.init();
     }
     
     /**
@@ -338,9 +230,8 @@ public class AgentApp {
      * 
      * @return a CompletableFuture that completes when the application is started
      */
-    public CompletableFuture<Void> start() {
-        buildRunner();
-        return runner.start();
+    public void start() {
+        runner.start();
     }
     
     /**
@@ -355,8 +246,8 @@ public class AgentApp {
      * @return a CompletableFuture that completes when the server is running
      * @throws IllegalStateException if DeployManager is not set
      */
-    public CompletableFuture<Void> run() {
-        return run(host, port);
+    public void run() {
+        run(host, port);
     }
     
     /**
@@ -367,28 +258,25 @@ public class AgentApp {
      * @return a CompletableFuture that completes when the server is running
      * @throws IllegalStateException if DeployManager is not set
      */
-    public CompletableFuture<Void> run(String host, int port) {
-        this.host = host;
-        this.port = port;
-        
+    public void run(String host, int port) {
         if (deployManager == null) {
-            this.deployManager = LocalDeployManager.builder().port(10001).build();
+            this.deployManager = LocalDeployManager.builder()
+                    .port(port)
+                    .endpointName(endpointPath)
+                    .protocolConfigs(protocolConfigs)
+                    .build();
         }
         
         buildRunner();
         
-        logger.info("[AgentApp] Starting AgentApp with endpoint: {}, host: {}, port: {}", 
-            endpointPath, host, port);
-        
+        logger.info("[AgentApp] Starting AgentApp with endpoint: {}, host: {}, port: {}", endpointPath, host, port);
+
         // Initialize and start the runner
-        return init()
-            .thenCompose(v -> start())
-            .thenRun(() -> {
-                // Deploy via DeployManager
-                deployManager.deploy(runner);
-                logger.info("[AgentApp] AgentApp started successfully on {}:{}{}", 
-                    host, port, endpointPath);
-            });
+        init();
+        start();
+        // Deploy via DeployManager
+        deployManager.deploy(runner);
+        logger.info("[AgentApp] AgentApp started successfully on {}:{}{}", host, port, endpointPath);
     }
     
     /**
@@ -396,11 +284,10 @@ public class AgentApp {
      * 
      * @return a CompletableFuture that completes when the application is stopped
      */
-    public CompletableFuture<Void> stop() {
+    public void stop() {
         if (runner != null) {
-            return runner.stop();
+            runner.stop();
         }
-        return CompletableFuture.completedFuture(null);
     }
     
     /**
@@ -411,23 +298,10 @@ public class AgentApp {
      * 
      * @return a CompletableFuture that completes when shutdown is done
      */
-    public CompletableFuture<Void> shutdown() {
-        CompletableFuture<Void> shutdownFuture = CompletableFuture.completedFuture(null);
-        
+    public void shutdown() {
         if (runner != null) {
-            shutdownFuture = runner.shutdown();
+            runner.shutdown();
         }
-        
-        // Call registered shutdown handler if exists (corresponds to Python's shutdown_handler call)
-        if (shutdownHandler != null) {
-            try {
-                shutdownHandler.run();
-            } catch (Exception e) {
-                logger.warn("[AgentApp] Exception in shutdown handler: {}", e.getMessage(), e);
-            }
-        }
-        
-        return shutdownFuture;
     }
     
     /**
@@ -483,61 +357,7 @@ public class AgentApp {
     public List<EndpointInfo> getCustomEndpoints() {
         return customEndpoints;
     }
-    
-    /**
-     * Get the registered init handler.
-     * 
-     * @return the init handler, or null if not set
-     */
-    public Runnable getInitHandler() {
-        return initHandler;
-    }
-    
-    /**
-     * Get the registered query handler.
-     * 
-     * @return the query handler, or null if not set
-     */
-    public java.util.function.Function<Map<String, Object>, Object> getQueryHandler() {
-        return queryHandler;
-    }
-    
-    /**
-     * Get the registered shutdown handler.
-     * 
-     * @return the shutdown handler, or null if not set
-     */
-    public Runnable getShutdownHandler() {
-        return shutdownHandler;
-    }
-    
-    /**
-     * Get the framework type for the query handler.
-     * 
-     * @return the framework type, or null if not set
-     */
-    public String getFrameworkType() {
-        return frameworkType;
-    }
-    
-    /**
-     * Get the before_start callback.
-     * 
-     * @return the before_start callback, or null if not set
-     */
-    public Runnable getBeforeStart() {
-        return beforeStart;
-    }
-    
-    /**
-     * Get the after_finish callback.
-     * 
-     * @return the after_finish callback, or null if not set
-     */
-    public Runnable getAfterFinish() {
-        return afterFinish;
-    }
-    
+
     /**
      * Endpoint information.
      */

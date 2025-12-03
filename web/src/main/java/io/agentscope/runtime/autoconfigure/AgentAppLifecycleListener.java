@@ -15,7 +15,7 @@
  */
 package io.agentscope.runtime.autoconfigure;
 
-import io.agentscope.runtime.app.AgentApp;
+import io.agentscope.runtime.engine.Runner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,11 +26,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.lang.NonNull;
 
 /**
- * Spring Boot lifecycle listener for AgentApp.
+ * Spring Boot lifecycle listener for Runner.
  * 
  * <p>This class corresponds to the lifespan manager in Python's FastAPIAppFactory.
  * It handles application startup and shutdown lifecycle events, calling the
- * registered lifecycle handlers in AgentApp.</p>
+ * registered lifecycle handlers in Runner.</p>
  * 
  * <p>Lifecycle flow (corresponds to Python's FastAPI lifespan):</p>
  * <ol>
@@ -50,7 +50,7 @@ import org.springframework.lang.NonNull;
  *   </li>
  * </ol>
  * 
- * <p>This listener is automatically registered when AgentApp is available as a Spring bean.</p>
+ * <p>This listener is automatically registered when Runner is available as a Spring bean.</p>
  */
 @Component
 public class AgentAppLifecycleListener implements 
@@ -58,17 +58,17 @@ public class AgentAppLifecycleListener implements
     
     private static final Logger logger = LoggerFactory.getLogger(AgentAppLifecycleListener.class);
     
-    private final AgentApp agentApp;
+    private final Runner runner;
     private boolean initialized = false;
     
     /**
-     * Constructor with AgentApp dependency injection.
+     * Constructor with Runner dependency injection.
      * 
-     * @param agentApp the AgentApp instance (optional, may be null if not configured)
+     * @param runner the Runner instance (optional, may be null if not configured)
      */
     @Autowired(required = false)
-    public AgentAppLifecycleListener(AgentApp agentApp) {
-        this.agentApp = agentApp;
+    public AgentAppLifecycleListener(Runner runner) {
+        this.runner = runner;
     }
     
     /**
@@ -86,8 +86,8 @@ public class AgentAppLifecycleListener implements
             return;
         }
         
-        if (agentApp == null) {
-            logger.debug("[AgentAppLifecycleListener] AgentApp not configured, skipping lifecycle management");
+        if (runner == null) {
+            logger.debug("[AgentAppLifecycleListener] Runner not configured, skipping lifecycle management");
             return;
         }
         
@@ -97,34 +97,21 @@ public class AgentAppLifecycleListener implements
         }
         
         try {
-            logger.info("[AgentAppLifecycleListener] Starting AgentApp lifecycle...");
-            
-            // Call before_start callback (corresponds to Python's before_start in lifespan)
-            Runnable beforeStart = agentApp.getBeforeStart();
-            if (beforeStart != null) {
-                try {
-                    logger.debug("[AgentAppLifecycleListener] Calling before_start callback");
-                    beforeStart.run();
-                } catch (Exception e) {
-                    logger.warn("[AgentAppLifecycleListener] Exception in before_start callback: {}", 
-                        e.getMessage(), e);
-                }
-            }
+            logger.info("[AgentAppLifecycleListener] Starting Runner lifecycle...");
             
             // Initialize and start the runner (this will call init_handler if registered)
             // Corresponds to Python's runner.__aenter__() and init_handler call
             logger.debug("[AgentAppLifecycleListener] Initializing and starting runner");
-            agentApp.init()
-                .thenCompose(v -> agentApp.start())
-                .thenRun(() -> {
-                    logger.info("[AgentAppLifecycleListener] AgentApp started successfully");
-                    initialized = true;
-                })
-                .exceptionally(ex -> {
-                    logger.error("[AgentAppLifecycleListener] Failed to start AgentApp: {}", 
-                        ex.getMessage(), ex);
-                    return null;
-                });
+            try {
+                runner.init();
+                runner.start();
+                initialized = true;
+                logger.info("[AgentAppLifecycleListener] Runner started successfully");
+            } catch (Exception e) {
+                logger.error("[AgentAppLifecycleListener] Failed to start Runner: {}", e.getMessage());
+                throw e;
+            }
+
             
         } catch (Exception e) {
             logger.error("[AgentAppLifecycleListener] Error during startup: {}", 
@@ -143,16 +130,16 @@ class AgentAppShutdownListener implements ApplicationListener<ContextClosedEvent
     
     private static final Logger logger = LoggerFactory.getLogger(AgentAppShutdownListener.class);
     
-    private final AgentApp agentApp;
+    private final Runner runner;
     
     /**
-     * Constructor with AgentApp dependency injection.
+     * Constructor with Runner dependency injection.
      * 
-     * @param agentApp the AgentApp instance (optional, may be null if not configured)
+     * @param runner the Runner instance (optional, may be null if not configured)
      */
     @Autowired(required = false)
-    public AgentAppShutdownListener(AgentApp agentApp) {
-        this.agentApp = agentApp;
+    public AgentAppShutdownListener(Runner runner) {
+        this.runner = runner;
     }
     
     /**
@@ -170,51 +157,22 @@ class AgentAppShutdownListener implements ApplicationListener<ContextClosedEvent
             return;
         }
         
-        if (agentApp == null) {
+        if (runner == null) {
             return;
         }
         
         try {
-            logger.info("[AgentAppShutdownListener] Shutting down AgentApp...");
+            logger.info("[AgentAppShutdownListener] Shutting down Runner...");
             
             // Stop the runner first (corresponds to Python's runner.__aexit__())
-            agentApp.stop()
-                .thenCompose(v -> {
-                    // Call shutdown_handler (corresponds to Python's shutdown_handler call)
-                    Runnable shutdownHandler = agentApp.getShutdownHandler();
-                    if (shutdownHandler != null) {
-                        try {
-                            logger.debug("[AgentAppShutdownListener] Calling shutdown_handler");
-                            shutdownHandler.run();
-                        } catch (Exception e) {
-                            logger.warn("[AgentAppShutdownListener] Exception in shutdown_handler: {}", 
-                                e.getMessage(), e);
-                        }
-                    }
-                    
-                    // Call shutdown() which also handles shutdown_handler
-                    return agentApp.shutdown();
-                })
-                .thenRun(() -> {
-                    // Call after_finish callback (corresponds to Python's after_finish in lifespan)
-                    Runnable afterFinish = agentApp.getAfterFinish();
-                    if (afterFinish != null) {
-                        try {
-                            logger.debug("[AgentAppShutdownListener] Calling after_finish callback");
-                            afterFinish.run();
-                        } catch (Exception e) {
-                            logger.warn("[AgentAppShutdownListener] Exception in after_finish callback: {}", 
-                                e.getMessage(), e);
-                        }
-                    }
-                    
-                    logger.info("[AgentAppShutdownListener] AgentApp shutdown completed");
-                })
-                .exceptionally(ex -> {
-                    logger.error("[AgentAppShutdownListener] Error during shutdown: {}", 
-                        ex.getMessage(), ex);
-                    return null;
-                });
+            try {
+                runner.stop();
+                runner.shutdown();
+                logger.info("[AgentAppShutdownListener] Runner shutdown completed");
+            } catch (Exception e) {
+                logger.error("[AgentAppShutdownListener] Error during shutdown: {}", e.getMessage());
+                throw e;
+            }
             
         } catch (Exception e) {
             logger.error("[AgentAppShutdownListener] Error during shutdown: {}", 

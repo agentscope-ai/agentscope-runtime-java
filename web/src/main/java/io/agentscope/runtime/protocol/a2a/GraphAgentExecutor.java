@@ -20,10 +20,18 @@ import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
-import io.a2a.spec.*;
+
+import io.a2a.spec.JSONRPCError;
+import io.a2a.spec.Part;
+import io.a2a.spec.Task;
+import io.a2a.spec.TaskState;
+import io.a2a.spec.TaskStatus;
+import io.a2a.spec.TextPart;
+
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.schemas.AgentRequest;
 import io.agentscope.runtime.engine.schemas.Content;
+import io.agentscope.runtime.engine.schemas.Event;
 import io.agentscope.runtime.engine.schemas.MessageType;
 import io.agentscope.runtime.engine.schemas.TextContent;
 import org.reactivestreams.Subscription;

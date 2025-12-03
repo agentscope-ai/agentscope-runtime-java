@@ -30,7 +30,6 @@ import java.util.logging.Logger;
 
 /**
  * Sandbox HTTP Client
- * Corresponds to Python's SandboxHttpClient
  * Used for HTTP communication with sandbox containers and calling tools within the sandbox
  */
 public class SandboxHttpClient extends SandboxClient {

@@ -17,36 +17,29 @@
 package io.agentscope.runtime.adapters;
 
 import io.agentscope.runtime.engine.schemas.AgentRequest;
-import io.agentscope.runtime.engine.schemas.Event;
 import reactor.core.publisher.Flux;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * AgentAdapter interface provides a unified abstraction for AgentApp core capabilities.
  *
- * <p>This interface is designed to adapt different Agent Framework Types (e.g., agentscope, 
- * autogen, agno, langgraph) and provides the core lifecycle management and query processing 
- * capabilities similar to Python's AgentApp.</p>
+ * <p>This interface is designed to adapt different Agent Framework Types (e.g., AgentScope,
+ * Spring AI Alibaba, Langchain4j) and provides the core lifecycle management and query processing
+ * capabilities.</p>
  *
- * <p>The interface follows the pattern from Python's AgentApp where:</p>
- * <ul>
- *   <li>{@link #init()} corresponds to the @app.init() decorator</li>
- *   <li>{@link #streamQuery(AgentRequest, Object)} corresponds to the @app.query() decorator</li>
- *   <li>{@link #shutdown()} corresponds to the @app.shutdown() decorator</li>
- * </ul>
  *
  * <p>Lifecycle flow:</p>
  * <ol>
- *   <li>{@link #init()} - Initialize the adapter and prepare resources</li>
  *   <li>{@link #start()} - Start the adapter and mark it as ready</li>
  *   <li>{@link #streamQuery(AgentRequest, Object)} - Process queries (can be called multiple times)</li>
  *   <li>{@link #stop()} - Stop accepting new queries</li>
- *   <li>{@link #shutdown()} - Clean up resources</li>
  * </ol>
  *
  */
 public interface AgentAdapter {
+
+    String getName();
+
+    String getDescription();
 
     /**
      * Get the framework type this adapter supports.
@@ -58,45 +51,27 @@ public interface AgentAdapter {
     String getFrameworkType();
 
     /**
-     * Initialize the adapter and prepare resources.
-     *
-     * <p>This method corresponds to the @app.init() decorator in Python's AgentApp.
-     * It should be called before {@link #start()} to set up any required resources,
-     * services, or dependencies.</p>
-     *
-     * <p>This method can be synchronous or asynchronous. If it returns a CompletableFuture,
-     * the caller should wait for it to complete before calling {@link #start()}.</p>
-     *
-     * @return a CompletableFuture that completes when initialization is done.
-     *         If initialization is synchronous, return CompletableFuture.completedFuture(null)
-     */
-    CompletableFuture<Void> init();
-
-    /**
      * Start the adapter and mark it as ready to process queries.
      *
-     * <p>This method should be called after {@link #init()} completes successfully.
      * After this method completes, the adapter should be ready to accept queries
      * via {@link #streamQuery(AgentRequest, Object)}.</p>
      *
      * <p>This method typically calls the init_handler if one was registered,
      * similar to Python's Runner.start() method.</p>
-     *
-     * @return a CompletableFuture that completes when the adapter is started
      */
-    CompletableFuture<Void> start();
+    void start();
 
     /**
-     * Process an agent query and return a stream of events.
+     * Process an agent query and return a stream of framework-specific events.
      *
      * <p>This method corresponds to the @app.query() decorator in Python's AgentApp.
-     * It processes the agent request and returns a reactive stream of events.</p>
+     * It processes the agent request and returns a reactive stream of framework-specific events.</p>
      *
      * <p>The implementation should:</p>
      * <ul>
      *   <li>Handle the framework-specific message format conversion</li>
      *   <li>Invoke the registered query handler</li>
-     *   <li>Adapt the result to a stream of Event objects</li>
+     *   <li>Return the raw framework-specific event stream (e.g., Flux&lt;io.agentscope.core.agent.Event&gt; for agentscope)</li>
      * </ul>
      *
      * <p>This method can be called multiple times concurrently. The adapter should
@@ -108,14 +83,17 @@ public interface AgentAdapter {
      * converted messages are passed via kwargs: kwargs.update({"msgs": message_to_agentscope_msg(request.input)}).
      * If messages is null, the adapter should use request.getInput() directly.</p>
      *
+     * <p>Note: The returned stream should contain framework-specific Event objects.
+     * The Runner will use StreamAdapter to convert this raw framework stream to runtime Event stream.</p>
+     *
      * @param request the agent request containing input messages, session info, etc.
      * @param messages the converted framework-specific messages (e.g., List&lt;Msg&gt; for agentscope),
      *                 or null if no conversion is needed
-     * @return a Flux of Event objects representing the streaming response
+     * @return a Flux of framework-specific Event objects (e.g., Flux&lt;io.agentscope.core.agent.Event&gt; for agentscope)
      * @throws IllegalStateException if the adapter is not started
      * @throws RuntimeException if the query handler is not set or encounters an error
      */
-    Flux<Event> streamQuery(AgentRequest request, Object messages);
+    Flux<?> streamQuery(AgentRequest request, Object messages);
 
     /**
      * Stop the adapter and prevent it from accepting new queries.
@@ -123,28 +101,9 @@ public interface AgentAdapter {
      * <p>This method should gracefully stop processing new queries while allowing
      * ongoing queries to complete. After this method completes, {@link #streamQuery(AgentRequest, Object)}
      * should not be called.</p>
-     *
-     * @return a CompletableFuture that completes when the adapter is stopped
      */
-    CompletableFuture<Void> stop();
+    void stop();
 
-    /**
-     * Shutdown the adapter and clean up resources.
-     *
-     * <p>This method corresponds to the @app.shutdown() decorator in Python's AgentApp.
-     * It should be called after {@link #stop()} to perform final cleanup, such as:</p>
-     * <ul>
-     *   <li>Closing connections</li>
-     *   <li>Releasing resources</li>
-     *   <li>Stopping background services</li>
-     * </ul>
-     *
-     * <p>This method typically calls the shutdown_handler if one was registered,
-     * similar to Python's Runner.stop() method.</p>
-     *
-     * @return a CompletableFuture that completes when shutdown is done
-     */
-    CompletableFuture<Void> shutdown();
 
     /**
      * Check if the adapter is in a healthy/ready state.

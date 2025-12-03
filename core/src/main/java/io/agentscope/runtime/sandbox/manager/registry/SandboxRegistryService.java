@@ -248,7 +248,7 @@ public class SandboxRegistryService {
 
     /**
      * Register a custom sandbox type by string name
-     * This supports dynamic type registration similar to Python's functionality
+     * This supports dynamic type registration.
      *
      * @param typeName  The custom type name
      * @param imageName The Docker image name

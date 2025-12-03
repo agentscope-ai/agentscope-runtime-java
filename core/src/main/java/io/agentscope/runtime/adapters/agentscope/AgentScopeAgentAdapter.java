@@ -20,10 +20,11 @@ import io.agentscope.runtime.adapters.AgentAdapter;
 import io.agentscope.runtime.adapters.MessageAdapter;
 import io.agentscope.runtime.adapters.StreamAdapter;
 import io.agentscope.runtime.engine.schemas.AgentRequest;
-import io.agentscope.runtime.engine.schemas.Event;
+import io.agentscope.runtime.engine.services.agent_state.StateService;
+import io.agentscope.runtime.engine.services.memory.service.MemoryService;
+import io.agentscope.runtime.engine.services.memory.service.SessionHistoryService;
+import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import reactor.core.publisher.Flux;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Abstract base class for AgentScope framework adapter implementations.
@@ -36,19 +37,34 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>Subclasses must implement the lifecycle methods:</p>
  * <ul>
- *   <li>{@link #init()} - Initialize the adapter</li>
  *   <li>{@link #start()} - Start the adapter</li>
  *   <li>{@link #streamQuery(AgentRequest, Object)} - Process queries</li>
  *   <li>{@link #stop()} - Stop the adapter</li>
- *   <li>{@link #shutdown()} - Shutdown the adapter</li>
  *   <li>{@link #isHealthy()} - Check health status</li>
  * </ul>
  */
 public abstract class AgentScopeAgentAdapter implements AgentAdapter {
-    
-    private final StreamAdapter streamAdapter;
-    private final MessageAdapter messageAdapter;
-    
+
+    protected final StreamAdapter streamAdapter;
+    protected final MessageAdapter messageAdapter;
+
+    // short-term from runtime, specifically for agentscope
+    protected StateService stateService;
+    // short-term from runtime
+    protected SessionHistoryService sessionHistoryService;
+    // long-term from runtime
+    protected MemoryService memoryService;
+
+    protected SandboxService sandboxService;
+
+    AgentScopeAgentAdapter(StateService stateService, SessionHistoryService sessionHistoryService, MemoryService memoryService, SandboxService sandboxService) {
+        this();
+        this.stateService = stateService;
+        this.sessionHistoryService = sessionHistoryService;
+        this.memoryService = memoryService;
+        this.sandboxService = sandboxService;
+    }
+
     /**
      * Creates a new AgentScopeAgentAdapter instance.
      * Initializes the stream adapter and message adapter for AgentScope framework.
@@ -57,7 +73,23 @@ public abstract class AgentScopeAgentAdapter implements AgentAdapter {
         this.streamAdapter = new AgentScopeStreamAdapter();
         this.messageAdapter = new AgentScopeMessageAdapter();
     }
-    
+
+    public void setSessionHistoryService(SessionHistoryService sessionHistoryService) {
+        this.sessionHistoryService = sessionHistoryService;
+    }
+
+    public void setStateService(StateService stateService) {
+        this.stateService = stateService;
+    }
+
+    public void setMemoryService(MemoryService memoryService) {
+        this.memoryService = memoryService;
+    }
+
+    public void setSandboxService(SandboxService sandboxService) {
+        this.sandboxService = sandboxService;
+    }
+
     /**
      * Get the framework type this adapter supports.
      *
@@ -91,53 +123,33 @@ public abstract class AgentScopeAgentAdapter implements AgentAdapter {
     // Lifecycle methods - must be implemented by subclasses
     
     /**
-     * Initialize the adapter and prepare resources.
-     * Must be implemented by subclasses.
-     *
-     * @return a CompletableFuture that completes when initialization is done
-     */
-    @Override
-    public abstract CompletableFuture<Void> init();
-    
-    /**
      * Start the adapter and mark it as ready to process queries.
      * Must be implemented by subclasses.
-     *
-     * @return a CompletableFuture that completes when the adapter is started
      */
     @Override
-    public abstract CompletableFuture<Void> start();
-    
-    /**
-     * Process an agent query and return a stream of events.
-     * Must be implemented by subclasses.
-     *
-     * @param request the agent request containing input messages, session info, etc.
-     * @param messages the converted framework-specific messages (e.g., List&lt;Msg&gt; for agentscope),
-     *                 or null if no conversion is needed
-     * @return a Flux of Event objects representing the streaming response
-     */
-    @Override
-    public abstract Flux<Event> streamQuery(AgentRequest request, Object messages);
-    
+    public void start() {
+        if (stateService != null) {
+            stateService.start();
+        }
+        if (sessionHistoryService != null) {
+            sessionHistoryService.start();
+        }
+    }
+
     /**
      * Stop the adapter and prevent it from accepting new queries.
      * Must be implemented by subclasses.
-     *
-     * @return a CompletableFuture that completes when the adapter is stopped
      */
     @Override
-    public abstract CompletableFuture<Void> stop();
-    
-    /**
-     * Shutdown the adapter and clean up resources.
-     * Must be implemented by subclasses.
-     *
-     * @return a CompletableFuture that completes when shutdown is done
-     */
-    @Override
-    public abstract CompletableFuture<Void> shutdown();
-    
+    public void stop() {
+        if (stateService != null) {
+            stateService.stop();
+        }
+        if (sessionHistoryService != null) {
+            sessionHistoryService.stop();
+        }
+    }
+
     /**
      * Check if the adapter is in a healthy/ready state.
      * Must be implemented by subclasses.
@@ -146,5 +158,18 @@ public abstract class AgentScopeAgentAdapter implements AgentAdapter {
      */
     @Override
     public abstract boolean isHealthy();
+
+    /**
+     * Process an agent query and return a stream of framework-specific events.
+     * Must be implemented by subclasses.
+     *
+     * @param request the agent request containing input messages, session info, etc.
+     * @param messages the converted framework-specific messages (e.g., List&lt;Msg&gt; for agentscope),
+     *                 or null if no conversion is needed
+     * @return a Flux of AgentScope Event objects (Flux&lt;io.agentscope.core.agent.Event&gt;)
+     */
+    @Override
+    public abstract Flux<?> streamQuery(AgentRequest request, Object messages);
+
 }
 

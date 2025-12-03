@@ -19,7 +19,6 @@ import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 
 /**
  * Queue interface for container pool management
- * Corresponds to Python's Queue abstract class
  */
 public interface ContainerQueue {
     

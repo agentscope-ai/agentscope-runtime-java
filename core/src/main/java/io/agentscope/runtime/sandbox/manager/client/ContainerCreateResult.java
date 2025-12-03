@@ -21,7 +21,6 @@ import java.util.List;
 
 /**
  * Result object for container creation operations.
- * This aligns with Python version's return tuple: (_id, ports, ip, *rest)
  */
 public class ContainerCreateResult {
     private String containerId;

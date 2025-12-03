@@ -7,6 +7,7 @@ import io.agentscope.core.memory.LongTermMemory;
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.runtime.adapters.agentscope.AgentScopeMessageAdapter;
 import io.agentscope.runtime.engine.schemas.Message;
+import io.agentscope.runtime.engine.services.memory.service.MemoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -28,7 +29,7 @@ import java.util.stream.Collectors;
  * <p><b>Usage Example:</b>
  * <pre>{@code
  * // Create memory service (assumed to exist in runtime)
- * MemoryServiceInterface service = new InMemoryMemoryService();
+ * MemoryService service = new InMemoryMemoryService();
  *
  * // Create long-term memory adapter
  * AgentScopeLongTermMemoryAdapter longTermMemory =
@@ -49,8 +50,7 @@ import java.util.stream.Collectors;
 public class LongTermMemoryAdapter implements LongTermMemory {
     private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryAdapter.class);
 
-    // TODO: Replace with actual MemoryService interface when available
-    private final MemoryServiceInterface service;
+    private final MemoryService service;
     private final String userId;
     private final String sessionId;
     private final AgentScopeMessageAdapter messageAdapter;
@@ -63,7 +63,7 @@ public class LongTermMemoryAdapter implements LongTermMemory {
      * @param sessionId The session ID linked to this memory
      */
     public LongTermMemoryAdapter(
-            MemoryServiceInterface service,
+            MemoryService service,
             String userId,
             String sessionId) {
         this.service = service;
@@ -92,12 +92,24 @@ public class LongTermMemoryAdapter implements LongTermMemory {
 
         // Add to memory service
         return Mono.fromFuture(
-                service.addMemory(userId, runtimeMessages, sessionId)
+                service.addMemory(userId, runtimeMessages, Optional.ofNullable(sessionId))
         ).then();
     }
 
     @Override
     public Mono<String> retrieve(Msg msg) {
+        return retrieve(msg, 5);
+    }
+
+    /**
+     * Retrieve memory with a specified limit.
+     * This matches the Python version's retrieve method signature.
+     *
+     * @param msg The message to search for in the memory
+     * @param limit The maximum number of memories to retrieve per search
+     * @return Mono containing the retrieved memory as a string
+     */
+    public Mono<String> retrieve(Msg msg, int limit) {
         // Handle null message - build a default message
         if (msg == null) {
             msg = Msg.builder()
@@ -113,11 +125,11 @@ public class LongTermMemoryAdapter implements LongTermMemory {
         List<Msg> queryMsgs = List.of(msg);
 
         // Search memory for each message
-        List<CompletableFuture<List<Object>>> searchFutures = queryMsgs.stream()
+        List<CompletableFuture<List<Message>>> searchFutures = queryMsgs.stream()
                 .map(queryMsg -> {
                     List<Message> queryMessages = messageAdapter.frameworkMsgToMessage(queryMsg);
-                    Map<String, Object> filters = Map.of("top_k", 5); // Default limit
-                    return service.searchMemory(userId, queryMessages, filters);
+                    Map<String, Object> filters = Map.of("top_k", limit);
+                    return service.searchMemory(userId, queryMessages, Optional.of(filters));
                 })
                 .collect(Collectors.toList());
 
@@ -126,14 +138,12 @@ public class LongTermMemoryAdapter implements LongTermMemory {
                 CompletableFuture.allOf(
                         searchFutures.toArray(new CompletableFuture[0])
                 ).thenApply(v -> {
-                    // Process results
+                    // Process results - convert Messages to readable format
                     List<String> processedResults = new ArrayList<>();
-                    for (CompletableFuture<List<Object>> future : searchFutures) {
+                    for (CompletableFuture<List<Message>> future : searchFutures) {
                         try {
-                            List<Object> result = future.join();
-                            String resultText = result.stream()
-                                    .map(Object::toString)
-                                    .collect(Collectors.joining("\n"));
+                            List<Message> result = future.join();
+                            String resultText = formatMessagesAsString(result);
                             processedResults.add(resultText);
                         } catch (Exception e) {
                             logger.error("Error retrieving memory", e);
@@ -217,11 +227,11 @@ public class LongTermMemoryAdapter implements LongTermMemory {
             }
 
             // Retrieve memories
-            List<CompletableFuture<List<Object>>> searchFutures = queryMsgs.stream()
+            List<CompletableFuture<List<Message>>> searchFutures = queryMsgs.stream()
                     .map(queryMsg -> {
                         List<Message> queryMessages = messageAdapter.frameworkMsgToMessage(queryMsg);
                         Map<String, Object> filters = Map.of("top_k", limit);
-                        return service.searchMemory(userId, queryMessages, filters);
+                        return service.searchMemory(userId, queryMessages, Optional.of(filters));
                     })
                     .collect(Collectors.toList());
 
@@ -230,12 +240,10 @@ public class LongTermMemoryAdapter implements LongTermMemory {
                             searchFutures.toArray(new CompletableFuture[0])
                     ).thenApply(v -> {
                         List<String> results = new ArrayList<>();
-                        for (CompletableFuture<List<Object>> future : searchFutures) {
+                        for (CompletableFuture<List<Message>> future : searchFutures) {
                             try {
-                                List<Object> result = future.join();
-                                String resultText = result.stream()
-                                        .map(Object::toString)
-                                        .collect(Collectors.joining("\n"));
+                                List<Message> result = future.join();
+                                String resultText = formatMessagesAsString(result);
                                 results.add(resultText);
                             } catch (Exception e) {
                                 logger.error("Error retrieving memory", e);
@@ -252,20 +260,82 @@ public class LongTermMemoryAdapter implements LongTermMemory {
         }
     }
 
-    // ========== Placeholder Interfaces ==========
-    // TODO: Replace with actual runtime service interfaces when available
+    /**
+     * Format a list of runtime Messages as a readable string.
+     * Converts Messages back to AgentScope Msg format and extracts text content,
+     * matching Python version's behavior of converting results to strings.
+     *
+     * @param messages List of runtime Message objects
+     * @return Formatted string representation of the messages
+     */
+    private String formatMessagesAsString(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return "";
+        }
+
+        try {
+            // Convert runtime Messages back to AgentScope Msgs
+            Object agentscopeMsgs = messageAdapter.messageToFrameworkMsg(messages);
+            List<Msg> msgList;
+
+            if (agentscopeMsgs instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Msg> list = (List<Msg>) agentscopeMsgs;
+                msgList = list;
+            } else if (agentscopeMsgs instanceof Msg) {
+                msgList = List.of((Msg) agentscopeMsgs);
+            } else {
+                // Fallback: use Message.toString() if conversion fails
+                return messages.stream()
+                        .map(Message::toString)
+                        .collect(Collectors.joining("\n"));
+            }
+
+            // Extract text content from AgentScope Msgs
+            return msgList.stream()
+                    .map(this::extractTextFromMsg)
+                    .filter(text -> text != null && !text.isEmpty())
+                    .collect(Collectors.joining("\n"));
+        } catch (Exception e) {
+            logger.warn("Failed to convert Messages to AgentScope format, using toString()", e);
+            // Fallback: use Message.toString() if conversion fails
+            return messages.stream()
+                    .map(Message::toString)
+                    .collect(Collectors.joining("\n"));
+        }
+    }
 
     /**
-     * Placeholder interface for MemoryService.
-     * This should be replaced with the actual service interface from runtime.
+     * Extract text content from an AgentScope Msg.
+     * Collects text from all TextBlock and ThinkingBlock content blocks.
+     *
+     * @param msg AgentScope Msg object
+     * @return Extracted text content
      */
-    public interface MemoryServiceInterface {
-        CompletableFuture<Void> addMemory(String userId, List<Message> messages, String sessionId);
-        CompletableFuture<List<Object>> searchMemory(
-                String userId,
-                List<Message> messages,
-                Map<String, Object> filters
-        );
+    private String extractTextFromMsg(Msg msg) {
+        if (msg == null || msg.getContent() == null) {
+            return "";
+        }
+
+        List<String> textParts = new ArrayList<>();
+        for (io.agentscope.core.message.ContentBlock block : msg.getContent()) {
+            if (block instanceof TextBlock) {
+                String text = ((TextBlock) block).getText();
+                if (text != null && !text.isEmpty()) {
+                    textParts.add(text);
+                }
+            } else if (block instanceof ThinkingBlock) {
+                String thinking = ((ThinkingBlock) block).getThinking();
+                if (thinking != null && !thinking.isEmpty()) {
+                    textParts.add(thinking);
+                }
+            }
+            // Other block types (tool_use, tool_result, etc.) are skipped
+            // as they are typically not useful for memory retrieval results
+        }
+
+        return String.join(" ", textParts);
     }
+
 }
 

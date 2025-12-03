@@ -28,7 +28,6 @@ import java.util.logging.Logger;
 /**
  * Thread-safe port allocation manager
  * Manages port allocation and release to avoid port conflicts
- * Corresponds to Python's port_set and ports_cache
  */
 public class PortManager {
     private static final Logger logger = Logger.getLogger(PortManager.class.getName());

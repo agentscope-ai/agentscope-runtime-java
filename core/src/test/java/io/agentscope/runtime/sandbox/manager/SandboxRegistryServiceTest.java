@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * SandboxRegistryService and SandboxConfig Test
- * Demonstrates how Java version aligns with Python's sandbox registration functionality
  */
 public class SandboxRegistryServiceTest {
 

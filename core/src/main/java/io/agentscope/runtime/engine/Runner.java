@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -57,8 +56,8 @@ public class Runner {
      * 
      * @return a CompletableFuture that completes when initialization is done
      */
-    public CompletableFuture<Void> init() {
-        return adapter.init();
+    public void init() {
+
     }
     
     /**
@@ -69,11 +68,10 @@ public class Runner {
      * 
      * @return a CompletableFuture that completes when the runner is started
      */
-    public CompletableFuture<Void> start() {
-        return adapter.start().thenRun(() -> {
-            this.health = true;
-            logger.info("[Runner] Runner started successfully");
-        });
+    public void start() {
+        adapter.start();
+        this.health = true;
+        logger.info("[Runner] Runner started successfully");
     }
     
     /**
@@ -83,11 +81,10 @@ public class Runner {
      * 
      * @return a CompletableFuture that completes when the runner is stopped
      */
-    public CompletableFuture<Void> stop() {
-        return adapter.stop().thenRun(() -> {
-            this.health = false;
-            logger.info("[Runner] Runner stopped");
-        });
+    public void stop() {
+        adapter.stop();
+        this.health = false;
+        logger.info("[Runner] Runner stopped");
     }
     
     /**
@@ -97,11 +94,9 @@ public class Runner {
      * 
      * @return a CompletableFuture that completes when shutdown is done
      */
-    public CompletableFuture<Void> shutdown() {
-        return adapter.shutdown().thenRun(() -> {
-            this.health = false;
-            logger.info("[Runner] Runner shutdown completed");
-        });
+    public void shutdown() {
+        this.health = false;
+        logger.info("[Runner] Runner shutdown completed");
     }
     
     /**
@@ -270,7 +265,7 @@ public class Runner {
      * 
      * @return the AgentAdapter instance
      */
-    public AgentAdapter getAdapter() {
+    public AgentAdapter getAgent() {
         return adapter;
     }
 

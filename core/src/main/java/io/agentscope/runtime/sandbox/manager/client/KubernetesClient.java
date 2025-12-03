@@ -168,7 +168,7 @@ public class KubernetesClient extends BaseClient {
 
         try {
             // KubernetesClient handles port mapping internally if needed
-            // For LoadBalancer, use port 80 as default (aligns with Python version behavior)
+            // For LoadBalancer, use port 80 as default
             Map<String, Integer> portMapping = new HashMap<>();
             if (ports != null && !ports.isEmpty()) {
                 for (String containerPort : ports) {
