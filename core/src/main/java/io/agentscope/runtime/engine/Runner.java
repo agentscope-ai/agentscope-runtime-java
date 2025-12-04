@@ -1,6 +1,6 @@
 package io.agentscope.runtime.engine;
 
-import io.agentscope.runtime.adapters.AgentAdapter;
+import io.agentscope.runtime.adapters.AgentHandler;
 import io.agentscope.runtime.adapters.MessageAdapter;
 import io.agentscope.runtime.adapters.StreamAdapter;
 import io.agentscope.runtime.engine.schemas.AgentRequest;
@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Runner {
     private static final Logger logger = LoggerFactory.getLogger(Runner.class);
     
-    private final AgentAdapter adapter;
+    private final AgentHandler adapter;
     private volatile boolean health = false;
     private final AtomicInteger sequenceGenerator = new AtomicInteger(0);
     
@@ -44,7 +44,7 @@ public class Runner {
      * 
      * @param adapter the AgentAdapter instance to proxy
      */
-    public Runner(AgentAdapter adapter) {
+    public Runner(AgentHandler adapter) {
         if (adapter == null) {
             throw new IllegalArgumentException("AgentAdapter cannot be null");
         }
@@ -265,7 +265,7 @@ public class Runner {
      * 
      * @return the AgentAdapter instance
      */
-    public AgentAdapter getAgent() {
+    public AgentHandler getAgent() {
         return adapter;
     }
 

@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import io.agentscope.runtime.LocalDeployManager;
-import io.agentscope.runtime.adapters.AgentAdapter;
+import io.agentscope.runtime.adapters.AgentHandler;
 import io.agentscope.runtime.engine.DeployManager;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.ProtocolConfig;
@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 public class AgentApp {
     private static final Logger logger = LoggerFactory.getLogger(AgentApp.class);
     
-    private final AgentAdapter adapter;
+    private final AgentHandler adapter;
     private volatile Runner runner;
     private DeployManager deployManager;
     
@@ -60,7 +60,7 @@ public class AgentApp {
      * 
      * @param adapter the AgentAdapter instance to use
      */
-    public AgentApp(AgentAdapter adapter) {
+    public AgentApp(AgentHandler adapter) {
         if (adapter == null) {
             throw new IllegalArgumentException("AgentAdapter cannot be null");
         }

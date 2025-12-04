@@ -27,10 +27,6 @@ import io.agentscope.runtime.adapters.agentscope.memory.LongTermMemoryAdapter;
 import io.agentscope.runtime.adapters.agentscope.memory.MemoryAdapter;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.schemas.AgentRequest;
-import io.agentscope.runtime.engine.services.agent_state.StateService;
-import io.agentscope.runtime.engine.services.memory.service.MemoryService;
-import io.agentscope.runtime.engine.services.memory.service.SessionHistoryService;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import org.slf4j.Logger;
@@ -52,13 +48,13 @@ import java.util.Map;
  *   <li>Saves state after completion</li>
  * </ul>
  */
-public class TestAgentScopeAgentAdapter extends AgentScopeAgentAdapter {
-    private static final Logger logger = LoggerFactory.getLogger(TestAgentScopeAgentAdapter.class);
-    private String apiKey;
+public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
+    private static final Logger logger = LoggerFactory.getLogger(MyAgentScopeAgentHandler.class);
+    private final String apiKey;
     /**
      * Creates a new TestAgentScopeAgentAdapter.
      */
-    public TestAgentScopeAgentAdapter() {
+    public MyAgentScopeAgentHandler() {
         apiKey = System.getenv("AI_DASHSCOPE_API_KEY");
     }
 

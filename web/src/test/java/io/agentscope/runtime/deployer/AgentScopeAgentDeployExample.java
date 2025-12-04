@@ -16,58 +16,37 @@
 
 package io.agentscope.runtime.deployer;
 
-import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
-
-import io.agentscope.runtime.adapters.agentscope.TestAgentScopeAgentAdapter;
+import io.agentscope.runtime.adapters.agentscope.MyAgentScopeAgentHandler;
 import io.agentscope.runtime.app.AgentApp;
 import io.agentscope.runtime.engine.services.agent_state.InMemoryStateService;
 import io.agentscope.runtime.engine.services.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.services.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
  */
 public class AgentScopeAgentDeployExample {
 
-    private DashScopeChatModel chatModel;
-
-    public AgentScopeAgentDeployExample() {
-        // Initialize DashScope ChatModel
-        initializeChatModel();
-
-    }
-
-    private void initializeChatModel() {
-        // Create DashScopeApi instance using the API key from environment variable
-        DashScopeApi dashScopeApi = DashScopeApi.builder()
-                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-                .build();
-
-        // Create DashScope ChatModel instance
-        this.chatModel = DashScopeChatModel.builder()
-                .dashScopeApi(dashScopeApi)
-                .build();
-    }
+    public AgentScopeAgentDeployExample() { }
 
     /**
      * Basic example of using SaaAgent with ReactAgent
      */
-    public void basicExample() {
+    public static void basicExample() {
         try {
-            TestAgentScopeAgentAdapter agentAdapter = new TestAgentScopeAgentAdapter();
+            MyAgentScopeAgentHandler agentAdapter = new MyAgentScopeAgentHandler();
 
             agentAdapter.setStateService(new InMemoryStateService());
             agentAdapter.setSessionHistoryService(new InMemorySessionHistoryService());
             agentAdapter.setMemoryService(new InMemoryMemoryService());
 
-//            SandboxService sandboxService = new SandboxService(
-//                    new SandboxManager(ManagerConfig.builder().build())
-//            );
-//            agentAdapter.setSandboxService(sandboxService);
+            agentAdapter.setSandboxService(buidSandboxService());
 
             AgentApp agentApp = new AgentApp(agentAdapter);
             agentApp.run();
@@ -75,6 +54,18 @@ public class AgentScopeAgentDeployExample {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @NotNull
+    private static SandboxService buidSandboxService() {
+        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .containerDeployment(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(
+                new SandboxManager(managerConfig)
+        );
+        return sandboxService;
     }
 
     /**
@@ -87,10 +78,8 @@ public class AgentScopeAgentDeployExample {
             System.exit(1);
         }
 
-        AgentScopeAgentDeployExample example = new AgentScopeAgentDeployExample();
-
         try {
-            example.basicExample();
+            basicExample();
         } catch (Exception e) {
             e.printStackTrace();
         }

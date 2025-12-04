@@ -16,7 +16,7 @@
  */
 package io.agentscope.runtime.adapters.agentscope;
 
-import io.agentscope.runtime.adapters.AgentAdapter;
+import io.agentscope.runtime.adapters.AgentHandler;
 import io.agentscope.runtime.adapters.MessageAdapter;
 import io.agentscope.runtime.adapters.StreamAdapter;
 import io.agentscope.runtime.engine.schemas.AgentRequest;
@@ -43,7 +43,7 @@ import reactor.core.publisher.Flux;
  *   <li>{@link #isHealthy()} - Check health status</li>
  * </ul>
  */
-public abstract class AgentScopeAgentAdapter implements AgentAdapter {
+public abstract class AgentScopeAgentHandler implements AgentHandler {
 
     protected final StreamAdapter streamAdapter;
     protected final MessageAdapter messageAdapter;
@@ -57,7 +57,7 @@ public abstract class AgentScopeAgentAdapter implements AgentAdapter {
 
     protected SandboxService sandboxService;
 
-    AgentScopeAgentAdapter(StateService stateService, SessionHistoryService sessionHistoryService, MemoryService memoryService, SandboxService sandboxService) {
+    AgentScopeAgentHandler(StateService stateService, SessionHistoryService sessionHistoryService, MemoryService memoryService, SandboxService sandboxService) {
         this();
         this.stateService = stateService;
         this.sessionHistoryService = sessionHistoryService;
@@ -69,7 +69,7 @@ public abstract class AgentScopeAgentAdapter implements AgentAdapter {
      * Creates a new AgentScopeAgentAdapter instance.
      * Initializes the stream adapter and message adapter for AgentScope framework.
      */
-    protected AgentScopeAgentAdapter() {
+    protected AgentScopeAgentHandler() {
         this.streamAdapter = new AgentScopeStreamAdapter();
         this.messageAdapter = new AgentScopeMessageAdapter();
     }

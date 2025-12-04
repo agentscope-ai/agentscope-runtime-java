@@ -20,7 +20,7 @@ import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
 import io.a2a.spec.TransportProtocol;
 
-import io.agentscope.runtime.adapters.AgentAdapter;
+import io.agentscope.runtime.adapters.AgentHandler;
 import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.ProtocolConfig;
@@ -55,7 +55,7 @@ public class AgentCardConfiguration {
         return createAgentCard(new NetworkUtils(deployProperties), runner.getAgent(), a2aConfig);
     }
 
-    private AgentCard createAgentCard(NetworkUtils networkUtils, AgentAdapter agent, A2aProtocolConfig a2aConfig) {
+    private AgentCard createAgentCard(NetworkUtils networkUtils, AgentHandler agent, A2aProtocolConfig a2aConfig) {
         AgentCapabilities capabilities = createDefaultCapabilities();
         String dynamicUrl = StringUtils.isEmpty(a2aConfig.getUrl()) ? networkUtils.getServerUrl("/a2a/") : a2aConfig.getUrl();
         return new AgentCard.Builder().name(StringUtils.isEmpty(a2aConfig.getName()) ? agent.getName() : a2aConfig.getName())

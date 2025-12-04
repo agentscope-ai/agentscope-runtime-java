@@ -35,7 +35,7 @@ import reactor.core.publisher.Flux;
  * </ol>
  *
  */
-public interface AgentAdapter {
+public interface AgentHandler {
 
     String getName();
 
