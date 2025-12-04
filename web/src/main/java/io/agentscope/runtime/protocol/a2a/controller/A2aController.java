@@ -22,10 +22,12 @@ import io.a2a.server.ServerCallContext;
 import io.a2a.spec.*;
 import io.a2a.util.Utils;
 import io.agentscope.runtime.engine.Runner;
+import io.agentscope.runtime.protocol.ProtocolConfig;
 import io.agentscope.runtime.protocol.a2a.AgentHandlerConfiguration;
 import io.agentscope.runtime.protocol.a2a.JSONRPCHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import org.reactivestreams.FlowAdapters;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -47,8 +49,8 @@ public class A2aController {
 
     private final JSONRPCHandler jsonRpcHandler;
 
-    public A2aController(Runner runner, AgentCard agentCard) {
-        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner, agentCard).jsonrpcHandler();
+    public A2aController(Runner runner, AgentCard agentCard, ObjectProvider<ProtocolConfig> protocolConfigs) {
+        this.jsonRpcHandler = AgentHandlerConfiguration.getInstance(runner, agentCard, protocolConfigs).jsonrpcHandler();
     }
 
     @PostMapping(value = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = {MediaType.APPLICATION_JSON_VALUE,
