@@ -29,14 +29,14 @@ import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
+ * Example demonstrating how to use runtime to delegate AgentScope ReActAgent.
  */
 public class AgentScopeAgentDeployExample {
 
     public AgentScopeAgentDeployExample() { }
 
     /**
-     * Basic example of using SaaAgent with ReactAgent
+     * Basic example of using AgentScope with ReActAgent
      */
     public static void basicExample() {
         try {

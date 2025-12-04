@@ -31,7 +31,7 @@ import io.agentscope.runtime.engine.memory.service.MemoryService;
 import io.agentscope.runtime.engine.memory.service.SessionHistoryService;
 
 /**
- * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
+ * Example demonstrating how to use runtime to proxy ReActAgent and Runner to execute AgentScope agent.
  */
 public class AgentScopeDeployExample {
 
@@ -72,7 +72,7 @@ public class AgentScopeDeployExample {
 
 
     /**
-     * Basic example of using SaaAgent with ReactAgent
+     * Basic example of using AgentScope with ReActAgent
      */
     public void basicExample() {
         try {

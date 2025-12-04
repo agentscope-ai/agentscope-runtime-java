@@ -128,7 +128,7 @@ public class AgentscopeBrowserUseAgent {
             throw new RuntimeException("DASHSCOPE_API_KEY or AI_DASHSCOPE_API_KEY environment variable not set");
         }
 
-        // Create SaaAgent
+        // Create AgentScope Agent
         ReActAgent.Builder agentBuilder =
                 ReActAgent.builder()
                         .name("Assistant")

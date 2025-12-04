@@ -36,7 +36,7 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 
 /**
- * Example demonstrating how to use SaaAgent to proxy ReactAgent and Runner to execute SaaAgent
+ * Example demonstrating how to use AgentScope to proxy ReActAgent
  */
 public class AgentScopeDeployExample {
 
@@ -76,7 +76,7 @@ public class AgentScopeDeployExample {
     }
 
     /**
-     * Basic example of using SaaAgent with ReactAgent
+     * Basic example of using AgentScope with ReActAgent
      */
     public void basicExample() {
         try {
