@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Runner class that proxies calls to AgentAdapter.
  * 
- * <p>This class corresponds to the Runner class in runner.py of the Python version.
  * It acts as a proxy to AgentAdapter, managing the lifecycle and query processing.</p>
  * 
  * <p>Key responsibilities:</p>

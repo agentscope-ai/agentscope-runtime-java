@@ -21,8 +21,7 @@ import java.util.concurrent.CompletableFuture;
  * AgentScope Memory implementation based on SessionHistoryService.
  * 
  * <p>This class stores messages in an underlying SessionHistoryService instance,
- * matching the Python version's AgentScopeSessionHistoryMemory implementation.
- * 
+ *
  * <p>This adapter bridges AgentScope Java framework's Memory interface with
  * the runtime's SessionHistoryService, allowing agents to use runtime-backed
  * session storage.
@@ -92,7 +91,7 @@ public class MemoryAdapter extends StateModuleBase implements Memory {
         return service.getSession(userId, sessionId)
             .thenCompose(optionalSession -> {
                 if (optionalSession.isPresent()) {
-                    // Always reload from backend to stay in sync (matching Python version)
+                    // Always reload from backend to stay in sync
                     this.session = optionalSession.get();
                     return CompletableFuture.completedFuture(null);
                 } else {

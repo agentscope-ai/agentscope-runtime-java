@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 /**
  * Adapter for converting AgentScope Java streaming events to runtime messages.
- * This matches the Python version's adapt_agentscope_message_stream() function
  * but uses Reactor Flux<Event> instead of AsyncIterator.
  * 
  * <p>This implementation strictly follows the Python stream.py logic:

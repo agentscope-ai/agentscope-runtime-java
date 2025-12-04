@@ -28,9 +28,8 @@ import reactor.core.publisher.Flux;
  * streams. The returned stream can contain both Message and Content objects, as
  * both inherit from Event.</p>
  *
- * <p>This matches the Python implementation where adapt_agentscope_message_stream()
  * has a return type of AsyncIterator[Message] but actually yields both Message
- * and Content objects (both inherit from Event in Python).</p>
+ * and Content objects.</p>
  *
  * <p>Implementations should handle:</p>
  * <ul>

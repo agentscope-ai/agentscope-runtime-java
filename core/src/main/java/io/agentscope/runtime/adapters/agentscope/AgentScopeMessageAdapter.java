@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 /**
  * Adapter for converting between AgentScope Java messages and runtime messages.
- * This matches the Python version's agentscope/message.py logic but uses
  * the actual AgentScope Java API types.
  */
 public class AgentScopeMessageAdapter implements MessageAdapter {
@@ -25,7 +24,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
 
     /**
      * Convert AgentScope Msg(s) into one or more runtime Message objects.
-     * Matches Python's agentscope_msg_to_message() function.
      *
      * @param agentscopeMsg AgentScope Msg object or list of Msg objects
      * @return List of runtime Message objects
@@ -155,7 +153,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
 
                     if (block instanceof ToolUseBlock) {
                         ToolUseBlock toolUseBlock = (ToolUseBlock) block;
-                        // Match Python logic: if input is dict/list, use json.dumps, else use directly
                         Object input = toolUseBlock.getInput();
                         String arguments;
                         if (input instanceof Map || input instanceof List) {
@@ -199,7 +196,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
 
                     if (block instanceof ToolResultBlock) {
                         ToolResultBlock toolResultBlock = (ToolResultBlock) block;
-                        // Match Python logic: if output is dict/list, use json.dumps, else use directly
                         List<ContentBlock> outputBlocks = toolResultBlock.getOutput();
                         String outputStr;
                         if (outputBlocks == null || outputBlocks.isEmpty()) {
@@ -222,7 +218,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
                                 toolResultBlock.getName(),
                                 outputStr
                         );
-                        // Match Python's model_dump(exclude_none=True)
                         Map<String, Object> outputMap = new HashMap<>();
                         outputMap.put("call_id", outputData.getCallId());
                         if (outputData.getName() != null) {
@@ -258,7 +253,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
                             cb5.setImageUrl(((URLSource) source).getUrl());
                         } else if (source instanceof Base64Source) {
                             Base64Source base64Source = (Base64Source) source;
-                            // Match Python: default media_type is "image/jpeg"
                             String mediaType = base64Source.getMediaType();
                             if (mediaType == null || mediaType.isEmpty()) {
                                 mediaType = "image/jpeg";
@@ -353,7 +347,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
 
     /**
      * Convert runtime Message(s) to AgentScope Msg(s).
-     * Matches Python's message_to_agentscope_msg() function.
      *
      * @param messages Runtime Message(s) - single Message or List<Message>
      * @return AgentScope Msg object(s) - single Msg or List<Msg>
@@ -381,7 +374,7 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
             convertedList.add(convertOneMessage(message));
         }
 
-        // Group by original_id (matching Python logic)
+        // Group by original_id
         Map<String, Msg> grouped = new LinkedHashMap<>();
         for (int i = 0; i < msgList.size() && i < convertedList.size(); i++) {
             Message msg = msgList.get(i);
@@ -507,7 +500,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
                             output = outputStr;
                         }
 
-                        // Match Python's is_valid_block logic
                         List<ContentBlock> outputBlocks;
                         if (output instanceof List) {
                             @SuppressWarnings("unchecked")
@@ -634,7 +626,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
                                     .build();
                         }
                     } else {
-                        // Match Python's urlparse logic
                         try {
                             URI uri = new URI(data);
                             if (uri.getScheme() != null && uri.getHost() != null) {
@@ -702,7 +693,7 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
 
     /**
      * Convert Map to ContentBlock (for tool result output parsing).
-     * Matches Python's logic for converting dict to ContentBlock.
+     * Converting dict to ContentBlock.
      */
     private ContentBlock mapToContentBlock(Map<String, Object> map) {
         String type = (String) map.getOrDefault("type", "text");

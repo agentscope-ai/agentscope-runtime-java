@@ -19,8 +19,7 @@ import java.util.stream.Collectors;
 /**
  * AgentScope Long Term Memory implementation based on MemoryService.
  *
- * <p>This class stores messages in an underlying MemoryService instance,
- * matching the Python version's AgentScopeLongTermMemory implementation.
+ * <p>This class stores messages in an underlying MemoryService instance
  *
  * <p>This adapter bridges AgentScope Java framework's LongTermMemory interface
  * with the runtime's MemoryService, allowing agents to use runtime-backed
@@ -103,7 +102,6 @@ public class LongTermMemoryAdapter implements LongTermMemory {
 
     /**
      * Retrieve memory with a specified limit.
-     * This matches the Python version's retrieve method signature.
      *
      * @param msg The message to search for in the memory
      * @param limit The maximum number of memories to retrieve per search
@@ -263,7 +261,6 @@ public class LongTermMemoryAdapter implements LongTermMemory {
     /**
      * Format a list of runtime Messages as a readable string.
      * Converts Messages back to AgentScope Msg format and extracts text content,
-     * matching Python version's behavior of converting results to strings.
      *
      * @param messages List of runtime Message objects
      * @return Formatted string representation of the messages

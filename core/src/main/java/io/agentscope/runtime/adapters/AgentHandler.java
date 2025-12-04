@@ -56,15 +56,13 @@ public interface AgentHandler {
      * After this method completes, the adapter should be ready to accept queries
      * via {@link #streamQuery(AgentRequest, Object)}.</p>
      *
-     * <p>This method typically calls the init_handler if one was registered,
-     * similar to Python's Runner.start() method.</p>
+     * <p>This method typically calls the init_handler if one was registered</p>
      */
     void start();
 
     /**
      * Process an agent query and return a stream of framework-specific events.
      *
-     * <p>This method corresponds to the @app.query() decorator in Python's AgentApp.
      * It processes the agent request and returns a reactive stream of framework-specific events.</p>
      *
      * <p>The implementation should:</p>
@@ -79,8 +77,8 @@ public interface AgentHandler {
      * is called.</p>
      *
      * <p>The messages parameter contains framework-specific converted messages
-     * (e.g., List&lt;Msg&gt; for agentscope). This matches Python's behavior where
-     * converted messages are passed via kwargs: kwargs.update({"msgs": message_to_agentscope_msg(request.input)}).
+     * (e.g., List&lt;Msg&gt; for agentscope).
+     * Converted messages are passed via kwargs: kwargs.update({"msgs": message_to_agentscope_msg(request.input)}).
      * If messages is null, the adapter should use request.getInput() directly.</p>
      *
      * <p>Note: The returned stream should contain framework-specific Event objects.
@@ -109,7 +107,7 @@ public interface AgentHandler {
      * Check if the adapter is in a healthy/ready state.
      *
      * <p>An adapter is considered healthy if it has been started and is ready
-     * to process queries. This is similar to Python's Runner._health flag.</p>
+     * to process queries.</p>
      *
      * @return true if the adapter is healthy and ready, false otherwise
      */
