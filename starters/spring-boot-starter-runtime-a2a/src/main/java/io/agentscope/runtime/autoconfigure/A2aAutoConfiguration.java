@@ -48,10 +48,16 @@ public class A2aAutoConfiguration {
     }
 
     @Bean
-    public ProtocolConfig a2aProtocolConfig(A2aAgentCardProperties properties) {
-        ConfigurableAgentCard agentCard = buildAgentCard(properties);
+    public ProtocolConfig a2aProtocolConfig(A2aAgentCardProperties cardProperties, A2aCommonProperties commonProperties) {
+        ConfigurableAgentCard agentCard = buildAgentCard(cardProperties);
         A2aProtocolConfig.Builder builder = new A2aProtocolConfig.Builder()
                 .agentCard(agentCard);
+        if (null != commonProperties.getAgentCompletionTimeoutSeconds()) {
+            builder.agentCompletionTimeoutSeconds(commonProperties.getAgentCompletionTimeoutSeconds());
+        }
+        if (null != commonProperties.getConsumptionCompletionTimeoutSeconds()) {
+            builder.consumptionCompletionTimeoutSeconds(commonProperties.getConsumptionCompletionTimeoutSeconds());
+        }
         return builder.build();
     }
 
