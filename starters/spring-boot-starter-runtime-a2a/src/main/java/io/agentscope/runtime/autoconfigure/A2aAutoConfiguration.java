@@ -17,6 +17,7 @@ package io.agentscope.runtime.autoconfigure;
 
 import io.agentscope.runtime.protocol.ProtocolConfig;
 import io.agentscope.runtime.protocol.a2a.A2aProtocolConfig;
+import io.agentscope.runtime.protocol.a2a.ConfigurableAgentCard;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -47,9 +48,22 @@ public class A2aAutoConfiguration {
     }
 
     @Bean
-    public ProtocolConfig a2aProtocolConfig(A2aAgentCardProperties properties) {
-        A2aProtocolConfig.Builder builder = new A2aProtocolConfig.Builder();
-        return builder.name(properties.getName())
+    public ProtocolConfig a2aProtocolConfig(A2aAgentCardProperties cardProperties, A2aCommonProperties commonProperties) {
+        ConfigurableAgentCard agentCard = buildAgentCard(cardProperties);
+        A2aProtocolConfig.Builder builder = new A2aProtocolConfig.Builder()
+                .agentCard(agentCard);
+        if (null != commonProperties.getAgentCompletionTimeoutSeconds()) {
+            builder.agentCompletionTimeoutSeconds(commonProperties.getAgentCompletionTimeoutSeconds());
+        }
+        if (null != commonProperties.getConsumptionCompletionTimeoutSeconds()) {
+            builder.consumptionCompletionTimeoutSeconds(commonProperties.getConsumptionCompletionTimeoutSeconds());
+        }
+        return builder.build();
+    }
+
+    private ConfigurableAgentCard buildAgentCard(A2aAgentCardProperties properties) {
+        return new ConfigurableAgentCard.Builder()
+                .name(properties.getName())
                 .description(properties.getDescription())
                 .url(properties.getUrl())
                 .provider(properties.getProvider())

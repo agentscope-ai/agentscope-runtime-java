@@ -21,10 +21,10 @@ import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.*;
-import io.agentscope.runtime.engine.schemas.message.*;
-import io.agentscope.runtime.engine.schemas.agent.*;
+import io.agentscope.runtime.engine.schemas.agent.AgentRequest;
 import io.agentscope.runtime.engine.schemas.message.Event;
 import io.agentscope.runtime.engine.schemas.message.Message;
+import io.agentscope.runtime.engine.schemas.message.*;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 
@@ -49,16 +49,31 @@ public class GraphAgentExecutor implements AgentExecutor {
         this.subscriptions = new ConcurrentHashMap<>();
     }
 
-    private Task new_task(io.a2a.spec.Message request) {
-        String context_id_str = request.getContextId();
-        if (context_id_str == null || context_id_str.isEmpty()) {
-            context_id_str = UUID.randomUUID().toString();
+    @Override
+    public void execute(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
+        try {
+            AgentRequest agentRequest = buildAgentRequest(context);
+            Flux<Event> resultFlux = executeFunction.apply(agentRequest);
+            Task task = context.getTask();
+            if (task == null) {
+                task = newTask(context.getMessage());
+                logger.info("Created new task: " + task.getId());
+            } else {
+                logger.info("Using existing task: " + task.getId());
+            }
+            if (isBlockRequest(context)) {
+                processTaskBlocking(context, eventQueue, task, resultFlux);
+            } else {
+                processTaskNonBlocking(context, eventQueue, task, resultFlux);
+            }
+
+            // No memory persistence in function-only mode
+            logger.info("Agent execution completed successfully");
+
+        } catch (Exception e) {
+            logger.severe("Agent execution failed" + e.getMessage());
+            eventQueue.enqueueEvent(A2A.toAgentMessage("Agent execution failed: " + e.getMessage()));
         }
-        String id = UUID.randomUUID().toString();
-        if (request.getTaskId() != null && !request.getTaskId().isEmpty()) {
-            id = request.getTaskId();
-        }
-        return new Task(id, context_id_str, new TaskStatus(TaskState.SUBMITTED), null, List.of(request), null);
     }
 
     private AgentRequest buildAgentRequest(RequestContext context) {
@@ -76,44 +91,6 @@ public class GraphAgentExecutor implements AgentExecutor {
         return agentRequest;
     }
 
-    @Override
-    public void execute(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
-        try {
-            AgentRequest agentRequest = buildAgentRequest(context);
-            Flux<Event> resultFlux = executeFunction.apply(agentRequest);
-            Task task = context.getTask();
-            if (task == null) {
-                task = new_task(context.getMessage());
-                eventQueue.enqueueEvent(task);
-                logger.info("Created new task: " + task.getId());
-            } else {
-                logger.info("Using existing task: " + task.getId());
-            }
-            TaskUpdater taskUpdater = new TaskUpdater(context, eventQueue);
-
-            StringBuilder accumulatedOutput = new StringBuilder();
-            try {
-                logger.info("Starting streaming output processing");
-                processStreamingOutput(resultFlux, taskUpdater, accumulatedOutput);
-                logger.info("Streaming output processing completed. Total output length: " + accumulatedOutput.length());
-            } catch (Exception e) {
-                logger.severe("Error processing streaming output" + e.getMessage());
-                taskUpdater.startWork(taskUpdater.newAgentMessage(
-                        List.of(new TextPart("Error processing streaming output: " + e.getMessage())),
-                        Map.of()
-                ));
-                taskUpdater.complete();
-            }
-
-            // No memory persistence in function-only mode
-            logger.info("Agent execution completed successfully");
-
-        } catch (Exception e) {
-            logger.severe("Agent execution failed" + e.getMessage());
-            eventQueue.enqueueEvent(A2A.toAgentMessage("Agent execution failed: " + e.getMessage()));
-        }
-    }
-
     private String getUserId(io.a2a.spec.Message message) {
         if (message.getMetadata() != null && message.getMetadata().containsKey("userId")) {
             return String.valueOf(message.getMetadata().get("userId"));
@@ -126,6 +103,89 @@ public class GraphAgentExecutor implements AgentExecutor {
             return String.valueOf(message.getMetadata().get("sessionId"));
         }
         return "default_session";
+    }
+
+    private Task newTask(io.a2a.spec.Message request) {
+        String contextId = request.getContextId();
+        if (contextId == null || contextId.isEmpty()) {
+            contextId = UUID.randomUUID().toString();
+        }
+        String taskId = UUID.randomUUID().toString();
+        if (request.getTaskId() != null && !request.getTaskId().isEmpty()) {
+            taskId = request.getTaskId();
+        }
+        return new Task(taskId, contextId, new TaskStatus(TaskState.SUBMITTED), null, List.of(request), null);
+    }
+
+    private boolean isBlockRequest(RequestContext context) {
+        if (null == context.getParams()) {
+            return true;
+        }
+        if (null == context.getParams().configuration()) {
+            return true;
+        }
+        return Boolean.FALSE.equals(context.getParams().configuration().blocking());
+    }
+
+    private void processTaskBlocking(RequestContext context, EventQueue eventQueue, Task task, Flux<Event> resultFlux) {
+        StringBuilder accumulatedOutput = new StringBuilder();
+        logger.info("Starting blocking output processing");
+        resultFlux.doOnSubscribe(s -> {
+                    logger.info("Subscribed to executeFunction result stream");
+                    subscriptions.put(context.getTaskId(), s);
+                })
+                .doOnNext(output -> {
+                    try {
+                        if (output instanceof Message m) {
+                            List<Content> contents = m.getContent();
+                            if (contents != null && !contents.isEmpty() && contents.get(0) instanceof TextContent text) {
+                                String content = text.getText();
+                                accumulatedOutput.append(content);
+                                logger.info("Appended content chunk (" + content.length() + " chars), total so far: "
+                                        + accumulatedOutput.length());
+                            }
+                        }
+                    } catch (Exception ignored) {
+                    }
+                })
+                .doOnComplete(() -> {
+                    logger.info("Subscribe and process stream output completed successfully");
+                    io.a2a.spec.Message resultMessage = A2A.createAgentTextMessage(accumulatedOutput.toString(),
+                            context.getContextId(),
+                            context.getTaskId());
+                    eventQueue.enqueueEvent(resultMessage);
+                })
+                .doOnError(e -> {
+                    io.a2a.spec.Message errorMessage = A2A.createAgentTextMessage(
+                            "Subscribe and process stream output failed: " + e.getMessage(),
+                            context.getContextId(),
+                            context.getTaskId());
+                    eventQueue.enqueueEvent(errorMessage);
+                })
+                .doFinally(signal -> {
+                    logger.info("Subscribe and process stream output terminated: " + signal);
+                    subscriptions.remove(context.getTaskId());
+                })
+                .blockLast();
+    }
+
+    private void processTaskNonBlocking(RequestContext context, EventQueue eventQueue, Task task, Flux<Event> resultFlux) {
+        TaskUpdater taskUpdater = new TaskUpdater(context, eventQueue);
+        StringBuilder accumulatedOutput = new StringBuilder();
+        try {
+            eventQueue.enqueueEvent(task);
+            logger.info("Starting streaming output processing");
+            processStreamingOutput(resultFlux, taskUpdater, accumulatedOutput);
+            logger.info("Streaming output processing completed. Total output length: " + accumulatedOutput.length());
+        } catch (Exception e) {
+            logger.severe("Error processing streaming output" + e.getMessage());
+            taskUpdater.fail(taskUpdater.newAgentMessage(
+                    List.of(new TextPart("Error processing streaming output: " + e.getMessage())),
+                    Map.of()
+            ));
+        } finally {
+            taskUpdater.complete();
+        }
     }
 
     /**
@@ -152,9 +212,8 @@ public class GraphAgentExecutor implements AgentExecutor {
                                         metaData.put("type", "toolCall");
                                     } else if (m.getType() == MessageType.TOOL_RESPONSE) {
                                         metaData.put("type", "toolResponse");
-                                    }
-                                    else{
-                                        metaData.put("type","chunk");
+                                    } else {
+                                        metaData.put("type", "chunk");
                                     }
                                     if (content != null && !content.isEmpty()) {
 
@@ -176,7 +235,7 @@ public class GraphAgentExecutor implements AgentExecutor {
                         }
                     })
                     .doOnComplete(() -> {
-                        logger.info("Stream processing completed successfully");
+                        logger.info("Subscribe and process stream output completed successfully");
                         io.a2a.spec.Message finalMessage = taskUpdater.newAgentMessage(
                                 List.of(new TextPart(accumulatedOutput.toString())),
                                 Map.of("type", "final_response")
@@ -185,13 +244,13 @@ public class GraphAgentExecutor implements AgentExecutor {
                     })
                     .doOnError(e -> {
                         io.a2a.spec.Message errorMessage = taskUpdater.newAgentMessage(
-                                List.of(new TextPart("Streaming failed: " + e.getMessage())),
+                                List.of(new TextPart("Subscribe and process stream output failed: " + e.getMessage())),
                                 Map.of()
                         );
                         taskUpdater.fail(errorMessage);
                     })
                     .doFinally(signal -> {
-                        logger.info("Stream terminated: " + signal);
+                        logger.info("Subscribe and process stream output terminated: " + signal);
                         subscriptions.remove(taskUpdater.getTaskId());
                     })
                     .blockLast();

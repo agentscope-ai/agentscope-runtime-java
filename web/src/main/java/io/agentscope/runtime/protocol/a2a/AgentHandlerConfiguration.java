@@ -25,7 +25,10 @@ import io.a2a.server.tasks.InMemoryTaskStore;
 import io.a2a.server.tasks.PushNotificationConfigStore;
 import io.a2a.spec.AgentCard;
 import io.agentscope.runtime.engine.Runner;
+import io.agentscope.runtime.protocol.ProtocolConfig;
+import org.springframework.beans.factory.ObjectProvider;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.Executors;
 
 public class AgentHandlerConfiguration {
@@ -34,20 +37,22 @@ public class AgentHandlerConfiguration {
 
     private final JSONRPCHandler jsonrpcHandler;
 
-    public AgentHandlerConfiguration(Runner runner, AgentCard agentCard) {
-        this(new GraphAgentExecutor(runner::streamQuery), agentCard);
+    public AgentHandlerConfiguration(Runner runner, AgentCard agentCard, A2aProtocolConfig a2aProtocolConfig) {
+        this(new GraphAgentExecutor(runner::streamQuery), agentCard, a2aProtocolConfig);
     }
 
-    protected AgentHandlerConfiguration(AgentExecutor agentExecutor, AgentCard agentCard) {
-        this.jsonrpcHandler = new JSONRPCHandler(agentCard, requestHandler(agentExecutor));
+    protected AgentHandlerConfiguration(AgentExecutor agentExecutor, AgentCard agentCard, A2aProtocolConfig a2aProtocolConfig) {
+        this.jsonrpcHandler = new JSONRPCHandler(agentCard, requestHandler(agentExecutor, a2aProtocolConfig));
     }
 
-    public static AgentHandlerConfiguration getInstance(Runner runner, AgentCard agentCard) {
+    public static AgentHandlerConfiguration getInstance(Runner runner, AgentCard agentCard,
+                                                        ObjectProvider<ProtocolConfig> protocolConfigs) {
         AgentHandlerConfiguration inst = INSTANCE;
         if (inst == null) {
             synchronized (AgentHandlerConfiguration.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new AgentHandlerConfiguration(runner, agentCard);
+                    A2aProtocolConfig a2aProtocolConfig = A2aProtocolConfigUtils.getConfigIfAbsent(protocolConfigs);
+                    INSTANCE = new AgentHandlerConfiguration(runner, agentCard, a2aProtocolConfig);
                 }
                 inst = INSTANCE;
             }
@@ -59,10 +64,32 @@ public class AgentHandlerConfiguration {
         return this.jsonrpcHandler;
     }
 
-    public static RequestHandler requestHandler(AgentExecutor agentExecutor) {
+    public static RequestHandler requestHandler(AgentExecutor agentExecutor, A2aProtocolConfig a2aProtocolConfig) {
         PushNotificationConfigStore pushConfigStore = new InMemoryPushNotificationConfigStore();
         InMemoryTaskStore inMemoryTaskStore = new InMemoryTaskStore();
-        return new DefaultRequestHandler(agentExecutor, inMemoryTaskStore, new InMemoryQueueManager(inMemoryTaskStore),
-                pushConfigStore, new BasePushNotificationSender(pushConfigStore), Executors.newCachedThreadPool());
+        DefaultRequestHandler requestHandler = DefaultRequestHandler.create(agentExecutor, inMemoryTaskStore,
+                new InMemoryQueueManager(inMemoryTaskStore), pushConfigStore,
+                new BasePushNotificationSender(pushConfigStore), Executors.newCachedThreadPool());
+        setTimeoutProperties(requestHandler, a2aProtocolConfig);
+        return requestHandler;
+    }
+
+    /**
+     * A2A Server Request Handler don't provider configurable way to set timeout. So temp use reflection to do.
+     *
+     * <p>
+     * If no timeout property setting, the blocking A2A request will return innerError immediately.
+     * </p>
+     */
+    private static void setTimeoutProperties(DefaultRequestHandler requestHandler, A2aProtocolConfig a2aProtocolConfig) {
+        try {
+            Field field = DefaultRequestHandler.class.getDeclaredField("agentCompletionTimeoutSeconds");
+            field.setAccessible(true);
+            field.set(requestHandler, a2aProtocolConfig.getAgentCompletionTimeoutSeconds());
+            field = DefaultRequestHandler.class.getDeclaredField("consumptionCompletionTimeoutSeconds");
+            field.setAccessible(true);
+            field.set(requestHandler, a2aProtocolConfig.getConsumptionCompletionTimeoutSeconds());
+        } catch (Exception ignored) {
+        }
     }
 }

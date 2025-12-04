@@ -22,7 +22,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(Constants.A2A_SERVER_PREFIX)
 public class A2aCommonProperties {
+
     private String endpointName;
+
+    private Integer agentCompletionTimeoutSeconds;
+
+    private Integer consumptionCompletionTimeoutSeconds;
 
     public A2aCommonProperties() {
     }
@@ -33,5 +38,21 @@ public class A2aCommonProperties {
 
     void setEndpointName(String endpointName) {
         this.endpointName = endpointName;
+    }
+
+    public Integer getAgentCompletionTimeoutSeconds() {
+        return agentCompletionTimeoutSeconds;
+    }
+
+    public void setAgentCompletionTimeoutSeconds(Integer agentCompletionTimeoutSeconds) {
+        this.agentCompletionTimeoutSeconds = agentCompletionTimeoutSeconds;
+    }
+
+    public Integer getConsumptionCompletionTimeoutSeconds() {
+        return consumptionCompletionTimeoutSeconds;
+    }
+
+    public void setConsumptionCompletionTimeoutSeconds(Integer consumptionCompletionTimeoutSeconds) {
+        this.consumptionCompletionTimeoutSeconds = consumptionCompletionTimeoutSeconds;
     }
 }
