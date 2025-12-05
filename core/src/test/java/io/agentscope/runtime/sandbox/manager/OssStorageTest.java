@@ -23,6 +23,7 @@ import io.agentscope.runtime.sandbox.manager.model.fs.OssConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -45,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - OSS_ACCESS_KEY_SECRET: OSS access key secret
  * - OSS_BUCKET_NAME: OSS bucket name
  */
+@EnabledIfEnvironmentVariable(named = "OSS_ENDPOINT", matches = ".+")
 public class OssStorageTest {
 
     private String ossEndpoint;
