@@ -88,6 +88,7 @@ public class ContainerPoolTest {
 
         // Create manager - this will automatically initialize the pool
         manager = new SandboxManager(config);
+        manager.start();
 
         assertNotNull(manager, "SandboxManager should be created successfully");
         
@@ -113,6 +114,7 @@ public class ContainerPoolTest {
                 .build();
 
         manager = new SandboxManager(config);
+        manager.start();
         assertNotNull(manager, "SandboxManager should be created successfully");
 
         // Define sessionIDs
@@ -167,6 +169,7 @@ public class ContainerPoolTest {
                 .build();
 
         manager = new SandboxManager(config);
+        manager.start();
         assertNotNull(manager, "SandboxManager should be created successfully");
 
         // Define sessionIDs

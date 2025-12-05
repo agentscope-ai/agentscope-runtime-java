@@ -54,6 +54,7 @@ public class DockerLifecycleTest {
                     .containerDeployment(clientConfig)
                     .build();
             sandboxManager = new SandboxManager(config);
+            sandboxManager.start();
             System.out.println("Docker SandboxManager initialized successfully");
         } catch (Exception e) {
             System.err.println("Failed to initialize Docker SandboxManager: " + e.getMessage());

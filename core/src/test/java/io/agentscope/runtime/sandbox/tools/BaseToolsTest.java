@@ -40,6 +40,7 @@ public class BaseToolsTest {
                     .containerDeployment(clientConfig)
                     .build();
             sandboxManager = new SandboxManager(config);
+            sandboxManager.start();
             sandbox = new BaseSandbox(sandboxManager, "test-user", "test-session");
             System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {

@@ -41,6 +41,7 @@ public class BrowserToolsTest{
                     .containerDeployment(clientConfig)
                     .build();
             sandboxManager = new SandboxManager(config);
+            sandboxManager.start();
             sandbox = new BrowserSandbox(sandboxManager, "test-user", "test-session");
             System.out.println("SandboxManager initialized successfully");
         } catch (Exception e) {

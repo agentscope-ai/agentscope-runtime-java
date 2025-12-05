@@ -77,6 +77,7 @@ public class RedisSandboxManagerTest {
                 .build();
         
         try (SandboxManager manager = new SandboxManager(config)) {
+            manager.start();
             assertNotNull(manager, "SandboxManager should be initialized");
             
             ContainerModel container = manager.getSandbox(

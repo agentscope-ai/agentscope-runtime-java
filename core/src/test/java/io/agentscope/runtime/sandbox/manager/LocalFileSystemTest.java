@@ -115,6 +115,7 @@ public class LocalFileSystemTest {
 
             // 4. Create SandboxManager
             manager = new SandboxManager(config);
+            manager.start();
             System.out.println("\nSandboxManager with local file system storage created successfully");
 
             // 5. Create container (will copy data from local storage)
