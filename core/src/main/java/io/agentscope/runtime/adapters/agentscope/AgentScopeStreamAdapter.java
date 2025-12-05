@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * Adapter for converting AgentScope Java streaming events to runtime messages.
  * but uses Reactor Flux<Event> instead of AsyncIterator.
  * 
- * <p>This implementation strictly follows the Python stream.py logic:
+ * <p>This implementation strictly follows the following logic:
  * <ul>
  *   <li>Maintains state across streaming events (msg_id, truncate memory, tool dict, etc.)</li>
  *   <li>Handles incremental text updates with deduplication (removeprefix logic)</li>
@@ -48,11 +48,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
     
     /**
      * Adapts AgentScope Java Flux<Event> stream to runtime Event stream.
-     * Matches Python's adapt_agentscope_message_stream() function logic.
-     * 
-     * <p>Note: Python's function signature is AsyncIterator[Message], but it actually
-     * yields both Message and Content objects (both inherit from Event). This Java
-     * implementation correctly returns Flux<Event> to match the actual behavior.</p>
      * 
      * @param sourceStream Flux of AgentScope Event objects (EventType, Msg, isLast)
      * @return Flux of runtime Event objects (Message or Content)
@@ -72,7 +67,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
     
     /**
      * Async version using Flux for better reactive support.
-     * This matches Python's adapt_agentscope_message_stream() function logic exactly.
      * 
      * <p>Key features:
      * <ul>
@@ -80,7 +74,7 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
      *   <li>Incremental text processing with deduplication</li>
      *   <li>Staged tool_use message building</li>
      *   <li>Support for all content block types</li>
-     *   <li>Yields both Message and Content objects (matching Python behavior)</li>
+     *   <li>Yields both Message and Content objects</li>
      * </ul>
      * 
      * @param sourceStream Flux of AgentScope framework Event objects (io.agentscope.core.agent.Event)
@@ -108,7 +102,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
                     })
                     .concatWith(Flux.defer(() -> {
                         // Handle last_content if any (final processing)
-                        // This matches Python's final if last_content block
                         if (state.lastContent != null && !state.lastContent.isEmpty()) {
                             List<Event> finalEvents = new ArrayList<>();
                             
@@ -120,7 +113,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
                             
                             TextContent textDeltaContent = new TextContent(true, state.index, state.lastContent);
                             textDeltaContent = (TextContent) state.message.addDeltaContent(textDeltaContent);
-                            // In Python, we yield textDeltaContent directly
                             finalEvents.add(textDeltaContent);
                             
                             updateMessageAttrs(state.message, state.metadata, state.usage);
@@ -134,22 +126,20 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
     }
     
     /**
-     * Process message content blocks, matching Python logic exactly.
-     * Returns both Message and Content objects, matching Python's behavior where
-     * both Message and Content (which inherit from Event) are yielded.
+     * Process message content blocks.
+     * Returns both Message and Content objects.
      */
     private List<Event> processMessageContent(Msg msg, boolean last, StreamState state) {
         List<Event> results = new ArrayList<>();
         List<ContentBlock> content = msg.getContent();
         
         // Handle string content (shouldn't happen with AgentScope Java API, but handle for compatibility)
-        // In Python: if isinstance(content, str): last_content = content
-        // In Java, content is always List<ContentBlock>, but we check for empty
+        // Content is always List<ContentBlock>, but we check for empty
         if (content == null || content.isEmpty()) {
             return results;
         }
         
-        // Separate tool_use blocks from other blocks (matching Python logic)
+        // Separate tool_use blocks from other blocks
         List<ContentBlock> newBlocks = new ArrayList<>();
         List<ContentBlock> newToolBlocks = new ArrayList<>();
         
@@ -181,8 +171,7 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         state.usage = null; // Usage not available in AgentScope Java Msg
         
         // Process each block
-        // In Python, there's also handling for string elements in content list
-        // But in Java, content is always List<ContentBlock>, so we process blocks directly
+        // Content is always List<ContentBlock>, so we process blocks directly
         for (ContentBlock element : blocksToProcess) {
             if (element instanceof TextBlock) {
                 processTextBlock((TextBlock) element, last, state, results);
@@ -232,7 +221,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         state.index = textDeltaContent.getIndex();
         
         // Only yield valid text
-        // In Python, we yield textDeltaContent directly - match this behavior
         if (textDeltaContent.getText() != null && !textDeltaContent.getText().isEmpty()) {
             results.add(textDeltaContent);
         }
@@ -244,7 +232,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
                 if (completedContent instanceof TextContent) {
                     TextContent textContent = (TextContent) completedContent;
                     if (textContent.getText() != null && !textContent.getText().isEmpty()) {
-                        // In Python, we yield completedContent.completed() directly
                         results.add(completedContent.completed());
                     }
                 }
@@ -287,7 +274,7 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         state.index = textDeltaContent.getIndex();
         
         // Only yield valid text
-        // In Python, we yield textDeltaContent directly - match this behavior
+        // Return textDeltaContent directly
         if (textDeltaContent.getText() != null && !textDeltaContent.getText().isEmpty()) {
             results.add(textDeltaContent);
         }
@@ -299,7 +286,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
                 if (completedContent instanceof TextContent) {
                     TextContent textContent = (TextContent) completedContent;
                     if (textContent.getText() != null && !textContent.getText().isEmpty()) {
-                        // In Python, we yield completedContent.completed() directly
                         results.add(completedContent.completed());
                     }
                 }
@@ -356,7 +342,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
             dataDeltaContent.setData(callData);
             
             dataDeltaContent = (DataContent) pluginCallMessage.addDeltaContent(dataDeltaContent);
-            // In Python, we yield dataDeltaContent.completed() directly
             results.add(dataDeltaContent.completed());
             
             updateMessageAttrs(pluginCallMessage, state.metadata, state.usage);
@@ -389,7 +374,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
                 results.add(pluginCallMessage.inProgress());
                 
                 dataDeltaContent = (DataContent) pluginCallMessage.addDeltaContent(dataDeltaContent);
-                // In Python, we yield dataDeltaContent directly
                 results.add(dataDeltaContent);
                 
                 state.toolUseMessagesDict.put(callId, pluginCallMessage);
@@ -401,7 +385,7 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
      * Process tool_result block.
      */
     private void processToolResultBlock(ToolResultBlock block, StreamState state, List<Event> results) {
-        // Serialize output to JSON (matching Python's ensure_ascii=False behavior)
+        // Serialize output to JSON
         String jsonStr;
         try {
             // Convert output blocks to JSON
@@ -482,7 +466,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         
         deltaContent = (ImageContent) state.message.addDeltaContent(deltaContent);
         state.index = deltaContent.getIndex();
-        // In Python, we yield deltaContent directly
         results.add(deltaContent);
     }
     
@@ -528,7 +511,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         
         deltaContent = (AudioContent) state.message.addDeltaContent(deltaContent);
         state.index = deltaContent.getIndex();
-        // In Python, we yield deltaContent directly
         results.add(deltaContent);
     }
     
@@ -547,7 +529,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         TextContent deltaContent = new TextContent(true, state.index, block.toString());
         deltaContent = (TextContent) state.message.addDeltaContent(deltaContent);
         state.index = deltaContent.getIndex();
-        // In Python, we yield deltaContent directly
         results.add(deltaContent);
     }
     
@@ -564,7 +545,7 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
     }
     
     /**
-     * Remove prefix from string (Java equivalent of Python's removeprefix).
+     * Remove prefix from string
      */
     private String removePrefix(String str, String prefix) {
         if (prefix == null || prefix.isEmpty() || !str.startsWith(prefix)) {

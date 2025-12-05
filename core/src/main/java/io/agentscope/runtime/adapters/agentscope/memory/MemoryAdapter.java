@@ -138,7 +138,6 @@ public class MemoryAdapter extends StateModuleBase implements Memory {
     @Override
     public List<Msg> getMessages() {
         // Ensure session exists and reload from backend for sync purposes
-        // (matching Python version's behavior of always reloading)
         ensureSession().join();
         
         if (session == null) {

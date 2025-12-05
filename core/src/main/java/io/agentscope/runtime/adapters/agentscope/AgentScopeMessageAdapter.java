@@ -507,7 +507,7 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
                         String toolName = (String) data.get("name");
                         String outputStr = (String) data.get("output");
 
-                        // Parse output - match Python's logic with is_valid_block check
+                        // Parse output
                         Object output;
                         try {
                             output = objectMapper.readValue(outputStr, Object.class);
@@ -680,7 +680,6 @@ public class AgentScopeMessageAdapter implements MessageAdapter {
 
     /**
      * Check if an object matches a valid ContentBlock structure.
-     * Matches Python's matches_typed_dict_structure logic.
      */
     private boolean isValidBlock(Object obj) {
         if (!(obj instanceof Map)) {

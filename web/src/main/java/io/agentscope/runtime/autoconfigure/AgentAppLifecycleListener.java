@@ -28,11 +28,10 @@ import org.springframework.lang.NonNull;
 /**
  * Spring Boot lifecycle listener for Runner.
  * 
- * <p>This class corresponds to the lifespan manager in Python's FastAPIAppFactory.
  * It handles application startup and shutdown lifecycle events, calling the
  * registered lifecycle handlers in Runner.</p>
  * 
- * <p>Lifecycle flow (corresponds to Python's FastAPI lifespan):</p>
+ * <p>Lifecycle flow:</p>
  * <ol>
  *   <li>On startup (ContextRefreshedEvent):
  *     <ul>
@@ -74,8 +73,7 @@ public class AgentAppLifecycleListener implements
     /**
      * Handle application startup event.
      * 
-     * <p>This corresponds to the startup phase in Python's FastAPI lifespan manager.
-     * It calls before_start callback and init_handler, then initializes and starts the runner.</p>
+     * <p>It calls before_start callback and init_handler, then initializes and starts the runner.</p>
      * 
      * @param event the context refreshed event
      */
@@ -100,7 +98,6 @@ public class AgentAppLifecycleListener implements
             logger.info("[AgentAppLifecycleListener] Starting Runner lifecycle...");
             
             // Initialize and start the runner (this will call init_handler if registered)
-            // Corresponds to Python's runner.__aenter__() and init_handler call
             logger.debug("[AgentAppLifecycleListener] Initializing and starting runner");
             try {
                 runner.init();
@@ -123,7 +120,6 @@ public class AgentAppLifecycleListener implements
 /**
  * Separate listener for application shutdown events.
  * 
- * <p>This corresponds to the shutdown phase in Python's FastAPI lifespan manager.</p>
  */
 @Component
 class AgentAppShutdownListener implements ApplicationListener<ContextClosedEvent> {
@@ -145,8 +141,7 @@ class AgentAppShutdownListener implements ApplicationListener<ContextClosedEvent
     /**
      * Handle application shutdown event.
      * 
-     * <p>This corresponds to the shutdown phase in Python's FastAPI lifespan manager.
-     * It stops the runner, calls shutdown_handler, and then calls after_finish callback.</p>
+     * <p>It stops the runner, calls shutdown_handler, and then calls after_finish callback.</p>
      * 
      * @param event the context closed event
      */
@@ -164,7 +159,7 @@ class AgentAppShutdownListener implements ApplicationListener<ContextClosedEvent
         try {
             logger.info("[AgentAppShutdownListener] Shutting down Runner...");
             
-            // Stop the runner first (corresponds to Python's runner.__aexit__())
+            // Stop the runner first
             try {
                 runner.stop();
                 runner.shutdown();

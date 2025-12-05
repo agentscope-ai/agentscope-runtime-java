@@ -78,8 +78,7 @@ public class Runner {
     /**
      * Start the runner by calling the adapter's start method.
      * 
-     * <p>This method corresponds to Runner.start() in the Python version.
-     * After this method completes, the runner is ready to process queries.</p>
+     * <p>After this method completes, the runner is ready to process queries.</p>
      * 
      * @return a CompletableFuture that completes when the runner is started
      */
@@ -91,10 +90,6 @@ public class Runner {
     
     /**
      * Stop the runner by calling the adapter's stop method.
-     * 
-     * <p>This method corresponds to Runner.stop() in the Python version.</p>
-     * 
-     * @return a CompletableFuture that completes when the runner is stopped
      */
     public void stop() {
         adapter.stop();
@@ -104,9 +99,7 @@ public class Runner {
     
     /**
      * Shutdown the runner by calling the adapter's shutdown method.
-     * 
-     * <p>This method corresponds to Runner.stop() calling shutdown_handler in the Python version.</p>
-     * 
+     *
      * @return a CompletableFuture that completes when shutdown is done
      */
     public void shutdown() {
@@ -117,10 +110,9 @@ public class Runner {
     /**
      * Stream query by delegating to the adapter.
      * 
-     * <p>This method corresponds to Runner.stream_query() in the Python version.
-     * It processes the agent request and returns a reactive stream of events with sequence numbers.</p>
+     * <p>This method processes the agent request and returns a reactive stream of events with sequence numbers.</p>
      * 
-     * <p>The implementation follows the Python version's logic:</p>
+     * <p>The implementation follows the following logic:</p>
      * <ol>
      *   <li>Check framework type is allowed</li>
      *   <li>Check runner health status</li>
@@ -174,7 +166,7 @@ public class Runner {
         AtomicBoolean hasError = new AtomicBoolean(false);
         
         // Get MessageAdapter and StreamAdapter from adapter
-        // This matches Python version's logic where adapters are selected based on framework_type
+        // Adapters are selected based on framework_type
         MessageAdapter messageAdapter = adapter.getMessageAdapter();
         StreamAdapter streamAdapter = adapter.getStreamAdapter();
         
@@ -210,28 +202,26 @@ public class Runner {
                 }
             })
             .onErrorResume(throwable -> {
-                // Handle errors similar to Python version
-                // In Python version, error handling yields failed response and returns immediately
                 hasError.set(true);
                 logger.error("Error happens in `query_handler`: {}", throwable.getMessage(), throwable);
                 Error error = new Error();
                 error.setCode("500");
                 error.setMessage("Error happens in `query_handler`: " + throwable.getMessage());
-                // Return only the failed response, matching Python version's return after yield
+                // Return only the failed response
                 return Flux.just(withSequenceNumber(response.failed(error)));
             });
         
         // Combine initial events with adapter stream, then complete with final response
-        // This matches Python version's flow: initial -> in_progress -> stream -> completed
+        // This matches flow: initial -> in_progress -> stream -> completed
         return Flux.concat(
             initialResponse,
             inProgressResponse,
             adapterStream
         ).concatWith(
             // Only execute if stream completed successfully (no error)
-            // This matches Python version's logic: if error occurred, return immediately (no further processing)
+            // This matches the logic: if error occurred, return immediately (no further processing)
             Flux.defer(() -> {
-                // If error occurred, don't process further (matches Python version's return)
+                // If error occurred, don't process further
                 if (hasError.get() || RunStatus.FAILED.equals(response.getStatus())) {
                     return Flux.empty();
                 }
@@ -245,7 +235,7 @@ public class Runner {
                         }
                     }
                 } catch (IndexOutOfBoundsException e) {
-                    // Avoid empty message error (corresponds to Python version's IndexError handling)
+                    // Avoid empty message error
                     logger.debug("Could not extract usage: {}", e.getMessage());
                 }
                 

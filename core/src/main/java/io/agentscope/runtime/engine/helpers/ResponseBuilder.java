@@ -21,7 +21,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 /**
- * Response Builder - matches Python version's ResponseBuilder class.
+ * Response Builder.
  * Responsible for building and managing AgentResponse objects,
  * coordinating MessageBuilder work.
  */
@@ -164,8 +164,7 @@ public class ResponseBuilder {
     
     /**
      * Generate complete streaming response sequence.
-     * Matches Python's generate_streaming_response method.
-     * 
+     *
      * @param textTokens Text fragment list
      * @param role Message role, defaults to assistant
      * @return Stream of response objects generated in order
@@ -211,7 +210,6 @@ public class ResponseBuilder {
     }
     
     /**
-     * Message Builder - matches Python version's MessageBuilder class.
      * Responsible for building and managing individual Message objects
      * and updating associated Response.
      */
@@ -301,7 +299,6 @@ public class ResponseBuilder {
     }
     
     /**
-     * Content Builder - matches Python version's ContentBuilder class.
      * Responsible for building and managing individual Content objects,
      * supporting Text, Image, and Data content types.
      */

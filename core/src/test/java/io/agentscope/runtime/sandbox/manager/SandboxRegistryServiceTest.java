@@ -79,7 +79,7 @@ public class SandboxRegistryServiceTest {
         String customTypeName = "test_custom_sandbox_" + System.currentTimeMillis();
         String customImage = "testcompany/custom-sandbox:latest";
 
-        // Register custom sandbox type (similar to Python's decorator registration)
+        // Register custom sandbox type
         SandboxRegistryService.registerCustomType(customTypeName, customImage);
 
         // Retrieve custom type configuration
@@ -120,7 +120,7 @@ public class SandboxRegistryServiceTest {
         Map<String, Object> runtimeConfig = new HashMap<>();
         runtimeConfig.put("shm_size", "512m");
 
-        // Register with full configuration (similar to Python's full registration)
+        // Register with full configuration
         SandboxRegistryService.registerCustomType(
             customTypeName,
             "testcompany/advanced-sandbox:v1.0",

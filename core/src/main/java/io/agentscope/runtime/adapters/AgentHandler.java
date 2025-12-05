@@ -43,7 +43,7 @@ public interface AgentHandler {
     /**
      * Get the framework type this adapter supports.
      *
-     * <p>Supported framework types: "agentscope", "autogen", "agno", "langgraph"</p>
+     * <p>Supported framework types: "AgentScope", "Spring Ai Alibaba", "Langchain4j"</p>
      *
      * @return the framework type string
      */
@@ -133,8 +133,7 @@ public interface AgentHandler {
      * Get the MessageAdapter implementation for this framework adapter.
      *
      * <p>This method returns a MessageAdapter instance that can convert between framework-specific
-     * message formats and runtime Message objects. This corresponds to Python version's message
-     * adapter functions (e.g., message_to_agentscope_msg for agentscope).</p>
+     * message formats and runtime Message objects.</p>
      *
      * <p>The MessageAdapter provides:</p>
      * <ul>

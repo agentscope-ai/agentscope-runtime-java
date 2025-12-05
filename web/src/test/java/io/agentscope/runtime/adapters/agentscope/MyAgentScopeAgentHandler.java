@@ -39,7 +39,7 @@ import reactor.core.publisher.Flux;
 /**
  * Test implementation of AgentScopeAgentAdapter.
  *
- * <p>This implementation follows the Python version's query_func logic:
+ * <p>This implementation follows the following logic:
  * <ul>
  *   <li>Exports state from StateService</li>
  *   <li>Creates ReActAgent with MemoryAdapter and Toolkit</li>
@@ -81,7 +81,6 @@ public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
 			if (sandboxService != null) {
 				try {
 					// Create a BaseSandbox instance for this session
-					// This matches Python version where sandbox is created per session
 					Sandbox sandbox = sandboxService.connect(userId, sessionId, BaseSandbox.class);
 
 					// Register Python code execution tool (matching Python: execute_python_code)

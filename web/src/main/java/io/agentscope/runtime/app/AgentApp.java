@@ -33,8 +33,7 @@ import org.slf4j.LoggerFactory;
 /**
  * AgentApp class represents an application that runs as an agent.
  * 
- * <p>This class corresponds to the AgentApp class in agent_app.py of the Python version.
- * It serves as the server startup entry point for starting Spring Boot Server,
+ * <p>This class serves as the server startup entry point for starting Spring Boot Server,
  * assembling configuration and components (Controller/Endpoint, etc.), and
  * initializing Runner (which proxies AgentAdapter).</p>
  * 
@@ -156,8 +155,7 @@ public class AgentApp {
     /**
      * Build the Runner instance by proxying the AgentAdapter.
      * 
-     * <p>This method corresponds to _build_runner() in the Python version.
-     * It creates a Runner instance that proxies calls to the AgentAdapter.</p>
+     * <p>This method creates a Runner instance that proxies calls to the AgentAdapter.</p>
      * 
      * @return this AgentApp instance for method chaining
      */
@@ -182,8 +180,7 @@ public class AgentApp {
     /**
      * Register a query handler with optional framework type.
      * 
-     * <p>This method corresponds to the @app.query(framework="agentscope") decorator 
-     * in Python's AgentApp. The handler will be called to process agent queries.</p>
+     * <p>The handler will be called to process agent queries.</p>
      * 
      * <p>Supported framework types: "agentscope", "saa"</p>
      * 
@@ -196,7 +193,7 @@ public class AgentApp {
      * });
      * }</pre>
      * 
-     * @param framework the framework type (must be one of: agentscope, autogen, agno, langgraph)
+     * @param framework the framework type (must be one of: agentscope, saa, langchain4j)
      * @param handler the query handler function that takes a request map and returns a response
      * @return this AgentApp instance for method chaining
      * @throws IllegalArgumentException if framework type is not supported
@@ -206,7 +203,7 @@ public class AgentApp {
             framework = "agentscope"; // Default framework
         }
         
-        // Validate framework type (corresponds to Python's allowed_frameworks check)
+        // Validate framework type
         List<String> allowedFrameworks = Arrays.asList("agentscope", "saa");
         if (!allowedFrameworks.contains(framework.toLowerCase())) {
             throw new IllegalArgumentException(
@@ -230,8 +227,7 @@ public class AgentApp {
     /**
      * Initialize the application by initializing the adapter.
      * 
-     * <p>This method corresponds to calling init_handler in the Python version.
-     * It will call the registered init handler if one exists.</p>
+     * <p>This method will call the registered init handler if one exists.</p>
      * 
      * @return a CompletableFuture that completes when initialization is done
      */
@@ -309,10 +305,7 @@ public class AgentApp {
     /**
      * Shutdown the application by shutting down the runner.
      * 
-     * <p>This method will call the registered shutdown handler if one exists,
-     * corresponding to Python's shutdown_handler call.</p>
-     * 
-     * @return a CompletableFuture that completes when shutdown is done
+     * <p>This method will call the registered shutdown handler if one exists</p>
      */
     public void shutdown() {
         if (runner != null) {
