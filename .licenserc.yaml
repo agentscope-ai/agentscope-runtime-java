@@ -48,6 +48,8 @@ header:
     - '**/*.ftl'
     - '**/*.tpl'
     - '**/*.xml'
+    - '**/*.yaml'
+    - '**/*.yml'
     - '**/*.factories'
     - '**/*.handlers'
     - '**/*.schemas'
