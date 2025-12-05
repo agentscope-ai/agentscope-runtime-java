@@ -20,6 +20,7 @@ import io.a2a.spec.AgentCapabilities;
 import io.a2a.spec.AgentCard;
 import io.a2a.spec.TransportProtocol;
 
+import io.agentscope.runtime.adapters.AgentHandler;
 import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.ProtocolConfig;

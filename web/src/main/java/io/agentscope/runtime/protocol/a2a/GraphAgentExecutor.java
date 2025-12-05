@@ -65,7 +65,7 @@ public class GraphAgentExecutor implements AgentExecutor {
     public void execute(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
         try {
             AgentRequest agentRequest = buildAgentRequest(context);
-            Flux<Event> resultFlux = executeFunction.apply(agentRequest);
+            Flux<Event> resultFlux = runner.streamQuery(agentRequest);
             Task task = context.getTask();
             if (task == null) {
                 task = newTask(context.getMessage());
