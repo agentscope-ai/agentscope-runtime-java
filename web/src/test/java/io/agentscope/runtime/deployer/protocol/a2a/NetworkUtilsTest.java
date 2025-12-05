@@ -17,31 +17,31 @@
 package io.agentscope.runtime.deployer.protocol.a2a;
 
 import io.agentscope.runtime.protocol.a2a.NetworkUtils;
-
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 
 public class NetworkUtilsTest {
 
-    @Test
-    @DisplayName("Test getServerIpAddress method")
-    public void testGetServerIpAddress() {
-        NetworkUtils networkUtils = new NetworkUtils(8080, null);
+	@Test
+	@DisplayName("Test getServerIpAddress method")
+	public void testGetServerIpAddress() {
+		NetworkUtils networkUtils = new NetworkUtils(8080, null);
 
 
-        String ipAddress = networkUtils.getServerIpAddress();
+		String ipAddress = networkUtils.getServerIpAddress();
 
-        assertNotNull(ipAddress);
-        assertFalse(ipAddress.isEmpty());
+		assertNotNull(ipAddress);
+		assertFalse(ipAddress.isEmpty());
 
-        for (int i = 0 ; i < 100 ; i ++) {
-            // The IP address should be consistent
-            assertEquals(ipAddress, networkUtils.getServerIpAddress());
-        }
+		for (int i = 0; i < 100; i++) {
+			// The IP address should be consistent
+			assertEquals(ipAddress, networkUtils.getServerIpAddress());
+		}
 
-    }
+	}
 }

@@ -33,55 +33,58 @@ import org.jetbrains.annotations.NotNull;
  */
 public class AgentScopeAgentDeployExample {
 
-    public AgentScopeAgentDeployExample() { }
+	public AgentScopeAgentDeployExample() {
+	}
 
-    /**
-     * Basic example of using AgentScope with ReActAgent
-     */
-    public static void basicExample() {
-        try {
-            MyAgentScopeAgentHandler agentAdapter = new MyAgentScopeAgentHandler();
+	/**
+	 * Basic example of using AgentScope with ReActAgent
+	 */
+	public static void basicExample() {
+		try {
+			MyAgentScopeAgentHandler agentAdapter = new MyAgentScopeAgentHandler();
 
-            agentAdapter.setStateService(new InMemoryStateService());
-            agentAdapter.setSessionHistoryService(new InMemorySessionHistoryService());
-            agentAdapter.setMemoryService(new InMemoryMemoryService());
+			agentAdapter.setStateService(new InMemoryStateService());
+			agentAdapter.setSessionHistoryService(new InMemorySessionHistoryService());
+			agentAdapter.setMemoryService(new InMemoryMemoryService());
 
-            agentAdapter.setSandboxService(buidSandboxService());
+			agentAdapter.setSandboxService(buidSandboxService());
 
-            AgentApp agentApp = new AgentApp(agentAdapter);
-            agentApp.run();
+			AgentApp agentApp = new AgentApp(agentAdapter);
+			agentApp.run();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
-    @NotNull
-    private static SandboxService buidSandboxService() {
-        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
-        ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
-                .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
-        return sandboxService;
-    }
+	@NotNull
+	private static SandboxService buidSandboxService() {
+		BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+		ManagerConfig managerConfig = ManagerConfig.builder()
+				.containerDeployment(clientConfig)
+				.build();
+		SandboxService sandboxService = new SandboxService(
+				new SandboxManager(managerConfig)
+		);
+		return sandboxService;
+	}
 
-    /**
-     * Main method to run all examples
-     */
-    public static void main(String[] args) {
-        // Check if API key is set
-        if (System.getenv("AI_DASHSCOPE_API_KEY") == null) {
-            System.err.println("Please set the AI_DASHSCOPE_API_KEY environment variable");
-            System.exit(1);
-        }
+	/**
+	 * Main method to run all examples
+	 */
+	public static void main(String[] args) {
+		// Check if API key is set
+		if (System.getenv("AI_DASHSCOPE_API_KEY") == null) {
+			System.err.println("Please set the AI_DASHSCOPE_API_KEY environment variable");
+			System.exit(1);
+		}
 
-        try {
-            basicExample();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+		try {
+			basicExample();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 }
