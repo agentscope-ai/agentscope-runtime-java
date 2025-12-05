@@ -15,76 +15,187 @@ This guide walks through the end-to-end workflow for running the sample projects
 
 ---
 
-## Step 1 – Initialize the Runtime Context Manager
+## Step 1 – Create AgentScope Agent
 
-AgentScope Runtime Java ships with an in-memory implementation of the context manager services. The snippet below shows how to bootstrap the context manager and start its dependent services.
+Create a custom agent handler by extending `AgentScopeAgentHandler`. This handler will manage the agent lifecycle, including state management, memory, and tool registration.
+
+### 1.1 Create Agent By Extending AgentScopeAgentHandler
 
 ```java
-private void initializeContextManager() {
-    try {
-        SessionHistoryService sessionHistoryService = new InMemorySessionHistoryService();
-        MemoryService memoryService = new InMemoryMemoryService();
-        this.contextManager = new ContextManager(
-            ContextComposer.class,
-            sessionHistoryService,
-            memoryService
-        );
+public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
 
-        sessionHistoryService.start().get();
-        memoryService.start().get();
-        this.contextManager.start().get();
+    @Override
+    public Flux<io.agentscope.core.agent.Event> streamQuery(AgentRequest request, Object messages) {
+        String sessionId = request.getSessionId();
+        String userId = request.getUserId();
 
-        System.out.println("ContextManager and its services initialized successfully");
-    } catch (Exception e) {
-        System.err.println("Failed to initialize ContextManager services: " + e.getMessage());
-        throw new RuntimeException("ContextManager initialization failed", e);
+        try {
+            // Export state from StateService
+            Map<String, Object> state = null;
+            if (stateService != null) {
+                try {
+                    state = stateService.exportState(userId, sessionId, null).join();
+                } catch (Exception e) {
+                    logger.warn("Failed to export state: {}", e.getMessage());
+                }
+            }
+
+            // Create Toolkit and register tools
+            Toolkit toolkit = new Toolkit();
+
+            if (sandboxService != null) {
+                try {
+                    Sandbox sandbox = sandboxService.connect(userId, sessionId, BaseSandbox.class);
+                    toolkit.registerTool(ToolkitInit.RunPythonCodeTool(sandbox));
+                } catch (Exception e) {
+                    logger.warn("Failed to create sandbox or register tools: {}", e.getMessage());
+                }
+            }
+
+            // Create MemoryAdapter for session history
+            MemoryAdapter memory = null;
+            if (sessionHistoryService != null) {
+                memory = new MemoryAdapter(sessionHistoryService, userId, sessionId);
+            }
+
+            // Create LongTermMemoryAdapter
+            LongTermMemoryAdapter longTermMemory = null;
+            if (memoryService != null) {
+                longTermMemory = new LongTermMemoryAdapter(memoryService, userId, sessionId);
+            }
+
+            // Create ReActAgent
+            ReActAgent.Builder agentBuilder = ReActAgent.builder()
+                    .name("Friday")
+                    .sysPrompt("You're a helpful assistant named Friday.")
+                    .toolkit(toolkit)
+                    .model(DashScopeChatModel.builder()
+                            .apiKey(apiKey)
+                            .modelName("qwen-max")
+                            .stream(true)
+                            .formatter(new DashScopeChatFormatter())
+                            .build());
+
+            if (longTermMemory != null) {
+                agentBuilder.longTermMemory(longTermMemory)
+                        .longTermMemoryMode(LongTermMemoryMode.BOTH);
+            }
+
+            if (memory != null) {
+                agentBuilder.memory(memory);
+            }
+
+            ReActAgent agent = agentBuilder.build();
+
+            // Load state if available
+            if (state != null && !state.isEmpty()) {
+                try {
+                    agent.loadStateDict(state);
+                } catch (Exception e) {
+                    logger.warn("Failed to load state: {}", e.getMessage());
+                }
+            }
+
+            // Convert messages to List<Msg>
+            List<Msg> agentMessages;
+            if (messages instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Msg> msgList = (List<Msg>) messages;
+                agentMessages = msgList;
+            } else if (messages instanceof Msg) {
+                agentMessages = List.of((Msg) messages);
+            } else {
+                logger.warn("Unexpected messages type: {}",
+                    messages != null ? messages.getClass().getName() : "null");
+                agentMessages = List.of();
+            }
+
+            // Prepare query message
+            Msg queryMessage;
+            if (agentMessages.isEmpty()) {
+                queryMessage = Msg.builder().role(MsgRole.USER).build();
+            } else if (agentMessages.size() == 1) {
+                queryMessage = agentMessages.get(0);
+            } else {
+                // Add all but the last to memory, use the last one for query
+                for (int i = 0; i < agentMessages.size() - 1; i++) {
+                    agent.getMemory().addMessage(agentMessages.get(i));
+                }
+                queryMessage = agentMessages.get(agentMessages.size() - 1);
+            }
+
+            // Configure streaming options
+            StreamOptions streamOptions = StreamOptions.builder()
+                    .eventTypes(EventType.REASONING, EventType.TOOL_RESULT)
+                    .incremental(true)
+                    .build();
+
+            // Stream agent responses
+            return agent.stream(queryMessage, streamOptions)
+                    .doFinally(signalType -> {
+                        // Save state after completion
+                        if (stateService != null) {
+                            try {
+                                Map<String, Object> finalState = agent.stateDict();
+                                if (finalState != null && !finalState.isEmpty()) {
+                                    stateService.saveState(userId, finalState, sessionId, null)
+                                            .exceptionally(e -> {
+                                                logger.error("Failed to save state: {}", e.getMessage(), e);
+                                                return null;
+                                            });
+                                }
+                            } catch (Exception e) {
+                                logger.error("Error saving state: {}", e.getMessage(), e);
+                            }
+                        }
+                    })
+                    .doOnError(error -> {
+                        logger.error("Error in agent stream: {}", error.getMessage(), error);
+                    });
+        } catch (Exception e) {
+            logger.error("Error in streamQuery: {}", e.getMessage(), e);
+            return Flux.error(e);
+        }
     }
 }
 ```
 
 ---
 
-## Step 2 – Configure the Sandbox Manager (Optional but Recommended)
+## Step 2 – Initialize Runtime Services
 
-`ManagerConfig` controls how sandboxes are created, maintained, and supplied with supporting resources. The defaults use an in-memory lifecycle manager, local Docker runtime, and no pre-provisioned files. You can opt into additional providers as needed.
+AgentScope Runtime Java provides in-memory implementations of the required services. You'll need to initialize these services and configure them with your agent handler:
 
-### 2.1 Lifecycle Backend
-
-Switch sandbox lifecycle management from memory lifecycle tracking to Redis:
-
-```java
-RedisManagerConfig redisConfig = RedisManagerConfig.builder()
-    .redisServer("localhost")
-    .redisPort(6379)
-    .redisDb(0)
-    .redisPortKey("_persist_test_ports")
-    .redisContainerPoolKey("_persist_test_pool")
-    .build();
-```
-
-### 2.2 File Synchronization
-
-Preload resources into the sandbox and persist output files after execution by defining a storage provider. When not set, the default is not to download files
+- **StateService** – manages agent state persistence
+- **SessionHistoryService** – manages conversation history
+- **MemoryService** – manages long-term memory
+- **SandboxService** – manages sandbox lifecycle for tool execution
 
 ```java
-LocalFileSystemConfig localConfig = LocalFileSystemConfig.builder()
-    .storageFolderPath("/path/to/assets")
-    .build();
+// Initialize services
+agentHandler.setStateService(new InMemoryStateService());
+agentHandler.setSessionHistoryService(new InMemorySessionHistoryService());
+agentHandler.setMemoryService(new InMemoryMemoryService());
+agentHandler.setSandboxService(buidSandboxService()); // see step 3
 ```
+
+---
+
+## Step 3 – Configure the Sandbox Service
+
+Create a `SandboxService` by configuring the `SandboxManager` with `ManagerConfig`. This controls how sandboxes are created, maintained, and supplied with supporting resources. The defaults use an in-memory lifecycle manager, local Docker runtime, and no pre-provisioned files. You can opt into additional providers as needed.
 
 ```java
-OssConfig ossConfig = OssConfig.builder()
-    .ossEndpoint(ossEndpoint)
-    .ossAccessKeyId(ossAccessKeyId)
-    .ossAccessKeySecret(ossAccessKeySecret)
-    .ossBucketName(ossBucketName)
-    .storageFolderPath("oss-folder")
-    .build();
+private static SandboxService buildSandboxService() {
+    BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+    ManagerConfig managerConfig = ManagerConfig.builder()
+            .containerDeployment(clientConfig)
+            .build();
+    return new SandboxService(new SandboxManager(managerConfig));
+}
 ```
 
-> **Note:** Volume binding is currently supported only when using the local Docker deployment target.
-
-### 2.3 Container Runtime
+### 3.1 Container Runtime
 
 Docker is selected by default. You can swap in Kubernetes or Alibaba AgentRun by providing the corresponding client configuration.
 
@@ -109,7 +220,7 @@ BaseClientConfig agentRunConfig = AgentRunClientConfig.builder()
     .build();
 ```
 
-### 2.4 Configure remote runtime hosting sandbox
+### 3.2 Configure remote runtime hosting sandbox
 
 If you want to use a remote runtime to proxy all sandbox lifecycle management and tool invocation work for the current runtime, you can configure the `baseURL` and `bearerToken` properties in the manageability config. The default runtime sandbox will be managed by itself.
 
@@ -120,7 +231,7 @@ ManagerConfig config = ManagerConfig.builder()
     .build();
 ```
 
-### 2.5 Pool Size and Port Range
+### 3.3 Pool Size and Port Range
 
 ```java
 ManagerConfig config = ManagerConfig.builder()
@@ -134,106 +245,32 @@ ManagerConfig config = ManagerConfig.builder()
 
 ---
 
-## Step 3 – Create the Native FrameWork Agent
+## Step 4 – Configure and Deploy the Agent
 
-### 3.1 Initialize Tools
-
-AgentScope Runtime Java offers multiple sandbox types:
-
-- **Base sandbox** – execute code snippets or shell commands
-- **File-system sandbox** – manage files
-- **Browser sandbox** – drive a built-in headless browser
-
-Built-in tools are exposed via `ToolcallsInit` and can be added directly to a Spring AI Alibaba agent.
+Configure the agent handler with the required services and deploy using `AgentApp`:
 
 ```java
-ToolCallback pythonTool = ToolcallsInit.RunPythonCodeTool();
+// Create and configure the agent handler
+MyAgentScopeAgentHandler agentHandler = new MyAgentScopeAgentHandler();
+agentHandler.setStateService(new InMemoryStateService());
+agentHandler.setSessionHistoryService(new InMemorySessionHistoryService());
+agentHandler.setMemoryService(new InMemoryMemoryService());
+agentHandler.setSandboxService(buildSandboxService());
+
+// Deploy using AgentApp
+AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.run(10001); // Server will listen on port 10001
 ```
 
-When using AgentScope, Built-in tools are exposed via `ToolkitInit`.
-
-```java
-AgentTool tool = ToolkitInit.RunPythonCodeTool();
-```
-
-> [!NOTE]
-> The usage of Spring AI Alibaba Agent is similar to AgentScope, and the following is only an example of AgentScope
-
-### 3.2 Configure MCP Tools
-
-Sandboxes can act as stdio-based MCP servers. Construct MCP tool callbacks by passing the MCP configuration, sandbox type, and sandbox manager:
-
-```java
-String mcpServerConfig = """
-{
-  "mcpServers": {
-    "time": {
-      "command": "uvx",
-      "args": [
-        "mcp-server-time",
-        "--local-timezone=America/New_York"
-      ]
-    }
-  }
-}
-""";
-
-List<AgentTool> mcpTools = ToolkitInit.getMcpTools(
-                    mcpServerConfig,
-                    SandboxType.BASE,
-                    environmentManager.getSandboxManager());
-```
-
-### 3.3 Assemble the FrameWork Agent
-
-```java
-Builder builder = ReactAgent.builder()
-    .name("saa_agent")
-    .tools(mcpCallbacks)
-    .model(chatModel);
-```
+The `AgentApp` automatically handles:
+- Creating and managing the `Runner`
+- Setting up the A2A protocol endpoints
+- Starting the HTTP server
+- Converting framework events to runtime events
 
 ---
 
-## Step 4 – Wrap the Agent with `Runtime Agent（AgentScopeAgent or SaaAgent）`
-
-```java
-AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder().agent(builder).build();
-```
-
----
-
-## Step 5 – Create and Initialize the Runner
-
-The Runner wires the agent, context manager, and (optionally) sandbox-aware environment manager together. `agent` is mandatory; `environmentManager` is required when the agent invokes sandbox tools.
-
-```java
-SandboxManager sandboxManager = new SandboxManager(config);
-EnvironmentManager environmentManager = new DefaultEnvironmentManager(sandboxManager);
-
-Runner runner = Runner.builder()
-    .agent(saaAgent)
-    .contextManager(contextManager)
-    .environmentManager(environmentManager)
-    .build();
-```
-
----
-
-## Step 6 – Deploy as an A2A Application
-
-Expose the agent through the standard A2A protocol using the local deployment manager. The default server listens on `localhost:8080`; override the port or host during builder configuration as needed.
-
-```java
-LocalDeployManager.builder()
-    .port(10001)
-    .build()
-    .deploy(runner);
-```
-
----
-
-## Step 7 – Call the A2A Endpoint
+## Step 5 – Call the A2A Endpoint
 
 Use any HTTP client to stream messages to the deployed agent. The example below triggers a Python calculation via the base sandbox.
 
@@ -271,7 +308,8 @@ Change the prompt to query for the current time to exercise an MCP-backed tool i
 
 ## Where to Go Next
 
-- Browse **complete implementations** in `examples/simple_agent_use_examples`
+- Browse **complete implementations** in `examples/simple_agent_use_examples/agentscope_use_example`
 - Go to the `browser_use_fullstack_runtime` folder and try to **visualize the Agent's operations** in the sandbox
 - Experiment with **different sandbox combinations and toolchains**
-- Extend the Runner to integrate with **your own deployment pipelines**
+- Learn how to create **custom tools** using the `@Tool` annotation
+- Explore **MCP (Model Context Protocol) tools** integration
