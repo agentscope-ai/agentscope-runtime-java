@@ -133,7 +133,7 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         List<Event> results = new ArrayList<>();
         List<ContentBlock> content = msg.getContent();
         
-        // Handle string content (shouldn't happen with AgentScope Java API, but handle for compatibility)
+        // Handle string content.
         // Content is always List<ContentBlock>, but we check for empty
         if (content == null || content.isEmpty()) {
             return results;
@@ -154,7 +154,7 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         // Update content based on tool_start flag
         List<ContentBlock> blocksToProcess;
         if (!newToolBlocks.isEmpty()) {
-            if (state.toolStart) {
+            if (state.toolStart || newBlocks.isEmpty()) {
                 blocksToProcess = newToolBlocks;
             } else {
                 blocksToProcess = newBlocks;

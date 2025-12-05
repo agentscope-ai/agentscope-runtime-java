@@ -22,8 +22,6 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.CompletableFuture;
-
 /**
  * Service for managing sandbox environments.
  *
@@ -34,10 +32,10 @@ import java.util.concurrent.CompletableFuture;
  * <p><b>Usage Example:</b>
  * <pre>{@code
  * SandboxService sandboxService = new SandboxService("http://localhost:8000", "token");
- * sandboxService.start().join();
+ * sandboxService.start();
  *
  * // Connect to sandbox for a session
- * List<SandboxInterface> sandboxes = sandboxService.connect("session_123", "user_456", null);
+ * Sandbox sandbox = sandboxService.connect("session_123", "user_456", BaseSandbox.class);
  *
  * // Release sandbox
  * sandboxService.release("session_123", "user_456");
@@ -54,24 +52,25 @@ public class SandboxService extends ServiceWithLifecycleManager {
     }
 
     @Override
-    public CompletableFuture<Void> start() {
+    public void start() {
+		if (managerApi != null) {
+			managerApi.start();
+		}
         health = true;
-        return CompletableFuture.completedFuture(null);
     }
 
     @Override
-    public CompletableFuture<Void> stop() {
+    public void stop() {
         health = false;
         if (managerApi != null) {
             managerApi.close();
-        }
-        managerApi = null;
-        return CompletableFuture.completedFuture(null);
+			managerApi = null;
+		}
     }
 
     @Override
-    public CompletableFuture<Boolean> health() {
-        return CompletableFuture.completedFuture(health);
+    public boolean health() {
+        return health;
     }
 
     /**
@@ -96,7 +95,6 @@ public class SandboxService extends ServiceWithLifecycleManager {
 			throw new RuntimeException(e);
 		}
 	}
-
 
 }
 

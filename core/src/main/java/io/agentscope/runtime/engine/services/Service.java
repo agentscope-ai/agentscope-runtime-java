@@ -16,8 +16,6 @@
 
 package io.agentscope.runtime.engine.services;
 
-import java.util.concurrent.CompletableFuture;
-
 /**
  * Abstract base class for services.
  * 
@@ -42,25 +40,20 @@ import java.util.concurrent.CompletableFuture;
 public interface Service {
     
     /**
-     * Starts the service, initializing any necessary resources or connections.
-     * 
-     * @return A CompletableFuture that completes when the service has started
-     */
-    CompletableFuture<Void> start();
+	 * Starts the service, initializing any necessary resources or connections.
+	 */
+    void start();
     
     /**
-     * Stops the service, releasing any acquired resources.
-     * 
-     * @return A CompletableFuture that completes when the service has stopped
-     */
-    CompletableFuture<Void> stop();
+	 * Stops the service, releasing any acquired resources.
+	 */
+    void stop();
     
     /**
-     * Checks the health of the service.
-     * 
-     * @return A CompletableFuture that completes with true if the service is healthy,
-     *         false otherwise
-     */
-    CompletableFuture<Boolean> health();
+	 * Checks the health of the service.
+	 *
+	 * @return
+	 */
+    boolean health();
 }
 

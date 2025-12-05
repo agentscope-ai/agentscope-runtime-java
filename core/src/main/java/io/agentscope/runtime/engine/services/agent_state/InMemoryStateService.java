@@ -55,27 +55,25 @@ public class InMemoryStateService extends StateService {
     }
     
     @Override
-    public CompletableFuture<Void> start() {
+    public void start() {
         if (store == null) {
             store = new ConcurrentHashMap<>();
         }
         health = true;
-        return CompletableFuture.completedFuture(null);
     }
     
     @Override
-    public CompletableFuture<Void> stop() {
+    public void stop() {
         if (store != null) {
             store.clear();
         }
         store = null;
         health = false;
-        return CompletableFuture.completedFuture(null);
     }
     
     @Override
-    public CompletableFuture<Boolean> health() {
-        return CompletableFuture.completedFuture(health);
+    public boolean health() {
+        return health;
     }
     
     @Override

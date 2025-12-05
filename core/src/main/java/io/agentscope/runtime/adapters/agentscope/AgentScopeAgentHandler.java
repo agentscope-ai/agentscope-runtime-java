@@ -133,6 +133,9 @@ public abstract class AgentScopeAgentHandler implements AgentHandler {
         if (sessionHistoryService != null) {
             sessionHistoryService.start();
         }
+        if (sandboxService != null) {
+            sandboxService.start();
+        }
     }
 
     /**
@@ -146,6 +149,9 @@ public abstract class AgentScopeAgentHandler implements AgentHandler {
         }
         if (sessionHistoryService != null) {
             sessionHistoryService.stop();
+        }
+        if (sandboxService != null) {
+            sandboxService.stop();
         }
     }
 

@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.agentscope.runtime.engine.schemas.Content;
 import io.agentscope.runtime.engine.schemas.Message;
 import io.agentscope.runtime.engine.schemas.MessageType;
+import io.agentscope.runtime.engine.schemas.Role;
 import io.agentscope.runtime.engine.schemas.TextContent;
 import io.agentscope.runtime.engine.services.memory.service.MemoryService;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
@@ -580,7 +581,7 @@ public class Mem0MemoryService implements MemoryService {
         Message message = new Message();
         // Todo: TEST ME
         message.setType(MessageType.MESSAGE);
-        message.setRole("user");
+        message.setRole(Role.USER);
 
         Content content = new TextContent(memoryText);
         message.setContent(Collections.singletonList(content));

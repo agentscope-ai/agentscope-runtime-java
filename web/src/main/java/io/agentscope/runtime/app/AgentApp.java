@@ -225,28 +225,6 @@ public class AgentApp {
     }
     
     /**
-     * Initialize the application by initializing the adapter.
-     * 
-     * <p>This method will call the registered init handler if one exists.</p>
-     * 
-     * @return a CompletableFuture that completes when initialization is done
-     */
-    public void init() {
-        runner.init();
-    }
-    
-    /**
-     * Start the application by starting the adapter.
-     * 
-     * <p>This method corresponds to calling start() in the Python version.</p>
-     * 
-     * @return a CompletableFuture that completes when the application is started
-     */
-    public void start() {
-        runner.start();
-    }
-    
-    /**
      * Run the application by starting the Spring Boot Server.
      * 
      * <p>This method corresponds to AgentApp.run() in the Python version.
@@ -261,6 +239,10 @@ public class AgentApp {
     public void run() {
         run(host, port);
     }
+
+    public void run(int port) {
+        run("0.0.0.0", port);
+    }
     
     /**
      * Run the application with specified host and port.
@@ -273,6 +255,7 @@ public class AgentApp {
     public void run(String host, int port) {
         if (deployManager == null) {
             this.deployManager = LocalDeployManager.builder()
+                    .host(host)
                     .port(port)
                     .endpointName(endpointPath)
                     .protocolConfigs(protocolConfigs)
@@ -280,39 +263,13 @@ public class AgentApp {
         }
         
         buildRunner();
-        
         logger.info("[AgentApp] Starting AgentApp with endpoint: {}, host: {}, port: {}", endpointPath, host, port);
 
-        // Initialize and start the runner
-        init();
-        start();
         // Deploy via DeployManager
         deployManager.deploy(runner);
         logger.info("[AgentApp] AgentApp started successfully on {}:{}{}", host, port, endpointPath);
     }
-    
-    /**
-     * Stop the application by stopping the runner.
-     * 
-     * @return a CompletableFuture that completes when the application is stopped
-     */
-    public void stop() {
-        if (runner != null) {
-            runner.stop();
-        }
-    }
-    
-    /**
-     * Shutdown the application by shutting down the runner.
-     * 
-     * <p>This method will call the registered shutdown handler if one exists</p>
-     */
-    public void shutdown() {
-        if (runner != null) {
-            runner.shutdown();
-        }
-    }
-    
+
     /**
      * Register custom endpoint.
      */

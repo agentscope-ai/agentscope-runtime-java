@@ -16,8 +16,6 @@
 
 package io.agentscope.runtime.engine.services;
 
-import java.util.concurrent.CompletableFuture;
-
 /**
  * Base class for services that want lifecycle manager functionality.
  * 
@@ -54,27 +52,22 @@ public abstract class ServiceWithLifecycleManager implements Service {
     
     /**
      * Starts the service, initializing any necessary resources or connections.
-     * 
-     * @return A CompletableFuture that completes when the service has started
      */
     @Override
-    public abstract CompletableFuture<Void> start();
+    public abstract void start();
     
     /**
      * Stops the service, releasing any acquired resources.
-     * 
-     * @return A CompletableFuture that completes when the service has stopped
      */
     @Override
-    public abstract CompletableFuture<Void> stop();
+    public abstract void stop();
     
     /**
      * Checks the health of the service.
-     * 
-     * @return A CompletableFuture that completes with true if the service is healthy,
-     *         false otherwise
+     *
+     * @return
      */
     @Override
-    public abstract CompletableFuture<Boolean> health();
+    public abstract boolean health();
 }
 

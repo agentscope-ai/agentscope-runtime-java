@@ -30,8 +30,8 @@
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope_deployer_example</artifactId>
     <version>1.0.0</version>
-    <name>Example::AgentScope</name>
-    <description>Java backend for AgentScope browser use demo</description>
+    <name>Example::Deployer Plugin</name>
+    <description>Java backend for AgentScope Deployer Plugin Demo</description>
 
     <properties>
         <java.version>17</java.version>

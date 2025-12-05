@@ -205,7 +205,12 @@ public class LongTermMemoryAdapter implements LongTermMemory {
 
             // Record to memory
             return record(List.of(msg))
-                    .then(Mono.just(ToolResultBlock.text("Successfully recorded content to memory")));
+                    .then(Mono.just(ToolResultBlock.text("Successfully recorded content to memory")))
+                    .onErrorResume(e -> {
+                        logger.error("Error recording content to memory", e);
+                        return Mono.just(ToolResultBlock.text(
+                                "Error recording content to memory: " + e.getMessage()));
+                    });
         } catch (Exception e) {
             logger.error("Error recording content to memory", e);
             return Mono.just(ToolResultBlock.text(
@@ -266,7 +271,12 @@ public class LongTermMemoryAdapter implements LongTermMemory {
                         }
                         return String.join("\n", results);
                     })
-            ).map(ToolResultBlock::text);
+            ).map(ToolResultBlock::text)
+            .onErrorResume(e -> {
+                logger.error("Error retrieving memory", e);
+                return Mono.just(ToolResultBlock.text(
+                        "Error retrieving memory: " + e.getMessage()));
+            });
         } catch (Exception e) {
             logger.error("Error retrieving memory", e);
             return Mono.just(ToolResultBlock.text(

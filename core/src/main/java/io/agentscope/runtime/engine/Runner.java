@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -193,9 +194,9 @@ public class Runner {
         Flux<Event> adapterStream = eventStream
             .map(this::withSequenceNumber)
             .doOnNext(event -> {
-                // Collect completed messages into response 
+                // Collect completed messages into response
                 if (event instanceof Message message) {
-                    if (RunStatus.COMPLETED.equals(message.getStatus()) 
+                    if (RunStatus.COMPLETED.equals(message.getStatus())
                         && "message".equals(message.getObject())) {
                         response.addNewMessage(message);
                     }
@@ -210,7 +211,7 @@ public class Runner {
                 // Return only the failed response
                 return Flux.just(withSequenceNumber(response.failed(error)));
             });
-        
+
         // Combine initial events with adapter stream, then complete with final response
         // This matches flow: initial -> in_progress -> stream -> completed
         return Flux.concat(
@@ -225,8 +226,8 @@ public class Runner {
                 if (hasError.get() || RunStatus.FAILED.equals(response.getStatus())) {
                     return Flux.empty();
                 }
-                
-                // Extract token usage from last message 
+
+                // Extract token usage from last message
                 try {
                     if (response.getOutput() != null && !response.getOutput().isEmpty()) {
                         Message lastMessage = response.getOutput().get(response.getOutput().size() - 1);
@@ -238,8 +239,8 @@ public class Runner {
                     // Avoid empty message error
                     logger.debug("Could not extract usage: {}", e.getMessage());
                 }
-                
-                // Yield completed response 
+
+                // Yield completed response
                 return Flux.just(withSequenceNumber(response.completed()));
             })
         );

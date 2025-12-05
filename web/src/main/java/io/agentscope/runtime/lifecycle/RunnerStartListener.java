@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.autoconfigure;
+package io.agentscope.runtime.lifecycle;
 
 import io.agentscope.runtime.engine.Runner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.stereotype.Component;
 import org.springframework.lang.NonNull;
@@ -52,10 +51,10 @@ import org.springframework.lang.NonNull;
  * <p>This listener is automatically registered when Runner is available as a Spring bean.</p>
  */
 @Component
-public class AgentAppLifecycleListener implements 
+public class RunnerStartListener implements
         ApplicationListener<ContextRefreshedEvent> {
     
-    private static final Logger logger = LoggerFactory.getLogger(AgentAppLifecycleListener.class);
+    private static final Logger logger = LoggerFactory.getLogger(RunnerStartListener.class);
     
     private final Runner runner;
     private boolean initialized = false;
@@ -66,7 +65,7 @@ public class AgentAppLifecycleListener implements
      * @param runner the Runner instance (optional, may be null if not configured)
      */
     @Autowired(required = false)
-    public AgentAppLifecycleListener(Runner runner) {
+    public RunnerStartListener(Runner runner) {
         this.runner = runner;
     }
     
@@ -112,65 +111,6 @@ public class AgentAppLifecycleListener implements
             
         } catch (Exception e) {
             logger.error("[AgentAppLifecycleListener] Error during startup: {}", 
-                e.getMessage(), e);
-        }
-    }
-}
-
-/**
- * Separate listener for application shutdown events.
- * 
- */
-@Component
-class AgentAppShutdownListener implements ApplicationListener<ContextClosedEvent> {
-    
-    private static final Logger logger = LoggerFactory.getLogger(AgentAppShutdownListener.class);
-    
-    private final Runner runner;
-    
-    /**
-     * Constructor with Runner dependency injection.
-     * 
-     * @param runner the Runner instance (optional, may be null if not configured)
-     */
-    @Autowired(required = false)
-    public AgentAppShutdownListener(Runner runner) {
-        this.runner = runner;
-    }
-    
-    /**
-     * Handle application shutdown event.
-     * 
-     * <p>It stops the runner, calls shutdown_handler, and then calls after_finish callback.</p>
-     * 
-     * @param event the context closed event
-     */
-    @Override
-    public void onApplicationEvent(@NonNull ContextClosedEvent event) {
-        // Only handle the root context close event (avoid duplicate calls)
-        if (event.getApplicationContext().getParent() != null) {
-            return;
-        }
-        
-        if (runner == null) {
-            return;
-        }
-        
-        try {
-            logger.info("[AgentAppShutdownListener] Shutting down Runner...");
-            
-            // Stop the runner first
-            try {
-                runner.stop();
-                runner.shutdown();
-                logger.info("[AgentAppShutdownListener] Runner shutdown completed");
-            } catch (Exception e) {
-                logger.error("[AgentAppShutdownListener] Error during shutdown: {}", e.getMessage());
-                throw e;
-            }
-            
-        } catch (Exception e) {
-            logger.error("[AgentAppShutdownListener] Error during shutdown: {}", 
                 e.getMessage(), e);
         }
     }

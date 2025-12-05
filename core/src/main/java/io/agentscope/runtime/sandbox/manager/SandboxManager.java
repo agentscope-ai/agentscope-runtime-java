@@ -49,7 +49,7 @@ public class SandboxManager implements AutoCloseable {
     private BaseClient containerClient;
     private final StorageManager storageManager;
     private final int poolSize;
-    private final ContainerQueue poolQueue;
+    private ContainerQueue poolQueue;
     private final SandboxType defaultType;
     private final PortManager portManager;
     private RedisClientWrapper redisClient;
@@ -96,6 +96,7 @@ public class SandboxManager implements AutoCloseable {
         }
 
         this.remoteHttpClient = null;
+        this.poolQueue = null;
         this.managerConfig = managerConfig;
         this.containerManagerType = managerConfig.getClientConfig().getClientType();
         this.storageManager = new StorageManager(managerConfig.getFileSystemConfig());
@@ -107,7 +108,9 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Initializing SandboxManager with container manager: " + this.containerManagerType);
         logger.info("Container pool size: " + this.poolSize);
         logger.info("Redis enabled: " + this.redisEnabled);
+    }
 
+    public void start() {
         if (this.redisEnabled) {
             try {
                 RedisManagerConfig redisConfig = managerConfig.getRedisConfig();

@@ -33,6 +33,7 @@ import io.agentscope.runtime.engine.schemas.AgentRequest;
 import io.agentscope.runtime.engine.schemas.Content;
 import io.agentscope.runtime.engine.schemas.Event;
 import io.agentscope.runtime.engine.schemas.MessageType;
+import io.agentscope.runtime.engine.schemas.Role;
 import io.agentscope.runtime.engine.schemas.TextContent;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
@@ -78,6 +79,7 @@ public class GraphAgentExecutor implements AgentExecutor {
         AgentRequest agentRequest = new AgentRequest();
         Message agentMessage = new Message();
         agentMessage.setType(MessageType.MESSAGE);
+        agentMessage.setRole(Role.USER);
         TextContent tc = new TextContent();
         tc.setText(inputText);
         agentMessage.setContent(List.of(tc));

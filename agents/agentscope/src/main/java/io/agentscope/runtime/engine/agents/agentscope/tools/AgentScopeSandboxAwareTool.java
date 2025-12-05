@@ -21,11 +21,14 @@ import io.agentscope.core.tool.AgentTool;
 import io.agentscope.core.tool.ToolCallParam;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
 public abstract class AgentScopeSandboxAwareTool<T extends SandboxTool> implements AgentTool {
+    protected final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
     protected T sandboxTool;
 
     public AgentScopeSandboxAwareTool(T sandboxTool) {
