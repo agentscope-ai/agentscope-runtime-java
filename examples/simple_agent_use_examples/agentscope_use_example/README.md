@@ -75,52 +75,6 @@ curl --location --request POST 'http://localhost:10001/a2a/' \
   }'
 ```
 
-## Code Overview
-
-### Main Components
-
-1. **ReActAgent**: Core agent supporting tool calls and reasoning
-2. **AgentScopeAgent**: Wraps a ReActAgent to be compatible with AgentScope Runtime
-3. **ContextManager**: Manages conversation history and memory
-4. **SandboxManager**: Manages the sandbox environment used to execute tools
-5. **Runner**: Execution engine that ties components together
-6. **LocalDeployManager**: Exposes the agent as an A2A application
-
-### Tool Configuration
-
-This example registers the following tools:
-
-- `RunPythonCodeTool()`: Execute Python code inside the sandbox
-- `RunShellCommandTool()`: Execute shell commands inside the sandbox
-- `BrowserNavigateTool()`: Navigate a browser within the sandbox
-
-More built-in sandbox tools are available. See `ToolkitInit.java` in the `agentscope-runtime-agentscope` module.
-
-### Model Configuration
-
-Uses Qwen (e.g., `qwen-plus`) with:
-
-- Streaming responses
-- Thinking process
-
-## Dependencies
-
-This example depends on the following AgentScope Runtime modules:
-
-- `agentscope-runtime-agentscope` — AgentScope compatibility layer
-- `agentscope-runtime-web` — Web service support
-- `agentscope-runtime-core` — Core runtime functionality
-
-## Packaging (Docker)
-
-This example includes the Docker packaging plugin in the POM. Running:
-
-```bash
-mvn clean package
-```
-
-will package the application into a Docker image automatically. For customization, use `docker-build.yml`. You can also control whether to push to a registry or deploy to Kubernetes via `pushToRegistry` and `deployToK8s`.
-
 ## Notes
 
 1. Ensure `AI_DASHSCOPE_API_KEY` is set

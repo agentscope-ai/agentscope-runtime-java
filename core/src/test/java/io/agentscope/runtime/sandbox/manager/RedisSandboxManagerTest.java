@@ -22,28 +22,49 @@ import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.model.fs.LocalFileSystemConfig;
 import org.junit.jupiter.api.*;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@EnabledIfDockerAvailable
+@Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class RedisSandboxManagerTest {
 
     private static final String TEST_USER_ID = "test_user";
     private static final String TEST_SESSION_ID = "test_session";
 
+    @Container
+    private static final GenericContainer<?> redisContainer = new GenericContainer<>(
+            DockerImageName.parse("valkey/valkey:8.1.2"))
+            .withExposedPorts(6379); // #gitleaks:allow
+
+    /**
+     * Helper method to create RedisManagerConfig using the testcontainer's Redis instance
+     */
+    private static RedisManagerConfig createRedisConfig(String portKey, String poolKey) {
+        return RedisManagerConfig.builder()
+                .redisServer(redisContainer.getHost())
+                .redisPort(redisContainer.getMappedPort(6379))
+                .redisDb(0)
+                .redisPassword(null)
+                .redisPortKey(portKey)
+                .redisContainerPoolKey(poolKey)
+                .build();
+    }
+
     @Test
     @Order(1)
     public void testSandboxManagerWithRedis() {
-        RedisManagerConfig redisConfig = RedisManagerConfig.builder()
-                .redisServer("localhost")
-                .redisPort(6379)
-                .redisDb(0)
-                .redisPassword(null)
-                .redisPortKey("_test_runtime_sandbox_occupied_ports")
-                .redisContainerPoolKey("_test_runtime_sandbox_pool")
-                .build();
+        RedisManagerConfig redisConfig = createRedisConfig(
+                "_test_runtime_sandbox_occupied_ports",
+                "_test_runtime_sandbox_pool");
         
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("redis_test_")
@@ -116,13 +137,9 @@ public class RedisSandboxManagerTest {
     @Test
     @Order(3)
     public void testSharedStateWithRedis() {
-        RedisManagerConfig redisConfig = RedisManagerConfig.builder()
-                .redisServer("localhost")
-                .redisPort(6379)
-                .redisDb(0)
-                .redisPortKey("_shared_test_ports")
-                .redisContainerPoolKey("_shared_test_pool")
-                .build();
+        RedisManagerConfig redisConfig = createRedisConfig(
+                "_shared_test_ports",
+                "_shared_test_pool");
         
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("shared_test_")
@@ -169,13 +186,9 @@ public class RedisSandboxManagerTest {
     @Test
     @Order(4)
     public void testContainerPoolWithRedis() {
-        RedisManagerConfig redisConfig = RedisManagerConfig.builder()
-                .redisServer("localhost")
-                .redisPort(6379)
-                .redisDb(0)
-                .redisPortKey("_pool_test_ports")
-                .redisContainerPoolKey("_pool_test_queue")
-                .build();
+        RedisManagerConfig redisConfig = createRedisConfig(
+                "_pool_test_ports",
+                "_pool_test_queue");
         
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("pool_test_")
@@ -209,13 +222,9 @@ public class RedisSandboxManagerTest {
     @Test
     @Order(5)
     public void testContainerPersistenceInRedis() {
-        RedisManagerConfig redisConfig = RedisManagerConfig.builder()
-                .redisServer("localhost")
-                .redisPort(6379)
-                .redisDb(0)
-                .redisPortKey("_persist_test_ports")
-                .redisContainerPoolKey("_persist_test_pool")
-                .build();
+        RedisManagerConfig redisConfig = createRedisConfig(
+                "_persist_test_ports",
+                "_persist_test_pool");
         
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("persist_test_")

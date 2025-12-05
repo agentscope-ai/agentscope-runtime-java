@@ -81,6 +81,7 @@ public class LocalDeployManager implements DeployManager {
                     ctx.registerBean(DeployProperties.class, () -> new DeployProperties(port, host, endpointName));
                     // Scan additional packages based on protocols
                     ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(ctx);
+                    scanner.scan("io.agentscope.runtime.lifecycle");
                     Map<Protocol, ProtocolConfig> protocolConfigMap = null != protocolConfigs ? protocolConfigs.stream()
                             .collect(HashMap::new, (map, config) -> map.put(config.type(), config), HashMap::putAll)
                             : Map.of();
@@ -92,6 +93,7 @@ public class LocalDeployManager implements DeployManager {
                             ctx.registerBean(protocolConfig.name(), ProtocolConfig.class, () -> protocolConfig);
                         }
                     }
+
                 })
                 .run();
 

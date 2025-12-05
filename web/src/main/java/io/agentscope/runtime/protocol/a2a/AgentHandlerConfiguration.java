@@ -38,7 +38,7 @@ public class AgentHandlerConfiguration {
     private final JSONRPCHandler jsonrpcHandler;
 
     public AgentHandlerConfiguration(Runner runner, AgentCard agentCard, A2aProtocolConfig a2aProtocolConfig) {
-        this(new GraphAgentExecutor(runner::streamQuery), agentCard, a2aProtocolConfig);
+        this(new GraphAgentExecutor(runner), agentCard, a2aProtocolConfig);
     }
 
     protected AgentHandlerConfiguration(AgentExecutor agentExecutor, AgentCard agentCard, A2aProtocolConfig a2aProtocolConfig) {

@@ -59,7 +59,7 @@ public class StorageManager {
     }
 
     /**
-     * Path join, similar to Python's os.path.join
+     * Path join
      *
      * @param parts path components
      * @return joined path

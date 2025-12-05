@@ -41,7 +41,7 @@ import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/sandbox")
 public class SandboxManagerController {
 
     private static final Logger logger = Logger.getLogger(SandboxManagerController.class.getName());
@@ -50,7 +50,6 @@ public class SandboxManagerController {
 
     @Autowired
     private Runner runner;
-
 
     @PostConstruct
     public void registerEndpoints() {
@@ -120,7 +119,17 @@ public class SandboxManagerController {
     private String extractPath(jakarta.servlet.http.HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         String contextPath = request.getContextPath();
-        return requestUri.substring(contextPath.length());
+        String path = requestUri.substring(contextPath.length());
+        
+        // Remove /sandbox prefix to match registered endpoints
+        if (path.startsWith("/sandbox")) {
+            path = path.substring("/sandbox".length());
+            if (path.isEmpty()) {
+                path = "/";
+            }
+        }
+        
+        return path;
     }
 
     private ResponseEntity<Map<String, Object>> handleRequest(
@@ -129,7 +138,7 @@ public class SandboxManagerController {
             RequestMethod httpMethod) {
 
         // Todo: fix this
-        SandboxManager sandboxManager = runner.getEnvironmentManager().getSandboxManager();
+        SandboxManager sandboxManager = runner.getSandboxManager();
 
         logger.info("Handling " + httpMethod + " request for path: " + path);
 

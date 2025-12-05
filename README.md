@@ -77,96 +77,68 @@ Add the following dependency to your `pom.xml`:
 
 ### Basic Agent Usage Example
 
-The following example demonstrates how to delegate a AgentScope ReactAgent using AgentScope Runtime Agent. The complete source code can be found in the [examples](./examples) directory.
+The following example demonstrates how to delegate a AgentScope ReactAgent using AgentScope Runtime. The complete source code can be found in the [examples](./examples) directory.
 
-1. Create Agent
+1. Create Agent Handler
+
+Create a custom agent handler by extending `AgentScopeAgentHandler`:
 
 ```java
-import io.agentscope.core.ReActAgent;
-import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;
-import io.agentscope.core.memory.InMemoryMemory;
-import io.agentscope.core.tool.Toolkit;
-import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
-import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
-import io.agentscope.core.model.DashScopeChatModel;
-
-// Create ReActAgent
-ReActAgent.Builder agentBuilder = ReActAgent.builder()
-    .name("Friday")
-    .sysPrompt("You're a helpful assistant named Friday.")
-    .memory(new InMemoryMemory())
-    .model(DashScopeChatModel.builder()
-        .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-        .modelName("qwen-turbo")
-        .stream(true)
-        .enableThinking(true)
-        .formatter(new DashScopeChatFormatter())
-        .build());
-
-// Create Runtime AgentScopeAgent
-AgentScopeAgent agentScopeAgent = AgentScopeAgent.builder()
-    .agent(agentBuilder)
-    .build();
-
-System.out.println("✅ AgentScope agent created successfully");
+public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
+    
+    @Override
+    public Flux<io.agentscope.core.agent.Event> streamQuery(AgentRequest request, Object messages) {
+        // Create Toolkit and register tools
+        Toolkit toolkit = new Toolkit();
+        if (sandboxService != null) {
+            Sandbox sandbox = sandboxService.connect(
+                request.getUserId(), 
+                request.getSessionId(), 
+                BaseSandbox.class
+            );
+            toolkit.registerTool(ToolkitInit.RunPythonCodeTool(sandbox));
+        }
+        
+        // Create ReActAgent with tools
+        ReActAgent agent = ReActAgent.builder()
+            .name("Friday")
+            .toolkit(toolkit)
+            .model(DashScopeChatModel.builder()
+                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
+                .modelName("qwen-max")
+                .stream(true)
+                .formatter(new DashScopeChatFormatter())
+                .build())
+            .build();
+        
+        // Convert messages and stream agent responses
+        // See examples/README.md for complete implementation
+        return agent.stream(queryMessage, streamOptions);
+    }
+}
 ```
 
-2. Configure Sandbox Manager (Optional but Recommended)
+2. Initialize Services and Deploy
+
+Configure the agent handler with required services and deploy using `AgentApp`:
 
 ```java
-// Create Toolkit
-Toolkit toolkit = new Toolkit();
-toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
-toolkit.registerTool(ToolkitInit.RunShellCommandTool());
+// Create and configure the agent handler
+MyAgentScopeAgentHandler agentHandler = new MyAgentScopeAgentHandler();
+agentHandler.setStateService(new InMemoryStateService());
+agentHandler.setSessionHistoryService(new InMemorySessionHistoryService());
+agentHandler.setMemoryService(new InMemoryMemoryService());
+agentHandler.setSandboxService(new SandboxService(
+    new SandboxManager(ManagerConfig.builder().build())
+));
 
-// Add Tools for Agent
-// ...
-agentBuilder.toolkit(toolkit)
-// ...
-
-// Create sandbox manager configuration (using default Docker configuration)
-ManagerConfig managerConfig = ManagerConfig.builder().build();
-// Create environment manager
-EnvironmentManager environmentManager = new DefaultEnvironmentManager(new SandboxManager(managerConfig));
-```
-
-> [!NOTE]
-> You can also use **Kubernetes** or Alibaba FC platform **AgentRun** to execute sandbox tools. Please refer to [this tutorial](https://runtime.agentscope.io/en/sandbox.html) for more details.
-
-3. Create Runner
-
-The Runner combines the agent, context manager, and environment manager:
-
-```java
-import io.agentscope.runtime.engine.Runner;
-
-Runner runner = Runner.builder()
-    .agent(agentScopeAgent)  // or saaAgent
-    .contextManager(contextManager)
-    .environmentManager(environmentManager)  // Required if using sandbox tools
-    .build();
-
-System.out.println("✅ Runner created successfully");
-```
-
-4. Deploy Agent
-
-Use `LocalDeployManager` to deploy the agent as an A2A service:
-
-```java
-import io.agentscope.runtime.LocalDeployManager;
-
-// Deploy agent (default port 8080)
-LocalDeployManager.builder()
-    .port(8090)
-    .build()
-    .deploy(runner);
-
-System.out.println("✅ Agent deployed successfully on port 8090");
+// Deploy using AgentApp
+AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.run(8090); // Server will listen on port 8090
 ```
 
 > [!NOTE]
-> The usage method for **Spring AI Alibaba** is very similar. Please refer to the [examples](./examples) directory for more details.
+> You can also use **Kubernetes** or Alibaba FC platform **AgentRun** to execute sandbox tools. Please refer to the [examples](./examples) directory for more details.
 ---
 
 ## 🔌 Agent Framework Integration
@@ -174,22 +146,7 @@ System.out.println("✅ Agent deployed successfully on port 8090");
 AgentScope Runtime Java implementation can be easily integrated with any agent frameworks developed in Java. Currently supported frameworks include:
 
 - **AgentScope Java**
-- **Spring AI Alibaba**
-- **Langchain4j and more coming soon...**
----
-
-## 🏗️ Deployment
-
-AgentScope Runtime Java can expose agents on a port using the standard A2A protocol or custom endpoints.
-
-To change the port or host, deploy as follows:
-
-```java
-LocalDeployManager.builder()
-    .port(10001)
-    .build()
-    .deploy(runner);
-```
+- **Spring AI Alibaba, Langchain4j and more coming soon...**
 
 ---
 

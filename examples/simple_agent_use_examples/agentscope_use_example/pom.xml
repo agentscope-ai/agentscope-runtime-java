@@ -30,8 +30,8 @@
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope_use_example</artifactId>
     <version>1.0.0</version>
-    <name>Example::AgentScope</name>
-    <description>Java backend for AgentScope browser use demo</description>
+    <name>Example::AgentScope Basic</name>
+    <description>Java backend for AgentScope Basic Usage</description>
 
     <properties>
         <java.version>17</java.version>
@@ -44,13 +44,13 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-agentscope</artifactId>
-            <version>0.1.1</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
 
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-web</artifactId>
-            <version>0.1.1</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
 
         <!-- Logging -->

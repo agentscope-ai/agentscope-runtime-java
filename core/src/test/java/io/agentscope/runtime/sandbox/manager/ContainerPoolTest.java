@@ -27,8 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Container Pool Functionality Test
- * Demonstrates how Java container pool aligns with Python's pool functionality
- * 
+ *
  * <p>Notes:
  * <ul>
  *   <li>Each test creates and destroys multiple Docker containers</li>

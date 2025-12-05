@@ -53,7 +53,6 @@
 
     <modules>
         <module>agentscope</module>
-        <module>saa</module>
     </modules>
     <scm>
         <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>

@@ -50,7 +50,6 @@ public class DockerClient extends BaseClient {
 
     /**
      * Constructor with DockerClientConfig
-     * Aligns with Python version where DockerClient receives config in __init__
      */
     public DockerClient(DockerClientConfig config) {
         this.config = config;
@@ -98,7 +97,6 @@ public class DockerClient extends BaseClient {
             throw new IllegalStateException("Docker client is not connected");
         }
 
-        // Align with Python version: DockerClient handles port finding internally
         // Find free ports automatically if ports are provided
         Map<String, Integer> portMapping = new HashMap<>();
         if (ports != null && !ports.isEmpty()) {
@@ -114,14 +112,14 @@ public class DockerClient extends BaseClient {
 
         String containerId = response.getId();
         
-        // Store port mapping in cache (align with Python's ports_cache.set)
+        // Store port mapping in cache
         if (portMapping != null && !portMapping.isEmpty()) {
             List<Integer> hostPorts = new ArrayList<>(portMapping.values());
             portsCache.put(containerId, hostPorts);
             logger.fine("Stored port mapping for container " + containerId + ": " + hostPorts);
         }
         
-        // Extract ports from portMapping (align with Python version)
+        // Extract ports from portMapping
         List<String> portList = new ArrayList<>();
         if (portMapping != null && !portMapping.isEmpty()) {
             for (Integer port : portMapping.values()) {
@@ -136,7 +134,6 @@ public class DockerClient extends BaseClient {
 
     /**
      * Find free ports for the given container ports
-     * Aligns with Python's _find_free_ports method
      */
     private Map<String, Integer> findFreePorts(List<String> containerPorts) {
         if (portManager == null || containerPorts == null || containerPorts.isEmpty()) {

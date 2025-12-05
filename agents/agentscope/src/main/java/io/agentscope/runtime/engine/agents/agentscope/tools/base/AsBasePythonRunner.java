@@ -30,6 +30,7 @@ public class AsBasePythonRunner extends AgentScopeSandboxAwareTool<RunPythonTool
 
     @Override
     public Mono<ToolResultBlock> callAsync(Map<String, Object> input) {
+        logger.info("AsBasePythonRunner called with input: {}", input);
         if (!input.containsKey("code")) {
             return Mono.just(ToolResultBlock.error("Error: key 'code' has to be contained in the input map"));
         }
@@ -43,4 +44,5 @@ public class AsBasePythonRunner extends AgentScopeSandboxAwareTool<RunPythonTool
                     "Calculation error: " + e.getMessage()));
         }
     }
+
 }
