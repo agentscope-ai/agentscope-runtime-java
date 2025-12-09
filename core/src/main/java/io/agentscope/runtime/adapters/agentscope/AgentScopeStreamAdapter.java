@@ -84,44 +84,9 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         // Use stateful operator to maintain state across events
         // We need to use a mutable state object that persists across events
         return sourceStream
-            .transformDeferred(flux -> {
-                StreamState state = new StreamState();
-                return flux
             .flatMap(event -> {
-                        Msg msg = event.getMessage();
-                        boolean last = event.isLast();
-                        
-                        // If a new message, reset state
-                        if (state.msgId == null || !msg.getId().equals(state.msgId)) {
-                            state.reset(msg.getId());
-                        }
-                        
-                        // Process the message content and emit all resulting events
-                        List<Event> newEvents = processMessageContent(msg, last, state);
-                        return Flux.fromIterable(newEvents);
-                    })
-                    .concatWith(Flux.defer(() -> {
-                        // Handle last_content if any (final processing)
-                        if (state.lastContent != null && !state.lastContent.isEmpty()) {
-                            List<Event> finalEvents = new ArrayList<>();
-                            
-                            if (state.shouldStartMessage) {
-                                state.index = null;
-                                updateMessageAttrs(state.message, state.metadata, state.usage);
-                                finalEvents.add(state.message.inProgress());
-                            }
-                            
-                            TextContent textDeltaContent = new TextContent(true, state.index, state.lastContent);
-                            textDeltaContent = (TextContent) state.message.addDeltaContent(textDeltaContent);
-                            finalEvents.add(textDeltaContent);
-                            
-                            updateMessageAttrs(state.message, state.metadata, state.usage);
-                            finalEvents.add(state.message.completed());
-                            
-                            return Flux.fromIterable(finalEvents);
-                        }
-                        return Flux.empty();
-                    }));
+                List<Event> newEvents = processMessageContent(event);
+                return Flux.fromIterable(newEvents);
             });
     }
     
@@ -129,8 +94,9 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
      * Process message content blocks.
      * Returns both Message and Content objects.
      */
-    private List<Event> processMessageContent(Msg msg, boolean last, StreamState state) {
+    private List<Event> processMessageContent(io.agentscope.core.agent.Event event) {
         List<Event> results = new ArrayList<>();
+        Msg msg = event.getMessage();
         List<ContentBlock> content = msg.getContent();
         
         // Handle string content.
@@ -139,55 +105,26 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
             return results;
         }
         
-        // Separate tool_use blocks from other blocks
-        List<ContentBlock> newBlocks = new ArrayList<>();
-        List<ContentBlock> newToolBlocks = new ArrayList<>();
+        Map<String, Object> metadata = msg.getMetadata();
         
-        for (ContentBlock block : content) {
-            if (block instanceof ToolUseBlock) {
-                newToolBlocks.add(block);
-            } else {
-                newBlocks.add(block);
-            }
-        }
-        
-        // Update content based on tool_start flag
-        List<ContentBlock> blocksToProcess;
-        if (!newToolBlocks.isEmpty()) {
-            if (state.toolStart || newBlocks.isEmpty()) {
-                blocksToProcess = newToolBlocks;
-            } else {
-                blocksToProcess = newBlocks;
-                state.toolStart = true;
-            }
-        } else {
-            blocksToProcess = newBlocks;
-        }
-        
-        // Update metadata and usage
-        state.metadata = msg.getMetadata();
-        // Note: AgentScope Java Msg doesn't have usage field directly
-        // It might be in metadata or we skip it
-        state.usage = null; // Usage not available in AgentScope Java Msg
-        
-        // Process each block
-        // Content is always List<ContentBlock>, so we process blocks directly
-        for (ContentBlock element : blocksToProcess) {
-            if (element instanceof TextBlock) {
-                processTextBlock((TextBlock) element, last, state, results);
-            } else if (element instanceof ThinkingBlock) {
-                processThinkingBlock((ThinkingBlock) element, last, state, results);
-            } else if (element instanceof ToolUseBlock) {
-                processToolUseBlock((ToolUseBlock) element, last, state, results);
-            } else if (element instanceof ToolResultBlock) {
-                processToolResultBlock((ToolResultBlock) element, state, results);
-            } else if (element instanceof ImageBlock) {
-                processImageBlock((ImageBlock) element, state, results);
-            } else if (element instanceof AudioBlock) {
-                processAudioBlock((AudioBlock) element, state, results);
-            } else {
-                // Fallback: convert to text
-                processUnknownBlock(element, state, results);
+        for (ContentBlock element : content) {
+            if(!event.isLast()||element instanceof ToolUseBlock || element instanceof ToolResultBlock){
+                if (element instanceof TextBlock textBlock) {
+                    processTextBlock(textBlock, metadata, results);
+                } else if (element instanceof ThinkingBlock thinkingBlock) {
+                    processThinkingBlock(thinkingBlock, metadata, results);
+                } else if (element instanceof ToolUseBlock toolUseBlock) {
+                    processToolUseBlock(toolUseBlock, metadata, results);
+                } else if (element instanceof ToolResultBlock toolResultBlock) {
+                    processToolResultBlock(toolResultBlock, metadata, results);
+                } else if (element instanceof ImageBlock imageBlock) {
+                    processImageBlock(imageBlock, metadata, results);
+                } else if (element instanceof AudioBlock audioBlock) {
+                    processAudioBlock(audioBlock, metadata, results);
+                } else {
+                    // Fallback: convert to text
+                    processUnknownBlock(element, metadata, results);
+                }
             }
         }
         
@@ -197,194 +134,76 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
     /**
      * Process text block with incremental updates and deduplication.
      */
-    private void processTextBlock(TextBlock block, boolean last, StreamState state, List<Event> results) {
+    private void processTextBlock(TextBlock block, Map<String, Object> metadata, List<Event> results) {
         String text = block.getText();
         if (text == null || text.isEmpty()) {
             return;
         }
         
-        // Start message if needed
-        if (state.shouldStartMessage) {
-            state.index = null;
-            updateMessageAttrs(state.message, state.metadata, state.usage);
-            results.add(state.message.inProgress());
-            state.shouldStartMessage = false;
-        }
+        Message message = new Message(MessageType.MESSAGE, "assistant");
+        updateMessageAttrs(message, metadata, null);
         
-        // Remove prefix (deduplication logic)
-        String newText = removePrefix(text, state.localTruncateMemory);
-        state.localTruncateMemory = text;
-        
-        // Create delta content
-        TextContent textDeltaContent = new TextContent(true, state.index, newText);
-        textDeltaContent = (TextContent) state.message.addDeltaContent(textDeltaContent);
-        state.index = textDeltaContent.getIndex();
-        
-        // Only yield valid text
-        if (textDeltaContent.getText() != null && !textDeltaContent.getText().isEmpty()) {
-            results.add(textDeltaContent);
-        }
-        
-        // Complete message if last or tool_start
-        if (last || state.toolStart) {
-            if (state.index != null && state.index < state.message.getContent().size()) {
-                Content completedContent = state.message.getContent().get(state.index);
-                if (completedContent instanceof TextContent) {
-                    TextContent textContent = (TextContent) completedContent;
-                    if (textContent.getText() != null && !textContent.getText().isEmpty()) {
-                        results.add(completedContent.completed());
-                    }
-                }
-            }
-            
-            updateMessageAttrs(state.message, state.metadata, state.usage);
-            results.add(state.message.completed());
-            
-            // Reset for next message
-            state.message = new Message(MessageType.MESSAGE, "assistant");
-            state.index = null;
-            state.shouldStartMessage = true;
-        }
+        TextContent textContent = new TextContent(true, null, text);
+        textContent = (TextContent) message.addDeltaContent(textContent);
+        results.add(textContent);
     }
     
     /**
      * Process thinking block with incremental updates and deduplication.
      */
-    private void processThinkingBlock(ThinkingBlock block, boolean last, StreamState state, List<Event> results) {
+    private void processThinkingBlock(ThinkingBlock block, Map<String, Object> metadata, List<Event> results) {
         String reasoning = block.getThinking();
         if (reasoning == null || reasoning.isEmpty()) {
             return;
         }
         
-        // Start reasoning message if needed
-        if (state.shouldStartReasoningMessage) {
-            state.index = null;
-            updateMessageAttrs(state.reasoningMessage, state.metadata, state.usage);
-            results.add(state.reasoningMessage.inProgress());
-            state.shouldStartReasoningMessage = false;
-        }
+        Message reasoningMessage = new Message(MessageType.REASONING, "assistant");
+        updateMessageAttrs(reasoningMessage, metadata, null);
         
-        // Remove prefix (deduplication logic)
-        String newReasoning = removePrefix(reasoning, state.localTruncateReasoningMemory);
-        state.localTruncateReasoningMemory = reasoning;
-        
-        // Create delta content
-        TextContent textDeltaContent = new TextContent(true, state.index, newReasoning);
-        textDeltaContent = (TextContent) state.reasoningMessage.addDeltaContent(textDeltaContent);
-        state.index = textDeltaContent.getIndex();
-        
-        // Only yield valid text
-        // Return textDeltaContent directly
-        if (textDeltaContent.getText() != null && !textDeltaContent.getText().isEmpty()) {
-            results.add(textDeltaContent);
-        }
-        
-        // Complete reasoning message if last or tool_start
-        if (last || state.toolStart) {
-            if (state.index != null && state.index < state.reasoningMessage.getContent().size()) {
-                Content completedContent = state.reasoningMessage.getContent().get(state.index);
-                if (completedContent instanceof TextContent) {
-                    TextContent textContent = (TextContent) completedContent;
-                    if (textContent.getText() != null && !textContent.getText().isEmpty()) {
-                        results.add(completedContent.completed());
-                    }
-                }
-            }
-            
-            updateMessageAttrs(state.reasoningMessage, state.metadata, state.usage);
-            results.add(state.reasoningMessage.completed());
-            
-            // Reset for next reasoning message
-            state.reasoningMessage = new Message(MessageType.REASONING, "assistant");
-            state.index = null;
-        }
+        TextContent textContent = new TextContent(true, null, reasoning);
+        textContent = (TextContent) reasoningMessage.addDeltaContent(textContent);
+        results.add(textContent);
     }
     
     /**
      * Process tool_use block with staged building (create empty, fill on last).
      */
-    private void processToolUseBlock(ToolUseBlock block, boolean last, StreamState state, List<Event> results) {
-        String callId = block.getId();
-        
-        if (last) {
-            // Fill in the complete arguments
-            Message pluginCallMessage = state.toolUseMessagesDict.get(callId);
-            if (pluginCallMessage == null) {
-                logger.warn("Tool use message not found for call_id: " + callId);
-                return;
-            }
-            
-            // Serialize input to JSON
-            String jsonStr;
-            try {
-                jsonStr = objectMapper.writeValueAsString(block.getInput());
-            } catch (Exception e) {
-                logger.error("Failed to serialize tool input", e);
-                jsonStr = "{}";
-            }
-            
-            // Create FunctionCall data
-            FunctionCall functionCall = new FunctionCall(
-                block.getId(),
-                block.getName(),
-                jsonStr
-            );
-            
-            // Convert to Map for DataContent
-            Map<String, Object> callData = new HashMap<>();
-            callData.put("call_id", functionCall.getCallId());
-            callData.put("name", functionCall.getName());
-            callData.put("arguments", functionCall.getArguments());
-            
-            DataContent dataDeltaContent = new DataContent();
-            dataDeltaContent.setDelta(true);
-            dataDeltaContent.setIndex(state.index);
-            dataDeltaContent.setData(callData);
-            
-            dataDeltaContent = (DataContent) pluginCallMessage.addDeltaContent(dataDeltaContent);
-            results.add(dataDeltaContent.completed());
-            
-            updateMessageAttrs(pluginCallMessage, state.metadata, state.usage);
-            results.add(pluginCallMessage.completed());
-            state.index = null;
-        } else {
-            // Create new tool call message if not exists
-            if (!state.toolUseMessagesDict.containsKey(callId)) {
-                Message pluginCallMessage = new Message(MessageType.PLUGIN_CALL, "assistant");
-                
-                // Create FunctionCall with empty arguments
-                FunctionCall functionCall = new FunctionCall(
-                    block.getId(),
-                    block.getName(),
-                    ""
-                );
-                
-                // Convert to Map for DataContent
-                Map<String, Object> callData = new HashMap<>();
-                callData.put("call_id", functionCall.getCallId());
-                callData.put("name", functionCall.getName());
-                callData.put("arguments", functionCall.getArguments());
-                
-                DataContent dataDeltaContent = new DataContent();
-                dataDeltaContent.setDelta(true);
-                dataDeltaContent.setIndex(state.index);
-                dataDeltaContent.setData(callData);
-                
-                updateMessageAttrs(pluginCallMessage, state.metadata, state.usage);
-                results.add(pluginCallMessage.inProgress());
-                
-                dataDeltaContent = (DataContent) pluginCallMessage.addDeltaContent(dataDeltaContent);
-                results.add(dataDeltaContent);
-                
-                state.toolUseMessagesDict.put(callId, pluginCallMessage);
-            }
+    private void processToolUseBlock(ToolUseBlock block, Map<String, Object> metadata, List<Event> results) {
+        // Serialize input to JSON
+        String jsonStr;
+        try {
+            jsonStr = objectMapper.writeValueAsString(block.getInput());
+        } catch (Exception e) {
+            logger.error("Failed to serialize tool input", e);
+            jsonStr = "{}";
         }
+        
+        FunctionCall functionCall = new FunctionCall(
+            block.getId(),
+            block.getName(),
+            jsonStr
+        );
+        
+        Map<String, Object> callData = new HashMap<>();
+        callData.put("call_id", functionCall.getCallId());
+        callData.put("name", functionCall.getName());
+        callData.put("arguments", functionCall.getArguments());
+        
+        DataContent dataDeltaContent = new DataContent();
+        dataDeltaContent.setDelta(true);
+        dataDeltaContent.setData(callData);
+        
+        Message pluginCallMessage = new Message(MessageType.MCP_TOOL_CALL, "assistant");
+        pluginCallMessage.addDeltaContent(dataDeltaContent);
+        updateMessageAttrs(pluginCallMessage, metadata, null);
+        
+        results.add(pluginCallMessage.completed());
     }
     
     /**
      * Process tool_result block.
      */
-    private void processToolResultBlock(ToolResultBlock block, StreamState state, List<Event> results) {
+    private void processToolResultBlock(ToolResultBlock block, Map<String, Object> metadata, List<Event> results) {
         // Serialize output to JSON
         String jsonStr;
         try {
@@ -418,36 +237,24 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
         outputData.put("output", functionCallOutput.getOutput());
         
         DataContent dataDeltaContent = new DataContent();
-        dataDeltaContent.setIndex(state.index);
         dataDeltaContent.setData(outputData);
         
-        Message pluginOutputMessage = new Message(MessageType.PLUGIN_CALL_OUTPUT, "tool");
+        Message pluginOutputMessage = new Message(MessageType.MCP_APPROVAL_RESPONSE, "tool");
         pluginOutputMessage.setContent(List.of(dataDeltaContent));
         
-        updateMessageAttrs(pluginOutputMessage, state.metadata, state.usage);
+        updateMessageAttrs(pluginOutputMessage, metadata, null);
         results.add(pluginOutputMessage.completed());
-        
-        // Reset message state
-        state.message = new Message(MessageType.MESSAGE, "assistant");
-        state.shouldStartMessage = true;
-        state.index = null;
     }
     
     /**
      * Process image block.
      */
-    private void processImageBlock(ImageBlock block, StreamState state, List<Event> results) {
-        // Start message if needed
-        if (state.shouldStartMessage) {
-            state.index = null;
-            updateMessageAttrs(state.message, state.metadata, state.usage);
-            results.add(state.message.inProgress());
-            state.shouldStartMessage = false;
-        }
+    private void processImageBlock(ImageBlock block, Map<String, Object> metadata, List<Event> results) {
+        Message message = new Message(MessageType.MESSAGE, "assistant");
+        updateMessageAttrs(message, metadata, null);
         
         ImageContent deltaContent = new ImageContent();
         deltaContent.setDelta(true);
-        deltaContent.setIndex(state.index);
         
         Source source = block.getSource();
         if (source instanceof URLSource) {
@@ -464,26 +271,20 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
             deltaContent.setImageUrl(url);
         }
         
-        deltaContent = (ImageContent) state.message.addDeltaContent(deltaContent);
-        state.index = deltaContent.getIndex();
+        deltaContent = (ImageContent) message.addDeltaContent(deltaContent);
         results.add(deltaContent);
+        results.add(message.completed());
     }
     
     /**
      * Process audio block.
      */
-    private void processAudioBlock(AudioBlock block, StreamState state, List<Event> results) {
-        // Start message if needed
-        if (state.shouldStartMessage) {
-            state.index = null;
-            updateMessageAttrs(state.message, state.metadata, state.usage);
-            results.add(state.message.inProgress());
-            state.shouldStartMessage = false;
-        }
+    private void processAudioBlock(AudioBlock block, Map<String, Object> metadata, List<Event> results) {
+        Message message = new Message(MessageType.MESSAGE, "assistant");
+        updateMessageAttrs(message, metadata, null);
         
         AudioContent deltaContent = new AudioContent();
         deltaContent.setDelta(true);
-        deltaContent.setIndex(state.index);
         
         Source source = block.getSource();
         if (source instanceof URLSource) {
@@ -509,27 +310,22 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
             deltaContent.setFormat(mediaType);
         }
         
-        deltaContent = (AudioContent) state.message.addDeltaContent(deltaContent);
-        state.index = deltaContent.getIndex();
+        deltaContent = (AudioContent) message.addDeltaContent(deltaContent);
         results.add(deltaContent);
+        results.add(message.completed());
     }
     
     /**
      * Process unknown block type (fallback to text).
      */
-    private void processUnknownBlock(ContentBlock block, StreamState state, List<Event> results) {
-        // Start message if needed
-        if (state.shouldStartMessage) {
-            state.index = null;
-            updateMessageAttrs(state.message, state.metadata, state.usage);
-            results.add(state.message.inProgress());
-            state.shouldStartMessage = false;
-        }
+    private void processUnknownBlock(ContentBlock block, Map<String, Object> metadata, List<Event> results) {
+        Message message = new Message(MessageType.MESSAGE, "assistant");
+        updateMessageAttrs(message, metadata, null);
         
-        TextContent deltaContent = new TextContent(true, state.index, block.toString());
-        deltaContent = (TextContent) state.message.addDeltaContent(deltaContent);
-        state.index = deltaContent.getIndex();
+        TextContent deltaContent = new TextContent(true, null, block.toString());
+        deltaContent = (TextContent) message.addDeltaContent(deltaContent);
         results.add(deltaContent);
+        results.add(message.completed());
     }
     
     /**
@@ -546,16 +342,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
     
     /**
      * Remove prefix from string
-     */
-    private String removePrefix(String str, String prefix) {
-        if (prefix == null || prefix.isEmpty() || !str.startsWith(prefix)) {
-            return str;
-        }
-        return str.substring(prefix.length());
-    }
-    
-    /**
-     * Convert ContentBlock to Map for JSON serialization.
      */
     private Map<String, Object> contentBlockToMap(ContentBlock block) {
         Map<String, Object> map = new HashMap<>();
@@ -596,40 +382,6 @@ public class AgentScopeStreamAdapter implements StreamAdapter {
             map.put("text", block.toString());
         }
         return map;
-    }
-    
-    /**
-     * State class to maintain streaming state across events.
-     */
-    private static class StreamState {
-        String msgId = null;
-        String lastContent = "";
-        Map<String, Object> metadata = null;
-        Map<String, Object> usage = null;
-        boolean toolStart = false;
-        Message message = new Message(MessageType.MESSAGE, "assistant");
-        Message reasoningMessage = new Message(MessageType.REASONING, "assistant");
-        String localTruncateMemory = "";
-        String localTruncateReasoningMemory = "";
-        boolean shouldStartMessage = true;
-        boolean shouldStartReasoningMessage = true;
-        Map<String, Message> toolUseMessagesDict = new HashMap<>();
-        Integer index = null;
-        List<Message> pendingMessages = new ArrayList<>();
-        
-        void reset(String newMsgId) {
-            localTruncateMemory = "";
-            localTruncateReasoningMemory = "";
-            lastContent = "";
-            message = new Message(MessageType.MESSAGE, "assistant");
-            reasoningMessage = new Message(MessageType.REASONING, "assistant");
-            shouldStartMessage = true;
-            shouldStartReasoningMessage = true;
-            index = null;
-            toolStart = false;
-            toolUseMessagesDict.clear();
-            msgId = newMsgId;
-        }
     }
 }
 
