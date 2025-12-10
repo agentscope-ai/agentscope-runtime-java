@@ -20,30 +20,17 @@ import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
-
-import io.a2a.spec.JSONRPCError;
-import io.a2a.spec.Part;
-import io.a2a.spec.Task;
-import io.a2a.spec.TaskState;
-import io.a2a.spec.TaskStatus;
-import io.a2a.spec.TextPart;
-
+import io.a2a.spec.*;
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.engine.schemas.AgentRequest;
-import io.agentscope.runtime.engine.schemas.Content;
+import io.agentscope.runtime.engine.schemas.*;
 import io.agentscope.runtime.engine.schemas.Event;
-import io.agentscope.runtime.engine.schemas.MessageType;
-import io.agentscope.runtime.engine.schemas.Role;
-import io.agentscope.runtime.engine.schemas.TextContent;
+import io.agentscope.runtime.engine.schemas.Message;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
-
-import io.agentscope.runtime.engine.schemas.Message;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -66,6 +53,7 @@ public class GraphAgentExecutor implements AgentExecutor {
         try {
             AgentRequest agentRequest = buildAgentRequest(context);
             Flux<Event> resultFlux = runner.streamQuery(agentRequest);
+
             Task task = context.getTask();
             if (task == null) {
                 task = newTask(context.getMessage());
@@ -137,7 +125,7 @@ public class GraphAgentExecutor implements AgentExecutor {
         if (null == context.getParams().configuration()) {
             return true;
         }
-        return Boolean.FALSE.equals(context.getParams().configuration().blocking());
+        return Boolean.TRUE.equals(context.getParams().configuration().blocking());
     }
 
     private void processTaskBlocking(RequestContext context, EventQueue eventQueue, Task task, Flux<Event> resultFlux) {
@@ -149,13 +137,51 @@ public class GraphAgentExecutor implements AgentExecutor {
                 })
                 .doOnNext(output -> {
                     try {
-                        if (output instanceof Message m) {
-                            List<Content> contents = m.getContent();
-                            if (contents != null && !contents.isEmpty() && contents.get(0) instanceof TextContent text) {
+                        if (output instanceof Content) {
+                            // Todo: only process text content for now, need to handle other content types later
+                            if (output instanceof TextContent text) {
                                 String content = text.getText();
                                 accumulatedOutput.append(content);
                                 logger.info("Appended content chunk (" + content.length() + " chars), total so far: "
                                         + accumulatedOutput.length());
+                            }
+                        }
+                        // Todo: need to know whether the blocking mode should also handle tool calls and responses
+                        else if (output instanceof Message message) {
+                            if (message.getType().equals("mcp_call")) {
+                                for (Content content : message.getContent()) {
+                                    if (content instanceof DataContent dataContent) {
+                                        if (dataContent.getData() == null || !dataContent.getData().containsKey("name") || dataContent.getData().get("name").toString().isEmpty()) {
+                                            continue;
+                                        }
+                                        System.out.println("Processing tool call: " + dataContent.getData());
+                                        String toolName = dataContent.getData().get("name").toString();
+                                        String arguments = dataContent.getData().get("arguments").toString();
+                                        String callId = dataContent.getData().get("call_id").toString();
+                                        String textContent = "Calling tool " + toolName + " with arguments: " + arguments + " (call ID: " + callId + ")";
+                                        Map<String, Object> metaData = new HashMap<>();
+                                        metaData.put("type", "toolCall");
+                                        accumulatedOutput.append(textContent);
+                                        // Todo: Still need to know the exact token usage for tool call
+                                    }
+                                }
+                            } else if (message.getType().equals("mcp_approval_response")) {
+                                for (Content content : message.getContent()) {
+                                    if (content instanceof DataContent dataContent) {
+                                        if (dataContent.getData() == null || !dataContent.getData().containsKey("name") || dataContent.getData().get("name").toString().isEmpty()) {
+                                            continue;
+                                        }
+                                        System.out.println("Processing tool call: " + dataContent.getData());
+                                        String toolResult = dataContent.getData().get("output").toString();
+                                        String toolName = dataContent.getData().get("name").toString();
+                                        String callId = dataContent.getData().get("call_id").toString();
+                                        String textContent = "Tool " + toolName + " returned result: " + toolResult + " (call ID: " + callId + ")";
+                                        Map<String, Object> metaData = new HashMap<>();
+                                        metaData.put("type", "toolResponse");
+                                        accumulatedOutput.append(textContent);
+                                        // Todo: Still need to know the exact token usage for tool call
+                                    }
+                                }
                             }
                         }
                     } catch (Exception ignored) {
@@ -163,6 +189,7 @@ public class GraphAgentExecutor implements AgentExecutor {
                 })
                 .doOnComplete(() -> {
                     logger.info("Subscribe and process stream output completed successfully");
+                    // Todo: Still need to decide whether to send the accumulated output as a final message in blocking mode
                     io.a2a.spec.Message resultMessage = A2A.createAgentTextMessage(accumulatedOutput.toString(),
                             context.getContextId(),
                             context.getTaskId());
@@ -207,6 +234,7 @@ public class GraphAgentExecutor implements AgentExecutor {
     private void processStreamingOutput(Flux<Event> resultFlux, TaskUpdater taskUpdater, StringBuilder accumulatedOutput) {
         String artifactId = UUID.randomUUID().toString();
         AtomicBoolean isFirstArtifact = new AtomicBoolean(true);
+
         try {
             resultFlux
                     .doOnSubscribe(s -> {
@@ -216,20 +244,14 @@ public class GraphAgentExecutor implements AgentExecutor {
                     })
                     .doOnNext(output -> {
                         try {
-                            if (output instanceof Message m) {
-                                List<Content> contents = m.getContent();
-                                if (contents != null && !contents.isEmpty() && contents.get(0) instanceof TextContent text) {
+                            if (output instanceof Content) {
+                                System.out.println(output.getClass().getName());
+                                // Todo: only process text content for now, need to handle other content types later
+                                if (output instanceof TextContent text) {
                                     String content = text.getText();
                                     Map<String, Object> metaData = new HashMap<>();
-                                    if (Objects.equals(m.getType(), MessageType.FUNCTION_CALL)) {
-                                        metaData.put("type", "toolCall");
-                                    } else if (Objects.equals(m.getType(), MessageType.FUNCTION_CALL_OUTPUT)) {
-                                        metaData.put("type", "toolResponse");
-                                    } else {
-                                        metaData.put("type", "chunk");
-                                    }
+                                    metaData.put("type", "chunk");
                                     if (content != null && !content.isEmpty()) {
-
                                         taskUpdater.addArtifact(
                                                 List.of(new TextPart(content)),
                                                 artifactId,
@@ -241,6 +263,58 @@ public class GraphAgentExecutor implements AgentExecutor {
                                         accumulatedOutput.append(content);
                                         logger.info("Appended content chunk (" + content.length() + " chars), total so far: "
                                                 + accumulatedOutput.length());
+                                    }
+                                }
+                            } else if (output instanceof Message message) {
+                                if (message.getType().equals("mcp_call")) {
+                                    for (Content content : message.getContent()) {
+                                        if (content instanceof DataContent dataContent) {
+                                            if (dataContent.getData() == null || !dataContent.getData().containsKey("name") || dataContent.getData().get("name").toString().isEmpty()) {
+                                                continue;
+                                            }
+                                            System.out.println("Processing tool call: " + dataContent.getData());
+                                            String toolName = dataContent.getData().get("name").toString();
+                                            String arguments = dataContent.getData().get("arguments").toString();
+                                            String callId = dataContent.getData().get("call_id").toString();
+                                            String textContent = "Calling tool " + toolName + " with arguments: " + arguments + " (call ID: " + callId + ")";
+                                            Map<String, Object> metaData = new HashMap<>();
+                                            metaData.put("type", "toolCall");
+                                            taskUpdater.addArtifact(
+                                                    List.of(new TextPart(textContent)),
+                                                    artifactId,
+                                                    "agent-response",
+                                                    metaData,
+                                                    !isFirstArtifact.getAndSet(false),
+                                                    false
+                                            );
+                                            accumulatedOutput.append(toolName);
+                                            // Todo: Still need to know the exact token usage for tool call
+                                        }
+                                    }
+                                } else if (message.getType().equals("mcp_approval_response")) {
+                                    for (Content content : message.getContent()) {
+                                        if (content instanceof DataContent dataContent) {
+                                            if (dataContent.getData() == null || !dataContent.getData().containsKey("name") || dataContent.getData().get("name").toString().isEmpty()) {
+                                                continue;
+                                            }
+                                            System.out.println("Processing tool call: " + dataContent.getData());
+                                            String toolResult = dataContent.getData().get("output").toString();
+                                            String toolName = dataContent.getData().get("name").toString();
+                                            String callId = dataContent.getData().get("call_id").toString();
+                                            String textContent = "Tool " + toolName + " returned result: " + toolResult + " (call ID: " + callId + ")";
+                                            Map<String, Object> metaData = new HashMap<>();
+                                            metaData.put("type", "toolResponse");
+                                            taskUpdater.addArtifact(
+                                                    List.of(new TextPart(textContent)),
+                                                    artifactId,
+                                                    "agent-response",
+                                                    metaData,
+                                                    !isFirstArtifact.getAndSet(false),
+                                                    false
+                                            );
+                                            accumulatedOutput.append(toolName);
+                                            // Todo: Still need to know the exact token usage for tool call
+                                        }
                                     }
                                 }
                             }
