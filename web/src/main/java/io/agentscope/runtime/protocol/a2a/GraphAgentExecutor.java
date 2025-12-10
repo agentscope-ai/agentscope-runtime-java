@@ -154,7 +154,6 @@ public class GraphAgentExecutor implements AgentExecutor {
                                         if (dataContent.getData() == null || !dataContent.getData().containsKey("name") || dataContent.getData().get("name").toString().isEmpty()) {
                                             continue;
                                         }
-                                        System.out.println("Processing tool call: " + dataContent.getData());
                                         String toolName = dataContent.getData().get("name").toString();
                                         String arguments = dataContent.getData().get("arguments").toString();
                                         String callId = dataContent.getData().get("call_id").toString();
@@ -171,7 +170,6 @@ public class GraphAgentExecutor implements AgentExecutor {
                                         if (dataContent.getData() == null || !dataContent.getData().containsKey("name") || dataContent.getData().get("name").toString().isEmpty()) {
                                             continue;
                                         }
-                                        System.out.println("Processing tool call: " + dataContent.getData());
                                         String toolResult = dataContent.getData().get("output").toString();
                                         String toolName = dataContent.getData().get("name").toString();
                                         String callId = dataContent.getData().get("call_id").toString();
@@ -272,7 +270,6 @@ public class GraphAgentExecutor implements AgentExecutor {
                                             if (dataContent.getData() == null || !dataContent.getData().containsKey("name") || dataContent.getData().get("name").toString().isEmpty()) {
                                                 continue;
                                             }
-                                            System.out.println("Processing tool call: " + dataContent.getData());
                                             String toolName = dataContent.getData().get("name").toString();
                                             String arguments = dataContent.getData().get("arguments").toString();
                                             String callId = dataContent.getData().get("call_id").toString();
@@ -297,7 +294,6 @@ public class GraphAgentExecutor implements AgentExecutor {
                                             if (dataContent.getData() == null || !dataContent.getData().containsKey("name") || dataContent.getData().get("name").toString().isEmpty()) {
                                                 continue;
                                             }
-                                            System.out.println("Processing tool call: " + dataContent.getData());
                                             String toolResult = dataContent.getData().get("output").toString();
                                             String toolName = dataContent.getData().get("name").toString();
                                             String callId = dataContent.getData().get("call_id").toString();

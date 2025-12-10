@@ -18,7 +18,6 @@ package io.agentscope.runtime.sandbox.manager.client.config;
 
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
 import io.agentscope.runtime.sandbox.manager.model.container.PortRange;
-import io.agentscope.runtime.sandbox.manager.model.container.RedisManagerConfig;
 
 public class DockerClientConfig extends BaseClientConfig {
     private String host;
@@ -26,21 +25,18 @@ public class DockerClientConfig extends BaseClientConfig {
     private String certPath;
     private PortRange portRange;
     private boolean redisEnabled;
-    private RedisManagerConfig redisConfig;
 
     private DockerClientConfig() {
         super(ContainerManagerType.DOCKER);
     }
 
     private DockerClientConfig(String host, int port, String certPath,
-                             PortRange portRange, boolean redisEnabled, RedisManagerConfig redisConfig) {
+                             PortRange portRange) {
         super(ContainerManagerType.DOCKER);
         this.host = host;
         this.port = port;
         this.certPath = certPath;
         this.portRange = portRange;
-        this.redisEnabled = redisEnabled;
-        this.redisConfig = redisConfig;
     }
 
     public static Builder builder() {
@@ -87,22 +83,12 @@ public class DockerClientConfig extends BaseClientConfig {
         this.redisEnabled = redisEnabled;
     }
 
-    public RedisManagerConfig getRedisConfig() {
-        return redisConfig;
-    }
-
-    public void setRedisConfig(RedisManagerConfig redisConfig) {
-        this.redisConfig = redisConfig;
-    }
-
     public static class Builder {
         private String host = "localhost";
         private int port = 2375;
         private String certPath;
         private PortRange portRange;
         private boolean redisEnabled = false;
-        private RedisManagerConfig redisConfig;
-
         private Builder() {
         }
 
@@ -131,13 +117,8 @@ public class DockerClientConfig extends BaseClientConfig {
             return this;
         }
 
-        public Builder redisConfig(RedisManagerConfig redisConfig) {
-            this.redisConfig = redisConfig;
-            return this;
-        }
-
         public DockerClientConfig build() {
-            return new DockerClientConfig(host, port, certPath, portRange, redisEnabled, redisConfig);
+            return new DockerClientConfig(host, port, certPath, portRange);
         }
     }
 }

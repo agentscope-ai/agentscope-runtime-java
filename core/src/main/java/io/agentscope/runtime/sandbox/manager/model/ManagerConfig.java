@@ -187,8 +187,8 @@ public class ManagerConfig {
             return this;
         }
 
-        public Builder portRange(int start, int end) {
-            this.portRange = new PortRange(start, end);
+        public Builder portRange(PortRange portRange) {
+            this.portRange = portRange;
             return this;
         }
 

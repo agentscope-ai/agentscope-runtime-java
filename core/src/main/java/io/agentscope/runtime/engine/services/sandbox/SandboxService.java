@@ -51,6 +51,10 @@ public class SandboxService extends ServiceWithLifecycleManager {
        this.managerApi = sandboxManager;
     }
 
+    public SandboxManager getManagerApi() {
+        return managerApi;
+    }
+
     @Override
     public void start() {
 		if (managerApi != null) {
