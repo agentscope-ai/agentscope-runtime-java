@@ -176,6 +176,5 @@ public abstract class AgentScopeAgentHandler implements AgentHandler {
     @Override
     public abstract Flux<?> streamQuery(AgentRequest request, Object messages);
 
-
 }
 
