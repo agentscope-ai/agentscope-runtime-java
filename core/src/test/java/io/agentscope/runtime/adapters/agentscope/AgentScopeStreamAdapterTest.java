@@ -462,7 +462,7 @@ class AgentScopeStreamAdapterTest {
         Msg msg = Msg.builder()
                 .id("msg-1")
                 .role(MsgRole.ASSISTANT)
-                .content(null)
+                .content()
                 .build();
 
         io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
