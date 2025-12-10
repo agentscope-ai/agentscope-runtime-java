@@ -103,7 +103,7 @@ public class SandboxManager implements AutoCloseable {
         this.poolSize = managerConfig.getPoolSize();
         this.defaultType = defaultType;
         this.redisEnabled = managerConfig.getRedisEnabled();
-        this.portManager = new PortManager(managerConfig.getPortRange()); // Thread-safe port manager
+        this.portManager = new PortManager(managerConfig.getPortRange());
 
         logger.info("Initializing SandboxManager with container manager: " + this.containerManagerType);
         logger.info("Container pool size: " + this.poolSize);
@@ -152,7 +152,6 @@ public class SandboxManager implements AutoCloseable {
                 // Set port range and redis config from ManagerConfig
                 dockerClientConfig.setPortRange(managerConfig.getPortRange());
                 dockerClientConfig.setRedisEnabled(managerConfig.getRedisEnabled());
-                dockerClientConfig.setRedisConfig(managerConfig.getRedisConfig());
 
                 DockerClient dockerClient = new DockerClient(dockerClientConfig);
                 this.containerClient = dockerClient;
@@ -957,7 +956,7 @@ public class SandboxManager implements AutoCloseable {
     private SandboxClient establishConnection(String sandboxId) {
         try {
             ContainerModel containerInfo = getInfo(sandboxId);
-            if (containerInfo.getVersion().contains("sandbox-appworld") || containerInfo.getVersion().contains("sandbox-bfclient")) {
+            if (containerInfo.getVersion().contains("sandbox-appworld") || containerInfo.getVersion().contains("sandbox-bfcl")) {
                 return new TrainingSandboxClient(containerInfo, 60);
             }
             return new SandboxHttpClient(containerInfo, 60);

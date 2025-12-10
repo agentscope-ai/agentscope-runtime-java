@@ -20,6 +20,7 @@ import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.RedisManagerConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.model.container.PortRange;
 import io.agentscope.runtime.sandbox.manager.model.fs.LocalFileSystemConfig;
 import org.junit.jupiter.api.*;
 import org.testcontainers.containers.GenericContainer;
@@ -65,37 +66,37 @@ public class RedisSandboxManagerTest {
         RedisManagerConfig redisConfig = createRedisConfig(
                 "_test_runtime_sandbox_occupied_ports",
                 "_test_runtime_sandbox_pool");
-        
+
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("redis_test_")
                 .redisConfig(redisConfig)
                 .poolSize(2)
-                .portRange(50000, 51000)
+                .portRange(new PortRange(50000, 51000))
                 .fileSystemConfig(LocalFileSystemConfig.builder()
                         .mountDir("sessions_mount_dir")
                         .build())
                 .build();
-        
+
         try (SandboxManager manager = new SandboxManager(config)) {
             manager.start();
             assertNotNull(manager, "SandboxManager should be initialized");
-            
+
             ContainerModel container = manager.getSandbox(
-                    SandboxType.BASE, 
-                    TEST_USER_ID, 
+                    SandboxType.BASE,
+                    TEST_USER_ID,
                     TEST_SESSION_ID
             );
-            
+
             assertNotNull(container, "Container should be created");
             assertNotNull(container.getContainerName(), "Container should have a name");
             assertNotNull(container.getBaseUrl(), "Container should have a base URL");
             assertTrue(container.getBaseUrl().contains("localhost"), "Base URL should contain localhost");
-            
+
             Map<SandboxKey, ContainerModel> allSandboxes = manager.getAllSandboxes();
             assertEquals(1, allSandboxes.size(), "Should have 1 sandbox");
-            
+
             manager.stopAndRemoveSandbox(SandboxType.BASE, TEST_USER_ID, TEST_SESSION_ID);
-            
+
         } catch (Exception e) {
             fail("Redis test failed: " + e.getMessage(), e);
         }
@@ -107,29 +108,29 @@ public class RedisSandboxManagerTest {
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("inmemory_test_")
                 .poolSize(0)
-                .portRange(51000, 52000)
+                .portRange(new PortRange(51000, 52000))
                 .fileSystemConfig(LocalFileSystemConfig.builder()
                         .mountDir("sessions_mount_dir")
                         .build())
                 .build();
-        
+
         try (SandboxManager manager = new SandboxManager(config)) {
             assertNotNull(manager, "SandboxManager should be initialized");
-            
+
             assertFalse(manager.getManagerConfig().getRedisEnabled(),
                     "Redis should not be enabled");
-            
+
             ContainerModel container = manager.getSandbox(
-                    SandboxType.BASE, 
-                    "memory_user", 
+                    SandboxType.BASE,
+                    "memory_user",
                     "memory_session"
             );
-            
+
             assertNotNull(container, "Container should be created");
             assertNotNull(container.getContainerName(), "Container should have a name");
 
             manager.stopAndRemoveSandbox(SandboxType.BASE, "memory_user", "memory_session");
-            
+
         } catch (Exception e) {
             fail("In-memory test failed: " + e.getMessage(), e);
         }
@@ -141,44 +142,44 @@ public class RedisSandboxManagerTest {
         RedisManagerConfig redisConfig = createRedisConfig(
                 "_shared_test_ports",
                 "_shared_test_pool");
-        
+
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("shared_test_")
                 .redisConfig(redisConfig)
                 .poolSize(0)
-                .portRange(52000, 53000)
+                .portRange(new PortRange(52000, 53000))
                 .fileSystemConfig(LocalFileSystemConfig.builder()
                         .mountDir("sessions_mount_dir")
                         .build())
                 .build();
-        
+
         ContainerModel container1;
         String containerName1;
-        
+
         try (SandboxManager manager1 = new SandboxManager(config)) {
             container1 = manager1.getSandbox(
-                    SandboxType.BASE, 
-                    "shared_user", 
+                    SandboxType.BASE,
+                    "shared_user",
                     "shared_session"
             );
-            
+
             assertNotNull(container1, "Container should be created by manager1");
             containerName1 = container1.getContainerName();
-            
+
             try (SandboxManager manager2 = new SandboxManager(config)) {
                 ContainerModel container2 = manager2.getSandbox(
-                        SandboxType.BASE, 
-                        "shared_user", 
+                        SandboxType.BASE,
+                        "shared_user",
                         "shared_session"
                 );
-                
+
                 assertNotNull(container2, "Container should be accessible from manager2");
-                assertEquals(containerName1, container2.getContainerName(), 
+                assertEquals(containerName1, container2.getContainerName(),
                         "Both managers should access the same container");
-                
+
                 manager2.stopAndRemoveSandbox(SandboxType.BASE, "shared_user", "shared_session");
             }
-            
+
         } catch (Exception e) {
             fail("Shared state test failed: " + e.getMessage(), e);
         }
@@ -190,31 +191,31 @@ public class RedisSandboxManagerTest {
         RedisManagerConfig redisConfig = createRedisConfig(
                 "_pool_test_ports",
                 "_pool_test_queue");
-        
+
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("pool_test_")
                 .redisConfig(redisConfig)
                 .poolSize(2)
-                .portRange(53000, 54000)
+                .portRange(new PortRange(53000, 54000))
                 .fileSystemConfig(LocalFileSystemConfig.builder()
                         .mountDir("sessions_mount_dir")
                         .build())
                 .build();
-        
+
         try (SandboxManager manager = new SandboxManager(config)) {
             assertNotNull(manager, "SandboxManager should be initialized");
-            
+
             ContainerModel container = manager.createFromPool(
                     SandboxType.BASE,
                     "pool_user",
                     "pool_session"
             );
-            
+
             assertNotNull(container, "Container should be created from pool");
             assertNotNull(container.getContainerName(), "Container should have a name");
 
             manager.release(container.getContainerName());
-            
+
         } catch (Exception e) {
             fail("Container pool test failed: " + e.getMessage(), e);
         }
@@ -226,36 +227,36 @@ public class RedisSandboxManagerTest {
         RedisManagerConfig redisConfig = createRedisConfig(
                 "_persist_test_ports",
                 "_persist_test_pool");
-        
+
         ManagerConfig config = ManagerConfig.builder()
                 .containerPrefixKey("persist_test_")
                 .redisConfig(redisConfig)
                 .poolSize(0)
-                .portRange(54000, 55000)
+                .portRange(new PortRange(54000, 55000))
                 .fileSystemConfig(LocalFileSystemConfig.builder()
                         .mountDir("sessions_mount_dir")
                         .build())
                 .build();
-        
+
         String containerName;
-        
+
         try (SandboxManager manager = new SandboxManager(config)) {
             ContainerModel container = manager.getSandbox(
                     SandboxType.BASE,
                     "persist_user",
                     "persist_session"
             );
-            
+
             containerName = container.getContainerName();
             assertNotNull(containerName, "Container should have a name");
-            
+
             Map<SandboxKey, ContainerModel> sandboxes = manager.getAllSandboxes();
             assertFalse(sandboxes.isEmpty(), "Should have at least one sandbox in Redis");
-            
+
             manager.stopAndRemoveSandbox(SandboxType.BASE, "persist_user", "persist_session");
         }
     }
-    
+
     @AfterEach
     public void afterEach() throws InterruptedException {
         Thread.sleep(1000);
