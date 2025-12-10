@@ -92,15 +92,13 @@ public class ChatController {
         return agent.streamQuery(agentRequest, convertedMessages)
                 .flatMap(event -> {
                     EventType type = event.getType();
-                    boolean isLast = false;
-                    if (event.isLast() || type == EventType.AGENT_RESULT) {
-                        isLast = true;
-                    }
+                    boolean isLast = event.isLast() || type == EventType.AGENT_RESULT;
+                    String messageType = type != null ? type.name() : null;
 
-                    Msg msgGenerated = event.getMessage();
+					Msg msgGenerated = event.getMessage();
                     if (msgGenerated == null || msgGenerated.getContent() == null || msgGenerated.getContent()
                             .isEmpty()) {
-                        return Flux.just(simpleYield("", "content"));
+                        return Flux.just(simpleYield("", "content", messageType));
                     }
 
                     List<ContentBlock> contentList = msgGenerated.getContent();
@@ -114,35 +112,45 @@ public class ChatController {
                                 responseBuilder.append(text);
                                 System.out.println(text);
                             }
+                            messageType = "ASSISTANT";
                         }
                         else if (item instanceof ToolUseBlock toolUseBlock) {
                             responseBuilder.append("Using tool: ").append(toolUseBlock.getName()).append("\n");
+                            messageType = "TOOL_CALL";
                         } else if (item instanceof ToolResultBlock toolResultBlock) {
-                            responseBuilder.append("Tool result: ").append(toolResultBlock.getOutput()).append("\n");
+                            responseBuilder.append("Tool result: ").append("\n");
+                            for (ContentBlock toolResultContentBlock : toolResultBlock.getOutput()) {
+                                if (toolResultContentBlock instanceof TextBlock toolResultTextBlock) {
+                                    responseBuilder.append(toolResultTextBlock.getText());
+                                }
+                            }
+                            responseBuilder.append("\n");
+                            messageType = "TOOL_RESPONSE";
                         } else if (item instanceof ThinkingBlock thinkingBlock) {
                             String thought = thinkingBlock.getThinking();
                             if (thought != null && !thought.isEmpty()) {
-                                thinkingBuilder.append("[Thinking]: ").append(thought).append("\n");
+                                thinkingBuilder.append(thought).append("\n");
                             }
+                            messageType = "THINKING";
                         }
                     }
 
                     String response = responseBuilder.toString();
                     if (!response.isEmpty()) {
-                        return Flux.just(simpleYield(response, "content"));
+                        return Flux.just(simpleYield(response, "content", messageType, null, null, null));
                     }
 
                     String thinking = thinkingBuilder.toString();
                     if (!thinking.isEmpty()) {
-                        return Flux.just(simpleYield(thinking, "think"));
+                        return Flux.just(simpleYield(thinking, "content", messageType, null, null, null));
                     }
 
-                    return Flux.just(simpleYield("", "content"));
+                    return Flux.just(simpleYield("", "content", messageType));
 
                 })
                 .onErrorResume(error -> {
                     logger.error("Error during chat completion", error);
-                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content"));
+                    return Flux.just(simpleYield("Error: " + error.getMessage(), "content", null, null, null, null));
                 });
     }
 
@@ -171,11 +179,15 @@ public class ChatController {
         }
     }
 
+    private String simpleYield(String content, String ctype, String messageType) {
+        return simpleYield(content, ctype, messageType, null, null, null);
+    }
+
     /**
      * Format response as SSE (Server-Sent Events) compatible string
      */
-    private String simpleYield(String content, String ctype) {
-        Map<String, Object> response = wrapAsOpenAIResponse(content, content, ctype);
+    private String simpleYield(String content, String ctype, String messageType, String toolName, String toolId, String toolData) {
+        Map<String, Object> response = wrapAsOpenAIResponse(content, content, ctype, messageType, toolName, toolId, toolData);
 
         try {
             // Use simple JSON formatting
@@ -190,7 +202,7 @@ public class ChatController {
     /**
      * Wrap content as OpenAI-compatible response
      */
-    private Map<String, Object> wrapAsOpenAIResponse(String textContent, String cardContent, String ctype) {
+    private Map<String, Object> wrapAsOpenAIResponse(String textContent, String cardContent, String ctype, String messageType, String toolName, String toolId, String toolData) {
         String contentType;
 
         contentType = switch (ctype) {
@@ -202,6 +214,24 @@ public class ChatController {
         Map<String, Object> delta = new HashMap<>();
         delta.put(contentType, textContent);
         delta.put("cards", cardContent);
+        // Add messageType to delta if present
+        if (messageType != null) {
+            delta.put("messageType", messageType);
+        }
+        // Add tool information if present
+        if (toolName != null) {
+            delta.put("toolName", toolName);
+        }
+        if (toolId != null) {
+            delta.put("toolId", toolId);
+        }
+        if (toolData != null) {
+            if ("TOOL_CALL".equals(messageType)) {
+                delta.put("toolInput", toolData);
+            } else if ("TOOL_RESPONSE".equals(messageType)) {
+                delta.put("toolResult", toolData);
+            }
+        }
 
         Map<String, Object> choice = new HashMap<>();
         choice.put("delta", delta);

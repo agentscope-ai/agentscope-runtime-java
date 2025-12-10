@@ -182,7 +182,7 @@ public class AgentscopeBrowserUseAgent extends AgentScopeAgentHandler {
                     .model(
                             DashScopeChatModel.builder()
                                     .apiKey(apiKey)
-                                    .modelName("qwen-max")
+                                    .modelName("qwen-plus")
                                     .stream(true)
                                     .enableThinking(true)
                                     .formatter(new DashScopeChatFormatter())
