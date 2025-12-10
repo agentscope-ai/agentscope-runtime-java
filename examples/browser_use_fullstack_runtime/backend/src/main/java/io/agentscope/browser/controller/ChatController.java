@@ -105,6 +105,8 @@ public class ChatController {
                     StringBuilder responseBuilder = new StringBuilder();
                     StringBuilder thinkingBuilder = new StringBuilder();
 
+
+                    String toolCallName = null;
                     for (ContentBlock item : contentList) {
                         if (item instanceof TextBlock textContent && !isLast) {
                             String text = textContent.getText();
@@ -116,9 +118,11 @@ public class ChatController {
                         }
                         else if (item instanceof ToolUseBlock toolUseBlock) {
                             responseBuilder.append("Using tool: ").append(toolUseBlock.getName()).append("\n");
+                            toolCallName = toolUseBlock.getName();
                             messageType = "TOOL_CALL";
                         } else if (item instanceof ToolResultBlock toolResultBlock) {
                             responseBuilder.append("Tool result: ").append("\n");
+                            toolCallName = toolResultBlock.getName();
                             for (ContentBlock toolResultContentBlock : toolResultBlock.getOutput()) {
                                 if (toolResultContentBlock instanceof TextBlock toolResultTextBlock) {
                                     responseBuilder.append(toolResultTextBlock.getText());
@@ -126,7 +130,7 @@ public class ChatController {
                             }
                             responseBuilder.append("\n");
                             messageType = "TOOL_RESPONSE";
-                        } else if (item instanceof ThinkingBlock thinkingBlock) {
+                        } else if (item instanceof ThinkingBlock thinkingBlock && !isLast) {
                             String thought = thinkingBlock.getThinking();
                             if (thought != null && !thought.isEmpty()) {
                                 thinkingBuilder.append(thought).append("\n");
@@ -137,12 +141,12 @@ public class ChatController {
 
                     String response = responseBuilder.toString();
                     if (!response.isEmpty()) {
-                        return Flux.just(simpleYield(response, "content", messageType, null, null, null));
+                        return Flux.just(simpleYield(response, "content", messageType, toolCallName, null, null));
                     }
 
                     String thinking = thinkingBuilder.toString();
                     if (!thinking.isEmpty()) {
-                        return Flux.just(simpleYield(thinking, "content", messageType, null, null, null));
+                        return Flux.just(simpleYield(thinking, "content", messageType, toolCallName, null, null));
                     }
 
                     return Flux.just(simpleYield("", "content", messageType));

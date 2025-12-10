@@ -231,13 +231,17 @@ const App: React.FC = () => {
   }
 
   useEffect(() => {
-    const scrollInterval = setInterval(() => {
-      if (listRef.current) {
-        listRef.current.scrollTop = listRef.current.scrollHeight;
+    if (listRef.current) {
+      const container = listRef.current;
+      // 检查用户是否在底部附近（50px 范围内）
+      const isNearBottom = 
+        container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+      
+      // 只有在底部附近时才自动滚动到底部
+      if (isNearBottom) {
+        container.scrollTop = container.scrollHeight;
       }
-    }, 1000);
-
-    return () => clearInterval(scrollInterval);
+    }
   }, [messages]);
 
   return (
