@@ -47,11 +47,10 @@ import java.util.List;
 public class AgentCardConfiguration {
 
     @Bean
-    @ConditionalOnBean(value = Runner.class)
     public AgentCard agentCard(DeployProperties deployProperties, ObjectProvider<ProtocolConfig> protocolConfigs,
-                               Runner runner) {
+                               AgentHandler agentHandler) {
         A2aProtocolConfig a2aConfig = A2aProtocolConfigUtils.getConfigIfAbsent(protocolConfigs);
-        return createAgentCard(new NetworkUtils(deployProperties), runner.getAgent(), a2aConfig.getAgentCard());
+        return createAgentCard(new NetworkUtils(deployProperties), agentHandler, a2aConfig.getAgentCard());
     }
 
     private AgentCard createAgentCard(NetworkUtils networkUtils, AgentHandler agent, ConfigurableAgentCard agentCard) {

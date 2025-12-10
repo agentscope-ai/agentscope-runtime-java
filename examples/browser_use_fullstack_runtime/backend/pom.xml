@@ -28,10 +28,10 @@
     </parent>
 
     <groupId>io.agentscope</groupId>
-    <artifactId>agentscope_use_example</artifactId>
+    <artifactId>browser-agent-backend</artifactId>
     <version>1.0.0</version>
-    <name>Example::AgentScope Basic</name>
-    <description>Java backend for AgentScope Basic Usage</description>
+    <name>Example::Browser Use Backend</name>
+    <description>Java backend for AgentScope browser use demo</description>
 
     <properties>
         <java.version>17</java.version>
@@ -41,17 +41,30 @@
     </properties>
 
     <dependencies>
+        <!-- Spring Boot Starter Web (includes Tomcat and Spring WebMVC) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Starter WebFlux (for reactive support) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
+        <!-- AgentScope Runtime -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>spring-boot-starter-runtime-a2a</artifactId>
+            <version>1.0.0-BETA1</version>
+        </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-agentscope</artifactId>
             <version>1.0.0-BETA1</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.agentscope</groupId>
-            <artifactId>agentscope-runtime-web</artifactId>
-            <version>1.0.0-BETA1</version>
-        </dependency>
 
         <!-- Logging -->
         <dependency>
@@ -63,7 +76,6 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
-
     </dependencies>
 
     <repositories>
@@ -104,15 +116,7 @@
                     <target>17</target>
                 </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>io.agentscope.AgentScopeDeployExample</mainClass>
-                </configuration>
-            </plugin>
-
         </plugins>
     </build>
 </project>
+
