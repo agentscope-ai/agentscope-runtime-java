@@ -24,12 +24,15 @@ import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test browser tools that require page element interaction
  * These tests require pages with specific elements to work properly
  */
+@EnabledIfDockerAvailable
 public class BrowserInteractiveToolsTest {
 
     private SandboxManager sandboxManager;

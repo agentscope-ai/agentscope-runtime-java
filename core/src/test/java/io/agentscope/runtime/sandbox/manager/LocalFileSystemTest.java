@@ -23,6 +23,7 @@ import io.agentscope.runtime.sandbox.manager.model.fs.LocalFileSystemConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -42,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Environment Variable Configuration:
  * - LOCAL_STORAGE_PATH: Local storage root directory path (optional, defaults to ./test_storage)
  */
+@EnabledIfDockerAvailable
 public class LocalFileSystemTest {
 
     private String localStoragePath;

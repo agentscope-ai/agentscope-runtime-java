@@ -65,6 +65,8 @@ public class AgentscopeBrowserUseAgent extends AgentScopeAgentHandler {
     private String baseUrl;
     private String runtimeToken;
 
+    private volatile boolean connected = false;
+
     /**
      * Creates a new AgentscopeBrowserUseAgent.
      */
@@ -83,7 +85,7 @@ public class AgentscopeBrowserUseAgent extends AgentScopeAgentHandler {
     /**
      * Connect and initialize the agent
      */
-    public Sandbox connect(String sessionId, String userId) {
+    public synchronized Sandbox connect(String sessionId, String userId) {
         logger.info("Initializing sand box...");
         Sandbox sandbox = null;
         // Get browser WebSocket URL and VNC info
@@ -180,7 +182,7 @@ public class AgentscopeBrowserUseAgent extends AgentScopeAgentHandler {
                     .model(
                             DashScopeChatModel.builder()
                                     .apiKey(apiKey)
-                                    .modelName("qwen-plus")
+                                    .modelName("qwen-max")
                                     .stream(true)
                                     .enableThinking(true)
                                     .formatter(new DashScopeChatFormatter())
@@ -255,7 +257,7 @@ public class AgentscopeBrowserUseAgent extends AgentScopeAgentHandler {
             // Return raw framework stream - Runner will handle conversion via StreamAdapter
             return agentScopeEvents
                     .doOnNext(event -> {
-                        logger.debug("Agent event: {}", event);
+                        logger.info("Agent event: {}", event);
                     })
                     .doFinally(signalType -> {
                         // Step 9: Save state after completion

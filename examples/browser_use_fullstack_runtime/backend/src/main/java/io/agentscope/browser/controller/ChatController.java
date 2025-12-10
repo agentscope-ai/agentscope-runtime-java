@@ -17,10 +17,13 @@
 package io.agentscope.browser.controller;
 
 import io.agentscope.browser.agent.AgentscopeBrowserUseAgent;
+import io.agentscope.core.agent.EventType;
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.message.ThinkingBlock;
+import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.runtime.engine.schemas.AgentRequest;
 import org.slf4j.Logger;
@@ -35,6 +38,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.annotation.PostConstruct;
 
 /**
  * REST controller for browser agent chat endpoints
@@ -52,6 +57,11 @@ public class ChatController {
 
     public ChatController(AgentscopeBrowserUseAgent agent) {
         this.agent = agent;
+    }
+
+    @PostConstruct
+    public void init() {
+        this.agent.start();
     }
 
     /**
@@ -81,16 +91,24 @@ public class ChatController {
 
         return agent.streamQuery(agentRequest, convertedMessages)
                 .flatMap(event -> {
+                    EventType type = event.getType();
+                    boolean isLast = false;
+                    if (event.isLast() || type == EventType.AGENT_RESULT) {
+                        isLast = true;
+                    }
+
                     Msg msgGenerated = event.getMessage();
-                    if (msgGenerated == null || msgGenerated.getContent() == null || msgGenerated.getContent().isEmpty()) {
+                    if (msgGenerated == null || msgGenerated.getContent() == null || msgGenerated.getContent()
+                            .isEmpty()) {
                         return Flux.just(simpleYield("", "content"));
                     }
 
                     List<ContentBlock> contentList = msgGenerated.getContent();
                     StringBuilder responseBuilder = new StringBuilder();
+                    StringBuilder thinkingBuilder = new StringBuilder();
 
                     for (ContentBlock item : contentList) {
-                        if (item instanceof TextBlock textContent) {
+                        if (item instanceof TextBlock textContent && !isLast) {
                             String text = textContent.getText();
                             if (text != null && !text.isEmpty()) {
                                 responseBuilder.append(text);
@@ -99,15 +117,28 @@ public class ChatController {
                         }
                         else if (item instanceof ToolUseBlock toolUseBlock) {
                             responseBuilder.append("Using tool: ").append(toolUseBlock.getName()).append("\n");
+                        } else if (item instanceof ToolResultBlock toolResultBlock) {
+                            responseBuilder.append("Tool result: ").append(toolResultBlock.getOutput()).append("\n");
+                        } else if (item instanceof ThinkingBlock thinkingBlock) {
+                            String thought = thinkingBlock.getThinking();
+                            if (thought != null && !thought.isEmpty()) {
+                                thinkingBuilder.append("[Thinking]: ").append(thought).append("\n");
+                            }
                         }
                     }
 
                     String response = responseBuilder.toString();
                     if (!response.isEmpty()) {
                         return Flux.just(simpleYield(response, "content"));
-                    } else {
-                        return Flux.just(simpleYield("", "content"));
                     }
+
+                    String thinking = thinkingBuilder.toString();
+                    if (!thinking.isEmpty()) {
+                        return Flux.just(simpleYield(thinking, "think"));
+                    }
+
+                    return Flux.just(simpleYield("", "content"));
+
                 })
                 .onErrorResume(error -> {
                     logger.error("Error during chat completion", error);
@@ -121,6 +152,8 @@ public class ChatController {
     @GetMapping("/env_info")
     public ResponseEntity<Map<String, String>> getEnvInfo() {
         logger.info("Received env_info request");
+
+        agent.connect(SESSION_ID, USER_ID);
 
         String baseUrl = agent.getBaseUrl();
         String runtimeToken = agent.getRuntimeToken();
