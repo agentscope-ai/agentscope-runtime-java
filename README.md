@@ -8,7 +8,9 @@
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.agentscope/agentscope-runtime/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.agentscope/agentscope-runtime)
 [![DingTalk](https://img.shields.io/badge/DingTalk-Join_Us-orange.svg)](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)
 
-[Cookbook](./cookbook/zh)
+[[Cookbook]](./cookbook/zh)
+[[中文README]](README_zh.md)
+[[Examples]](./examples)
 
 **AgentScope Runtime Java**
 
@@ -42,8 +44,6 @@ Join our community on DingTalk:
 ## 📋 Table of Contents
 
 - [Quick Start](#-quick-start)
-- [Agent Framework Integration](#-agent-framework-integration)
-- [Deployment](#️-deployment)
 - [Contributing](#-contributing)
 - [License](#-license)
 
