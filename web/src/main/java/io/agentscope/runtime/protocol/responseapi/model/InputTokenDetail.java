@@ -13,10 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.agentscope.runtime.protocol.responseapi.model;
 
-package io.agentscope.runtime.protocol;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public enum Protocol {
-    A2A,
-    ResponseAPI
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class InputTokenDetail {
+    @JsonProperty("cached_tokens")
+    private Integer cachedTokens;
+
+    public Integer getCachedTokens() {
+        return cachedTokens;
+    }
+
+    public void setCachedTokens(Integer cachedTokens) {
+        this.cachedTokens = cachedTokens;
+    }
 }

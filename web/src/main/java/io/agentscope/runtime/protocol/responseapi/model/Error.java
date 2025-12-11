@@ -13,10 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.agentscope.runtime.protocol.responseapi.model;
 
-package io.agentscope.runtime.protocol;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-public enum Protocol {
-    A2A,
-    ResponseAPI
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class Error {
+    private String message;
+    private String code;
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
 }
