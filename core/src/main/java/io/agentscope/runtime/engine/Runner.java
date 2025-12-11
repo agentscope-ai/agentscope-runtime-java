@@ -274,10 +274,8 @@ public class Runner {
         return adapter;
     }
 
-    /** FIXME
-     */
     public SandboxManager getSandboxManager() {
-        return null;
+        return adapter.getSandboxService().getManagerApi();
     }
     
 }

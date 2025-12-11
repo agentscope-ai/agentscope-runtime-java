@@ -132,7 +132,7 @@ public class LocalDeployManager implements DeployManager {
         private String endpointName;
         private String host;
         private int port = 8080;
-        private List<Protocol> protocols = List.of(Protocol.A2A);
+        private List<Protocol> protocols = List.of(Protocol.A2A, Protocol.ResponseAPI);
         private List<ProtocolConfig> protocolConfigs = List.of();
 
         public LocalDeployerManagerBuilder endpointName(String endpointName) {

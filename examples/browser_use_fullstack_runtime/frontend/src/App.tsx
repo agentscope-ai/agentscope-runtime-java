@@ -91,20 +91,43 @@ const App: React.FC = () => {
     const data = await response.json();
     console.log(data);
     if (data.baseUrl && data.runtimeToken) {
-      // Replace /fastapi with /vnc/vnc_lite.html and append password param
       const baseVncPath = data.baseUrl.replace("/fastapi", "/vnc/vnc_lite.html");
-      // URL-encode password and append to URL params
+      console.log(baseVncPath);
       const encodedPassword = encodeURIComponent(data.runtimeToken);
       const vncUrl = `${baseVncPath}?password=${encodedPassword}`;
+
+      await retryUntilVncReady(vncUrl);
       setVncUrl(vncUrl);
     }
   }
 
+  async function retryUntilVncReady(url: string, maxRetries = 5, delay = 1000) {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, { method: "HEAD" });
+        if (response.ok) {
+          console.log(`VNC service ready after ${i + 1} attempt(s)`);
+          return true;
+        }
+      } catch (error) {
+        console.log(`VNC not ready, retrying... (${i + 1}/${maxRetries})`);
+      }
+
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    console.warn("VNC service may not be fully ready, proceeding anyway");
+    return false;
+  }
+
+
   const handleSend = async (message: string) => {
-    await getVncInfo();
     if (message.trim() === "") {
       return;
     }
+
     const newMessage = {
       message,
       sender: "user",
@@ -121,9 +144,14 @@ const App: React.FC = () => {
 
     setMessages(newMessages);
 
+    getVncInfo().catch(error => {
+      console.error("Failed to initialize VNC:", error);
+    });
+
     setIsTyping(true);
     await processMessageToChatGPT(newMessages);
   };
+
 
   async function processMessageToChatGPT(chatMessages: ChatMessage) {
     let apiMessages = chatMessages
@@ -185,10 +213,14 @@ const App: React.FC = () => {
       accumulatedMessage = lines.pop() || "";
 
       for (const line of lines) {
-        if (line.trim() === "") continue;
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) continue;
+
+        const payload = trimmed.replace(/^(data:\s*)+/, "");
+        if (!payload || payload === "[DONE]") continue;
 
         try {
-          const parsed = JSON.parse(line.split("data: ")[1]);
+          const parsed = JSON.parse(payload);
           const delta = parsed.choices[0]?.delta || {};
           const content = delta.content || "";
           const messageType = delta.messageType;
@@ -233,11 +265,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (listRef.current) {
       const container = listRef.current;
-      // 检查用户是否在底部附近（50px 范围内）
-      const isNearBottom = 
+      const isNearBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight < 50;
       
-      // 只有在底部附近时才自动滚动到底部
       if (isNearBottom) {
         container.scrollTop = container.scrollHeight;
       }
