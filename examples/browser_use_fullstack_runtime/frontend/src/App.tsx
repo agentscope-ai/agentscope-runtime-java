@@ -94,6 +94,7 @@ const App: React.FC = () => {
       // Replace /fastapi with /vnc/vnc_lite.html and append password param
       const baseVncPath = data.baseUrl.replace("/fastapi", "/vnc/vnc_lite.html");
       // URL-encode password and append to URL params
+      console.log(baseVncPath)
       const encodedPassword = encodeURIComponent(data.runtimeToken);
       const vncUrl = `${baseVncPath}?password=${encodedPassword}`;
       setVncUrl(vncUrl);
@@ -185,10 +186,15 @@ const App: React.FC = () => {
       accumulatedMessage = lines.pop() || "";
 
       for (const line of lines) {
-        if (line.trim() === "") continue;
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) continue;
+
+        // 部分后端会重复前缀 "data:"，用正则剥离所有连续的 data:
+        const payload = trimmed.replace(/^(data:\s*)+/, "");
+        if (!payload || payload === "[DONE]") continue;
 
         try {
-          const parsed = JSON.parse(line.split("data: ")[1]);
+          const parsed = JSON.parse(payload);
           const delta = parsed.choices[0]?.delta || {};
           const content = delta.content || "";
           const messageType = delta.messageType;

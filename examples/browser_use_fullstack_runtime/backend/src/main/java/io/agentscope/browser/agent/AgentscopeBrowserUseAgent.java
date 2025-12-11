@@ -141,9 +141,6 @@ public class AgentscopeBrowserUseAgent extends AgentScopeAgentHandler {
             if (sandboxService != null) {
                 try {
                     Sandbox sandbox = connect(sessionId, userId);
-
-                    // Register Python code execution tool (matching Python: execute_python_code)
-                    toolkit.registerTool(ToolkitInit.RunPythonCodeTool(sandbox));
                     // Register browser navigation tool
                     toolkit.registerTool(ToolkitInit.BrowserNavigateTool(sandbox));
 
