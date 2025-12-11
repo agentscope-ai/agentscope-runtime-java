@@ -292,8 +292,6 @@ public class ResponseApiHandler {
         responseContent.setText(accumulatedOutput.toString());
         payload.add(responseContent);
 
-        System.out.println("Final accumulated output: " + accumulatedOutput);
-
         return payload;
     }
 
