@@ -91,15 +91,39 @@ const App: React.FC = () => {
     const data = await response.json();
     console.log(data);
     if (data.baseUrl && data.runtimeToken) {
-      // Replace /fastapi with /vnc/vnc_lite.html and append password param
       const baseVncPath = data.baseUrl.replace("/fastapi", "/vnc/vnc_lite.html");
-      // URL-encode password and append to URL params
-      console.log(baseVncPath)
+      console.log(baseVncPath);
       const encodedPassword = encodeURIComponent(data.runtimeToken);
       const vncUrl = `${baseVncPath}?password=${encodedPassword}`;
+
+      // 添加重试机制,确保 VNC 服务就绪
+      await retryUntilVncReady(vncUrl);
       setVncUrl(vncUrl);
     }
   }
+
+  // 轮询检查 VNC 服务是否就绪
+  async function retryUntilVncReady(url: string, maxRetries = 5, delay = 1000) {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, { method: "HEAD" });
+        if (response.ok) {
+          console.log(`VNC service ready after ${i + 1} attempt(s)`);
+          return true;
+        }
+      } catch (error) {
+        console.log(`VNC not ready, retrying... (${i + 1}/${maxRetries})`);
+      }
+
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    console.warn("VNC service may not be fully ready, proceeding anyway");
+    return false;
+  }
+
 
   const handleSend = async (message: string) => {
     await getVncInfo();
