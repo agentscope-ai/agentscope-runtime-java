@@ -126,10 +126,10 @@ const App: React.FC = () => {
 
 
   const handleSend = async (message: string) => {
-    await getVncInfo();
     if (message.trim() === "") {
       return;
     }
+
     const newMessage = {
       message,
       sender: "user",
@@ -144,11 +144,18 @@ const App: React.FC = () => {
 
     const newMessages = [...messages, newMessage];
 
+    // 先立即显示消息
     setMessages(newMessages);
+
+    // VNC 初始化异步执行，不阻塞消息显示
+    getVncInfo().catch(error => {
+      console.error("Failed to initialize VNC:", error);
+    });
 
     setIsTyping(true);
     await processMessageToChatGPT(newMessages);
   };
+
 
   async function processMessageToChatGPT(chatMessages: ChatMessage) {
     let apiMessages = chatMessages
