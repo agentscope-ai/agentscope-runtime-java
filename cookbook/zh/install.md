@@ -10,15 +10,13 @@
 
 ## 安装方式
 
-### 1. 通过 Maven Central 安装（推荐）
+### 通过 Maven Central 安装（推荐）
 
 AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Maven 依赖使用。
 
-```{note}
-当前稳定版本：0.1.1
-
-您可以在 [Maven Central](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-core) 上查找和下载所有模块。
-```
+> 当前稳定版本：1.0.0
+>
+> 您可以在 [Maven Central](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-core) 上查找和下载所有模块。
 
 在您的 `pom.xml` 中添加相应的依赖即可使用：
 
@@ -30,7 +28,7 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-core</artifactId>
-    <version>0.1.1</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
@@ -42,19 +40,7 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-agentscope</artifactId>
-    <version>0.1.1</version>
-</dependency>
-```
-
-#### Spring-AI-Alibaba Agent 支持
-
-如果需要使用 Spring AI Alibaba Agent (SAA)：
-
-```xml
-<dependency>
-    <groupId>io.agentscope</groupId>
-    <artifactId>agentscope-runtime-saa</artifactId>
-    <version>0.1.1</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
@@ -66,11 +52,11 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-web</artifactId>
-    <version>0.1.1</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
-#### A2A 集成
+#### 协议集成
 
 如果需要使用 A2A (Agent-to-Agent) 协议：
 
@@ -78,88 +64,41 @@ AgentScope Runtime Java 已经发布到 Maven Central，您可以直接通过 Ma
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-    <version>0.1.1</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
-### 2. 从源码安装（可选）
+#### 自动化部署
 
-如果您想要使用最新的开发版本、测试新功能或为项目做贡献，可以从源码安装：
+如果想要自动将 Agent 应用打包为容器，并自动部署到 K8s 或 AgentRun 上，可以使用提供的插件：
+
+```xml
+<plugin>
+    <groupId>io.agentscope</groupId>
+    <artifactId>deployer-maven-plugin</artifactId>
+    <version>1.0.0</version>
+    <configuration>
+        <configFile>deployer.yml</configFile>
+        <port>8080</port>
+    </configuration>
+</plugin>
+```
+
+### （可选）从源码安装
+
+如果您想要使用最新的开发版本或为项目做贡献，可以从源码安装：
 
 ```bash
 git clone https://github.com/agentscope-ai/agentscope-runtime-java.git
 
 cd agentscope-runtime-java
 
-mvn clean install -DskipTests
+mvn clean install -Dskiptests
 ```
 
 安装完成后，依赖项将安装在本地 Maven 仓库中，您可以在项目中使用它们。
 
-```{note}
-从源码安装会使用 SNAPSHOT 版本，适合开发和测试场景。生产环境建议使用 Maven Central 上的稳定版本。
-```
-
-## 检查您的安装
-
-要验证安装，您可以检查 Maven 依赖是否成功下载，或者尝试编译一个简单的 Java 类。
-
-### 检查核心运行时
-
-创建一个简单的 Java 类来测试核心运行时：
-
-```java
-import io.agentscope.runtime.engine.memory.context.ContextManager;
-import io.agentscope.runtime.engine.memory.context.ContextManagerFactory;
-
-public class InstallCheck {
-    public static void main(String[] args) {
-        try {
-            ContextManager manager = ContextManagerFactory.createDefault();
-            System.out.println("✅ agentscope-runtime-core - 安装成功");
-        } catch (Exception e) {
-            System.out.println("❌ agentscope-runtime-core - 安装失败: " + e.getMessage());
-            System.out.println("💡 请确保已正确添加依赖到 pom.xml");
-        }
-    }
-}
-```
-
-### 检查 AgentScope Agent
-
-```java
-import io.agentscope.runtime.engine.agents.agentscope.AgentScopeAgent;
-
-public class AgentScopeCheck {
-    public static void main(String[] args) {
-        try {
-            Class<?> agentClass = AgentScopeAgent.class;
-            System.out.println("✅ AgentScopeAgent - 导入成功: " + agentClass.getName());
-        } catch (NoClassDefFoundError e) {
-            System.out.println("❌ AgentScopeAgent - 导入失败: " + e.getMessage());
-            System.out.println("💡 请确保已添加 agentscope-runtime-agentscope 依赖");
-        }
-    }
-}
-```
-
-### 检查 Spring-AI-Alibaba Agent
-
-```java
-import io.agentscope.runtime.engine.agents.saa.SaaAgent;
-
-public class SaaAgentCheck {
-    public static void main(String[] args) {
-        try {
-            Class<?> agentClass = SaaAgent.class;
-            System.out.println("✅ SaaAgent - 导入成功: " + agentClass.getName());
-        } catch (NoClassDefFoundError e) {
-            System.out.println("❌ SaaAgent - 导入失败: " + e.getMessage());
-            System.out.println("💡 请确保已添加 agentscope-runtime-saa 依赖");
-        }
-    }
-}
-```
+> 从源码安装会使用 SNAPSHOT 版本，适合开发和测试场景。生产环境建议使用 Maven Central 上的稳定版本。
 
 ### 使用 Maven 检查依赖
 
@@ -171,92 +110,22 @@ mvn dependency:tree | grep agentscope
 
 这将显示所有与 agentscope 相关的依赖及其版本。
 
-### 编译和运行检查代码
-
-要运行上面的检查代码，您需要：
-
-1. 创建一个 Maven 项目（如果还没有）
-2. 将检查代码保存为 Java 文件
-3. 在项目根目录运行：
-
-```bash
-# 编译项目
-mvn compile
-
-# 运行检查类（例如 InstallCheck）
-mvn exec:java -Dexec.mainClass="InstallCheck"
-```
-
-或者使用 IDE（如 IntelliJ IDEA 或 Eclipse）直接运行 Java 类。
 
 ## 安装选项说明
 
-这个图展示了安装选项的层次结构，从底层核心运行时（agentscope-runtime-core）开始——其中 **包含 Agent 运行框架 和 Sandbox 依赖**。可选模块（例如 saa、agentscope、web、a2a-starter等）堆叠在核心之上，每个模块都增加了特定的功能（如多Agent框架支持、自动化），并需要相应的依赖项。查看所有安装选项的详细信息，请参见项目的 [pom.xml](https://github.com/agentscope-ai/agentscope-runtime-java/blob/main/pom.xml)。
+这个图展示了安装选项的层次结构，从底层核心运行时（agentscope-runtime-core）开始——其中 **包含 Agent 运行框架 和 Sandbox 依赖**。可选模块（例如 agentscope、web、a2a-starter等）堆叠在核心之上，每个模块都增加了特定的功能（如多Agent框架支持、自动化）。查看所有安装选项的详细信息，请参见项目的 [pom.xml](https://github.com/agentscope-ai/agentscope-runtime-java/blob/main/pom.xml)。
 
-| **组件**                    | **Maven 坐标**                        | **用途**            | **依赖项**                                    |
-| --------------------------- | ------------------------------------- | ------------------- | --------------------------------------------- |
-| 核心运行时                  | `io.agentscope:agentscope-runtime-core`         | 核心运行环境        | 最小依赖，包括 Agent 运行框架 和 Sandbox 依赖 |
-| Spring-AI-Alibaba Agent支持 | `io.agentscope:agentscope-runtime-saa`          | SAA Agent 开发支持  | Spring AI Alibaba 框架                        |
-| AgentScope Agent 集成       | `io.agentscope:agentscope-runtime-agentscope`   | AgentScope 开发支持 | AgentScope 框架                               |
-| 一键部署                    | `io.agentscope:agentscope-runtime-web`          | 一键对外部署        | SpringBoot 框架                               |
-| A2A 集成                    | `io.agentscope:spring-boot-starter-runtime-a2a` | 引入A2A支持         | A2A SDK                                       |
-
-### Maven 依赖示例
-
-#### 最小化安装（仅核心运行时）
-
-```xml
-<dependency>
-    <groupId>io.agentscope</groupId>
-    <artifactId>agentscope-runtime-core</artifactId>
-    <version>0.1.1</version>
-</dependency>
-```
-
-#### 完整功能安装（包含所有模块）
-
-```xml
-<dependencies>
-    <!-- 核心运行时 -->
-    <dependency>
-        <groupId>io.agentscope</groupId>
-        <artifactId>agentscope-runtime-core</artifactId>
-        <version>0.1.1</version>
-    </dependency>
-    
-    <!-- AgentScope Agent 集成 -->
-    <dependency>
-        <groupId>io.agentscope</groupId>
-        <artifactId>agentscope-runtime-agentscope</artifactId>
-        <version>0.1.1</version>
-    </dependency>
-    
-    <!-- Spring-AI-Alibaba Agent 支持 -->
-    <dependency>
-        <groupId>io.agentscope</groupId>
-        <artifactId>agentscope-runtime-saa</artifactId>
-        <version>0.1.1</version>
-    </dependency>
-    
-    <!-- 一键部署 -->
-    <dependency>
-        <groupId>io.agentscope</groupId>
-        <artifactId>agentscope-runtime-web</artifactId>
-        <version>0.1.1</version>
-    </dependency>
-    
-    <!-- A2A 集成 -->
-    <dependency>
-        <groupId>io.agentscope</groupId>
-        <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-        <version>0.1.1</version>
-    </dependency>
-</dependencies>
-```
+| **组件**              | **Maven 坐标**                                  | **用途**                                                     |
+| --------------------- | ----------------------------------------------- | ------------------------------------------------------------ |
+| 核心运行时            | `io.agentscope:agentscope-runtime-core`         | 最小依赖，提供沙箱管理、记忆管理等基础运行时能力             |
+| AgentScope Agent 集成 | `io.agentscope:agentscope-runtime-agentscope`   | AgentScope 集成，支持原生 AgentScope Agent 到 Runtime Agent 的转换，并内置 Sandbox Tool 到 AgentScope Tool 的映射逻辑 |
+| 一键启动              | `io.agentscope:agentscope-runtime-web`          | 通过 LocalDeployer 实现 Agent 应用的一键启动与本地运行       |
+| 协议集成              | `io.agentscope:spring-boot-starter-runtime-a2a` | 在用户构建好的 Spring Boot 应用中自动注册 A2A（Agent-to-Agent）通信端点及 Responses API 接口 |
+| 自动化部署            | `deployer-maven-plugin`                         | 将 Agent 应用打包为一个容器，并可选部署到 K8s 或 AgentRun 上 |
 
 ## 版本信息
 
-- **当前稳定版本**：`0.1.1`
+- **当前稳定版本**：`1.0.0`
 - **发布位置**：[Maven Central](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-core)
 - **GroupId**：`io.agentscope`
 
@@ -266,6 +135,5 @@ mvn exec:java -Dexec.mainClass="InstallCheck"
 
 - [agentscope-runtime-core](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-core)
 - [agentscope-runtime-agentscope](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-agentscope)
-- [agentscope-runtime-saa](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-saa)
 - [agentscope-runtime-web](https://central.sonatype.com/artifact/io.agentscope/agentscope-runtime-web)
 - [spring-boot-starter-runtime-a2a](https://central.sonatype.com/artifact/io.agentscope/spring-boot-starter-runtime-a2a)
