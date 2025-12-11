@@ -96,13 +96,11 @@ const App: React.FC = () => {
       const encodedPassword = encodeURIComponent(data.runtimeToken);
       const vncUrl = `${baseVncPath}?password=${encodedPassword}`;
 
-      // 添加重试机制,确保 VNC 服务就绪
       await retryUntilVncReady(vncUrl);
       setVncUrl(vncUrl);
     }
   }
 
-  // 轮询检查 VNC 服务是否就绪
   async function retryUntilVncReady(url: string, maxRetries = 5, delay = 1000) {
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -144,10 +142,8 @@ const App: React.FC = () => {
 
     const newMessages = [...messages, newMessage];
 
-    // 先立即显示消息
     setMessages(newMessages);
 
-    // VNC 初始化异步执行，不阻塞消息显示
     getVncInfo().catch(error => {
       console.error("Failed to initialize VNC:", error);
     });
@@ -220,7 +216,6 @@ const App: React.FC = () => {
         const trimmed = line.trim();
         if (!trimmed || !trimmed.startsWith("data:")) continue;
 
-        // 部分后端会重复前缀 "data:"，用正则剥离所有连续的 data:
         const payload = trimmed.replace(/^(data:\s*)+/, "");
         if (!payload || payload === "[DONE]") continue;
 
@@ -270,11 +265,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (listRef.current) {
       const container = listRef.current;
-      // 检查用户是否在底部附近（50px 范围内）
-      const isNearBottom = 
+      const isNearBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight < 50;
       
-      // 只有在底部附近时才自动滚动到底部
       if (isNearBottom) {
         container.scrollTop = container.scrollHeight;
       }
