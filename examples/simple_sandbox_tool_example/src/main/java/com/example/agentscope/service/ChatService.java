@@ -1,0 +1,132 @@
+package com.example.agentscope.service;
+
+import com.example.agentscope.model.ChatRequest;
+import com.example.agentscope.model.ChatResponse;
+import com.example.agentscope.model.ToolInfo;
+import com.example.agentscope.tools.CalculatorTool;
+import com.example.agentscope.tools.WeatherTool;
+import io.agentscope.core.ReActAgent;
+import io.agentscope.core.memory.InMemoryMemory;
+import io.agentscope.core.message.Msg;
+import io.agentscope.core.message.MsgRole;
+import io.agentscope.core.message.TextBlock;
+import io.agentscope.core.model.DashScopeChatModel;
+import io.agentscope.core.tool.Toolkit;
+import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
+import io.agentscope.runtime.engine.services.sandbox.SandboxService;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import org.checkerframework.checker.units.qual.A;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * Chat service
+ * Handle interaction logic with the Agent
+ */
+@Service
+public class ChatService {
+    @Autowired
+    private ObjectProvider<ReActAgent> agentProvider;
+
+    @Autowired
+    private Toolkit toolkit;
+
+
+    /**
+     * Handle chat requests
+     */
+    public ChatResponse chat(ChatRequest request) {
+        long startTime = System.currentTimeMillis();
+
+        System.out.println("\n" + "=".repeat(50));
+        System.out.println("📨 Received user message: " + request.getMessage());
+        System.out.println("=".repeat(50));
+
+        try {
+            // Create user message
+            Msg userMsg = Msg.builder()
+                    .name(request.getUserName() != null ? request.getUserName() : "user")
+                    .role(MsgRole.USER)
+                    .content(List.of(
+                            TextBlock.builder()
+                                    .text(request.getMessage())
+                                    .build()
+                    ))
+                    .build();
+
+            // Invoke the Agent
+            ReActAgent agent = agentProvider.getObject();
+            Msg responseMsg = agent.call(userMsg).block();
+
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("\n✅ Processing completed, duration: " + duration + "ms");
+            System.out.println("=".repeat(50) + "\n");
+
+            // Build response
+            ChatResponse response = new ChatResponse();
+            response.setSuccess(true);
+            if (responseMsg != null) {
+                response.setMessage(responseMsg.getTextContent());
+            }
+            response.setAgentName(agent.getName());
+            response.setTimestamp(System.currentTimeMillis());
+            response.setProcessingTime(duration);
+
+            return response;
+
+        } catch (Exception e) {
+            System.err.println("❌ Processing failed: " + e.getMessage());
+
+            ChatResponse errorResponse = new ChatResponse();
+            errorResponse.setSuccess(false);
+            errorResponse.setMessage("Sorry, an issue occurred while processing your request.");
+            errorResponse.setError(e.getMessage());
+            errorResponse.setTimestamp(System.currentTimeMillis());
+
+            return errorResponse;
+        }
+    }
+
+    /**
+     * Get available tool list
+     */
+    public List<ToolInfo> getAvailableTools() {
+        return toolkit.getToolSchemas().stream()
+                .map(schema -> {
+                    Map<String, Object> schemaMap = new HashMap<>();
+                    if (schema != null) {
+                        schema.forEach((k, v) -> schemaMap.put(String.valueOf(k), v));
+                    }
+
+                    ToolInfo info = new ToolInfo();
+                    Object function = schemaMap.get("function");
+                    if(function instanceof Map<? , ?>){
+                        info.setName(((Map<?, ?>) function).get("name").toString());
+                        info.setDescription(((Map<?, ?>) function).get("description").toString());
+                        if(((Map<?, ?>) function).get("parameters") instanceof Map<?, ?> paramsMap){
+                            Map<String, Object> paramMap = new HashMap<>();
+                            paramsMap.forEach((k, v) -> paramMap.put(String.valueOf(k), v));
+                            info.setParameters(paramMap);
+                        }
+                    }
+                    return info;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Reset conversation memory
+     */
+    public void resetMemory() {
+        // Each request creates a new Agent; memory is not shared by default
+        System.out.println("🔄 Reset request received (each request creates a new Agent by default)");
+    }
+}
+
