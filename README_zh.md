@@ -9,7 +9,7 @@
 [![DingTalk](https://img.shields.io/badge/DingTalk-Join_Us-orange.svg)](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)
 
 [[Cookbook]](./cookbook/zh)
-[[English README]](README_zh.md)
+[[English README]](./README.md)
 [[Examples]](./examples)
 
 **AgentScope Runtime Java**
