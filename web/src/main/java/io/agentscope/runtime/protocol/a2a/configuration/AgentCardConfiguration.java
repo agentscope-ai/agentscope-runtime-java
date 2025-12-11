@@ -32,7 +32,6 @@ import io.agentscope.runtime.protocol.a2a.NetworkUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -47,7 +46,6 @@ import java.util.List;
 public class AgentCardConfiguration {
 
     @Bean
-    @ConditionalOnBean(value = Runner.class)
     public AgentCard agentCard(DeployProperties deployProperties, ObjectProvider<ProtocolConfig> protocolConfigs,
                                Runner runner) {
         A2aProtocolConfig a2aConfig = A2aProtocolConfigUtils.getConfigIfAbsent(protocolConfigs);

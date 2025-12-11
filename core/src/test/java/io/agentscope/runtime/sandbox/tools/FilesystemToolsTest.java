@@ -24,8 +24,11 @@ import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
+
 import static org.junit.jupiter.api.Assertions.*;
 
+@EnabledIfDockerAvailable
 public class FilesystemToolsTest{
 
     private SandboxManager sandboxManager;

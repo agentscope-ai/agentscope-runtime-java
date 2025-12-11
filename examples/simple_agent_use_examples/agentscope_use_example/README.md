@@ -49,30 +49,36 @@ After deployment, the agent listens on `http://localhost:10001`.
 
 ```bash
 curl --location --request POST 'http://localhost:10001/a2a/' \
-  --header 'Content-Type: application/json' \
-  --data-raw '{
-    "method": "message/stream",
-    "id": "test-request-id",
-    "jsonrpc": "2.0",
-    "params": {
-      "message": {
-        "role": "user",
-        "kind": "message",
-        "contextId": "test-context",
-        "metadata": {
-          "userId": "test-user",
-          "sessionId": "test-session"
-        },
-        "parts": [
-          {
-            "text": "Hello, please calculate the 10th Fibonacci number using Python",
-            "kind": "text"
-          }
-        ],
-        "messageId": "test-message-id"
-      }
+--header 'User-Agent: Apifox/1.0.0 (https://apifox.com)' \
+--header 'Content-Type: application/json' \
+--header 'Accept: */*' \
+--header 'Host: localhost:10001' \
+--header 'Connection: keep-alive' \
+--data-raw '{
+  "method": "message/stream",
+  "id": "2d2b4dc8-8ea2-437b-888d-3aaf3a8239dc",
+  "jsonrpc": "2.0",
+  "params": {
+    "configuration": {
+      "blocking": false
+    },
+    "message": {
+      "role": "user",
+      "kind": "message",
+      "metadata": {
+        "userId": "me",
+        "sessionId": "test1"
+      },
+      "parts": [
+        {
+          "text": "Hello, please calculate the 10th Fibonacci number using Python.",
+          "kind": "text"
+        }
+      ],
+      "messageId": "c4911b64c8404b7a8bf7200dd225b152"
     }
-  }'
+  }
+}'
 ```
 
 ## Notes

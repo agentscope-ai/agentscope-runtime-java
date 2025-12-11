@@ -27,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import java.util.UUID;
 
@@ -35,6 +37,8 @@ import java.util.UUID;
  * Docker Sandbox Lifecycle Test
  * Tests sandbox creation, startup, status checking, stopping and cleanup functionality in Docker environment
  */
+@EnabledIfDockerAvailable
+@EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class DockerLifecycleTest {
 
     private SandboxManager sandboxManager;
