@@ -16,6 +16,7 @@
 package io.agentscope.runtime.adapters;
 
 import io.agentscope.runtime.engine.schemas.AgentRequest;
+import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import reactor.core.publisher.Flux;
 
 /**
@@ -35,6 +36,7 @@ import reactor.core.publisher.Flux;
  *
  */
 public interface AgentHandler {
+    SandboxService getSandboxService();
 
     String getName();
 

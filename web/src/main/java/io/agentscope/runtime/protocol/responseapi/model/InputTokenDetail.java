@@ -14,9 +14,21 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.protocol;
+package io.agentscope.runtime.protocol.responseapi.model;
 
-public enum Protocol {
-    A2A,
-    ResponseAPI
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class InputTokenDetail {
+    @JsonProperty("cached_tokens")
+    private Integer cachedTokens;
+
+    public Integer getCachedTokens() {
+        return cachedTokens;
+    }
+
+    public void setCachedTokens(Integer cachedTokens) {
+        this.cachedTokens = cachedTokens;
+    }
 }

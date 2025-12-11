@@ -14,9 +14,19 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.protocol;
+package io.agentscope.runtime.protocol.responseapi.model;
 
-public enum Protocol {
-    A2A,
-    ResponseAPI
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class IncompleteDetail {
+    private String reason;
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
 }
