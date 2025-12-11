@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 
 import io.agentscope.core.ReActAgent;
-import io.agentscope.core.agent.Event;
 import io.agentscope.core.agent.EventType;
 import io.agentscope.core.agent.StreamOptions;
 import io.agentscope.core.formatter.dashscope.DashScopeChatFormatter;

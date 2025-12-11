@@ -75,6 +75,9 @@ public class GuiMixin {
                 if (!containerUrl.endsWith("/")) {
                     containerUrl += "/";
                 }
+                if(containerUrl.endsWith("fastapi/")){
+                    containerUrl = containerUrl.replace("fastapi/", "");
+                }
                 return containerUrl + path.substring(1) + "?" + params;
             } else {
                 // Use base_url with sandbox ID
