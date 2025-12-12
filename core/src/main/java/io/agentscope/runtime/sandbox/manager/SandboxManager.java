@@ -31,7 +31,6 @@ import io.agentscope.runtime.sandbox.manager.remote.RemoteHttpClient;
 import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 import io.agentscope.runtime.sandbox.manager.remote.RequestMethod;
 import io.agentscope.runtime.sandbox.manager.util.*;
-import org.checkerframework.checker.units.qual.C;
 
 import java.nio.file.Paths;
 import java.util.*;
