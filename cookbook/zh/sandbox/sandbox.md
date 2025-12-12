@@ -37,7 +37,7 @@ pip install agentscope-runtime
 为了确保完整的沙箱体验并启用所有功能，请按照以下步骤从我们的仓库拉取并标记必要的 Docker 镜像：
 
 > **镜像来源：阿里云容器镜像服务**
-> 
+>
 > 所有Docker镜像都托管在阿里云容器镜像服务(ACR)上，以在全球范围内实现可获取和可靠性。镜像从ACR拉取后使用标准名称重命名，以与AgentScope Runtime无缝集成。
 
 ```bash
@@ -179,14 +179,14 @@ public class Main {
 
 ```java
 try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)){
-    System.out.println(sandbox.listTools(""));
-    if(sandbox instanceof BaseSandbox baseSandbox) {
-        String pythonResult = baseSandbox.runIpythonCell("print('Hello from the sandbox!')");
+        System.out.println(sandbox.listTools(""));
+        if(sandbox instanceof BaseSandbox baseSandbox) {
+String pythonResult = baseSandbox.runIpythonCell("print('Hello from the sandbox!')");
         System.out.println("Sandbox execution result: " + pythonResult);
-        String shellResult = baseSandbox.runShellCommand("echo Hello, World!");
+String shellResult = baseSandbox.runShellCommand("echo Hello, World!");
         System.out.println("Shell command result: " + shellResult);
     }
-}
+            }
 ```
 
 * **GUI 沙箱 （GUI Sandbox）**： 提供**可视化桌面环境**，可执行鼠标、键盘以及屏幕相关操作。
@@ -195,19 +195,19 @@ try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox
 
 ```json
 try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", GuiSandbox.class)){
-    Gson gson = new Gson();
-    String tools = gson.toJson(sandbox.listTools(""));
-    System.out.println("Available tools: ");
-    System.out.println(tools);
+Gson gson = new Gson();
+String tools = gson.toJson(sandbox.listTools(""));
+System.out.println("Available tools: ");
+System.out.println(tools);
 
-    if(sandbox instanceof GuiSandbox guiSandbox) {
-        String desktopUrl = guiSandbox.getDesktopUrl();
-        System.out.println("GUI Desktop URL: " + desktopUrl);
-        String cursorPosition = guiSandbox.computerUse("get_cursor_position");
-        System.out.println("Cursor Position: " + cursorPosition);
-        String screenShot = guiSandbox.computerUse("get_screenshot");
-        System.out.println("Screenshot (base64): " + screenShot);
-    }
+if(sandbox instanceof GuiSandbox guiSandbox) {
+String desktopUrl = guiSandbox.getDesktopUrl();
+System.out.println("GUI Desktop URL: " + desktopUrl);
+String cursorPosition = guiSandbox.computerUse("get_cursor_position");
+System.out.println("Cursor Position: " + cursorPosition);
+String screenShot = guiSandbox.computerUse("get_screenshot");
+System.out.println("Screenshot (base64): " + screenShot);
+}
 }
 ```
 
@@ -217,18 +217,18 @@ try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", GuiSandbox.
 
 ```java
 try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", FilesystemSandbox.class)){
-    Gson gson = new Gson();
-    String tools = gson.toJson(sandbox.listTools(""));
+Gson gson = new Gson();
+String tools = gson.toJson(sandbox.listTools(""));
     System.out.println("Available tools: ");
     System.out.println(tools);
 
     if(sandbox instanceof FilesystemSandbox filesystemSandbox) {
-        String desktopUrl = filesystemSandbox.getDesktopUrl();
+String desktopUrl = filesystemSandbox.getDesktopUrl();
         System.out.println("GUI Desktop URL: " + desktopUrl);
-        String cursorPosition = filesystemSandbox.createDirectory("test");
+String cursorPosition = filesystemSandbox.createDirectory("test");
         System.out.println("Created directory 'test' at: " + cursorPosition);
     }
-}
+            }
 ```
 
 * **浏览器沙箱（Browser Sandbox）**: 基于 GUI 的沙箱，可进行浏览器操作。
@@ -237,31 +237,31 @@ try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", FilesystemS
 
 ```java
 try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BrowserSandbox.class)){
-    Gson gson = new Gson();
-    String tools = gson.toJson(sandbox.listTools(""));
+Gson gson = new Gson();
+String tools = gson.toJson(sandbox.listTools(""));
     System.out.println("Available tools: ");
     System.out.println(tools);
 
     if(sandbox instanceof BrowserSandbox browserSandbox) {
-        String desktopUrl = browserSandbox.getDesktopUrl();
+String desktopUrl = browserSandbox.getDesktopUrl();
         System.out.println("GUI Desktop URL: " + desktopUrl);
-        String navigateResult = browserSandbox.navigate("https://cn.bing.com");
+String navigateResult = browserSandbox.navigate("https://cn.bing.com");
         System.out.println("Navigate Result: " + navigateResult);
     }
-}
+            }
 ```
 
 * **TrainingSandbox**：训练评估沙箱，详情请参考：[训练用沙箱](training_sandbox.md)。
 
 ```java
 try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", APPWorldSandbox.class)){
-    if(sandbox instanceof APPWorldSandbox appWorldSandbox){
-        String profileList = appWorldSandbox.getEnvProfile("appworld","train",null);
+        if(sandbox instanceof APPWorldSandbox appWorldSandbox){
+String profileList = appWorldSandbox.getEnvProfile("appworld","train",null);
         System.out.println("Profile List: " + profileList);
     } else {
-        System.err.println("Failed to connect to TrainingSandbox.");
+            System.err.println("Failed to connect to TrainingSandbox.");
     }
-}
+            }
 ```
 
 > 更多沙箱类型正在开发中，敬请期待！
@@ -273,26 +273,38 @@ MCP（模型上下文协议）是一个标准化协议，使AI应用程序能够
 沙箱支持通过`add_mcp_servers`方法集成MCP服务器。添加后，您可以使用`list_tools`发现可用工具并使用`call_tool`执行它们。
 
 ```java
-try {
-    String mcpServerConfig = """
-                       {
-                "mcpServers": {
-                    "time": {
-                        "command": "uvx",
-                        "args": [
-                            "mcp-server-time",
-                            "--local-timezone=America/New_York"
-                        ]
-                    }
+try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)) {
+String mcpServerConfig = """
+                   {
+            "mcpServers": {
+                "time": {
+                    "command": "uvx",
+                    "args": [
+                        "mcp-server-time",
+                        "--local-timezone=America/New_York"
+                    ]
                 }
             }
-            """;
-    List<AgentTool> mcpTools = ToolkitInit.getMcpTools(
-            mcpServerConfig,
-            SandboxType.BASE,
-            sandboxService.getManagerApi());
+        }
+        """;
 
-    System.out.println("MCP Tools: " + mcpTools);
+Gson gson = new Gson();
+Type mcpServerType = new TypeToken<Map<String, Object>>() {
+}.getType();
+Map<String, Object> serverConfigMap = gson.fromJson(mcpServerConfig, mcpServerType);
+
+//   将MCP服务器添加到沙箱
+    sandbox.addMcpServers(serverConfigMap);
+
+//   列出所有可用工具（现在包括MCP工具）
+String tools = gson.toJson(sandbox.listTools(""));
+    System.out.println("Available tools: ");
+    System.out.println(tools);
+
+//   使用MCP服务器提供的时间工具
+String result = sandbox.callTool("get_current_time", Map.of("timezone", "America/New_York"));
+    System.out.println("Tool call result: ");
+    System.out.println(result);
 }
 ```
 
@@ -303,7 +315,7 @@ try {
 > * 多个客户端共享同一沙箱环境
 > * 在资源受限的本地机器上开发，同时在高性能服务器上执行
 > * K8s 集群部署沙盒服务
-> 
+>
 > 有关sandbox-server的更高级用法，请参阅[工具沙箱高级用法](sandbox_advanced.md)了解详细说明。
 
 您可以在本地机器或不同机器上启动沙箱服务器，以便于远程访问。您可以先启动一个runtime，作为远程沙箱管理器
@@ -370,55 +382,68 @@ public class Main {
 
 ### 使用沙箱服务添加MCP服务器
 
-```{code-cell}
-from agentscope_runtime.engine.services.sandbox import SandboxService
+```java
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import io.agentscope.runtime.engine.services.sandbox.SandboxService;
+import io.agentscope.runtime.sandbox.box.BaseSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 
-async def main():
-    sandbox_service = SandboxService()
-    await sandbox_service.start()
+import java.lang.reflect.Type;
+import java.util.Map;
 
-    session_id = "session_mcp"
-    user_id = "user_mcp"
+public class Main {
+    public static void main(String[] args) {
+        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .containerDeployment(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(
+                new SandboxManager(managerConfig)
+        );
+        sandboxService.start();
 
-    sandboxes = sandbox_service.connect(
-        session_id=session_id,
-        user_id=user_id,
-        sandbox_types=["base"],
-    )
+        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)) {
+            String mcpServerConfig = """
+                               {
+                        "mcpServers": {
+                            "time": {
+                                "command": "uvx",
+                                "args": [
+                                    "mcp-server-time",
+                                    "--local-timezone=America/New_York"
+                                ]
+                            }
+                        }
+                    }
+                    """;
 
-    sandbox = sandboxes[0]
+            Gson gson = new Gson();
+            Type mcpServerType = new TypeToken<Map<String, Object>>() {
+            }.getType();
+            Map<String, Object> serverConfigMap = gson.fromJson(mcpServerConfig, mcpServerType);
 
-    mcp_server_configs = {
-        "mcpServers": {
-            "time": {
-                "command": "uvx",
-                "args": [
-                    "mcp-server-time",
-                    "--local-timezone=America/New_York",
-                ],
-            },
-        },
+//            将MCP服务器添加到沙箱
+            sandbox.addMcpServers(serverConfigMap);
+
+//            列出所有可用工具（现在包括MCP工具）
+            String tools = gson.toJson(sandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+//            使用MCP服务器提供的时间工具
+            String result = sandbox.callTool("get_current_time", Map.of("timezone", "America/New_York"));
+            System.out.println("Tool call result: ");
+            System.out.println(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-
-    # 将MCP服务器添加到沙箱
-    sandbox.add_mcp_servers(server_configs=mcp_server_configs)
-
-    # 列出所有可用工具（现在包括MCP工具）
-    print(sandbox.list_tools())
-
-    # 使用MCP服务器提供的时间工具
-    print(
-        sandbox.call_tool(
-            "get_current_time",
-            arguments={
-                "timezone": "America/New_York",
-            },
-        ),
-    )
-
-    await sandbox_service.stop()
-
-await main()
+}
 ```
 
 ### 使用沙箱服务连接远程沙箱
@@ -436,8 +461,8 @@ public class Main {
     public static void main(String[] args) {
 //        创建并启动沙箱服务
         ManagerConfig managerConfig = ManagerConfig.builder()
-            .baseUrl("http://remote-host:port")
-            .build();
+                .baseUrl("http://remote-host:port")
+                .build();
         SandboxService sandboxService = new SandboxService(
                 new SandboxManager(managerConfig)
         );

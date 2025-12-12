@@ -141,6 +141,8 @@ public class SandboxManager implements AutoCloseable {
             logger.info("Using in-memory container storage");
         }
 
+        logger.info("Using container type: " + this.containerManagerType);
+
         switch (this.containerManagerType) {
             case DOCKER:
                 DockerClientConfig dockerClientConfig;
@@ -154,6 +156,8 @@ public class SandboxManager implements AutoCloseable {
                 dockerClientConfig.setRedisEnabled(managerConfig.getRedisEnabled());
 
                 DockerClient dockerClient = new DockerClient(dockerClientConfig);
+                logger.info("Docker client created: " + dockerClient);
+
                 this.containerClient = dockerClient;
                 this.client = dockerClient.connectDocker();
                 break;

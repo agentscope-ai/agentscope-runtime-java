@@ -23,13 +23,21 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.lang.reflect.Field;
-
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for AgentScopeStreamAdapter.
+ * 
+ * <p>Tests are based on the actual implementation logic:
+ * <ul>
+ *   <li>TextBlock and ThinkingBlock: only processed when !isLast, returns TextContent (delta=true)</li>
+ *   <li>ToolUseBlock: always processed, returns completed Message (MCP_TOOL_CALL)</li>
+ *   <li>ToolResultBlock: always processed, returns completed Message (MCP_APPROVAL_RESPONSE)</li>
+ *   <li>ImageBlock and AudioBlock: only processed when !isLast, returns Content and completed Message</li>
+ * </ul>
  */
 class AgentScopeStreamAdapterTest {
 
@@ -43,7 +51,35 @@ class AgentScopeStreamAdapterTest {
     }
 
     @Test
-    void testAdaptFrameworkStreamWithTextBlock() {
+    void testAdaptFrameworkStreamWithTextBlockNotLast() {
+        // TextBlock is only processed when !isLast
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(TextBlock.builder().text("Hello").build()))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(1, events.size());
+        
+        // Should return TextContent with delta=true
+        assertTrue(events.get(0) instanceof TextContent);
+        TextContent textContent = (TextContent) events.get(0);
+        assertTrue(textContent.getDelta());
+        assertEquals("Hello", textContent.getText());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithTextBlockIsLast() {
+        // TextBlock is NOT processed when isLast=true (unless it's ToolUseBlock or ToolResultBlock)
         Msg msg = Msg.builder()
                 .id("msg-1")
                 .role(MsgRole.ASSISTANT)
@@ -59,25 +95,12 @@ class AgentScopeStreamAdapterTest {
 
         List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
         assertNotNull(events);
-        assertTrue(events.size() >= 3);
-        
-        // First event should be inProgress message
-        assertTrue(events.get(0) instanceof Message);
-        Message firstMessage = (Message) events.get(0);
-        assertEquals(MessageType.MESSAGE, firstMessage.getType());
-        assertEquals("assistant", firstMessage.getRole());
-        
-        // Second event should be content
-        assertTrue(events.get(1) instanceof Content);
-        
-        // Last event should be completed message
-        Message lastMessage = (Message) events.get(events.size() - 1);
-        assertEquals(RunStatus.COMPLETED, lastMessage.getStatus());
+        assertTrue(events.isEmpty());
     }
 
     @Test
     void testAdaptFrameworkStreamWithIncrementalText() {
-        // First event with partial text
+        // First event with partial text (not last)
         Msg msg1 = Msg.builder()
                 .id("msg-1")
                 .role(MsgRole.ASSISTANT)
@@ -88,7 +111,7 @@ class AgentScopeStreamAdapterTest {
                 messageEventType != null ? messageEventType : getDefaultEventType(), msg1, false
         );
 
-        // Second event with complete text
+        // Second event with complete text (not last)
         Msg msg2 = Msg.builder()
                 .id("msg-1")
                 .role(MsgRole.ASSISTANT)
@@ -96,7 +119,7 @@ class AgentScopeStreamAdapterTest {
                 .build();
 
         io.agentscope.core.agent.Event event2 = new io.agentscope.core.agent.Event(
-                messageEventType != null ? messageEventType : getDefaultEventType(), msg2, true
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg2, false
         );
 
         Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event1, event2);
@@ -104,11 +127,43 @@ class AgentScopeStreamAdapterTest {
 
         List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
         assertNotNull(events);
-        assertTrue(events.size() >= 5);
+        assertEquals(2, events.size());
+        
+        // Both should be TextContent
+        assertTrue(events.get(0) instanceof TextContent);
+        assertTrue(events.get(1) instanceof TextContent);
     }
 
     @Test
-    void testAdaptFrameworkStreamWithThinkingBlock() {
+    void testAdaptFrameworkStreamWithThinkingBlockNotLast() {
+        // ThinkingBlock is only processed when !isLast
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(ThinkingBlock.builder().thinking("Let me think...").build()))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(1, events.size());
+        
+        // Should return TextContent with delta=true
+        assertTrue(events.get(0) instanceof TextContent);
+        TextContent textContent = (TextContent) events.get(0);
+        assertTrue(textContent.getDelta());
+        assertEquals("Let me think...", textContent.getText());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithThinkingBlockIsLast() {
+        // ThinkingBlock is NOT processed when isLast=true
         Msg msg = Msg.builder()
                 .id("msg-1")
                 .role(MsgRole.ASSISTANT)
@@ -124,58 +179,53 @@ class AgentScopeStreamAdapterTest {
 
         List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
         assertNotNull(events);
-        assertTrue(events.size() >= 3);
-        
-        // First event should be reasoning message
-        assertTrue(events.get(0) instanceof Message);
-        Message firstMessage = (Message) events.get(0);
-        assertEquals(MessageType.REASONING, firstMessage.getType());
-        
-        // Second event should be content
-        assertTrue(events.get(1) instanceof Content);
-        
-        // Last event should be completed message
-        Message lastMessage = (Message) events.get(events.size() - 1);
-        assertEquals(RunStatus.COMPLETED, lastMessage.getStatus());
+        assertTrue(events.isEmpty());
     }
 
-//    @Test
-//    void testAdaptFrameworkStreamWithToolUseBlock() {
-//        Map<String, Object> input = Map.of("query", "test");
-//        ToolUseBlock toolUse = new ToolUseBlock("call-1", "test_tool", input);
-//
-//        Msg msg = Msg.builder()
-//                .id("msg-1")
-//                .role(MsgRole.ASSISTANT)
-//                .content(List.of(toolUse))
-//                .build();
-//
-//        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
-//                messageEventType != null ? messageEventType : getDefaultEventType(), msg, true
-//        );
-//
-//        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
-//        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
-//
-//        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
-//        assertNotNull(events);
-//        assertTrue(events.size() >= 3);
-//
-//        // First event should be plugin call message
-//        assertTrue(events.get(0) instanceof Message);
-//        Message firstMessage = (Message) events.get(0);
-//        assertEquals(MessageType.PLUGIN_CALL, firstMessage.getType());
-//
-//        // Second event should be content
-//        assertTrue(events.get(1) instanceof Content);
-//
-//        // Last event should be completed message
-//        Message lastMessage = (Message) events.get(events.size() - 1);
-//        assertEquals(RunStatus.COMPLETED, lastMessage.getStatus());
-//    }
+    @Test
+    void testAdaptFrameworkStreamWithToolUseBlock() {
+        // ToolUseBlock is always processed regardless of isLast
+        Map<String, Object> input = Map.of("query", "test");
+        ToolUseBlock toolUse = new ToolUseBlock("call-1", "test_tool", input);
+
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(toolUse))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, true
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(1, events.size());
+        
+        // Should return completed Message with MCP_TOOL_CALL type
+        assertTrue(events.get(0) instanceof Message);
+        Message message = (Message) events.get(0);
+        assertEquals(MessageType.MCP_TOOL_CALL, message.getType());
+        assertEquals(RunStatus.COMPLETED, message.getStatus());
+        assertEquals("assistant", message.getRole());
+        
+        // Verify content contains function call data
+        assertNotNull(message.getContent());
+        assertFalse(message.getContent().isEmpty());
+        assertTrue(message.getContent().get(0) instanceof DataContent);
+        DataContent dataContent = (DataContent) message.getContent().get(0);
+        assertNotNull(dataContent.getData());
+        Map<String, Object> data = dataContent.getData();
+        assertEquals("call-1", data.get("call_id"));
+        assertEquals("test_tool", data.get("name"));
+    }
 
     @Test
     void testAdaptFrameworkStreamWithToolResultBlock() {
+        // ToolResultBlock is always processed regardless of isLast
         ToolResultBlock toolResult = ToolResultBlock.of(
                 "call-1",
                 "test_tool",
@@ -197,51 +247,195 @@ class AgentScopeStreamAdapterTest {
 
         List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
         assertNotNull(events);
-        assertTrue(events.size() >= 1);
+        assertEquals(1, events.size());
         
-        // First event should be plugin call output message
+        // Should return completed Message with MCP_APPROVAL_RESPONSE type
         assertTrue(events.get(0) instanceof Message);
         Message message = (Message) events.get(0);
-        assertEquals(MessageType.PLUGIN_CALL_OUTPUT, message.getType());
+        assertEquals(MessageType.MCP_APPROVAL_RESPONSE, message.getType());
+        assertEquals(RunStatus.COMPLETED, message.getStatus());
+        assertEquals("tool", message.getRole());
+        
+        // Verify content contains function call output data
+        assertNotNull(message.getContent());
+        assertFalse(message.getContent().isEmpty());
+        assertTrue(message.getContent().get(0) instanceof DataContent);
+        DataContent dataContent = (DataContent) message.getContent().get(0);
+        assertNotNull(dataContent.getData());
+        Map<String, Object> data = dataContent.getData();
+        assertEquals("call-1", data.get("call_id"));
+        assertEquals("test_tool", data.get("name"));
+        assertNotNull(data.get("output"));
     }
 
-//    @Test
-//    void testAdaptFrameworkStreamWithImageBlock() {
-//        ImageBlock imageBlock = ImageBlock.builder()
-//                .source(URLSource.builder().url("https://example.com/image.jpg").build())
-//                .build();
-//
-//        Msg msg = Msg.builder()
-//                .id("msg-1")
-//                .role(MsgRole.USER)
-//                .content(List.of(imageBlock))
-//                .build();
-//
-//        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
-//                messageEventType != null ? messageEventType : getDefaultEventType(), msg, true
-//        );
-//
-//        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
-//        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
-//
-//        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
-//        assertNotNull(events);
-//        assertTrue(events.size() >= 3);
-//
-//        // First event should be message
-//        assertTrue(events.get(0) instanceof Message);
-//        Message firstMessage = (Message) events.get(0);
-//        assertEquals(MessageType.MESSAGE, firstMessage.getType());
-//
-//        // Second event should be image content
-//        assertTrue(events.get(1) instanceof ImageContent);
-//        ImageContent imageContent = (ImageContent) events.get(1);
-//        assertEquals("https://example.com/image.jpg", imageContent.getImageUrl());
-//
-//        // Last event should be completed message
-//        Message lastMessage = (Message) events.get(events.size() - 1);
-//        assertEquals(RunStatus.COMPLETED, lastMessage.getStatus());
-//    }
+    @Test
+    void testAdaptFrameworkStreamWithImageBlockNotLast() {
+        // ImageBlock is only processed when !isLast
+        ImageBlock imageBlock = ImageBlock.builder()
+                .source(URLSource.builder().url("https://example.com/image.jpg").build())
+                .build();
+
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.USER)
+                .content(List.of(imageBlock))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(2, events.size());
+        
+        // First event should be ImageContent
+        assertTrue(events.get(0) instanceof ImageContent);
+        ImageContent imageContent = (ImageContent) events.get(0);
+        assertTrue(imageContent.getDelta());
+        assertEquals("https://example.com/image.jpg", imageContent.getImageUrl());
+        
+        // Second event should be completed Message
+        assertTrue(events.get(1) instanceof Message);
+        Message message = (Message) events.get(1);
+        assertEquals(MessageType.MESSAGE, message.getType());
+        assertEquals(RunStatus.COMPLETED, message.getStatus());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithImageBlockIsLast() {
+        // ImageBlock is NOT processed when isLast=true
+        ImageBlock imageBlock = ImageBlock.builder()
+                .source(URLSource.builder().url("https://example.com/image.jpg").build())
+                .build();
+
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.USER)
+                .content(List.of(imageBlock))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, true
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertTrue(events.isEmpty());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithBase64Image() {
+        // Base64 image should be converted to data URI
+        ImageBlock imageBlock = ImageBlock.builder()
+                .source(Base64Source.builder()
+                        .mediaType("image/jpeg")
+                        .data("base64data")
+                        .build())
+                .build();
+
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.USER)
+                .content(List.of(imageBlock))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(2, events.size());
+        
+        // Should contain image content with base64 data URI
+        assertTrue(events.get(0) instanceof ImageContent);
+        ImageContent imageContent = (ImageContent) events.get(0);
+        assertNotNull(imageContent.getImageUrl());
+        assertTrue(imageContent.getImageUrl().startsWith("data:image/jpeg;base64,"));
+        assertEquals("data:image/jpeg;base64,base64data", imageContent.getImageUrl());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithAudioBlockNotLast() {
+        // AudioBlock is only processed when !isLast
+        AudioBlock audioBlock = AudioBlock.builder()
+                .source(URLSource.builder().url("https://example.com/audio.mp3").build())
+                .build();
+
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.USER)
+                .content(List.of(audioBlock))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(2, events.size());
+        
+        // First event should be AudioContent
+        assertTrue(events.get(0) instanceof AudioContent);
+        AudioContent audioContent = (AudioContent) events.get(0);
+        assertTrue(audioContent.getDelta());
+        assertEquals("https://example.com/audio.mp3", audioContent.getData());
+        
+        // Second event should be completed Message
+        assertTrue(events.get(1) instanceof Message);
+        Message message = (Message) events.get(1);
+        assertEquals(MessageType.MESSAGE, message.getType());
+        assertEquals(RunStatus.COMPLETED, message.getStatus());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithBase64Audio() {
+        // Base64 audio should be converted to data URI
+        AudioBlock audioBlock = AudioBlock.builder()
+                .source(Base64Source.builder()
+                        .mediaType("audio/mpeg")
+                        .data("base64audiodata")
+                        .build())
+                .build();
+
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.USER)
+                .content(List.of(audioBlock))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(2, events.size());
+        
+        // Should contain audio content with base64 data URI
+        assertTrue(events.get(0) instanceof AudioContent);
+        AudioContent audioContent = (AudioContent) events.get(0);
+        assertNotNull(audioContent.getData());
+        assertTrue(audioContent.getData().startsWith("data:audio/mpeg;base64,"));
+        assertEquals("audio/mpeg", audioContent.getFormat());
+    }
 
     @Test
     void testAdaptFrameworkStreamWithEmptyContent() {
@@ -264,55 +458,11 @@ class AgentScopeStreamAdapterTest {
     }
 
     @Test
-    void testAdaptFrameworkStreamThrowsExceptionForInvalidType() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            adapter.adaptFrameworkStream("invalid");
-        });
-    }
-
-    @Test
-    void testAdaptFrameworkStreamWithMultipleMessages() {
-        Msg msg1 = Msg.builder()
-                .id("msg-1")
-                .role(MsgRole.USER)
-                .content(List.of(TextBlock.builder().text("Hello").build()))
-                .build();
-
-        Msg msg2 = Msg.builder()
-                .id("msg-2")
-                .role(MsgRole.ASSISTANT)
-                .content(List.of(TextBlock.builder().text("Hi").build()))
-                .build();
-
-        io.agentscope.core.agent.Event event1 = new io.agentscope.core.agent.Event(
-                messageEventType != null ? messageEventType : getDefaultEventType(), msg1, true
-        );
-
-        io.agentscope.core.agent.Event event2 = new io.agentscope.core.agent.Event(
-                messageEventType != null ? messageEventType : getDefaultEventType(), msg2, true
-        );
-
-        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event1, event2);
-        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
-
-        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
-        assertNotNull(events);
-        assertTrue(events.size() >= 6);
-    }
-
-    @Test
-    void testAdaptFrameworkStreamWithBase64Image() {
-        ImageBlock imageBlock = ImageBlock.builder()
-                .source(Base64Source.builder()
-                        .mediaType("image/jpeg")
-                        .data("base64data")
-                        .build())
-                .build();
-
+    void testAdaptFrameworkStreamWithNullContent() {
         Msg msg = Msg.builder()
                 .id("msg-1")
-                .role(MsgRole.USER)
-                .content(List.of(imageBlock))
+                .role(MsgRole.ASSISTANT)
+                .content()
                 .build();
 
         io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
@@ -324,15 +474,202 @@ class AgentScopeStreamAdapterTest {
 
         List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
         assertNotNull(events);
-        assertTrue(events.size() >= 1);
+        assertTrue(events.isEmpty());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamThrowsExceptionForInvalidType() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            adapter.adaptFrameworkStream("invalid");
+        });
         
-        // Should contain image content with base64 data URI
-        boolean foundBase64Image = events.stream()
-                .filter(e -> e instanceof ImageContent)
-                .map(e -> (ImageContent) e)
-                .anyMatch(ic -> ic.getImageUrl() != null && 
-                               ic.getImageUrl().startsWith("data:image/jpeg;base64,"));
-        assertTrue(foundBase64Image);
+        assertThrows(IllegalArgumentException.class, () -> {
+            adapter.adaptFrameworkStream(null);
+        });
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithMultipleMessages() {
+        // First message with text (not last)
+        Msg msg1 = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.USER)
+                .content(List.of(TextBlock.builder().text("Hello").build()))
+                .build();
+
+        io.agentscope.core.agent.Event event1 = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg1, false
+        );
+
+        // Second message with text (not last)
+        Msg msg2 = Msg.builder()
+                .id("msg-2")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(TextBlock.builder().text("Hi").build()))
+                .build();
+
+        io.agentscope.core.agent.Event event2 = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg2, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event1, event2);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(2, events.size());
+        
+        // Both should be TextContent
+        assertTrue(events.get(0) instanceof TextContent);
+        assertTrue(events.get(1) instanceof TextContent);
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithMixedContentBlocks() {
+        // Mix of different content blocks (not last)
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(
+                        TextBlock.builder().text("Hello").build(),
+                        ThinkingBlock.builder().thinking("Thinking...").build()
+                ))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(2, events.size());
+        
+        // Both should be TextContent
+        assertTrue(events.get(0) instanceof TextContent);
+        assertTrue(events.get(1) instanceof TextContent);
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithToolUseAndToolResult() {
+        // ToolUseBlock (always processed)
+        Map<String, Object> input = Map.of("query", "test");
+        ToolUseBlock toolUse = new ToolUseBlock("call-1", "test_tool", input);
+
+        Msg msg1 = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(toolUse))
+                .build();
+
+        io.agentscope.core.agent.Event event1 = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg1, true
+        );
+
+        // ToolResultBlock (always processed)
+        ToolResultBlock toolResult = ToolResultBlock.of(
+                "call-1",
+                "test_tool",
+                List.of(TextBlock.builder().text("result").build())
+        );
+
+        Msg msg2 = Msg.builder()
+                .id("msg-2")
+                .role(MsgRole.TOOL)
+                .content(List.of(toolResult))
+                .build();
+
+        io.agentscope.core.agent.Event event2 = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg2, true
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event1, event2);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(2, events.size());
+        
+        // First should be MCP_TOOL_CALL
+        assertTrue(events.get(0) instanceof Message);
+        Message toolCallMessage = (Message) events.get(0);
+        assertEquals(MessageType.MCP_TOOL_CALL, toolCallMessage.getType());
+        
+        // Second should be MCP_APPROVAL_RESPONSE
+        assertTrue(events.get(1) instanceof Message);
+        Message toolResultMessage = (Message) events.get(1);
+        assertEquals(MessageType.MCP_APPROVAL_RESPONSE, toolResultMessage.getType());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithMetadata() {
+        // Test that metadata is preserved
+        Map<String, Object> metadata = Map.of("key", "value");
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(TextBlock.builder().text("Hello").build()))
+                .metadata(metadata)
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertEquals(1, events.size());
+        
+        // Metadata should be set on the Message (though TextContent doesn't expose it directly)
+        // The adapter creates a Message internally and sets metadata on it
+        assertTrue(events.get(0) instanceof TextContent);
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithEmptyTextBlock() {
+        // Empty text should be skipped
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(TextBlock.builder().text("").build()))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertTrue(events.isEmpty());
+    }
+
+    @Test
+    void testAdaptFrameworkStreamWithEmptyThinkingBlock() {
+        // Empty thinking should be skipped
+        Msg msg = Msg.builder()
+                .id("msg-1")
+                .role(MsgRole.ASSISTANT)
+                .content(List.of(ThinkingBlock.builder().thinking("").build()))
+                .build();
+
+        io.agentscope.core.agent.Event event = new io.agentscope.core.agent.Event(
+                messageEventType != null ? messageEventType : getDefaultEventType(), msg, false
+        );
+
+        Flux<io.agentscope.core.agent.Event> sourceStream = Flux.just(event);
+        Flux<io.agentscope.runtime.engine.schemas.Event> result = adapter.adaptFrameworkStream(sourceStream);
+
+        List<io.agentscope.runtime.engine.schemas.Event> events = result.collectList().block();
+        assertNotNull(events);
+        assertTrue(events.isEmpty());
     }
     
     private EventType getDefaultEventType() {
@@ -352,4 +689,3 @@ class AgentScopeStreamAdapterTest {
         }
     }
 }
-

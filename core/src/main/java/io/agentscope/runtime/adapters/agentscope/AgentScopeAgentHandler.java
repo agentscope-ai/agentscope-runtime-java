@@ -73,6 +73,10 @@ public abstract class AgentScopeAgentHandler implements AgentHandler {
         this.messageAdapter = new AgentScopeMessageAdapter();
     }
 
+    public SandboxService getSandboxService() {
+        return sandboxService;
+    }
+
     public void setSessionHistoryService(SessionHistoryService sessionHistoryService) {
         this.sessionHistoryService = sessionHistoryService;
     }

@@ -15,6 +15,8 @@
  */
 package io.agentscope.runtime.autoconfigure;
 
+import io.agentscope.runtime.adapters.AgentHandler;
+import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.ProtocolConfig;
 import io.agentscope.runtime.protocol.a2a.A2aProtocolConfig;
 import io.agentscope.runtime.protocol.a2a.ConfigurableAgentCard;
@@ -26,10 +28,15 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ComponentScan(value = {"io.agentscope.runtime.autoconfigure",
+@ComponentScan(value = {"io.agentscope.runtime.autoconfigure", "io.agentscope.runtime.lifecycle",
         "io.agentscope.runtime.protocol.a2a"})
 @EnableConfigurationProperties({A2aCommonProperties.class, A2aAgentCardProperties.class})
 public class A2aAutoConfiguration {
+
+    @Bean
+    public Runner runner(AgentHandler agentHandler) {
+        return new Runner(agentHandler);
+    }
 
     @Bean
     public DeployProperties deployProperties(A2aCommonProperties properties, ObjectProvider<ServerProperties> serverPropertiesProvider) {

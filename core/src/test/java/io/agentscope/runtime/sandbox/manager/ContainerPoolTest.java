@@ -22,6 +22,7 @@ import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>If port conflicts occur, SandboxManager will automatically retry</li>
  * </ul>
  */
+@EnabledIfDockerAvailable
 public class ContainerPoolTest {
 
     private SandboxManager manager;
