@@ -31,6 +31,7 @@ import io.agentscope.runtime.sandbox.manager.remote.RemoteHttpClient;
 import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 import io.agentscope.runtime.sandbox.manager.remote.RequestMethod;
 import io.agentscope.runtime.sandbox.manager.util.*;
+import org.checkerframework.checker.units.qual.C;
 
 import java.nio.file.Paths;
 import java.util.*;
@@ -73,7 +74,7 @@ public class SandboxManager implements AutoCloseable {
             this.remoteHttpClient = new RemoteHttpClient(baseUrl, bearerToken);
             logger.info("Initialized SandboxManager in remote mode with base URL: " + baseUrl);
             this.managerConfig = managerConfig != null ? managerConfig : new ManagerConfig.Builder().build();
-            this.containerManagerType = this.managerConfig.getClientConfig().getClientType();
+            this.containerManagerType = ContainerManagerType.CLOUD;
             this.storageManager = null;
             this.poolSize = 0;
             this.redisEnabled = false;
@@ -281,7 +282,9 @@ public class SandboxManager implements AutoCloseable {
             if (result instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> resultMap = (Map<String, Object>) result;
-                return ContainerModel.fromMap(resultMap);
+                ContainerModel containerModel = ContainerModel.fromMap(resultMap);
+                poolQueue.enqueue(containerModel);
+                return containerModel;
             }
             return null;
         }
@@ -863,8 +866,8 @@ public class SandboxManager implements AutoCloseable {
                 while (!poolQueue.isEmpty()) {
                     ContainerModel containerModel = poolQueue.dequeue();
                     if (containerModel != null) {
-                        logger.info("Destroying pool container: " + containerModel.getContainerId());
-                        releaseContainer(containerModel);
+                        logger.info("Destroying pool container: " + containerModel.getContainerName());
+                        release(containerModel.getContainerId());
                     }
                 }
                 logger.info("Container pool cleanup complete");

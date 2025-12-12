@@ -42,7 +42,7 @@ import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 
 
 @RestController
-@RequestMapping("/sandbox")
+@RequestMapping("/")
 public class SandboxManagerController {
 
     private static final Logger logger = Logger.getLogger(SandboxManagerController.class.getName());
