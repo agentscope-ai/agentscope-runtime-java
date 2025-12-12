@@ -9,31 +9,31 @@
 [![DingTalk](https://img.shields.io/badge/DingTalk-Join_Us-orange.svg)](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)
 
 [[Cookbook]](./cookbook/zh)
-[[中文README]](./README_zh.md)
+[[English README]](./README.md)
 [[Examples]](./examples)
 
 **AgentScope Runtime Java**
 
-This is the Java implementation of [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime/). 
+这是 [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime/) 的 Java 实现。
 
 
 </div>
 
 ---
 
-## ✨ Key Features
+## ✨ 核心特性
 
-- **Deployment Infrastructure**: Built-in services for session management, memory, and sandbox environment control
-- **Sandboxed Tool Execution**: Isolated sandboxes ensure safe tool execution without system compromise
-- **Developer Friendly**: Simple deployment with powerful customization options
-- **Framework Agnostic**: Not tied to any specific framework. Works seamlessly with popular open-source agent frameworks and custom implementations
-- 🚧 **Observability**: Trace and visualize agent operations comprehensively (under development)
+- **部署基础设施**：内置会话管理、内存和沙箱环境控制服务
+- **沙箱化工具执行**：隔离的沙箱确保工具执行安全，不会危及系统
+- **开发者友好**：简单部署，强大的自定义选项
+- **框架无关**：不绑定任何特定框架。可与流行的开源 Agent 框架和自定义实现无缝协作
+- 🚧 **可观测性**：全面追踪和可视化 Agent 操作（开发中）
 
 ---
 
-## 💬 Community
+## 💬 社区
 
-Join our community on DingTalk:
+加入我们的钉钉社区：
 
 | DingTalk                                                     |
 | ------------------------------------------------------------ |
@@ -41,24 +41,24 @@ Join our community on DingTalk:
 
 ---
 
-## 📋 Table of Contents
+## 📋 目录
 
-- [Quick Start](#-quick-start)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [快速开始](#-快速开始)
+- [贡献](#-贡献)
+- [许可证](#-许可证)
 
 ---
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### Prerequisites
+### 前置要求
 
-- Java 17 or higher
+- Java 17 或更高版本
 - Maven 3.6+
 
-### Add Dependency
+### 添加依赖
 
-Add the following dependency to your `pom.xml`:
+在您的 `pom.xml` 中添加以下依赖：
 <!-- Add runtime starter dependency -->
 ```xml
 <dependency>
@@ -75,13 +75,13 @@ Add the following dependency to your `pom.xml`:
 </dependency>
 ```
 
-### Basic Agent Usage Example
+### 基础 Agent 使用示例
 
-The following example demonstrates how to delegate a AgentScope ReactAgent using AgentScope Runtime. The complete source code can be found in the [examples](./examples) directory.
+以下示例演示如何使用 AgentScope Runtime 委托一个 AgentScope ReactAgent。完整源代码可在 [examples](./examples) 目录中找到。
 
-1. Create Agent Handler
+1. 创建 Agent Handler
 
-Create a custom agent handler by extending `AgentScopeAgentHandler`:
+通过扩展 `AgentScopeAgentHandler` 创建自定义 agent handler：
 
 ```java
 public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
@@ -118,9 +118,9 @@ public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
 }
 ```
 
-2. Initialize Services and Deploy
+2. 初始化服务并部署
 
-Configure the agent handler with required services and deploy using `AgentApp`:
+使用所需服务配置 agent handler，并使用 `AgentApp` 进行部署：
 
 ```java
 // Create and configure the agent handler
@@ -138,48 +138,48 @@ agentApp.run(8090); // Server will listen on port 8090
 ```
 
 > [!NOTE]
-> You can also use **Kubernetes** or Alibaba FC platform **AgentRun** to execute sandbox tools. Please refer to the [examples](./examples) directory for more details.
+> 您也可以使用 **Kubernetes** 或阿里云 FC 平台的 **AgentRun** 来执行沙箱工具。更多详情请参考 [examples](./examples) 目录。
 ---
 
-## 🔌 Agent Framework Integration
+## 🔌 Agent 框架集成
 
-AgentScope Runtime Java implementation can be easily integrated with any agent frameworks developed in Java. Currently supported frameworks include:
+AgentScope Runtime Java 实现可以轻松集成任何用 Java 开发的 Agent 框架。目前支持的框架包括：
 
 - **AgentScope Java**
-- **Spring AI Alibaba, Langchain4j and more coming soon...**
+- **Spring AI Alibaba, Langchain4j 以及更多即将推出...**
 
 ---
 
-## 🤝 Contributing
+## 🤝 贡献
 
-We welcome contributions from the community! Here's how you can help:
+我们欢迎社区贡献！以下是如何提供帮助：
 
-### 🐛 Bug Reports
+### 🐛 错误报告
 
-- Use [GitHub Issues](https://github.com/agentscope-ai/agentscope-runtime-java/issues) to report bugs
-- Include detailed reproduction steps
-- Provide system information and relevant logs
+- 使用 [GitHub Issues](https://github.com/agentscope-ai/agentscope-runtime-java/issues) 报告错误
+- 包含详细的复现步骤
+- 提供系统信息和相关日志
 
-### 💡 Feature Requests
+### 💡 功能请求
 
-- Discuss new ideas in [GitHub Discussions](https://github.com/agentscope-ai/agentscope-runtime-java/discussions)
-- Follow the feature request template
-- Consider implementation feasibility
+- 在 [GitHub Discussions](https://github.com/agentscope-ai/agentscope-runtime-java/discussions) 中讨论新想法
+- 遵循功能请求模板
+- 考虑实现可行性
 
-### 🔧 Code Contributions
+### 🔧 代码贡献
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Fork 仓库
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 打开 Pull Request
 
-For detailed contributing guidelines, please see [CONTRIBUTING.md](CONTRIBUTING.md).
+详细的贡献指南，请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ---
 
-## 📄 License
+## 📄 许可证
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
+本项目采用 Apache License 2.0 许可证。详情请参阅 [LICENSE](LICENSE) 文件。
 
 ---
