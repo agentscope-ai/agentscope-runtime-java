@@ -42,7 +42,6 @@ import java.util.logging.Logger;
 public class SandboxManager implements AutoCloseable {
     private final Map<SandboxKey, ContainerModel> sandboxMap = new HashMap<>();
     private final ContainerManagerType containerManagerType;
-    public com.github.dockerjava.api.DockerClient client;
     Logger logger = Logger.getLogger(SandboxManager.class.getName());
     String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     private final ManagerConfig managerConfig;
@@ -133,7 +132,6 @@ public class SandboxManager implements AutoCloseable {
                 logger.info("Redis client initialized successfully for container management");
             } catch (Exception e) {
                 logger.severe("Failed to initialize Redis client: " + e.getMessage());
-                e.printStackTrace();
                 throw new RuntimeException("Failed to initialize Redis", e);
             }
         } else {
@@ -151,15 +149,11 @@ public class SandboxManager implements AutoCloseable {
                 } else {
                     dockerClientConfig = DockerClientConfig.builder().build();
                 }
-                // Set port range and redis config from ManagerConfig
-                dockerClientConfig.setPortRange(managerConfig.getPortRange());
-                dockerClientConfig.setRedisEnabled(managerConfig.getRedisEnabled());
-
-                DockerClient dockerClient = new DockerClient(dockerClientConfig);
+                DockerClient dockerClient = new DockerClient(dockerClientConfig,portManager);
                 logger.info("Docker client created: " + dockerClient);
 
                 this.containerClient = dockerClient;
-                this.client = dockerClient.connectDocker();
+                dockerClient.connectDocker();
                 break;
             case KUBERNETES:
                 KubernetesClient kubernetesClient;
@@ -173,8 +167,7 @@ public class SandboxManager implements AutoCloseable {
                 kubernetesClient.connect();
                 break;
             case AGENTRUN:
-                AgentRunClient agentRunClient = getAgentRunClient(managerConfig);
-                this.containerClient = agentRunClient;
+                this.containerClient = getAgentRunClient(managerConfig);
                 break;
             case CLOUD:
                 break;
@@ -727,9 +720,7 @@ public class SandboxManager implements AutoCloseable {
                 Map<SandboxKey, ContainerModel> redisData = redisContainerMapping.getAll();
                 logger.info("Retrieved " + redisData.size() + " containers from Redis");
 
-                for (Map.Entry<SandboxKey, ContainerModel> entry : redisData.entrySet()) {
-                    allSandboxes.put(entry.getKey(), entry.getValue());
-                }
+                allSandboxes.putAll(redisData);
             } catch (Exception e) {
                 logger.warning("Failed to retrieve containers from Redis: " + e.getMessage());
             }
