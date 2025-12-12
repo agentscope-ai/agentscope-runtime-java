@@ -27,7 +27,7 @@ This is the Java implementation of [AgentScope Runtime](https://github.com/agent
 - **Sandboxed Tool Execution**: Isolated sandboxes ensure safe tool execution without system compromise
 - **Developer Friendly**: Simple deployment with powerful customization options
 - **Framework Agnostic**: Not tied to any specific framework. Works seamlessly with popular open-source agent frameworks and custom implementations
-- 🚧 **Observability**: Trace and visualize agent operations comprehensively
+- 🚧 **Observability**: Trace and visualize agent operations comprehensively (under development)
 
 ---
 
