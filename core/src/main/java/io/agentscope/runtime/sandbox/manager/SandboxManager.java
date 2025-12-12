@@ -49,7 +49,6 @@ public class SandboxManager implements AutoCloseable {
     private final StorageManager storageManager;
     private final int poolSize;
     private ContainerQueue poolQueue;
-    private final SandboxType defaultType;
     private final PortManager portManager;
     private RedisClientWrapper redisClient;
     private RedisContainerMapping redisContainerMapping;
@@ -66,19 +65,10 @@ public class SandboxManager implements AutoCloseable {
     }
 
     public SandboxManager(ManagerConfig managerConfig) {
-        this(managerConfig, managerConfig.getBaseUrl(), managerConfig.getBearerToken(), SandboxType.BASE);
+        this(managerConfig, managerConfig.getBaseUrl(), managerConfig.getBearerToken());
     }
-
-    public SandboxManager(SandboxType defaultType) {
-        this(new ManagerConfig.Builder().build(), null, null, defaultType);
-    }
-
 
     public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken) {
-        this(managerConfig, baseUrl, bearerToken, SandboxType.BASE);
-    }
-
-    public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken, SandboxType defaultType) {
         if (baseUrl != null && !baseUrl.isEmpty()) {
             this.remoteHttpClient = new RemoteHttpClient(baseUrl, bearerToken);
             logger.info("Initialized SandboxManager in remote mode with base URL: " + baseUrl);
@@ -86,7 +76,6 @@ public class SandboxManager implements AutoCloseable {
             this.containerManagerType = this.managerConfig.getClientConfig().getClientType();
             this.storageManager = null;
             this.poolSize = 0;
-            this.defaultType = defaultType;
             this.redisEnabled = false;
             this.portManager = null;
             this.poolQueue = null;
@@ -100,7 +89,6 @@ public class SandboxManager implements AutoCloseable {
         this.containerManagerType = managerConfig.getClientConfig().getClientType();
         this.storageManager = new StorageManager(managerConfig.getFileSystemConfig());
         this.poolSize = managerConfig.getPoolSize();
-        this.defaultType = defaultType;
         this.redisEnabled = managerConfig.getRedisEnabled();
         this.portManager = new PortManager(managerConfig.getPortRange());
 
@@ -121,13 +109,9 @@ public class SandboxManager implements AutoCloseable {
                 String mappingPrefix = managerConfig.getContainerPrefixKey() + "mapping";
                 this.redisContainerMapping = new RedisContainerMapping(this.redisClient, mappingPrefix);
 
-                if (this.poolSize > 0) {
-                    String queueName = redisConfig.getRedisContainerPoolKey();
-                    this.poolQueue = new RedisContainerQueue(this.redisClient, queueName);
-                    logger.info("Using Redis-backed container pool with queue: " + queueName);
-                } else {
-                    this.poolQueue = new InMemoryContainerQueue();
-                }
+                String queueName = redisConfig.getRedisContainerPoolKey();
+                this.poolQueue = new RedisContainerQueue(this.redisClient, queueName);
+                logger.info("Using Redis-backed container pool with queue: " + queueName);
 
                 logger.info("Redis client initialized successfully for container management");
             } catch (Exception e) {
@@ -149,7 +133,7 @@ public class SandboxManager implements AutoCloseable {
                 } else {
                     dockerClientConfig = DockerClientConfig.builder().build();
                 }
-                DockerClient dockerClient = new DockerClient(dockerClientConfig,portManager);
+                DockerClient dockerClient = new DockerClient(dockerClientConfig, portManager);
                 logger.info("Docker client created: " + dockerClient);
 
                 this.containerClient = dockerClient;
@@ -198,37 +182,34 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Initializing container pool with size: " + poolSize);
 
         while (poolQueue.size() < poolSize) {
-            try {
-                ContainerModel containerModel = createContainer(defaultType, null, null, null);
+            for (SandboxType type : managerConfig.getDefaultSandboxType()) {
+                try {
+                    ContainerModel containerModel = createContainer(type, null, null, null);
 
-                if (containerModel != null) {
-                    if (poolQueue.size() < poolSize) {
-                        poolQueue.enqueue(containerModel);
-                        logger.info("Added container to pool: " + containerModel.getContainerName() + " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
+                    if (containerModel != null) {
+                        if (poolQueue.size() < poolSize) {
+                            poolQueue.enqueue(containerModel);
+                            logger.info("Added container to pool: " + containerModel.getContainerName() + " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
+                        } else {
+                            logger.info("Pool size limit reached, releasing container: " + containerModel.getContainerName());
+                            releaseContainer(containerModel);
+                            break;
+                        }
                     } else {
-                        logger.info("Pool size limit reached, releasing container: " + containerModel.getContainerName());
-                        releaseContainer(containerModel);
+                        logger.severe("Failed to create container for pool");
                         break;
                     }
-                } else {
-                    logger.severe("Failed to create container for pool");
+                } catch (Exception e) {
+                    logger.severe("Error initializing container pool: " + e.getMessage());
+                    e.printStackTrace();
                     break;
                 }
-            } catch (Exception e) {
-                logger.severe("Error initializing container pool: " + e.getMessage());
-                e.printStackTrace();
-                break;
             }
         }
         logger.info("Container pool initialization complete. Pool size: " + poolQueue.size());
     }
 
     public ContainerModel createFromPool(SandboxType sandboxType) {
-        if (sandboxType != defaultType) {
-            logger.info("Requested type " + sandboxType + " differs from pool type " + defaultType + ", creating directly");
-            return createContainer(sandboxType, null, null, null);
-        }
-
         int attempts = 0;
         int maxAttempts = poolSize + 1;
 
@@ -236,7 +217,7 @@ public class SandboxManager implements AutoCloseable {
             attempts++;
 
             try {
-                ContainerModel newContainer = createContainer(defaultType, null, null, null);
+                ContainerModel newContainer = createContainer(sandboxType, null, null, null);
                 if (newContainer != null) {
                     poolQueue.enqueue(newContainer);
                 }
@@ -250,7 +231,7 @@ public class SandboxManager implements AutoCloseable {
 
                 logger.info("Retrieved container from pool: " + containerModel.getContainerName());
 
-                String currentImage = SandboxRegistryService.getImageByType(defaultType).orElse(containerModel.getVersion());
+                String currentImage = SandboxRegistryService.getImageByType(sandboxType).orElse(containerModel.getVersion());
 
                 if (!currentImage.equals(containerModel.getVersion())) {
                     logger.warning("Container " + containerModel.getContainerName() + " is outdated (has: " + containerModel.getVersion() + ", current: " + currentImage + "), releasing and trying next");
@@ -499,7 +480,7 @@ public class SandboxManager implements AutoCloseable {
                 .version(imageName)
                 .build();
 
-        logger.info("Container Model: "+ containerModel);
+        logger.info("Container Model: " + containerModel);
 
         containerClient.startContainer(containerId);
         return containerModel;
