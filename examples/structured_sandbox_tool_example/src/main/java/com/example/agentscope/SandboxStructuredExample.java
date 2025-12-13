@@ -135,9 +135,18 @@ public class SandboxStructuredExample {
 
         public static class Team {
             public String country;
+            public Coach coach;
             public List<String> players;
 
             public Team() {
+            }
+        }
+
+        public static class Coach {
+            public String name;
+            public int age;
+
+            public Coach() {
             }
         }
     }
