@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.manager;
 import io.agentscope.runtime.sandbox.manager.client.*;
 import io.agentscope.runtime.sandbox.manager.client.config.AgentRunClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.FcClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.collections.ContainerQueue;
 import io.agentscope.runtime.sandbox.manager.collections.InMemoryContainerQueue;
@@ -153,6 +154,8 @@ public class SandboxManager implements AutoCloseable {
             case AGENTRUN:
                 this.containerClient = getAgentRunClient(managerConfig);
                 break;
+            case FC:
+                this.containerClient = getFcClient(managerConfig);
             case CLOUD:
                 break;
             default:
@@ -162,6 +165,20 @@ public class SandboxManager implements AutoCloseable {
         if (this.poolSize > 0) {
             initContainerPool();
         }
+    }
+
+    private FcClient getFcClient(ManagerConfig managerConfig) {
+        FcClient fcClient;
+        try {
+            if (managerConfig.getClientConfig() instanceof FcClientConfig fcClientConfig) {
+                fcClient = new FcClient(fcClientConfig);
+            } else {
+                throw new RuntimeException("Provided clientConfig is not an instance of FC config, using default configuration");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize FC client");
+        }
+        return fcClient;
     }
 
     private AgentRunClient getAgentRunClient(ManagerConfig managerConfig) {
@@ -388,7 +405,7 @@ public class SandboxManager implements AutoCloseable {
         if (mountDir == null || mountDir.isEmpty()) {
             mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
         }
-        if (this.managerConfig.getClientConfig().getClientType() == ContainerManagerType.AGENTRUN) {
+        if (containerManagerType == ContainerManagerType.AGENTRUN || containerManagerType == ContainerManagerType.FC) {
             mountDir = Paths.get(mountDir).toAbsolutePath().toString();
         }
         java.io.File file = new java.io.File(mountDir);
@@ -399,7 +416,7 @@ public class SandboxManager implements AutoCloseable {
         if (storagePath == null) {
             storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath();
         }
-        if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN) {
+        if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN && containerManagerType != ContainerManagerType.FC) {
             logger.info("Downloading from storage path: " + storagePath + " to mount dir: " + mountDir);
             boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
             if (downloadSuccess) {
@@ -411,7 +428,9 @@ public class SandboxManager implements AutoCloseable {
         String runtimeToken = RandomStringGenerator.generateRandomString(32);
         environment.put("SECRET_TOKEN", runtimeToken);
         List<VolumeBinding> volumeBindings = new ArrayList<>();
-        volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
+        if(containerManagerType != ContainerManagerType.AGENTRUN && containerManagerType != ContainerManagerType.FC){
+            volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
+        }
         Map<String, String> readonlyMounts = managerConfig.getFileSystemConfig().getReadonlyMounts();
         if (readonlyMounts != null && !readonlyMounts.isEmpty()) {
             logger.info("Adding readonly mounts: " + readonlyMounts.size() + " mount(s)");
