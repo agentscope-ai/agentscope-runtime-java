@@ -19,7 +19,7 @@ package io.agentscope.runtime.sandbox.manager.model.container;
  * Container management type enumeration
  */
 public enum ContainerManagerType {
-    DOCKER("docker"), KUBERNETES("kubernetes"), CLOUD("cloud"), AGENTRUN("agentrun");
+    DOCKER("docker"), KUBERNETES("kubernetes"), CLOUD("cloud"), AGENTRUN("agentrun"), FC("fc");
 
     private final String value;
 
