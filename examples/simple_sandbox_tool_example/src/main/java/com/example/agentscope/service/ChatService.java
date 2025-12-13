@@ -27,6 +27,7 @@ import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.model.DashScopeChatModel;
+import io.agentscope.core.model.ToolSchema;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.services.sandbox.SandboxService;
@@ -117,21 +118,14 @@ public class ChatService {
         return toolkit.getToolSchemas().stream()
                 .map(schema -> {
                     Map<String, Object> schemaMap = new HashMap<>();
+                    ToolInfo info = new ToolInfo();
+
                     if (schema != null) {
-                        schema.forEach((k, v) -> schemaMap.put(String.valueOf(k), v));
+                        info.setName(schema.getParameters().toString());
+                        info.setDescription(schema.getDescription());
+                        info.setParameters(schema.getParameters());
                     }
 
-                    ToolInfo info = new ToolInfo();
-                    Object function = schemaMap.get("function");
-                    if(function instanceof Map<? , ?>){
-                        info.setName(((Map<?, ?>) function).get("name").toString());
-                        info.setDescription(((Map<?, ?>) function).get("description").toString());
-                        if(((Map<?, ?>) function).get("parameters") instanceof Map<?, ?> paramsMap){
-                            Map<String, Object> paramMap = new HashMap<>();
-                            paramsMap.forEach((k, v) -> paramMap.put(String.valueOf(k), v));
-                            info.setParameters(paramMap);
-                        }
-                    }
                     return info;
                 })
                 .collect(Collectors.toList());

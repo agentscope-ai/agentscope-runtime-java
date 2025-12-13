@@ -25,6 +25,7 @@ import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.transport.DockerHttpClient;
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.model.container.PortRange;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.util.PortManager;
 
@@ -52,21 +53,18 @@ public class DockerClient extends BaseClient {
      * Constructor with DockerClientConfig
      */
     public DockerClient(DockerClientConfig config) {
-        this.config = config;
-        if (config != null && config.getPortRange() != null) {
-            this.portManager = new PortManager(config.getPortRange());
-            logger.info("DockerClient initialized with port range: " + 
-                       config.getPortRange().getStart() + "-" + config.getPortRange().getEnd());
-        } else {
-            this.portManager = null;
-        }
+        this(config, new PortManager(new PortRange()));
     }
 
-    public com.github.dockerjava.api.DockerClient connectDocker() {
+    public DockerClient(DockerClientConfig config, PortManager portManager) {
+        this.config = config;
+        this.portManager = portManager;
+    }
+
+    public void connectDocker() {
         this.client = openDockerClient();
         this.client.infoCmd().exec();
         this.connected = true;
-        return this.client;
     }
 
     @Override
@@ -90,9 +88,9 @@ public class DockerClient extends BaseClient {
 
     @Override
     public ContainerCreateResult createContainer(String containerName, String imageName,
-                                  List<String> ports,
-                                  List<VolumeBinding> volumeBindings,
-                                  Map<String, String> environment, Map<String, Object> runtimeConfig) {
+                                                 List<String> ports,
+                                                 List<VolumeBinding> volumeBindings,
+                                                 Map<String, String> environment, Map<String, Object> runtimeConfig) {
         if (!isConnected()) {
             throw new IllegalStateException("Docker client is not connected");
         }
@@ -111,14 +109,14 @@ public class DockerClient extends BaseClient {
                 ports, portMapping, volumeBindings, environment, runtimeConfig);
 
         String containerId = response.getId();
-        
+
         // Store port mapping in cache
         if (portMapping != null && !portMapping.isEmpty()) {
             List<Integer> hostPorts = new ArrayList<>(portMapping.values());
             portsCache.put(containerId, hostPorts);
             logger.fine("Stored port mapping for container " + containerId + ": " + hostPorts);
         }
-        
+
         // Extract ports from portMapping
         List<String> portList = new ArrayList<>();
         if (portMapping != null && !portMapping.isEmpty()) {
@@ -126,9 +124,9 @@ public class DockerClient extends BaseClient {
                 portList.add(String.valueOf(port));
             }
         }
-        
+
         String ip = "localhost";
-        
+
         return new ContainerCreateResult(containerId, portList, ip);
     }
 
@@ -177,7 +175,7 @@ public class DockerClient extends BaseClient {
         if (!isConnected()) {
             throw new IllegalStateException("Docker client is not connected");
         }
-        
+
         // Align with Python version: release ports when container is removed
         List<Integer> ports = portsCache.remove(containerId);
         if (ports != null && portManager != null) {
@@ -186,7 +184,7 @@ public class DockerClient extends BaseClient {
             }
             logger.fine("Released " + ports.size() + " port(s) for container " + containerId);
         }
-        
+
         removeContainer(client, containerId);
     }
 
@@ -204,7 +202,7 @@ public class DockerClient extends BaseClient {
                 DefaultDockerClientConfig.Builder configBuilder = DefaultDockerClientConfig.createDefaultConfigBuilder();
                 String dockerHost = "tcp://" + this.config.getHost() + ":" + this.config.getPort();
                 configBuilder.withDockerHost(dockerHost);
-                
+
                 if (this.config.getCertPath() != null && !this.config.getCertPath().isEmpty()) {
                     configBuilder.withDockerCertPath(this.config.getCertPath());
                     logger.info("Connecting to Docker at " + dockerHost + " with TLS");
@@ -220,14 +218,14 @@ public class DockerClient extends BaseClient {
                         .build();
 
                 com.github.dockerjava.api.DockerClient client = DockerClientImpl.getInstance(config, httpClient);
-                
+
                 client.infoCmd().exec();
                 logger.info("Successfully connected to Docker using configured host and port");
                 return client;
             } catch (Exception e) {
-                logger.warning("Failed to connect to Docker using configured host (" + 
-                             this.config.getHost() + ":" + this.config.getPort() + 
-                             "): " + e.getMessage());
+                logger.warning("Failed to connect to Docker using configured host (" +
+                        this.config.getHost() + ":" + this.config.getPort() +
+                        "): " + e.getMessage());
                 logger.info("Falling back to default Docker configuration");
             }
         }
@@ -630,7 +628,7 @@ public class DockerClient extends BaseClient {
         }
         return pullImage(client, imageName);
     }
-    
+
     @Override
     public boolean inspectContainer(String containerIdOrName) {
         if (!isConnected()) {
@@ -683,9 +681,9 @@ public class DockerClient extends BaseClient {
     public boolean pullImage(com.github.dockerjava.api.DockerClient client, String imageName) {
         try {
             logger.info("Pulling image: " + imageName);
-            
+
             PullImageCmd pullCmd = client.pullImageCmd(imageName);
-            
+
             pullCmd.exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<PullResponseItem>() {
                 @Override
                 public void onNext(PullResponseItem item) {
@@ -697,7 +695,7 @@ public class DockerClient extends BaseClient {
                     }
                 }
             }).awaitCompletion();
-            
+
             logger.info("Successfully pulled image: " + imageName);
             return true;
         } catch (Exception e) {

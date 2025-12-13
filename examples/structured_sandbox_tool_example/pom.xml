@@ -13,10 +13,10 @@
     </parent>
 
     <groupId>com.example</groupId>
-    <artifactId>agentscope-examples-simple</artifactId>
+    <artifactId>agentscope-examples-structured</artifactId>
     <version>1.0.0</version>
     <name>AgentScope Spring MVC Demo</name>
-    <description>AgentScope simple sample project using Spring MVC</description>
+    <description>AgentScope sample project using Spring MVC</description>
 
     <properties>
         <java.version>17</java.version>
