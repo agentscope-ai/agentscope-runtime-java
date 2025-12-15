@@ -58,7 +58,8 @@ public class A2aController {
     @ResponseBody
     public Object handleRequest(@RequestBody String body, HttpServletRequest httpRequest) {
         ServerCallContext context = buildServerCallContext(httpRequest);
-        boolean streaming = isStreamingRequest(body);
+        boolean streaming = isStreamingRequest(body, context);
+        context.getState().put(ContextKeys.IS_STREAM_KEY, streaming);
         Object result;
         try {
             if (streaming) {
@@ -75,12 +76,16 @@ public class A2aController {
         return result;
     }
 
-    private boolean isStreamingRequest(String requestBody) {
+    private boolean isStreamingRequest(String requestBody, ServerCallContext context) {
         try {
             JsonNode node = Utils.OBJECT_MAPPER.readTree(requestBody);
             JsonNode method = node != null ? node.get("method") : null;
-            return method != null && (SendStreamingMessageRequest.METHOD.equals(method.asText())
-                    || TaskResubscriptionRequest.METHOD.equals(method.asText()));
+            String methodName = method != null ? method.asText() : null;
+            if (methodName != null) {
+                context.getState().put(ContextKeys.METHOD_NAME_KEY, methodName);
+                return SendStreamingMessageRequest.METHOD.equals(methodName) || TaskResubscriptionRequest.METHOD.equals(methodName);
+            }
+            return false;
         } catch (Exception e) {
             return false;
         }
@@ -150,11 +155,13 @@ public class A2aController {
 
     private ServerCallContext buildServerCallContext(HttpServletRequest httpRequest) {
         Map<String, Object> state = new HashMap<>();
+        Map<String, String> headers = new HashMap<>();
+        state.put(ContextKeys.HEADERS_KEY, headers);
         Enumeration<String> headerNames = httpRequest.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
             String headerValue = httpRequest.getHeader(headerName);
-            state.put(headerName, headerValue);
+            headers.put(headerName, headerValue);
         }
         return new ServerCallContext(null, state, new HashSet<>());
     }
