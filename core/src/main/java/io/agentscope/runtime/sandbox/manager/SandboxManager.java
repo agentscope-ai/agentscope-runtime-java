@@ -153,9 +153,11 @@ public class SandboxManager implements AutoCloseable {
                 break;
             case AGENTRUN:
                 this.containerClient = getAgentRunClient(managerConfig);
+                containerClient.connect();
                 break;
             case FC:
                 this.containerClient = getFcClient(managerConfig);
+                containerClient.connect();
             case CLOUD:
                 break;
             default:

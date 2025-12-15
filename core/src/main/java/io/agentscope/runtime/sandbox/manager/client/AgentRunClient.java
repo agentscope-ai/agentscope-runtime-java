@@ -671,7 +671,7 @@ public class AgentRunClient extends BaseClient {
                 "serverless-registry.cn-hangzhou.cr.aliyuncs.com/functionai/agentscope_runtime-sandbox-browser:20251027");
         replacementMap.put("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-filesystem",
                 "serverless-registry.cn-hangzhou.cr.aliyuncs.com/functionai/agentscope_runtime-sandbox-filesystem:20251027");
-        replacementMap.put("agentscope/runtime-sandbox-gui",
+        replacementMap.put("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-gui",
                 "serverless-registry.cn-hangzhou.cr.aliyuncs.com/functionai/agentscope_runtime-sandbox-gui:20251027");
 
         String imageName;

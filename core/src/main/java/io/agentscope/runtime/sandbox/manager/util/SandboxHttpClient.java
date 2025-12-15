@@ -41,6 +41,8 @@ public class SandboxHttpClient extends SandboxClient {
     private final String secret;
     private final HttpClient httpClient;
     private final int timeout;
+    private final HttpRequest.Builder requestBuilder;
+
 
     public SandboxHttpClient(ContainerModel containerModel, int timeout) {
         this.sessionId = containerModel.getSessionId();
@@ -52,6 +54,13 @@ public class SandboxHttpClient extends SandboxClient {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
 
+        this.requestBuilder = HttpRequest.newBuilder()
+                .header("Authorization", "Bearer " + secret)
+                .header("Content-Type", "application/json")
+                .header("x-agentrun-session-id", "s" + sessionId)
+                .header("x-agentscope-runtime-session-id", "s" + sessionId)
+                .timeout(Duration.ofSeconds(timeout));
+
         waitUntilHealthy();
     }
 
@@ -59,11 +68,8 @@ public class SandboxHttpClient extends SandboxClient {
         try {
             String endpoint = baseUrl + "/healthz";
 
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest request = requestBuilder
                     .uri(URI.create(endpoint))
-                    .header("Authorization", "Bearer " + secret)
-                    .header("x-agentrun-session-id", "s" + sessionId)
-                    .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
 
@@ -101,12 +107,8 @@ public class SandboxHttpClient extends SandboxClient {
         try {
             String endpoint = baseUrl + "/mcp/list_tools";
 
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest request = requestBuilder
                     .uri(URI.create(endpoint))
-                    .header("Authorization", "Bearer " + secret)
-                    .header("Content-Type", "application/json")
-                    .header("x-agentrun-session-id", "s" + sessionId)
-                    .timeout(Duration.ofSeconds(timeout))
                     .GET()
                     .build();
 
@@ -155,12 +157,8 @@ public class SandboxHttpClient extends SandboxClient {
 
             String jsonBody = objectMapper.writeValueAsString(requestBody);
 
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest request = requestBuilder
                     .uri(URI.create(endpoint))
-                    .header("Authorization", "Bearer " + secret)
-                    .header("Content-Type", "application/json")
-                    .header("x-agentrun-session-id", "s" + sessionId)
-                    .timeout(Duration.ofSeconds(timeout))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
 
@@ -189,12 +187,8 @@ public class SandboxHttpClient extends SandboxClient {
 
             String jsonBody = objectMapper.writeValueAsString(requestBody);
 
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest request = requestBuilder
                     .uri(URI.create(endpoint))
-                    .header("Authorization", "Bearer " + secret)
-                    .header("Content-Type", "application/json")
-                    .header("x-agentrun-session-id", "s" + sessionId)
-                    .timeout(Duration.ofSeconds(timeout))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
 
@@ -221,12 +215,11 @@ public class SandboxHttpClient extends SandboxClient {
 
             String jsonBody = objectMapper.writeValueAsString(arguments);
 
-            HttpRequest request = HttpRequest.newBuilder()
+            System.out.println("Calling generic tool " + toolName + " with body: " + jsonBody);
+            System.out.println("Endpoint: " + endpoint);
+
+            HttpRequest request = requestBuilder
                     .uri(URI.create(endpoint))
-                    .header("Authorization", "Bearer " + secret)
-                    .header("Content-Type", "application/json")
-                    .header("x-agentrun-session-id", "s" + sessionId)
-                    .timeout(Duration.ofSeconds(timeout))
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
 
