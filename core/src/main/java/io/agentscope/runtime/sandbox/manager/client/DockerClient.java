@@ -687,13 +687,51 @@ public class DockerClient extends BaseClient {
             PullImageCmd pullCmd = client.pullImageCmd(imageName);
             
             pullCmd.exec(new com.github.dockerjava.api.async.ResultCallback.Adapter<PullResponseItem>() {
+                // The previous "10% progress point" for each layer
+                private final Map<String, Integer> lastProgressMap = new HashMap<>();
+                private final Set<String> printedStatus = new HashSet<>();
+
                 @Override
                 public void onNext(PullResponseItem item) {
-                    if (item.getStatus() != null) {
-                        logger.info("Pull progress: " + item.getStatus());
-                    }
                     if (item.getErrorDetail() != null) {
                         logger.warning("Pull error: " + item.getErrorDetail().getMessage());
+                        return;
+                    }
+
+                    String layerId = item.getId() != null ? item.getId() : item.getStatus();
+                    if (layerId == null) {
+                        layerId = "unknown-layer";
+                    }
+
+                    // Print once every 10% when progress information is available.
+                    ResponseItem.ProgressDetail pd = item.getProgressDetail();
+                    if (pd != null && pd.getCurrent() != null && pd.getTotal() != null && pd.getTotal() > 0) {
+                        long current = pd.getCurrent();
+                        long total   = pd.getTotal();
+
+                        // Calculate and normalize the layer download progress to 10% steps.
+                        int percent = (int) ((current * 100) / total);
+                        int rounded = ((percent + 5) / 10) * 10;
+                        if (rounded > 100) rounded = 100;
+                        if (rounded < 0)   rounded = 0;
+
+                        Integer lastRounded = lastProgressMap.get(layerId);
+                        if (lastRounded == null || rounded > lastRounded) {
+                            lastProgressMap.put(layerId, rounded);
+                            String percentText = String.format("%3d%%", rounded);
+                            logger.info(String.format("Pull progress: %-10s(layer=%s)", percentText, layerId));
+
+                        }
+                        return;
+                    }
+
+                    if (item.getStatus() != null) {
+                        String status = item.getStatus();
+                        String key = status + "|" + layerId;
+                        if (!printedStatus.contains(key)) {
+                            printedStatus.add(key);
+                            logger.info(String.format("Pull status: %-20s (layer=%s)", status, layerId));
+                        }
                     }
                 }
             }).awaitCompletion();
@@ -705,4 +743,5 @@ public class DockerClient extends BaseClient {
             return false;
         }
     }
+
 }
