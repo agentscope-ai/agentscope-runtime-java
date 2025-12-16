@@ -61,6 +61,8 @@ public class SandboxRegistryInitializer {
         tryRegisterClass(WebShopSandbox.class.getName());
         tryRegisterClass(APPWorldSandbox.class.getName());
         tryRegisterClass(GuiSandbox.class.getName());
+        tryRegisterClass(MobileSandbox.class.getName());
+        tryRegisterClass(AgentBaySandbox.class.getName());
         logger.info("Built-in sandbox classes registered");
     }
 

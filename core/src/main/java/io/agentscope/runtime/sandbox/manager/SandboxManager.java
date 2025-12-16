@@ -395,6 +395,44 @@ public class SandboxManager implements AutoCloseable {
             return null;
         }
 
+        if (sandboxType == SandboxType.AGENTBAY) {
+            ContainerCreateResult createResult = agentBayClient.createContainer(imageId, labels);
+
+            String containerId = createResult.getContainerId();
+            if (containerId == null) {
+                logger.severe("Container creation failed: containerId is null");
+                return null;
+            }
+            List<String> resultPorts = createResult.getPorts();
+            String ip = createResult.getIp();
+            String httpProtocol = createResult.getProtocol();
+
+            String firstPort = resultPorts != null && !resultPorts.isEmpty() ? resultPorts.get(0) : "80";
+
+            String baseHost = ip != null ? ip : "localhost";
+            String accessPort = firstPort;
+
+            String[] mappedPorts = resultPorts != null ? resultPorts.toArray(new String[0]) : new String[]{firstPort};
+
+            ContainerModel containerModel = ContainerModel.builder()
+                    .sessionId(containerId)
+                    .containerId(containerId)
+                    .containerName(containerId)
+                    .baseUrl(String.format("%s://%s:%s/fastapi", httpProtocol, baseHost, accessPort))
+                    .browserUrl(String.format("%s://%s:%s/steel-api/%s", httpProtocol, baseHost, accessPort, ""))
+                    .frontBrowserWS(String.format("ws://%s:%s/steel-api/%s/v1/sessions/cast", baseHost, accessPort, ""))
+                    .clientBrowserWS(String.format("ws://%s:%s/steel-api/%s/&sessionId=%s", baseHost, accessPort, "", BROWSER_SESSION_ID))
+                    .artifactsSIO(String.format("%s://%s:%s/v1", httpProtocol, baseHost, accessPort))
+                    .ports(mappedPorts)
+                    .mountDir(mountDir)
+                    .storagePath(storagePath)
+                    .runtimeToken("")
+                    .authToken("")
+                    .version("agentbay-cloud")
+                    .build();
+            return containerModel;
+        }
+
         if (environment == null) {
             environment = new HashMap<>();
         }
@@ -498,12 +536,7 @@ public class SandboxManager implements AutoCloseable {
         }
         // TODO: Need to check container name uniqueness?
         ContainerCreateResult createResult;
-
-        if (sandboxType != SandboxType.AGENTBAY) {
-            createResult = containerClient.createContainer(containerName, imageName, ports, volumeBindings, environment, runtimeConfig);
-        } else {
-            createResult = agentBayClient.createContainer(imageId, labels);
-        }
+        createResult = containerClient.createContainer(containerName, imageName, ports, volumeBindings, environment, runtimeConfig);
 
         String containerId = createResult.getContainerId();
         if (containerId == null) {
@@ -876,6 +909,13 @@ public class SandboxManager implements AutoCloseable {
             }
 
             portManager.releaseContainerPorts(containerModel.getContainerName());
+
+            if (keyToRemove != null && keyToRemove.getSandboxType() == SandboxType.AGENTBAY) {
+                agentBayClient.removeContainer(containerModel.getContainerId());
+                logger.info("Deleted AgentBay container: " + containerModel.getContainerName());
+                return true;
+            }
+
             containerClient.stopContainer(containerModel.getContainerId());
             containerClient.removeContainer(containerModel.getContainerId());
             logger.info("Container destroyed: " + containerModel.getContainerName());
