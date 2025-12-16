@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
  * Provide external REST API endpoints
  */
 @RestController
-@RequestMapping("/chat")
+@RequestMapping("/api/chat")
 @CrossOrigin(origins = "*")
 public class ChatController {
 

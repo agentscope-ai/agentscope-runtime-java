@@ -94,6 +94,27 @@ AgentRun是阿里云推出的基于Serverless架构的智能Agent开发框架，
 | `agentrunLogProject` | SLS日志项目              | `null`                        | SLS日志项目名称（可选）                                                                             |
 | `agentrunLogStore` | SLS日志库                | `null`                        | SLS日志库名称（可选）                                                                              |
 
+##### （可选）函数计算（FC）设置
+
+函数计算（Function Compute，简称FC）是一种事件驱动的全托管计算服务，开发者无需管理服务器等基础设施，只需编写并上传代码，函数计算便会自动准备计算资源，并以弹性、可靠的方式运行代码。您可将沙盒服务器部署到FC上。
+
+要在沙盒服务器中配置特定于 [FC](https://fcnext.console.aliyun.com/) 的设置，请在 `containerDeployment` 中传递 `FcClientConfig` 参数。可以考虑调整以下参数：
+
+| Parameter           | Description    | Default               | Notes                                                        |
+| ------------------- | -------------- | --------------------- | ------------------------------------------------------------ |
+| `FcAccessKeyId`     | 访问密钥ID     | `null`                | 阿里云AccessKey ID，需要`AliyunAgentRunFullAccess`权限       |
+| `FcAccessKeySecret` | 访问密钥Secret | `null`                | 阿里云AccessKey Secret                                       |
+| `FcAccountId`       | 阿里云账号ID   | `null`                | 阿里云主账号ID，登录阿里云[RAM控制台](https://ram.console.aliyun.com/profile/access-keys)获取阿里云账号ID和AK、SK |
+| `FcRegionId`        | 部署区域ID     | `cn-hangzhou`         | Agentrun部署地域ID                                           |
+| `FcCpu`             | CPU规格        | `2.0f`                | vCPU规格                                                     |
+| `FcMemory`          | 内存规格       | `2048`                | 内存规格 (MB)                                                |
+| `FcVpcId`           | VPC ID         | `null`                | VPC网络ID（可选）                                            |
+| `FcVswitchIds`      | 交换机ID列表   | `null`                | VSwitch ID列表（可选）                                       |
+| `FcSecurityGroupId` | 安全组ID       | `null`                | 安全组ID（可选）                                             |
+| `FcPrefix`          | 资源名称前缀   | `agentscope-sandbox_` | 创建的资源名称前缀                                           |
+| `FcLogProject`      | SLS日志项目    | `null`                | SLS日志项目名称（可选）                                      |
+| `FcLogStore`        | SLS日志库      | `null`                | SLS日志库名称（可选）                                        |
+
 ### 导入自定义沙箱
 
 除了默认提供的基础沙箱类型外，您还可以通过编写扩展模块并使用 `--extension` 参数加载，实现自定义沙箱的功能，例如修改镜像、增加环境变量、定义超时时间等。

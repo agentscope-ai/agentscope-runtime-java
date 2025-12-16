@@ -21,12 +21,14 @@ import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerManagerType;
 import io.agentscope.runtime.sandbox.manager.model.container.PortRange;
 import io.agentscope.runtime.sandbox.manager.model.container.RedisManagerConfig;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 import io.agentscope.runtime.sandbox.manager.model.fs.LocalFileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.OssConfig;
 
 import java.io.File;
+import java.util.List;
 
 /**
  * Sandbox Manager Environment Configuration Class
@@ -45,6 +47,7 @@ public class ManagerConfig {
 
     private PortRange portRange;
     private int poolSize = 0;
+    private List<SandboxType> defaultSandboxType;
 
     private BaseClientConfig clientConfig;
     private FileSystemConfig fileSystemConfig;
@@ -62,6 +65,7 @@ public class ManagerConfig {
 
         this.baseUrl = builder.baseUrl;
         this.bearerToken = builder.bearerToken;
+        this.defaultSandboxType = builder.defaultSandboxType;
 
         validate();
     }
@@ -100,6 +104,10 @@ public class ManagerConfig {
         if (value == null || (value instanceof String && ((String) value).isEmpty())) {
             throw new IllegalArgumentException(fieldName + " must be set when " + condition);
         }
+    }
+
+    public List<SandboxType> getDefaultSandboxType() {
+        return defaultSandboxType;
     }
 
     public String getContainerPrefixKey() {
@@ -151,6 +159,7 @@ public class ManagerConfig {
         private int poolSize = 0;
         private String baseUrl;
         private String bearerToken;
+        private List<SandboxType> defaultSandboxType = List.of(SandboxType.BASE);
 
         private FileSystemConfig fileSystemConfig = LocalFileSystemConfig.builder().build();
 
@@ -199,6 +208,11 @@ public class ManagerConfig {
 
         public Builder fileSystemConfig(FileSystemConfig fileSystemConfig) {
             this.fileSystemConfig = fileSystemConfig;
+            return this;
+        }
+
+        public Builder defaultSandboxType(List<SandboxType> defaultSandboxType) {
+            this.defaultSandboxType = defaultSandboxType;
             return this;
         }
 

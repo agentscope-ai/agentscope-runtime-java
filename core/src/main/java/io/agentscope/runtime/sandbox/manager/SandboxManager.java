@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.manager;
 import io.agentscope.runtime.sandbox.manager.client.*;
 import io.agentscope.runtime.sandbox.manager.client.config.AgentRunClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
+import io.agentscope.runtime.sandbox.manager.client.config.FcClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.collections.ContainerQueue;
 import io.agentscope.runtime.sandbox.manager.collections.InMemoryContainerQueue;
@@ -42,7 +43,6 @@ import java.util.logging.Logger;
 public class SandboxManager implements AutoCloseable {
     private final Map<SandboxKey, ContainerModel> sandboxMap = new HashMap<>();
     private final ContainerManagerType containerManagerType;
-    public com.github.dockerjava.api.DockerClient client;
     Logger logger = Logger.getLogger(SandboxManager.class.getName());
     String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     private final ManagerConfig managerConfig;
@@ -50,7 +50,6 @@ public class SandboxManager implements AutoCloseable {
     private final StorageManager storageManager;
     private final int poolSize;
     private ContainerQueue poolQueue;
-    private final SandboxType defaultType;
     private final PortManager portManager;
     private RedisClientWrapper redisClient;
     private RedisContainerMapping redisContainerMapping;
@@ -67,27 +66,17 @@ public class SandboxManager implements AutoCloseable {
     }
 
     public SandboxManager(ManagerConfig managerConfig) {
-        this(managerConfig, managerConfig.getBaseUrl(), managerConfig.getBearerToken(), SandboxType.BASE);
+        this(managerConfig, managerConfig.getBaseUrl(), managerConfig.getBearerToken());
     }
-
-    public SandboxManager(SandboxType defaultType) {
-        this(new ManagerConfig.Builder().build(), null, null, defaultType);
-    }
-
 
     public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken) {
-        this(managerConfig, baseUrl, bearerToken, SandboxType.BASE);
-    }
-
-    public SandboxManager(ManagerConfig managerConfig, String baseUrl, String bearerToken, SandboxType defaultType) {
         if (baseUrl != null && !baseUrl.isEmpty()) {
             this.remoteHttpClient = new RemoteHttpClient(baseUrl, bearerToken);
             logger.info("Initialized SandboxManager in remote mode with base URL: " + baseUrl);
             this.managerConfig = managerConfig != null ? managerConfig : new ManagerConfig.Builder().build();
-            this.containerManagerType = this.managerConfig.getClientConfig().getClientType();
+            this.containerManagerType = ContainerManagerType.CLOUD;
             this.storageManager = null;
             this.poolSize = 0;
-            this.defaultType = defaultType;
             this.redisEnabled = false;
             this.portManager = null;
             this.poolQueue = null;
@@ -101,7 +90,6 @@ public class SandboxManager implements AutoCloseable {
         this.containerManagerType = managerConfig.getClientConfig().getClientType();
         this.storageManager = new StorageManager(managerConfig.getFileSystemConfig());
         this.poolSize = managerConfig.getPoolSize();
-        this.defaultType = defaultType;
         this.redisEnabled = managerConfig.getRedisEnabled();
         this.portManager = new PortManager(managerConfig.getPortRange());
 
@@ -122,18 +110,13 @@ public class SandboxManager implements AutoCloseable {
                 String mappingPrefix = managerConfig.getContainerPrefixKey() + "mapping";
                 this.redisContainerMapping = new RedisContainerMapping(this.redisClient, mappingPrefix);
 
-                if (this.poolSize > 0) {
-                    String queueName = redisConfig.getRedisContainerPoolKey();
-                    this.poolQueue = new RedisContainerQueue(this.redisClient, queueName);
-                    logger.info("Using Redis-backed container pool with queue: " + queueName);
-                } else {
-                    this.poolQueue = new InMemoryContainerQueue();
-                }
+                String queueName = redisConfig.getRedisContainerPoolKey();
+                this.poolQueue = new RedisContainerQueue(this.redisClient, queueName);
+                logger.info("Using Redis-backed container pool with queue: " + queueName);
 
                 logger.info("Redis client initialized successfully for container management");
             } catch (Exception e) {
                 logger.severe("Failed to initialize Redis client: " + e.getMessage());
-                e.printStackTrace();
                 throw new RuntimeException("Failed to initialize Redis", e);
             }
         } else {
@@ -151,15 +134,11 @@ public class SandboxManager implements AutoCloseable {
                 } else {
                     dockerClientConfig = DockerClientConfig.builder().build();
                 }
-                // Set port range and redis config from ManagerConfig
-                dockerClientConfig.setPortRange(managerConfig.getPortRange());
-                dockerClientConfig.setRedisEnabled(managerConfig.getRedisEnabled());
-
-                DockerClient dockerClient = new DockerClient(dockerClientConfig);
+                DockerClient dockerClient = new DockerClient(dockerClientConfig, portManager);
                 logger.info("Docker client created: " + dockerClient);
 
                 this.containerClient = dockerClient;
-                this.client = dockerClient.connectDocker();
+                dockerClient.connectDocker();
                 break;
             case KUBERNETES:
                 KubernetesClient kubernetesClient;
@@ -173,9 +152,12 @@ public class SandboxManager implements AutoCloseable {
                 kubernetesClient.connect();
                 break;
             case AGENTRUN:
-                AgentRunClient agentRunClient = getAgentRunClient(managerConfig);
-                this.containerClient = agentRunClient;
+                this.containerClient = getAgentRunClient(managerConfig);
+                containerClient.connect();
                 break;
+            case FC:
+                this.containerClient = getFcClient(managerConfig);
+                containerClient.connect();
             case CLOUD:
                 break;
             default:
@@ -185,6 +167,20 @@ public class SandboxManager implements AutoCloseable {
         if (this.poolSize > 0) {
             initContainerPool();
         }
+    }
+
+    private FcClient getFcClient(ManagerConfig managerConfig) {
+        FcClient fcClient;
+        try {
+            if (managerConfig.getClientConfig() instanceof FcClientConfig fcClientConfig) {
+                fcClient = new FcClient(fcClientConfig);
+            } else {
+                throw new RuntimeException("Provided clientConfig is not an instance of FC config, using default configuration");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to initialize FC client");
+        }
+        return fcClient;
     }
 
     private AgentRunClient getAgentRunClient(ManagerConfig managerConfig) {
@@ -205,37 +201,34 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Initializing container pool with size: " + poolSize);
 
         while (poolQueue.size() < poolSize) {
-            try {
-                ContainerModel containerModel = createContainer(defaultType, null, null, null);
+            for (SandboxType type : managerConfig.getDefaultSandboxType()) {
+                try {
+                    ContainerModel containerModel = createContainer(type, null, null, null);
 
-                if (containerModel != null) {
-                    if (poolQueue.size() < poolSize) {
-                        poolQueue.enqueue(containerModel);
-                        logger.info("Added container to pool: " + containerModel.getContainerName() + " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
+                    if (containerModel != null) {
+                        if (poolQueue.size() < poolSize) {
+                            poolQueue.enqueue(containerModel);
+                            logger.info("Added container to pool: " + containerModel.getContainerName() + " (pool size: " + poolQueue.size() + "/" + poolSize + ")");
+                        } else {
+                            logger.info("Pool size limit reached, releasing container: " + containerModel.getContainerName());
+                            releaseContainer(containerModel);
+                            break;
+                        }
                     } else {
-                        logger.info("Pool size limit reached, releasing container: " + containerModel.getContainerName());
-                        releaseContainer(containerModel);
+                        logger.severe("Failed to create container for pool");
                         break;
                     }
-                } else {
-                    logger.severe("Failed to create container for pool");
+                } catch (Exception e) {
+                    logger.severe("Error initializing container pool: " + e.getMessage());
+                    e.printStackTrace();
                     break;
                 }
-            } catch (Exception e) {
-                logger.severe("Error initializing container pool: " + e.getMessage());
-                e.printStackTrace();
-                break;
             }
         }
         logger.info("Container pool initialization complete. Pool size: " + poolQueue.size());
     }
 
     public ContainerModel createFromPool(SandboxType sandboxType) {
-        if (sandboxType != defaultType) {
-            logger.info("Requested type " + sandboxType + " differs from pool type " + defaultType + ", creating directly");
-            return createContainer(sandboxType, null, null, null);
-        }
-
         int attempts = 0;
         int maxAttempts = poolSize + 1;
 
@@ -243,7 +236,7 @@ public class SandboxManager implements AutoCloseable {
             attempts++;
 
             try {
-                ContainerModel newContainer = createContainer(defaultType, null, null, null);
+                ContainerModel newContainer = createContainer(sandboxType, null, null, null);
                 if (newContainer != null) {
                     poolQueue.enqueue(newContainer);
                 }
@@ -257,7 +250,7 @@ public class SandboxManager implements AutoCloseable {
 
                 logger.info("Retrieved container from pool: " + containerModel.getContainerName());
 
-                String currentImage = SandboxRegistryService.getImageByType(defaultType).orElse(containerModel.getVersion());
+                String currentImage = SandboxRegistryService.getImageByType(sandboxType).orElse(containerModel.getVersion());
 
                 if (!currentImage.equals(containerModel.getVersion())) {
                     logger.warning("Container " + containerModel.getContainerName() + " is outdated (has: " + containerModel.getVersion() + ", current: " + currentImage + "), releasing and trying next");
@@ -307,7 +300,9 @@ public class SandboxManager implements AutoCloseable {
             if (result instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> resultMap = (Map<String, Object>) result;
-                return ContainerModel.fromMap(resultMap);
+                ContainerModel containerModel = ContainerModel.fromMap(resultMap);
+                poolQueue.enqueue(containerModel);
+                return containerModel;
             }
             return null;
         }
@@ -412,7 +407,7 @@ public class SandboxManager implements AutoCloseable {
         if (mountDir == null || mountDir.isEmpty()) {
             mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
         }
-        if (this.managerConfig.getClientConfig().getClientType() == ContainerManagerType.AGENTRUN) {
+        if (containerManagerType == ContainerManagerType.AGENTRUN || containerManagerType == ContainerManagerType.FC) {
             mountDir = Paths.get(mountDir).toAbsolutePath().toString();
         }
         java.io.File file = new java.io.File(mountDir);
@@ -423,7 +418,7 @@ public class SandboxManager implements AutoCloseable {
         if (storagePath == null) {
             storagePath = managerConfig.getFileSystemConfig().getStorageFolderPath();
         }
-        if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN) {
+        if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerManagerType != ContainerManagerType.AGENTRUN && containerManagerType != ContainerManagerType.FC) {
             logger.info("Downloading from storage path: " + storagePath + " to mount dir: " + mountDir);
             boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
             if (downloadSuccess) {
@@ -435,7 +430,9 @@ public class SandboxManager implements AutoCloseable {
         String runtimeToken = RandomStringGenerator.generateRandomString(32);
         environment.put("SECRET_TOKEN", runtimeToken);
         List<VolumeBinding> volumeBindings = new ArrayList<>();
-        volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
+        if(containerManagerType != ContainerManagerType.AGENTRUN && containerManagerType != ContainerManagerType.FC){
+            volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
+        }
         Map<String, String> readonlyMounts = managerConfig.getFileSystemConfig().getReadonlyMounts();
         if (readonlyMounts != null && !readonlyMounts.isEmpty()) {
             logger.info("Adding readonly mounts: " + readonlyMounts.size() + " mount(s)");
@@ -506,7 +503,7 @@ public class SandboxManager implements AutoCloseable {
                 .version(imageName)
                 .build();
 
-        logger.info("Container Model: "+ containerModel);
+        logger.info("Container Model: " + containerModel);
 
         containerClient.startContainer(containerId);
         return containerModel;
@@ -727,9 +724,7 @@ public class SandboxManager implements AutoCloseable {
                 Map<SandboxKey, ContainerModel> redisData = redisContainerMapping.getAll();
                 logger.info("Retrieved " + redisData.size() + " containers from Redis");
 
-                for (Map.Entry<SandboxKey, ContainerModel> entry : redisData.entrySet()) {
-                    allSandboxes.put(entry.getKey(), entry.getValue());
-                }
+                allSandboxes.putAll(redisData);
             } catch (Exception e) {
                 logger.warning("Failed to retrieve containers from Redis: " + e.getMessage());
             }
@@ -891,8 +886,8 @@ public class SandboxManager implements AutoCloseable {
                 while (!poolQueue.isEmpty()) {
                     ContainerModel containerModel = poolQueue.dequeue();
                     if (containerModel != null) {
-                        logger.info("Destroying pool container: " + containerModel.getContainerId());
-                        releaseContainer(containerModel);
+                        logger.info("Destroying pool container: " + containerModel.getContainerName());
+                        release(containerModel.getContainerId());
                     }
                 }
                 logger.info("Container pool cleanup complete");
