@@ -32,9 +32,9 @@ public class DynamicSandboxType {
     public static final DynamicSandboxType APPWORLD = fromEnum(SandboxType.APPWORLD);
     public static final DynamicSandboxType BFCL = fromEnum(SandboxType.BFCL);
     public static final DynamicSandboxType WEBSHOP = fromEnum(SandboxType.WEBSHOP);
-    public static final DynamicSandboxType PYTHON = fromEnum(SandboxType.PYTHON);
-    public static final DynamicSandboxType NODE = fromEnum(SandboxType.NODE);
-    public static final DynamicSandboxType JAVA = fromEnum(SandboxType.JAVA);
+    public static final DynamicSandboxType GUI = fromEnum(SandboxType.GUI);
+    public static final DynamicSandboxType MOBILE = fromEnum(SandboxType.MOBILE);
+    public static final DynamicSandboxType AGENTBAY = fromEnum(SandboxType.AGENTBAY);
 
     private final String typeName;
     private final SandboxType enumType;

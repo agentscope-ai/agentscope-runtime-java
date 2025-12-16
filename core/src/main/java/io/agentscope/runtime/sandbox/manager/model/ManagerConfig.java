@@ -53,6 +53,13 @@ public class ManagerConfig {
     private FileSystemConfig fileSystemConfig;
     private RedisManagerConfig redisConfig;
 
+    public String getAgentBayApiKey() {
+        return agentBayApiKey;
+    }
+
+
+    private String agentBayApiKey;
+
     private ManagerConfig(Builder builder) {
         this.containerPrefixKey = builder.containerPrefixKey;
         this.redisEnabled = builder.redisEnabled;
@@ -66,6 +73,9 @@ public class ManagerConfig {
         this.baseUrl = builder.baseUrl;
         this.bearerToken = builder.bearerToken;
         this.defaultSandboxType = builder.defaultSandboxType;
+
+        this.agentBayApiKey = builder.agentBayApiKey == null ? System.getenv("AGENTBAY_API_KEY") : builder.agentBayApiKey;
+        this.agentBayApiKey = this.agentBayApiKey == null ? this.bearerToken : this.agentBayApiKey;
 
         validate();
     }
@@ -160,6 +170,7 @@ public class ManagerConfig {
         private String baseUrl;
         private String bearerToken;
         private List<SandboxType> defaultSandboxType = List.of(SandboxType.BASE);
+        private String agentBayApiKey;
 
         private FileSystemConfig fileSystemConfig = LocalFileSystemConfig.builder().build();
 
@@ -213,6 +224,11 @@ public class ManagerConfig {
 
         public Builder defaultSandboxType(List<SandboxType> defaultSandboxType) {
             this.defaultSandboxType = defaultSandboxType;
+            return this;
+        }
+
+        public Builder agentBayApiKey(String agentBayApiKey) {
+            this.agentBayApiKey = agentBayApiKey;
             return this;
         }
 

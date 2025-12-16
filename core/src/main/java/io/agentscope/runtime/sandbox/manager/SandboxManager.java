@@ -55,6 +55,11 @@ public class SandboxManager implements AutoCloseable {
     private RedisContainerMapping redisContainerMapping;
     private final boolean redisEnabled;
     private final RemoteHttpClient remoteHttpClient;
+    private AgentBayClient agentBayClient;
+
+    public AgentBayClient getAgentBayClient() {
+        return agentBayClient;
+    }
 
 
     public SandboxManager() {
@@ -125,6 +130,10 @@ public class SandboxManager implements AutoCloseable {
         }
 
         logger.info("Using container type: " + this.containerManagerType);
+
+        if (managerConfig.getAgentBayApiKey() != null) {
+            agentBayClient = new AgentBayClient(managerConfig.getAgentBayApiKey());
+        }
 
         switch (this.containerManagerType) {
             case DOCKER:
@@ -237,6 +246,7 @@ public class SandboxManager implements AutoCloseable {
 
             try {
                 ContainerModel newContainer = createContainer(sandboxType, null, null, null);
+                ContainerModel newContainer = createContainer(defaultType, null, null, null, imageId, labels);
                 if (newContainer != null) {
                     poolQueue.enqueue(newContainer);
                 }
@@ -280,17 +290,23 @@ public class SandboxManager implements AutoCloseable {
         }
 
         logger.warning("Failed to get container from pool after " + maxAttempts + " attempts, creating new container");
-        return createContainer(sandboxType, null, null, null);
+        return createContainer(sandboxType, null, null, null, imageId, labels);
+    }
+
+    public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID){
+        return createFromPool(sandboxType, userID, sessionID, null, null);
     }
 
     @RemoteWrapper
-    public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID) {
+    public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID, String imageId, Map<String, String> labels) {
         if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
             logger.info("Remote mode: forwarding createFromPool(with userID/sessionID) to remote server");
             Map<String, Object> requestData = new HashMap<>();
             requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
+            requestData.put("imageId", imageId);
+            requestData.put("labels", labels);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
                     "/createFromPool",
@@ -324,7 +340,7 @@ public class SandboxManager implements AutoCloseable {
             }
         }
 
-        ContainerModel containerModel = createFromPool(sandboxType);
+        ContainerModel containerModel = createFromPool(sandboxType, imageId, labels);
 
         if (containerModel == null) {
             logger.severe("Failed to get container from pool");
@@ -344,7 +360,7 @@ public class SandboxManager implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public ContainerModel createContainer(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment) {
+    public ContainerModel createContainer(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String imageId, Map<String, String> labels) {
         if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
             logger.info("Remote mode: forwarding createContainer to remote server");
             Map<String, Object> requestData = new HashMap<>();
@@ -352,6 +368,8 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("mountDir", mountDir);
             requestData.put("storagePath", storagePath);
             requestData.put("environment", environment);
+            requestData.put("imageId", imageId);
+            requestData.put("labels", labels);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
                     "/createContainer",
@@ -468,7 +486,14 @@ public class SandboxManager implements AutoCloseable {
             containerName = prefix.replace('_', '-') + sessionId.toLowerCase();
         }
         // TODO: Need to check container name uniqueness?
-        ContainerCreateResult createResult = containerClient.createContainer(containerName, imageName, ports, volumeBindings, environment, runtimeConfig);
+        ContainerCreateResult createResult;
+
+        if(sandboxType!=SandboxType.AGENTBAY){
+            createResult = containerClient.createContainer(containerName, imageName, ports, volumeBindings, environment, runtimeConfig);
+        }
+        else{
+            createResult = agentBayClient.createContainer(imageId, labels);
+        }
 
         String containerId = createResult.getContainerId();
         if (containerId == null) {
@@ -527,10 +552,14 @@ public class SandboxManager implements AutoCloseable {
     }
 
     public ContainerModel getSandbox(SandboxType sandboxType, String userID, String sessionID) {
-        return getSandbox(sandboxType, null, null, null, userID, sessionID);
+        return getSandbox(sandboxType, null, null, null, userID, sessionID, null, null);
     }
 
-    public ContainerModel getSandbox(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID) {
+    public ContainerModel getSandbox(SandboxType sandboxType, String userID, String sessionID, String imageId, Map<String, String> labels) {
+        return getSandbox(sandboxType, null, null, null, userID, sessionID, imageId, labels);
+    }
+
+    public ContainerModel getSandbox(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID, String imageId, Map<String, String> labels) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
 
         if (redisEnabled && redisContainerMapping != null) {
@@ -546,7 +575,7 @@ public class SandboxManager implements AutoCloseable {
         if (sandboxMap.containsKey(key)) {
             return sandboxMap.get(key);
         } else {
-            ContainerModel containerModel = createContainer(sandboxType, mountDir, storagePath, environment);
+            ContainerModel containerModel = createContainer(sandboxType, mountDir, storagePath, environment, imageId, labels);
             sandboxMap.put(key, containerModel);
 
             if (redisEnabled && redisContainerMapping != null) {
