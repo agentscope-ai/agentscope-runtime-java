@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.agentscope.runtime.sandbox.manager.client;
 
 import com.aliyun.agentbay.AgentBay;
@@ -51,7 +67,7 @@ public class AgentBayClient extends BaseClient{
         catch (AgentBayException e){
             logger.severe("Failed to create AgentBay session: " + e.getMessage());
         }
-        return createContainer(null, null, null, null, null, null);
+        return new ContainerCreateResult(null, null, null);
     }
 
     @Override
@@ -114,6 +130,20 @@ public class AgentBayClient extends BaseClient{
             }
         } catch (AgentBayException e) {
             logger.severe("Failed to get AgentBay session info: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public Session getSession(String sessionId){
+        try{
+            SessionResult getResult =  agentBay.get(sessionId);
+            if(getResult.isSuccess()){
+                return getResult.getSession();
+            } else {
+                logger.severe("AgentBay session not found: " + sessionId);
+            }
+        } catch (AgentBayException e) {
+            logger.severe("Failed to get AgentBay session: " + e.getMessage());
         }
         return null;
     }
