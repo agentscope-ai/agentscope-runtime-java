@@ -42,7 +42,7 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
 
 ### Added
 - 原生Short/Long Memory、智能体 State 适配器集成至 AgentScope Framework。
-- 新增多种 Sandbox 类型，如移动端沙箱、AgentBay无影云沙箱等（开发中）。
+- 新增多种 Sandbox 类型，如移动端沙箱、AgentBay无影云沙箱等。
 - 新增 AgentHandler，用来作为智能体定义入口，开发者需要继承该接口以提供完整的智能体定义和处理逻辑。
 - 新增 AgentApp，用来作为 Runtime 启动入口，实现组件生命周期管理、容器启动等。
 
@@ -123,7 +123,7 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      					logger.warn("Failed to export state: {}", e.getMessage());
      				}
      			}
-
+  	
      			// Step 2: Create Toolkit and register tools
      			Toolkit toolkit = new Toolkit();
 
@@ -133,7 +133,7 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      				try {
      					// Create a BaseSandbox instance for this session
      					Sandbox sandbox = sandboxService.connect(userId, sessionId, BaseSandbox.class);
-
+  	
      					// Register Python code execution tool (matching Python: execute_python_code)
      					toolkit.registerTool(ToolkitInit.RunPythonCodeTool(sandbox));
      					logger.debug("Registered execute_python_code tool");
@@ -143,7 +143,7 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      					// Continue without tools if sandbox creation fails
      				}
      			}
-
+  	
      			// Step 3: Create MemoryAdapter
      			MemoryAdapter memory = null;
      			if (sessionHistoryService != null) {
@@ -153,7 +153,7 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      						sessionId
      				);
      			}
-
+  	
      			// Step 4: Create LongTermMemoryAdapter
      			LongTermMemoryAdapter longTermMemory = null;
      			if (memoryService != null) {
@@ -163,7 +163,7 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      						sessionId
      				);
      			}
-
+  	
      			// Step 5: Create ReActAgent
      			ReActAgent.Builder agentBuilder = ReActAgent.builder()
      					.name("Friday")
@@ -184,14 +184,14 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      						.longTermMemoryMode(LongTermMemoryMode.BOTH);
      				logger.debug("Long-term memory configured");
      			}
-
+  	
      			if (memory != null) {
      				agentBuilder.memory(memory);
      				logger.debug("Memory adapter configured");
      			}
-
+  	
      			ReActAgent agent = agentBuilder.build();
-
+  	
      			// Step 6: Load state if available
      			if (state != null && !state.isEmpty()) {
      				try {
@@ -202,7 +202,7 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      					logger.warn("Failed to load state: {}", e.getMessage());
      				}
      			}
-
+  	
      			// Step 7: Convert messages parameter to List<Msg>
      			// Python version: msgs parameter is already a list of Msg
      			List<Msg> agentMessages;
@@ -219,14 +219,14 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      						messages != null ? messages.getClass().getName() : "null");
      				agentMessages = List.of();
      			}
-
+  	
      			// Step 8: Stream agent responses (matching Python: async for msg, last in stream_printing_messages(...))
      			// Configure streaming options - match Python version's streaming behavior
      			StreamOptions streamOptions = StreamOptions.builder()
      					.eventTypes(EventType.REASONING, EventType.TOOL_RESULT)
      					.incremental(true)
      					.build();
-
+  	
      			// Python version: agent(msgs) - passes the entire list
      			// In Java, ReActAgent.stream() accepts a single Msg, so we use the first message
      			// or combine all messages into memory first, then call with the last message
@@ -249,10 +249,10 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      				}
      				queryMessage = agentMessages.get(agentMessages.size() - 1);
      			}
-
+  	
      			// Stream agent responses
      			Flux<io.agentscope.core.agent.Event> agentScopeEvents = agent.stream(queryMessage, streamOptions);
-
+  	
      			return agentScopeEvents
      					.doOnNext(event -> {
      						// Step 9: Handle intermediate events if needed
@@ -280,7 +280,7 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
      					.doOnError(error -> {
      						logger.error("Error in agent stream: {}", error.getMessage(), error);
      					});
-
+  	
      		}
      		catch (Exception e) {
      			logger.error("Error in streamQuery: {}", e.getMessage(), e);
@@ -298,14 +298,14 @@ AgentScope Runtime Java v1.0 在高效智能体部署与安全沙箱执行的坚
 
      ```java
      # v0.x
-	Toolkit toolkit = new Toolkit();
-	toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
-
+	  Toolkit toolkit = new Toolkit();
+	  toolkit.registerTool(ToolkitInit.RunPythonCodeTool());
+     
      # v1.0
-	Toolkit toolkit = new Toolkit();
-	Sandbox sandbox = sandboxService.connect(userId, sessionId, BaseSandbox.class);
-	// 需要明确指定 sandbox 实例
-	toolkit.registerTool(ToolkitInit.RunPythonCodeTool(sandbox));
+	  Toolkit toolkit = new Toolkit();
+	  Sandbox sandbox = sandboxService.connect(userId, sessionId, BaseSandbox.class);
+	  // 需要明确指定 sandbox 实例
+	  toolkit.registerTool(ToolkitInit.RunPythonCodeTool(sandbox));
      ```
 
 ### Removed
