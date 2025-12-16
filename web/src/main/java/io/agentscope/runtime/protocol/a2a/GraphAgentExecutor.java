@@ -16,15 +16,17 @@
 package io.agentscope.runtime.protocol.a2a;
 
 import io.a2a.A2A;
+import io.a2a.server.ServerCallContext;
 import io.a2a.server.agentexecution.AgentExecutor;
 import io.a2a.server.agentexecution.RequestContext;
 import io.a2a.server.events.EventQueue;
 import io.a2a.server.tasks.TaskUpdater;
 import io.a2a.spec.*;
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.engine.schemas.*;
 import io.agentscope.runtime.engine.schemas.Event;
 import io.agentscope.runtime.engine.schemas.Message;
+import io.agentscope.runtime.engine.schemas.*;
+import io.agentscope.runtime.protocol.a2a.controller.ContextKeys;
 import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 
@@ -119,6 +121,13 @@ public class GraphAgentExecutor implements AgentExecutor {
     }
 
     private boolean isBlockRequest(RequestContext context) {
+        // Streaming request must non-block.
+        ServerCallContext callContext = context.getCallContext();
+        Object isStreaming = callContext.getState().getOrDefault(ContextKeys.IS_STREAM_KEY, Boolean.FALSE);
+        if (Boolean.TRUE.equals(isStreaming)) {
+            return false;
+        }
+        // If not Streaming request, according to the request parameter configuration.
         if (null == context.getParams()) {
             return true;
         }
@@ -221,8 +230,6 @@ public class GraphAgentExecutor implements AgentExecutor {
                     List.of(new TextPart("Error processing streaming output: " + e.getMessage())),
                     Map.of()
             ));
-        } finally {
-            taskUpdater.complete();
         }
     }
 
