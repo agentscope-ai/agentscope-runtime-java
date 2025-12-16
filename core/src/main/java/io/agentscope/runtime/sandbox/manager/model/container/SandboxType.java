@@ -26,10 +26,9 @@ public enum SandboxType {
     APPWORLD("appworld"),
     BFCL("bfcl"),
     WEBSHOP("webshop"),
-    PYTHON("python"),
-    NODE("node"),
-    JAVA("java"),
-    GUI("gui");
+    GUI("gui"),
+    MOBILE("mobile"),
+    AGENTBAY("agentbay");
 
     private final String typeName;
 

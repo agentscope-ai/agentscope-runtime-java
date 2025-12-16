@@ -48,11 +48,12 @@ public class RedisContainerMapping {
     }
 
     private String getFullKey(SandboxKey key) {
-        return String.format("%s%s:%s:%s",
+        return String.format("%s%s:%s:%s:%s",
                 prefix, 
                 key.getUserID(), 
                 key.getSessionID(), 
-                key.getSandboxType().getTypeName());
+                key.getSandboxType().getTypeName(),
+                key.getImageID());
     }
 
     private String getFullKey(String key) {

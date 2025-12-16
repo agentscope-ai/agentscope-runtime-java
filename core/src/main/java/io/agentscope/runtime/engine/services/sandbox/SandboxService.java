@@ -17,10 +17,13 @@
 package io.agentscope.runtime.engine.services.sandbox;
 
 import io.agentscope.runtime.engine.services.ServiceWithLifecycleManager;
+import io.agentscope.runtime.sandbox.box.AgentBaySandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 /**
  * Service for managing sandbox environments.
@@ -99,6 +102,58 @@ public class SandboxService extends ServiceWithLifecycleManager {
 			throw new RuntimeException(e);
 		}
 	}
+
+    public Sandbox connect(
+            String sessionId,
+            String userId,
+            Class<? extends Sandbox> sandboxType,
+            String imageId) {
+        try {
+            if(sandboxType!= AgentBaySandbox.class){
+                logger.warn("The imageId parameter is only applicable to AgentBaySandbox. Ignoring imageId for other sandbox types.");
+                return sandboxType.getConstructor(
+                        SandboxManager.class,
+                        String.class,
+                        String.class
+                ).newInstance(managerApi, userId, sessionId);
+            }
+            return sandboxType.getConstructor(
+                    SandboxManager.class,
+                    String.class,
+                    String.class,
+                    String.class
+            ).newInstance(managerApi, userId, sessionId, imageId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Sandbox connect(
+            String sessionId,
+            String userId,
+            Class<? extends Sandbox> sandboxType,
+            String imageId,
+            Map<String, String> labels) {
+        try {
+            if(sandboxType!= AgentBaySandbox.class){
+                logger.warn("The imageId parameter is only applicable to AgentBaySandbox. Ignoring imageId for other sandbox types.");
+                return sandboxType.getConstructor(
+                        SandboxManager.class,
+                        String.class,
+                        String.class
+                ).newInstance(managerApi, userId, sessionId);
+            }
+            return sandboxType.getConstructor(
+                    SandboxManager.class,
+                    String.class,
+                    String.class,
+                    String.class,
+                    Map.class
+            ).newInstance(managerApi, userId, sessionId, imageId, labels);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 }
 

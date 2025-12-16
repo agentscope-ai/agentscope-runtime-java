@@ -28,6 +28,10 @@ public class ContainerCreateResult {
     private String ip;
     private List<String> rest; // Additional values like protocol ("https")
 
+    public ContainerCreateResult(String containerId) {
+        this(containerId, null, null, "http");
+    }
+
     public ContainerCreateResult(String containerId, List<String> ports, String ip) {
         this.containerId = containerId;
         this.ports = ports != null ? ports : new ArrayList<>();

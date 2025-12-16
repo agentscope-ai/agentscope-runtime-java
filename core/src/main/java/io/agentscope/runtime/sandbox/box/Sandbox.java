@@ -24,15 +24,15 @@ import java.util.logging.Logger;
 
 public abstract class Sandbox implements AutoCloseable {
     private static final Logger logger = Logger.getLogger(Sandbox.class.getName());
-    
+
     protected final SandboxManager managerApi;
-    protected final String sandboxId;
+    protected String sandboxId;
     protected final String userId;
     protected final String sessionId;
     protected final SandboxType sandboxType;
     protected final int timeout;
     protected final boolean autoRelease;
-    private boolean closed = false;
+    protected boolean closed = false;
 
     public Sandbox(
             SandboxManager managerApi,
@@ -56,48 +56,54 @@ public abstract class Sandbox implements AutoCloseable {
         this.sandboxType = sandboxType;
         this.timeout = timeout;
         this.autoRelease = autoRelease;
-        
-        try {
-            ContainerModel containerModel = managerApi.createFromPool(sandboxType, userId, sessionId);
-            if (containerModel == null) {
-                throw new RuntimeException(
-                    "No sandbox available. Please check if sandbox images exist."
-                );
+
+        if(sandboxType != SandboxType.AGENTBAY){
+            try {
+                ContainerModel containerModel = managerApi.createFromPool(sandboxType, userId, sessionId);
+                if (containerModel == null) {
+                    throw new RuntimeException(
+                            "No sandbox available. Please check if sandbox images exist."
+                    );
+                }
+                this.sandboxId = containerModel.getContainerName();
+                logger.info("Sandbox initialized: " + this.sandboxId +
+                        " (type=" + sandboxType + ", user=" + userId +
+                        ", session=" + sessionId + ", autoRelease=" + autoRelease + ")");
+            } catch (Exception e) {
+                logger.severe("Failed to initialize sandbox: " + e.getMessage());
+                throw new RuntimeException("Failed to initialize sandbox", e);
             }
-            this.sandboxId = containerModel.getContainerName();
-            logger.info("Sandbox initialized: " + this.sandboxId + 
-                       " (type=" + sandboxType + ", user=" + userId + 
-                       ", session=" + sessionId + ", autoRelease=" + autoRelease + ")");
-        } catch (Exception e) {
-            logger.severe("Failed to initialize sandbox: " + e.getMessage());
-            throw new RuntimeException("Failed to initialize sandbox", e);
         }
     }
-    
+
     public String getSandboxId() {
         return sandboxId;
     }
-    
+
     public String getUserId() {
         return userId;
     }
-    
+
     public String getSessionId() {
         return sessionId;
     }
-    
+
     public SandboxType getSandboxType() {
         return sandboxType;
     }
-    
+
     public ContainerModel getInfo() {
         return managerApi.getInfo(sandboxId);
     }
-    
+
+    public Map<String, Object> listTools() {
+        return listTools(null);
+    }
+
     public Map<String, Object> listTools(String toolType) {
         return managerApi.listTools(sandboxId, userId, sessionId, toolType);
     }
-    
+
     public String callTool(String name, Map<String, Object> arguments) {
         return managerApi.callTool(sandboxId, userId, sessionId, name, arguments);
     }
@@ -115,7 +121,7 @@ public abstract class Sandbox implements AutoCloseable {
         if (closed) {
             return;
         }
-        
+
         closed = true;
 
         try {
@@ -129,7 +135,7 @@ public abstract class Sandbox implements AutoCloseable {
             logger.severe("Failed to cleanup sandbox: " + e.getMessage());
         }
     }
-    
+
     /**
      * Manually release sandbox resources
      * Forces release of underlying container regardless of autoRelease setting
@@ -144,7 +150,7 @@ public abstract class Sandbox implements AutoCloseable {
             throw new RuntimeException("Failed to release sandbox", e);
         }
     }
-    
+
     public boolean isClosed() {
         return closed;
     }

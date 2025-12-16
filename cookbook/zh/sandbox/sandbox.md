@@ -264,6 +264,34 @@ String profileList = appWorldSandbox.getEnvProfile("appworld","train",null);
             }
 ```
 
+* **云沙箱（Cloud Sandbox）**：基于云服务的沙箱环境，无需本地 Docker 容器。`CloudSandbox` 是云沙箱的基类，提供了云沙箱的统一接口
+
+```java
+// CloudSandbox 是抽象基类，通常不直接使用
+// 请使用具体的云沙箱实现，如 AgentBaySandbox
+```
+
+* **AgentBay沙箱（AgentBay Sandbox）**：基于 AgentBay 云服务的沙箱实现，支持多种镜像类型（Linux、Windows、Browser、CodeSpace、Mobile等）
+
+```java
+try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", AgentBaySandbox.class)) {
+    System.out.println(sandbox.listTools());
+    if (sandbox instanceof AgentBaySandbox agentBaySandbox) {
+        String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
+        System.out.println("Sandbox execution result: " + pythonResult);
+        String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
+        System.out.println("Shell command result: " + shellResult);
+    }
+}
+```
+
+**AgentBay 沙箱特性：**
+
+* 无需本地 Docker，完全基于云服务
+* 支持多种环境类型
+* 自动管理会话生命周期
+* 通过 API 直接与云服务通信
+
 > 更多沙箱类型正在开发中，敬请期待！
 
 ### 向沙箱添加MCP服务器

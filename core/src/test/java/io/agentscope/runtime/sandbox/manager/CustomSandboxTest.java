@@ -39,7 +39,7 @@ public class CustomSandboxTest {
 
     @RegisterSandbox(
         imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-python:latest",
-        sandboxType = SandboxType.PYTHON,
+        sandboxType = SandboxType.BASE,
         securityLevel = "high",
         timeout = 60,
         description = "Custom Python Sandbox with extra security",
@@ -50,7 +50,7 @@ public class CustomSandboxTest {
                 SandboxManager managerApi,
                 String userId,
                 String sessionId) {
-            super(managerApi, userId, sessionId, SandboxType.PYTHON, 60);
+            super(managerApi, userId, sessionId, SandboxType.BASE, 60);
         }
         
         public String executePython(String code) {
@@ -134,11 +134,11 @@ public class CustomSandboxTest {
     public void testCustomPythonSandboxRegistration() {
         System.out.println("\n--- Test CustomPythonSandbox Registration ---");
 
-        boolean pythonRegistered = SandboxRegistryService.isRegistered(SandboxType.PYTHON);
+        boolean pythonRegistered = SandboxRegistryService.isRegistered(SandboxType.BASE);
         assertTrue(pythonRegistered, "CustomPythonSandbox should be registered");
         System.out.println("✓ CustomPythonSandbox registered");
 
-        SandboxRegistryService.getConfigByType(SandboxType.PYTHON).ifPresent(config -> {
+        SandboxRegistryService.getConfigByType(SandboxType.BASE).ifPresent(config -> {
             System.out.println("\nConfiguration:");
             System.out.println("  Image: " + config.getImageName());
             System.out.println("  Type: " + config.getSandboxType());
@@ -148,7 +148,7 @@ public class CustomSandboxTest {
             System.out.println("  Resource Limits: " + config.getResourceLimits());
 
             assertNotNull(config.getImageName());
-            assertEquals(SandboxType.PYTHON, config.getSandboxType());
+            assertEquals(SandboxType.BASE, config.getSandboxType());
             assertEquals("high", config.getSecurityLevel());
             assertEquals(60, config.getTimeout());
             assertEquals("Custom Python Sandbox with extra security", config.getDescription());
@@ -245,7 +245,7 @@ public class CustomSandboxTest {
     public void testAllCustomSandboxesRegistered() {
         System.out.println("\n--- Test All Custom Sandboxes Registration Status ---");
 
-        assertTrue(SandboxRegistryService.isRegistered(SandboxType.PYTHON), 
+        assertTrue(SandboxRegistryService.isRegistered(SandboxType.BASE), 
             "CustomPythonSandbox should be registered");
         assertTrue(SandboxRegistryService.isCustomTypeRegistered("custom_sandbox"), 
             "MyCustomSandbox should be registered");
@@ -267,7 +267,7 @@ public class CustomSandboxTest {
     public void testGetImageNames() {
         System.out.println("\n--- Test Getting Image Names ---");
 
-        SandboxRegistryService.getImageByType(SandboxType.PYTHON).ifPresent(image -> {
+        SandboxRegistryService.getImageByType(SandboxType.BASE).ifPresent(image -> {
             System.out.println("CustomPythonSandbox image: " + image);
             assertFalse(image.isEmpty());
             assertTrue(image.contains("runtime-sandbox-python"));
@@ -289,8 +289,8 @@ public class CustomSandboxTest {
     public void testConfigurationOverride() {
         System.out.println("\n--- Test Configuration Override ---");
 
-        SandboxRegistryService.getConfigByType(SandboxType.PYTHON).ifPresent(config -> {
-            System.out.println("\nCustom configuration for PYTHON type:");
+        SandboxRegistryService.getConfigByType(SandboxType.BASE).ifPresent(config -> {
+            System.out.println("\nCustom configuration for BASE type:");
             System.out.println("  Security Level: " + config.getSecurityLevel());
             System.out.println("  Timeout: " + config.getTimeout());
             

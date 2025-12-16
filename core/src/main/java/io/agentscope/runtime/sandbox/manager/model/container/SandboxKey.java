@@ -16,16 +16,27 @@
 package io.agentscope.runtime.sandbox.manager.model.container;
 
 import java.util.Objects;
+import java.util.logging.Logger;
 
 public class SandboxKey {
+    Logger logger = Logger.getLogger(SandboxKey.class.getName());
     private final String userID;
     private final String sessionID;
     private final SandboxType sandboxType;
+    private final String imageID;
 
-    public SandboxKey(String userID, String sessionID, SandboxType sandboxType) {
+    public SandboxKey(String userID, String sessionID, SandboxType sandboxType, String imageID) {
         this.userID = userID;
         this.sessionID = sessionID;
         this.sandboxType = sandboxType;
+        this.imageID = imageID;
+    }
+
+    public SandboxKey(String userID, String sessionID, SandboxType sandboxType) {
+        this(userID, sessionID, sandboxType, sandboxType == SandboxType.AGENTBAY ? "linux_latest" : "");
+        if (sandboxType == SandboxType.AGENTBAY) {
+            logger.warning("Creating SandboxKey without default \"linux_latest\" imageID for AGENTBAY type.");
+        }
     }
 
     public String getUserID() {
@@ -40,21 +51,25 @@ public class SandboxKey {
         return sandboxType;
     }
 
+    public String getImageID() {
+        return imageID;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SandboxKey that = (SandboxKey) o;
-        return Objects.equals(userID, that.userID) && Objects.equals(sessionID, that.sessionID) && sandboxType == that.sandboxType;
+        return Objects.equals(userID, that.userID) && Objects.equals(sessionID, that.sessionID) && sandboxType == that.sandboxType && Objects.equals(imageID, that.imageID);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(userID, sessionID, sandboxType);
+        return Objects.hash(userID, sessionID, sandboxType, imageID);
     }
 
     @Override
     public String toString() {
-        return "SandboxKey{" + "userID='" + userID + '\'' + ", sessionID='" + sessionID + '\'' + ", sandboxType=" + sandboxType + '}';
+        return "SandboxKey{" + "userID='" + userID + '\'' + ", sessionID='" + sessionID + '\'' + ", sandboxType=" + sandboxType + '\'' + ", imageId=" + imageID + '}';
     }
 }
