@@ -28,13 +28,13 @@ import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
         timeout = 30,
         description = "Base Sandbox"
 )
-public class TestBox extends Sandbox {
+public class CustomSandbox extends Sandbox {
 
-    public TestBox(SandboxManager managerApi, String userId, String sessionId) {
+    public CustomSandbox(SandboxManager managerApi, String userId, String sessionId) {
         this(managerApi, userId, sessionId, 3000);
     }
 
-    public TestBox(
+    public CustomSandbox(
             SandboxManager managerApi,
             String userId,
             String sessionId,

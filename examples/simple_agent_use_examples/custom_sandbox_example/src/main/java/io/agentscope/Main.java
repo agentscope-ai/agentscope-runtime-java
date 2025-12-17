@@ -23,8 +23,6 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
-import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryService;
 
 public class Main {
     public static void main(String[] args) {
@@ -37,10 +35,7 @@ public class Main {
         );
         sandboxService.start();
 
-        String imageName = SandboxRegistryService.getImageByType(SandboxType.CUSTOM).orElse("N/A");
-        System.out.println("Filesystem Sandbox Image: " + imageName);
-
-        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", TestBox.class)) {
+        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", CustomSandbox.class)) {
             Gson gson = new Gson();
             String tools = gson.toJson(sandbox.listTools(""));
             System.out.println("Available tools: ");
