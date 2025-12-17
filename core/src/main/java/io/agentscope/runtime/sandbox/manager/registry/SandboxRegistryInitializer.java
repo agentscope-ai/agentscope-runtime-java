@@ -15,9 +15,12 @@
  */
 package io.agentscope.runtime.sandbox.manager.registry;
 
-import io.agentscope.runtime.sandbox.box.*;
-
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class SandboxRegistryInitializer {
     private static final Logger logger = Logger.getLogger(SandboxRegistryInitializer.class.getName());
@@ -40,7 +43,7 @@ public class SandboxRegistryInitializer {
         logger.info("Initializing SandboxRegistryService with annotated classes...");
 
         try {
-            registerBuiltInSandboxes();
+            registerViaSpi();
             initialized = true;
             logger.info("SandboxRegistryService initialization completed successfully");
         } catch (Exception e) {
@@ -49,37 +52,43 @@ public class SandboxRegistryInitializer {
         }
     }
 
-    /**
-     * Register built-in Sandbox classes
-     */
-    private static void registerBuiltInSandboxes() {
-        logger.info("Registering built-in sandbox classes...");
-        tryRegisterClass(BaseSandbox.class.getName());
-        tryRegisterClass(FilesystemSandbox.class.getName());
-        tryRegisterClass(BrowserSandbox.class.getName());
-        tryRegisterClass(BFCLSandbox.class.getName());
-        tryRegisterClass(WebShopSandbox.class.getName());
-        tryRegisterClass(APPWorldSandbox.class.getName());
-        tryRegisterClass(GuiSandbox.class.getName());
-        tryRegisterClass(MobileSandbox.class.getName());
-        tryRegisterClass(AgentBaySandbox.class.getName());
-        logger.info("Built-in sandbox classes registered");
-    }
+    private static void registerViaSpi() {
+        Set<Class<?>> registered = new LinkedHashSet<>();
 
-    /**
-     * Try to register the specified class
-     *
-     * @param className Fully qualified class name
-     */
-    private static void tryRegisterClass(String className) {
-        try {
-            Class<?> clazz = Class.forName(className);
-            SandboxAnnotationProcessor.processClass(clazz);
-        } catch (ClassNotFoundException e) {
-            logger.fine("Sandbox class not found, skipping: " + className);
-        } catch (Exception e) {
-            logger.warning("Failed to register sandbox class " + className + ": " + e.getMessage());
+        ServiceLoader<SandboxProvider> loader = ServiceLoader.load(SandboxProvider.class);
+        for (SandboxProvider provider : loader) {
+            try {
+                Collection<Class<?>> classes = provider.getSandboxClasses();
+                if (classes == null) {
+                    logger.fine("Provider " + provider.getClass().getName() + " returned null class list, skipping");
+                    continue;
+                }
+
+                for (Class<?> clazz : classes) {
+                    if (clazz == null) {
+                        continue;
+                    }
+                    SandboxAnnotationProcessor.processClass(clazz);
+                    registered.add(clazz);
+                }
+
+                logger.info("Sandbox SPI provider loaded: " + provider.getClass().getName()
+                        + ", provided=" + classes.size());
+            } catch (Exception e) {
+                logger.warning("Failed to load sandboxes from provider " + provider.getClass().getName()
+                        + ": " + e.getMessage());
+            }
         }
+
+        if (registered.isEmpty()) {
+            logger.warning("No sandbox classes discovered via SPI; registry is empty until providers are added.");
+            return;
+        }
+
+        String summary = registered.stream()
+                .map(Class::getSimpleName)
+                .collect(Collectors.joining(", "));
+        logger.info("Registered sandboxes via SPI: " + summary);
     }
 
 
