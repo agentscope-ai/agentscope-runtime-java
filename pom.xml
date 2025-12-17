@@ -50,7 +50,7 @@
         <module>core</module>
         <module>agents</module>
         <module>web</module>
-        <!--        <module>maven_plugin</module>-->
+        <module>maven_plugin</module>
         <module>starters/spring-boot-starter-runtime-a2a</module>
     </modules>
     <scm>

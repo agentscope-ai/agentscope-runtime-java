@@ -89,6 +89,7 @@ public class Main {
 | `GUI`        | Graphical interface sandbox                 | Interact with GUI applications (click, input, screenshot)       |
 | `APPWORLD`   | Application world simulation sandbox             | Simulate cross-application interactions in virtual environments                |
 | `BFCL`       | BFCL (specific business domain execution environment) | Run business process scripts (depends on implementation)        |
+| `AGENTBAY`   | AgentBay session-based sandbox          | Persistent environment for multi-agent collaboration or complex task orchestration |
 
 ## Runtime Mode Switching Examples
 

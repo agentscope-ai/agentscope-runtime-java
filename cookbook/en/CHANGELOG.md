@@ -45,7 +45,7 @@ Key improvements:
 
 ### Added
 - Native Short/Long Memory and agent State adapter integration into AgentScope Framework.
-- Added multiple Sandbox types, such as mobile sandbox, AgentBay cloud sandbox, etc. (in development).
+- Added multiple Sandbox types, such as mobile sandbox, AgentBay cloud sandbox, etc.
 - Added AgentHandler, used as the agent definition entry point. Developers need to inherit this interface to provide complete agent definition and processing logic.
 - Added AgentApp, used as the Runtime startup entry point, implementing component lifecycle management, container startup, etc.
 
