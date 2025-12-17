@@ -49,6 +49,13 @@
             <organization>Alibaba Cloud</organization>
             <organizationUrl>https://aliyun.com</organizationUrl>
         </developer>
+        <developer>
+            <id>xuehuitian45</id>
+            <name>Huitian Xue</name>
+            <email>13069167198@163.com</email>
+            <organization>Alibaba Cloud</organization>
+            <organizationUrl>https://aliyun.com</organizationUrl>
+        </developer>
     </developers>
     <scm>
         <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>
