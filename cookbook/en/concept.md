@@ -1,128 +1,156 @@
 # Concepts
 
-This chapter introduces the core concepts of AgentScope Runtime Java, which provides two main usage patterns:
+This chapter introduces the core concepts of AgentScope Runtime.
 
-- **Agent Deployment**: Use the Engine module for full-featured agent deployment, including runtime orchestration, context management, and production-ready services
-- **Sandbox Tool Usage**: Use the Sandbox module independently for secure tool execution and integration in your own applications
-
-## Engine Module Concepts
-
-### Architecture
+## Architecture
 
 AgentScope Runtime uses a modular architecture with several key components:
 
-<img src="/_static/agent_architecture.jpg" alt="Installation Options" style="zoom:25%;" />
+```mermaid
+flowchart LR
+    %% Service modules
+    subgraph Service["💼 Service"]
+        MS["Memory Service"]
+        SS["Session Service"]
+        STS["State Service"]
+        SBS["Sandbox Service"]
+    end
 
-- **Agent**: The core AI component that processes requests and generates responses (supports AgentScope Java, Spring AI Alibaba, and other Java Agent frameworks)
-- **AgentApp**: Uses SpringBoot as the application implementation, responsible for providing external API interfaces, route registration, configuration loading, and delegating requests to Runner for execution
-- **Runner**: Orchestrates agent execution at runtime and manages deployment
-- **Context**: Contains all information needed for agent execution
-- **Context & Env Manager**: Provides additional functional service management, such as session history management, long-term memory management, and sandbox management
-- **Deployer**: Deploys Runner as a service
+    %% Sandbox modules
+    subgraph Sandbox["🐳 Sandbox"]
+        BS["Browser Sandbox"]
+        FS["File System Sandbox"]
+        GS["GUI Sandbox"]
+        CSB["Cloud Sandbox"]
+        MSB["Mobile Sandbox"]
+        ETC["More..."]
+    end
+
+    %% Adapter modules (large block)
+    subgraph Adapter["🔌 Adapter"]
+        MAD["Memory Adapter"]
+        SAD["Session Adapter"]
+        STAD["State Adapter"]
+        SBAD["Sandbox Tool Adapter"]
+    end
+
+    %% Agent modules (large block)
+    subgraph Agent["🤖 Agent"]
+        AG["AgentScope Java"]
+        AG_NOTE["(More...)"]
+    end
+
+    %% Application layer
+    subgraph AgentAPP["📦 Agent Application"]
+        RA["Runner"]
+    end
+
+    %% Deployment modules
+    subgraph Deployer["🚀 Deployer"]
+        CT["Container Deployment"]
+        KD["K8s Deployment"]
+        DP["Cloud Deployment"]
+        LD["Local Deployment"]
+    end
+
+    %% External protocols
+    OAI["OpenAI Responses API SDK"]:::ext
+    A2A["Google A2A Protocol"]:::ext
+    CUS["Custom Endpoints"]:::ext
+
+    MS --> MAD
+    SS --> SAD
+    STS --> STAD
+    SBS --> SBAD
+
+    BS --> SBS
+    FS --> SBS
+    GS --> SBS
+    CSB --> SBS
+    MSB --> SBS
+    ETC --> SBS
+
+    %% Large block to large block connections
+    Adapter --> Agent
+
+    AG --> RA
+    RA --> CT
+    RA --> KD
+    RA --> DP
+    RA --> LD
+
+    %% Entire deployment module connects to external protocols
+    Deployer --> OAI
+    Deployer --> A2A
+    Deployer --> CUS
+
+    %% Styles
+    classDef small fill:#0066FF,stroke:#004CBE,color:#FFFFFF,font-weight:bold
+    classDef big fill:#99D6FF,stroke:#004CBE,color:#FFFFFF,font-weight:bold
+    classDef ext fill:#FFFFFF,stroke:#000000,color:#000000,font-weight:bold
+
+    class Tools,Service,Sandbox,Adapter,Agent,AgentAPP,Deployer big
+    class RT,ST,PT,MS,SS,STS,SBS,BS,FS,GS,CSB,MSB,ETC,TAD,MAD,SAD,STAD,SBAD,AG,AG_NOTE,RA,CT,KD,DP,LD small
+
+```
+
+- **Agent**: The core AI component that processes requests and generates responses. In Runtime, it is recommended to use the AgentScope framework to build Agents.
+- **AgentApp**: Serves as the entry point for agent applications, responsible for providing external API interfaces, route registration, configuration loading, and delegating requests to the Runner for execution.
+- **Runner**: Orchestrates agent execution and manages deployment at runtime. It handles agent lifecycle, session management, streaming responses, and service deployment.
+- **Deployer**: Deploys the Runner as a service, providing health checks, monitoring, lifecycle management, real-time response streaming using SSE, error handling, logging, and graceful shutdown.
+- **Tool**: Provides out-of-the-box sandbox tool support.
+- **Service**: Provides management services required by agents, such as memory management and sandbox management.
+- **Adapter**: Adapters that adapt components/modules provided by Runtime to agent framework interfaces.
 
 ### Key Components
 
 #### 1. Agent
 
-`Agent` is the core component that processes requests and generates responses. It is an abstract base class that defines the interface for all agent types. We will use `AgentScopeAgent` as the main example, but the same deployment steps apply to all agent types.
+`Agent` is the core component that processes requests and generates responses. There are already many development frameworks that include Agent classes. Runtime itself does not provide additional Agent classes. Developers can use AgentScope to develop the Agents they need.
 
-#### 2. Runner
+#### 2. AgentApp
 
-The `Runner` class provides a flexible and extensible runtime to orchestrate agent execution and provide deployment capabilities. It manages:
+`AgentApp` is the **application entry point** in AgentScope Runtime, used to deploy Agents as API applications that can provide services externally.
 
-- Agent lifecycle
-- Context manager and sandbox manager lifecycle
-- Agent responses
+Its responsibilities include:
 
-#### 3. Context
+- Initialize and bind **Agent** and **AgentScopeAgentHandler**, automatically build **Runner**, and delegate requests to the runtime for processing
+- Provide standardized **HTTP API interfaces** (including health checks)
+- Support **Server-Sent Events (SSE)** and standard JSON responses
+- Allow registration of middleware, task queues (Celery), and custom routes
+- Manage application lifecycle (support `before_start` / `after_finish` hooks)
+- Deploy Agent applications as services
 
-The `Context` object contains all information needed for agent execution:
+#### 3. AgentScopeAgentHandler
 
-- Session information
-- User requests
-- Service instances
+The `AgentScopeAgentHandler` class provides flexible and extensible agent execution logic. It manages:
 
-#### 4. Context & Env Manager
+- User-customizable request execution logic through `streamQuery`
+- Streaming responses
 
-Includes `ContextManager` and `EnvironmentManager`:
+#### 4. Deployer
 
-* `ContextManager`: Provides session history management and long-term memory management
-* `EnvironmentManager`: Provides sandbox lifecycle management
+`Deployer` (implemented as the `deployer-maven-plugin` plugin) provides production-grade deployment functionality:
 
-#### 5. Deployer
+- Automatically **build Docker images** during Maven packaging
+- Optionally push to remote repositories, one-click deployment to **K8s clusters**, and deployment to **AgentRun**
 
-The `Deployer` system provides production-level deployment capabilities:
+#### 5. Sandbox & Tool
 
-- Deploys `runner` as a service
-- Health checks, monitoring, and lifecycle management
-- Real-time response streaming using SSE
-- Error handling, logging, and graceful shutdown
-
-## Sandbox Module Concepts
-
-### Architecture
-
-The Sandbox module provides a **secure** and **isolated** execution environment for various operations, including MCP tool execution, browser automation, and file system operations. The architecture is built around three main components:
-
-- **Sandbox**: Provides isolated and secure containerized execution environments
-- **Tools**: Function-like interfaces executed within sandboxes
-
-### Sandbox Types
-
-The system supports multiple sandbox types, each optimized for specific use cases:
-
-#### 1. BaseSandbox (Base Sandbox)
-
-- **Purpose**: Basic Python code execution and shell commands
-- **Use Cases**: Essential for basic tool execution and scripting
-- **Capabilities**: IPython environment, shell command execution
-
-#### 2. GuiSandbox (GUI Sandbox)
-
-- **Purpose**: Graphical user interface (GUI) interaction and automation with secure access control
-- **Use Cases**: User interface testing, desktop automation, interactive workflows
-- **Capabilities**: Simulating user input (clicks, keyboard input), window management, screen capture, etc.
-
-#### 3. FilesystemSandbox (File System Sandbox)
-
-- **Purpose**: File system operations with secure access control
-- **Use Cases**: File management, text processing, and data manipulation
-- **Capabilities**: File read/write, directory operations, file search, and metadata, etc.
-
-#### 4. BrowserSandbox (Browser Sandbox)
-
-- **Purpose**: Web browser automation and control
-- **Use Cases**: Web scraping, UI testing, and browser-based interactions
-- **Capabilities**: Page navigation, element interaction, screenshot capture, etc.
-
-#### 5. TrainingSandbox (Training Sandbox)
-
-- **Purpose**: Agent training and evaluation environments
-- **Use Cases**: Benchmarking and performance evaluation
-- **Capabilities**: Environment analysis, training data management
-
-### Tool Module
-
-#### Function-like Interface
-
-Tools are designed with an intuitive function-like interface that provides maximum flexibility while abstracting sandbox complexity:
-
-- **Direct Execution**: Tools can be called directly, automatically creating temporary sandboxes
-- **Sandbox Binding**: Tools can be bound to specific sandbox instances for persistent execution contexts
-- **Schema Definition**: Each tool has a defined schema specifying input parameters and expected behavior
-
-#### Tool Execution Priority
-
-The tool module implements a three-level sandbox specification priority:
-
-1. **Temporary Sandbox** (Highest Priority): Specified during function call
-2. **Instance-bound Sandbox** (Second Priority): Specified through binding methods
-3. **Dry-run Mode** (Lowest Priority, No Sandbox Specified): Automatically creates a temporary sandbox when no sandbox is specified, which will be released after tool execution
-
-#### Immutable Binding Pattern
-
-When a tool is bound to a specific sandbox, a new tool instance is created rather than modifying the original instance. This immutable binding pattern ensures thread safety and allows multiple sandbox-bound versions of the same tool to coexist without interfering with each other.
+Runtime provides two ways to integrate tools:
+- Ready-to-use tools, i.e., services provided by service providers that are ready to use out of the box, such as RAG
+- Tool sandboxes, i.e., safe and controllable tools running in the runtime, such as browsers
 
 
+#### 6. Service
 
+`Service` includes the following types:
 
+- `state_service` State service
+- `memory_service` Agent memory service
+- `sandbox_service` Sandbox service
+- `session_history_service` Session history recording service
+
+#### 7. Adapter
+
+`Adapter` is categorized by different Agent frameworks and includes memory adapters, session adapters, message protocol adapters, etc.

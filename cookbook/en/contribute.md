@@ -6,11 +6,11 @@ AgentScope Runtime Java is an open-source project focused on agent deployment an
 
 ## Community
 
-- Join our DingTalk group:
+The first step to participating in the AgentScope Runtime Java project is to join our discussions and connect with us through different communication channels. Here are several ways to get in touch:
 
-  | DingTalk                                                     |
-  | ------------------------------------------------------------ |
-  | <img src="https://img.alicdn.com/imgextra/i1/O1CN01LxzZha1thpIN2cc2E_!!6000000005934-2-tps-497-477.png" width="100" height="100"> |
+- **GitHub Discussions**: Ask questions and share experiences (please use **English**)
+- **Discord**: Join our [Discord channel](https://discord.gg/eYMpfnkG8h) for real-time discussions
+- **DingTalk**: Chinese users can join our [DingTalk group](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)
 
 ## Reporting Issues
 
@@ -20,14 +20,15 @@ If you find a bug in AgentScope Runtime Java, please first test with the latest 
 
 - If you confirm the bug hasn't been reported, please submit a bug issue before writing any code. When submitting an issue, please include:
 - Clear problem description
-- Steps to reproduce
+- Reproduction steps
 - Code/error messages
-- Environment details (operating system, Java dependency details)
-- Affected components (e.g., Engine module, Sandbox module, or both)
+  - Environment details (operating system, JDK version)
+
+- Affected components (e.g., Engine module, Sandbox module, etc.)
 
 ### Security Issues
 
-If you find a security issue in AgentScope Runtime Java, please report it to us through the [Alibaba Security Response Center (ASRC)](https://security.alibaba.com/).
+If you discover a security issue in AgentScope Runtime Java, please report it to us through the [Alibaba Security Response Center (ASRC)](https://security.alibaba.com/).
 
 ## Feature Requests
 
@@ -37,17 +38,13 @@ If you would like AgentScope Runtime Java to have a feature that doesn't exist, 
 - How it should work
 - Security considerations (if applicable)
 
-## Improving Documentation
-
-Please refer to {doc}`README`
-
 ## Contributing Code
 
-If you want to contribute new features or bug fixes to AgentScope Runtime, please first discuss your ideas in a GitHub issue. If no related issue exists, please create one. Someone might already be working on it, or it might have special complexities (especially security considerations for Sandbox features) that you should be aware of before starting to code.
+If you want to contribute new features or bug fixes to AgentScope Runtime Java, please first discuss your ideas in a GitHub issue. If no related issue exists, please create one. Someone may already be working on it, or it may have special complexities (especially security considerations for Sandbox features) that you should understand before starting to code.
 
-### Fork and Create a Branch
+### Fork and Create Branch
 
-Fork the AgentScope Runtime Java main branch code and clone it to your local machine. For help, see the GitHub help pages.
+Fork the [AgentScope Runtime Java main branch code](https://github.com/agentscope-ai/agentscope-runtime-java) and clone it to your local machine. For help, see the GitHub help pages.
 
 Create a branch with a descriptive name.
 
@@ -55,12 +52,12 @@ Create a branch with a descriptive name.
 git checkout -b feature/your-feature-name
 ```
 
-### Making Changes
+### Make Changes
 
 - Write clear, well-commented code
 - Follow existing code style
 - Add tests for new features/fixes
-- Update documentation as needed
+- Update documentation as needed Test Your Changes
 
 ### Test Your Changes
 
@@ -70,7 +67,7 @@ Run the test suite to ensure your changes don't break existing functionality:
 mvn test
 ```
 
-### Submitting Your Changes
+### Submit Your Changes
 
 1. Commit your changes with a clear message:
 
@@ -88,12 +85,8 @@ git push origin feature/your-feature-name
 
 ### Code Review Process
 
-- All PRs require review by maintainers
+- All PRs require maintainer review
 - Address any feedback or requested changes
 - Once approved, your PR will be merged
 
 Thank you for contributing to AgentScope Runtime Java!
-
-
-
-
