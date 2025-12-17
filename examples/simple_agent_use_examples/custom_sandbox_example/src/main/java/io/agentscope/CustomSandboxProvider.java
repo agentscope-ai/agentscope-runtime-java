@@ -13,31 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.manager.model.container;
 
-/**
- * Sandbox type enumeration
- */
-public enum SandboxType {
-    BASE("base"),
-    BROWSER("browser"),
-    FILESYSTEM("filesystem"),
-    TRAINING("training"),
-    APPWORLD("appworld"),
-    BFCL("bfcl"),
-    WEBSHOP("webshop"),
-    GUI("gui"),
-    MOBILE("mobile"),
-    CUSTOM("custom"),
-    AGENTBAY("agentbay");
+package io.agentscope;
 
-    private final String typeName;
+import io.agentscope.runtime.sandbox.manager.registry.SandboxProvider;
 
-    SandboxType(String typeName) {
-        this.typeName = typeName;
-    }
+import java.util.Collection;
+import java.util.Collections;
 
-    public String getTypeName() {
-        return typeName;
+public class CustomSandboxProvider implements SandboxProvider {
+
+    @Override
+    public Collection<Class<?>> getSandboxClasses() {
+        return Collections.singletonList(CustomSandbox.class);
     }
 }
+

@@ -13,31 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.manager.model.container;
+package io.agentscope.runtime.sandbox.box.model;
 
 /**
- * Sandbox type enumeration
+ * Custom exception raised when host prerequisites
+ * for MobileSandbox are not met.
  */
-public enum SandboxType {
-    BASE("base"),
-    BROWSER("browser"),
-    FILESYSTEM("filesystem"),
-    TRAINING("training"),
-    APPWORLD("appworld"),
-    BFCL("bfcl"),
-    WEBSHOP("webshop"),
-    GUI("gui"),
-    MOBILE("mobile"),
-    CUSTOM("custom"),
-    AGENTBAY("agentbay");
-
-    private final String typeName;
-
-    SandboxType(String typeName) {
-        this.typeName = typeName;
-    }
-
-    public String getTypeName() {
-        return typeName;
+public class HostPrerequisiteError extends RuntimeException {
+    public HostPrerequisiteError(String message) {
+        super(message);
     }
 }
+

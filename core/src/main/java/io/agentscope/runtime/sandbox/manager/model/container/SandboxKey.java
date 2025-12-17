@@ -60,6 +60,9 @@ public class SandboxKey {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SandboxKey that = (SandboxKey) o;
+        if(sandboxType != SandboxType.AGENTBAY){
+            return Objects.equals(userID, that.userID) && Objects.equals(sessionID, that.sessionID) && sandboxType == that.sandboxType;
+        }
         return Objects.equals(userID, that.userID) && Objects.equals(sessionID, that.sessionID) && sandboxType == that.sandboxType && Objects.equals(imageID, that.imageID);
     }
 

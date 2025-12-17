@@ -21,6 +21,9 @@ import com.aliyun.agentbay.browser.BrowserOption;
 import com.aliyun.agentbay.exception.BrowserException;
 import com.aliyun.agentbay.model.*;
 import com.aliyun.agentbay.session.Session;
+import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Playwright;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.AgentBayClient;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
@@ -330,15 +333,32 @@ public class AgentBaySandbox extends CloudSandbox {
             return "AgentBay session not found: " + this.sandboxId;
         }
         Map<String, Object> response = new HashMap<>();
-        String result = null;
+        String result = "";
         try {
-            session.getBrowser().initialize(new BrowserOption());
-            result = session.getBrowser().getAgent().navigate(url);
+            String endpointUrl = session.getBrowser().getEndpointUrl();
+
+            try (Playwright playwright = Playwright.create()) {
+                Browser browser = playwright.chromium().connectOverCDP(endpointUrl);
+
+                Page page = browser.newPage();
+
+                // Navigate to a website
+                page.navigate(url);
+
+                // Wait for page load
+                page.waitForTimeout(2000);
+
+                result = page.content();
+                browser.close();
+            } catch (Exception e) {
+                logger.severe("Playwright integration failed: " + e.getMessage());
+            }
             response = Map.of(
                     "success", true,
+                    "content", result,
                     "error", ""
             );
-        } catch (BrowserException e) {
+        } catch (Exception e) {
             logger.severe("Browser navigate failed: " + e.getMessage());
             response = Map.of(
                     "success", false,

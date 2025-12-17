@@ -411,6 +411,14 @@ public class DockerClient extends BaseClient {
             }
         }
 
+        // Handle privileged mode (privileged)
+        if (runtimeConfig.containsKey("privileged")) {
+            Object privilegedObj = runtimeConfig.get("privileged");
+            boolean privileged = parseBoolean(privilegedObj);
+            hostConfig = hostConfig.withPrivileged(privileged);
+            logger.info("Applied privileged mode: " + privileged);
+        }
+
         return hostConfig;
     }
 
