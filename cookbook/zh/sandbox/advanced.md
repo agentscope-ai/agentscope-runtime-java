@@ -6,19 +6,20 @@
 
 #### ManagerConfig 配置
 
-| Parameter            | Type  | Description            | Default                    | Notes                                                        |
-| ----------------------| ------------ | ---------------------- | -------------------------- | ------------------------------------------------------------ |
-| `defaultSandboxType` | `List<SandboxType>` | 默认沙箱类型（可多个） | `SandboxType.BASE`  | 可以是单个类型，也可以是多个类型的列表，从而启用多个独立的沙箱预热池。合法取值包括 `BASE`、`BROWSER`、`FILESYSTEM`、`GUI` 等 |
-| `bearerToken` | `String` | 调用远程runtime沙箱的身份验证令牌 | `null`                    | 如果设置为 `null`，将在连接的时候不会进行身份验证 |
-| `baseUrl` | `String` | 调用远程runtime沙箱的服务器绑定地址 | `null`                 | 如果设置为 `null`，将默认使用本地沙箱管理 |
-| `containerDeployment` | `BaseClientConfig` | 容器运行时      | `DockerClientConfig` | 目前支持  `Docker`、`K8s` 和 `AgentRun`              |
-| `poolSize` | `int` | 预热容器池大小    | `0`       | 缓存的容器以实现更快启动。 `poolSize`  参数控制预创建并缓存在就绪状态的容器数量。当用户请求新沙箱时，系统将首先尝试从这个预热池中分配，相比从零开始创建容器显著减少启动时间。例如，使用  `poolSize=10`，系统维护 10 个就绪容器，可以立即分配给新请求 |
-| `fileSystemConfig` | `FileSystemConfig` | 容器文件系统配置   | `LocalFileSystemConfig` | 管理容器文件系统的下载方式，默认使用`本地文件系统`，也可以使用 `oss` |
-| `redisConfig` | `RedisManagerConfig` | redis支持配置 | `null` | 启用 Redis 支持，分布式部署或工作进程数大于 `1` 时必需，默认不启用 |
+| Parameter             | Type                 | Description                         | Default                 | Notes                                                        |
+| --------------------- | -------------------- | ----------------------------------- | ----------------------- | ------------------------------------------------------------ |
+| `defaultSandboxType`  | `List<SandboxType>`  | 默认沙箱类型（可多个）              | `SandboxType.BASE`      | 可以是单个类型，也可以是多个类型的列表，从而启用多个独立的沙箱预热池。合法取值包括 `BASE`、`BROWSER`、`FILESYSTEM`、`GUI` 等 |
+| `bearerToken`         | `String`             | 调用远程runtime沙箱的身份验证令牌   | `null`                  | 如果设置为 `null`，将在连接的时候不会进行身份验证            |
+| `baseUrl`             | `String`             | 调用远程runtime沙箱的服务器绑定地址 | `null`                  | 如果设置为 `null`，将默认使用本地沙箱管理                    |
+| `containerDeployment` | `BaseClientConfig`   | 容器运行时                          | `DockerClientConfig`    | 目前支持  `Docker`、`K8s` 和 `AgentRun`                      |
+| `poolSize`            | `int`                | 预热容器池大小                      | `0`                     | 缓存的容器以实现更快启动。 `poolSize`  参数控制预创建并缓存在就绪状态的容器数量。当用户请求新沙箱时，系统将首先尝试从这个预热池中分配，相比从零开始创建容器显著减少启动时间。例如，使用  `poolSize=10`，系统维护 10 个就绪容器，可以立即分配给新请求 |
+| `fileSystemConfig`    | `FileSystemConfig`   | 容器文件系统配置                    | `LocalFileSystemConfig` | 管理容器文件系统的下载方式，默认使用`本地文件系统`，也可以使用 `oss` |
+| `redisConfig`         | `RedisManagerConfig` | redis支持配置                       | `null`                  | 启用 Redis 支持，分布式部署或工作进程数大于 `1` 时必需，默认不启用 |
 
 #### Redis 配置
 
 > **何时使用 Redis：**
+>
 > - **单个工作进程（`WORKERS=1`）**：Redis 是可选的。系统可以使用内存缓存来管理沙箱状态，这更简单且延迟更低。
 > - **多个工作进程（`WORKERS>1`）**：需要 Redis 来在工作进程间共享沙箱状态并确保一致性。
 
@@ -57,12 +58,12 @@ Redis 为沙箱状态和状态管理提供缓存。如果只有一个工作进�
 
 要在沙盒服务器中配置特定 Docker 的设置，请在 `containerDeployment` 中传递 `DockerClientConfig` 参数 。可以考虑调整以下参数：
 
-| Parameter         | Description                  | Default   | Notes                              |
-| ----------------- | ---------------------------- | --------- | ---------------------------------- |
-| `portRange` | 沙箱服务可分配的**动态端口范围**（用于暴露容器内服务 | `(49152, 59152)` | 必须是未被占用的高端口范围；避免与系统服务冲突 |
-| `host` | Docker 守护进程（Docker Daemon）的监听地址 | `localhost` | 若 Docker 运行在远程主机或 Docker Desktop，需设为对应 IP 或 socket 路径 |
-| `port` | Docker 守护进程的 TCP 监听端口 | `2375` | ⚠️ 仅当 Docker 配置了 `tcp://0.0.0.0:2375`时使用；生产环境应禁用（不安全） |
-| `certPath` | **TLS 证书目录路径**（用于安全连接 Docker Daemon） | `null` | 若启用了 TLS（端口通常为 `2376`），需提供包含 `ca.pem`, `cert.pem`, `key.pem` 的目录 |
+| Parameter   | Description                                          | Default          | Notes                                                        |
+| ----------- | ---------------------------------------------------- | ---------------- | ------------------------------------------------------------ |
+| `portRange` | 沙箱服务可分配的**动态端口范围**（用于暴露容器内服务 | `(49152, 59152)` | 必须是未被占用的高端口范围；避免与系统服务冲突               |
+| `host`      | Docker 守护进程（Docker Daemon）的监听地址           | `localhost`      | 若 Docker 运行在远程主机或 Docker Desktop，需设为对应 IP 或 socket 路径 |
+| `port`      | Docker 守护进程的 TCP 监听端口                       | `2375`           | ⚠️ 仅当 Docker 配置了 `tcp://0.0.0.0:2375`时使用；生产环境应禁用（不安全） |
+| `certPath`  | **TLS 证书目录路径**（用于安全连接 Docker Daemon）   | `null`           | 若启用了 TLS（端口通常为 `2376`），需提供包含 `ca.pem`, `cert.pem`, `key.pem` 的目录 |
 
 ##### （可选）K8s 设置
 
@@ -79,20 +80,20 @@ AgentRun是阿里云推出的基于Serverless架构的智能Agent开发框架，
 
 要在沙盒服务器中配置特定于 [AgentRun](https://functionai.console.aliyun.com/cn-hangzhou/agent/) 的设置，请在 `containerDeployment` 中传递 `AgentRunClientConfig` 参数。可以考虑调整以下参数：
 
-| Parameter                     | Description              | Default                          | Notes                                                                                     |
-|-------------------------------| ------------------------ |----------------------------------|-------------------------------------------------------------------------------------------|
-| `agentRunAccountId` | 阿里云账号ID             | `null`                     | 阿里云主账号ID，登录阿里云[RAM控制台](https://ram.console.aliyun.com/profile/access-keys)获取阿里云账号ID和AK、SK |
-| `agentRunAccessKeyId` | 访问密钥ID               | `null`     | 阿里云AccessKey ID，需要`AliyunAgentRunFullAccess`权限                                            |
-| `agentRunAccessKeySecret` | 访问密钥Secret           | `null`   | 阿里云AccessKey Secret                                                                       |
-| `agentRunRegionId` | 部署区域ID               | `cn-hangzhou` | Agentrun部署地域ID                                                                            |
-| `agentRunCpu`    | CPU规格                  | `2.0f`                          | vCPU规格                                                                                    |
-| `agentRunMemory` | 内存规格                 | `2048`                           | 内存规格 (MB)                                                                                 |
-| `agentRunVpcId` | VPC ID                   | `null`                        | VPC网络ID（可选）                                                                               |
-| `agentRunVswitchIds` | 交换机ID列表             | `null`                        | VSwitch ID列表（可选）                                                                          |
-| `agentRunSecurityGroupId` | 安全组ID                 | `null`                        | 安全组ID（可选）                                                                                 |
-| `agentRunPrefix` | 资源名称前缀             | `agentscope-sandbox_`            | 创建的资源名称前缀                                                                                 |
-| `agentrunLogProject` | SLS日志项目              | `null`                        | SLS日志项目名称（可选）                                                                             |
-| `agentrunLogStore` | SLS日志库                | `null`                        | SLS日志库名称（可选）                                                                              |
+| Parameter                 | Description    | Default               | Notes                                                        |
+| ------------------------- | -------------- | --------------------- | ------------------------------------------------------------ |
+| `agentRunAccountId`       | 阿里云账号ID   | `null`                | 阿里云主账号ID，登录阿里云[RAM控制台](https://ram.console.aliyun.com/profile/access-keys)获取阿里云账号ID和AK、SK |
+| `agentRunAccessKeyId`     | 访问密钥ID     | `null`                | 阿里云AccessKey ID，需要`AliyunAgentRunFullAccess`权限       |
+| `agentRunAccessKeySecret` | 访问密钥Secret | `null`                | 阿里云AccessKey Secret                                       |
+| `agentRunRegionId`        | 部署区域ID     | `cn-hangzhou`         | Agentrun部署地域ID                                           |
+| `agentRunCpu`             | CPU规格        | `2.0f`                | vCPU规格                                                     |
+| `agentRunMemory`          | 内存规格       | `2048`                | 内存规格 (MB)                                                |
+| `agentRunVpcId`           | VPC ID         | `null`                | VPC网络ID（可选）                                            |
+| `agentRunVswitchIds`      | 交换机ID列表   | `null`                | VSwitch ID列表（可选）                                       |
+| `agentRunSecurityGroupId` | 安全组ID       | `null`                | 安全组ID（可选）                                             |
+| `agentRunPrefix`          | 资源名称前缀   | `agentscope-sandbox_` | 创建的资源名称前缀                                           |
+| `agentrunLogProject`      | SLS日志项目    | `null`                | SLS日志项目名称（可选）                                      |
+| `agentrunLogStore`        | SLS日志库      | `null`                | SLS日志库名称（可选）                                        |
 
 ##### （可选）函数计算（FC）设置
 
@@ -117,7 +118,7 @@ AgentRun是阿里云推出的基于Serverless架构的智能Agent开发框架，
 
 ### 导入自定义沙箱
 
-除了默认提供的基础沙箱类型外，您还可以通过编写扩展模块并使用 `--extension` 参数加载，实现自定义沙箱的功能，例如修改镜像、增加环境变量、定义超时时间等。
+除了默认提供的基础沙箱类型外，您还可以通过使用 `@RegisterSandbox` 注解并继承 `Sandbox` 类，实现自定义沙箱的功能，例如修改镜像、增加环境变量、定义超时时间等，应用会在启动时自动扫描所有带有该注解的类，并实现自动注册。（目前仅支持添加一个自定义沙箱，后续版本允许添加更多自定义沙箱）
 
 #### 编写自定义沙箱扩展（例如 `CustomSandbox.java`）
 
@@ -126,6 +127,28 @@ AgentRun是阿里云推出的基于Serverless架构的智能Agent开发框架，
 > - `@RegisterSandbox` 会将该类注册到沙箱管理器中，启动时可被识别和使用。
 > - `environment` 字段可以向沙箱注入外部 API Key 或其他必要配置。
 > - 类继承自 `Sandbox`，可覆盖其方法来实现更多自定义逻辑。
+
+#### 添加 Java SPI 扫描配置
+
+AgentScope Runtime Java 提供了 `SandboxProvider` 作为沙箱扫描工具基类，你需要在你的项目中继承 `SandboxProvider` 类，并将你的沙箱添加进去，如下所示：
+
+```java
+import io.agentscope.runtime.sandbox.manager.registry.SandboxProvider;
+
+import java.util.Collection;
+import java.util.Collections;
+
+public class CustomSandboxProvider implements SandboxProvider {
+
+    @Override
+    public Collection<Class<?>> getSandboxClasses() {
+ 				// 注册自定义的 CustomSandbox 沙箱
+        return Collections.singletonList(CustomSandbox.class);
+    }
+}
+```
+
+然后在 resources 文件夹中添加 META-INF.services 文件夹，并添加 `io.agentscope.runtime.sandbox.manager.registry.SandboxProvider` 文件，文件内添加继承的 SandboxProvider 全限定名，如`io.agentscope.CustomSandboxProvider`
 
 ## 自定义构建沙箱
 
@@ -143,53 +166,42 @@ pip install -e .
 ```
 
 > 创建自定义沙箱时，`-e`（可编辑）标志是必需的，因为它允许您：
+>
 > - 修改沙箱代码并立即看到更改而无需重新安装
 > - 将您的自定义沙箱类添加到注册表中
 > - 迭代开发和测试自定义工具
 
 ### 创建自定义沙箱类
 
-您可以定义自定义沙箱类型并将其注册到系统中以满足特殊需求。只需继承 `Sandbox` 并使用 `SandboxRegistry.register`装饰器，然后将文件放在 `src/agentscope_runtime/sandbox/custom` 中（例如，`src/agentscope_runtime/sandbox/custom/custom_sandbox.py`）:
+您可以定义自定义沙箱类型并将其注册到系统中以满足特殊需求。只需继承 `Sandbox` 并使用 `RegisterSandbox`装饰器，然后将文件放在你的项目文件夹中:
 
-```python
-import os
+```java
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
-from typing import Optional
-
-from agentscope_runtime.sandbox.utils import build_image_uri
-from agentscope_runtime.sandbox.registry import SandboxRegistry
-from agentscope_runtime.sandbox.enums import SandboxType
-from agentscope_runtime.sandbox.box.sandbox import Sandbox
-
-SANDBOXTYPE = "my_custom_sandbox"
-
-
-@SandboxRegistry.register(
-    build_image_uri(f"runtime-sandbox-{SANDBOXTYPE}"),
-    sandbox_type=SANDBOXTYPE,
-    security_level="medium",
-    timeout=60,
-    description="my sandbox",
-    environment={
-        "TAVILY_API_KEY": os.getenv("TAVILY_API_KEY", ""),
-        "AMAP_MAPS_API_KEY": os.getenv("AMAP_MAPS_API_KEY", ""),
-    },
+@RegisterSandbox(
+        imageName = "YOUR-IMAGE-NAME",
+        sandboxType = SandboxType.CUSTOM,
+        securityLevel = "medium",
+        timeout = 30,
+        description = "YOUR Sandbox"
 )
-class MyCustomSandbox(Sandbox):
-    def __init__(
-        self,
-        sandbox_id: Optional[str] = None,
-        timeout: int = 3000,
-        base_url: Optional[str] = None,
-        bearer_token: Optional[str] = None,
-    ):
-        super().__init__(
-            sandbox_id,
-            timeout,
-            base_url,
-            bearer_token,
-            SandboxType(SANDBOXTYPE),
-        )
+public class CustomSandbox extends Sandbox {
+
+    public CustomSandbox(SandboxManager managerApi, String userId, String sessionId) {
+        this(managerApi, userId, sessionId, 3000);
+    }
+
+    public CustomSandbox(
+            SandboxManager managerApi,
+            String userId,
+            String sessionId,
+            int timeout) {
+        super(managerApi, userId, sessionId, SandboxType.CUSTOM, timeout);
+    }
+}
 ```
 
 ### 准备Docker镜像
@@ -345,8 +357,8 @@ runtime-sandbox-builder mobile
 
 Sandbox 模块运行所用的 Docker 镜像由以下三个环境变量共同决定，你可以根据需要修改其中任意一个，来改变镜像的来源或版本。
 
-| 环境变量                            | 作用                                                    | 默认值         | 修改示例                                                     |
+| 环境变量                          | 作用                                                    | 默认值         | 修改示例                                                     |
 | --------------------------------- | ------------------------------------------------------- | -------------- | ------------------------------------------------------------ |
-| `RUNTIME_SANDBOX_REGISTRY`     | 镜像注册中心地址（Registry）。为空表示使用 Docker Hub。 | `""`           | `export RUNTIME_SANDBOX_REGISTRY="agentscope-registry.ap-southeast-1.cr.aliyuncs.com"` |
+| `RUNTIME_SANDBOX_REGISTRY`        | 镜像注册中心地址（Registry）。为空表示使用 Docker Hub。 | `""`           | `export RUNTIME_SANDBOX_REGISTRY="agentscope-registry.ap-southeast-1.cr.aliyuncs.com"` |
 | `RUNTIME_SANDBOX_IMAGE_NAMESPACE` | 镜像命名空间（Namespace），类似账号名。                 | `"agentscope"` | `export RUNTIME_SANDBOX_IMAGE_NAMESPACE="my_namespace"`      |
-| `RUNTIME_SANDBOX_IMAGE_TAG`   | 镜像版本标签（Tag）。                                   | `"latest"`     | `export RUNTIME_SANDBOX_IMAGE_TAG="my_custom"`               |
+| `RUNTIME_SANDBOX_IMAGE_TAG`       | 镜像版本标签（Tag）。                                   | `"latest"`     | `export RUNTIME_SANDBOX_IMAGE_TAG="my_custom"`               |
