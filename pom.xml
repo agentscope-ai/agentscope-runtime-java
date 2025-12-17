@@ -60,7 +60,7 @@
     </scm>
 
     <properties>
-        <revision>1.0.0-SNAPSHOT</revision>
+        <revision>1.0.0</revision>
 
         <a2a-sdk.version>0.3.2.Final</a2a-sdk.version>
         <spring-boot.version>3.4.5</spring-boot.version>
