@@ -23,6 +23,7 @@ import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.model.container.PortRange;
 import io.agentscope.runtime.sandbox.manager.model.fs.LocalFileSystemConfig;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
@@ -36,7 +37,12 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfDockerAvailable
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class RedisSandboxManagerTest {
+
+    private static boolean isCI() {
+        return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
+    }
 
     private static final String TEST_USER_ID = "test_user";
     private static final String TEST_SESSION_ID = "test_session";

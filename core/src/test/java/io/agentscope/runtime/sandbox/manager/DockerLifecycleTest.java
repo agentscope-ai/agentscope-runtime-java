@@ -41,6 +41,10 @@ import java.util.UUID;
 @EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class DockerLifecycleTest {
 
+    private static boolean isCI() {
+        return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
+    }
+
     private SandboxManager sandboxManager;
     private String testUserId;
     private String testSessionId;

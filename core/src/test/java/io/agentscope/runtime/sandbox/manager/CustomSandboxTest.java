@@ -25,6 +25,7 @@ import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +38,12 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @Ignore
 @DisplayName("Custom Sandbox Registration and Configuration Tests")
+@EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class CustomSandboxTest {
+
+    private static boolean isCI() {
+        return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
+    }
 
     @RegisterSandbox(
         imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-python:latest",

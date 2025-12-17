@@ -22,6 +22,7 @@ import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,7 +39,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  */
 @EnabledIfDockerAvailable
+@EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class ContainerPoolTest {
+    private static boolean isCI() {
+        return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
+    }
 
     private SandboxManager manager;
 
