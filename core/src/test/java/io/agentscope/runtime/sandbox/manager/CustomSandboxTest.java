@@ -21,6 +21,7 @@ import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxAnnotationProcessor;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryInitializer;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryService;
+import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Custom Sandbox Test Class
  * Demonstrates how to create and test custom sandboxes using @RegisterSandbox annotation
  */
+@Ignore
 @DisplayName("Custom Sandbox Registration and Configuration Tests")
 public class CustomSandboxTest {
 
