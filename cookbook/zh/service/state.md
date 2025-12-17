@@ -61,7 +61,7 @@ agent.load_state_dict(loaded_state)
 | 服务类型                 | 导入路径                                                     | 存储位置         | 持久化     | 生产可用性 | 特点                                                    | 适用场景                       |
 | ------------------------ | ------------------------------------------------------------ | ---------------- | ---------- | ---------- | ------------------------------------------------------- | ------------------------------ |
 | **InMemoryStateService** | `from agentscope_runtime.engine.services.agent_state import InMemoryStateService` | 进程内存         | ❌ 无       | ❌          | 简单快速，无需外部依赖，进程结束数据丢失                | 开发调试、单元测试             |
-| **RedisStateService**    | `from agentscope_runtime.engine.services.agent_state import RedisStateService` | Redis 内存数据库 | ✅ 可持久化 | ✅          | 支持分布式共享状态，跨进程，Redis 可选持久化（RDB/AOF） | 高性能生产部署、跨进程数据共享 |
+| **RedisStateService（开发中）**    | `from agentscope_runtime.engine.services.agent_state import RedisStateService` | Redis 内存数据库 | ✅ 可持久化 | ✅          | 支持分布式共享状态，跨进程，Redis 可选持久化（RDB/AOF） | 高性能生产部署、跨进程数据共享 |
 
 ## 切换不同实现
 

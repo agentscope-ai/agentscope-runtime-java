@@ -61,7 +61,7 @@ Similar to session history, Agent State Service also has different storage backe
 | Service Type                 | Import Path                                                     | Storage Location         | Persistence     | Production Ready | Characteristics                                                    | Use Cases                       |
 | ------------------------ | ------------------------------------------------------------ | ---------------- | ---------- | ---------- | ------------------------------------------------------- | ------------------------------ |
 | **InMemoryStateService** | `from agentscope_runtime.engine.services.agent_state import InMemoryStateService` | Process Memory         | ❌ No       | ❌          | Simple and fast, no external dependencies, data lost on process exit                | Development/Testing, Unit Tests             |
-| **RedisStateService**    | `from agentscope_runtime.engine.services.agent_state import RedisStateService` | Redis In-Memory Database | ✅ Can Persist | ✅          | Supports distributed shared state, cross-process, Redis optional persistence (RDB/AOF) | High-performance Production Deployment, Cross-process Data Sharing |
+| **RedisStateService (under development)**    | `from agentscope_runtime.engine.services.agent_state import RedisStateService` | Redis In-Memory Database | ✅ Can Persist | ✅          | Supports distributed shared state, cross-process, Redis optional persistence (RDB/AOF) | High-performance Production Deployment, Cross-process Data Sharing |
 
 ## Switching Different Implementations
 
