@@ -16,14 +16,13 @@
 
 package io.agentscope;
 
+import com.google.gson.Gson;
 import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-
-import com.google.gson.Gson;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.SandboxRegistryService;
 
@@ -41,13 +40,12 @@ public class Main {
         String imageName = SandboxRegistryService.getImageByType(SandboxType.CUSTOM).orElse("N/A");
         System.out.println("Filesystem Sandbox Image: " + imageName);
 
-        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", TestBox.class)){
+        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", TestBox.class)) {
             Gson gson = new Gson();
             String tools = gson.toJson(sandbox.listTools(""));
             System.out.println("Available tools: ");
             System.out.println(tools);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

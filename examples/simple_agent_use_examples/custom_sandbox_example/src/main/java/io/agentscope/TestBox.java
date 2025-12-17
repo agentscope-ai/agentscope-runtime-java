@@ -20,9 +20,6 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
-import java.util.HashMap;
-import java.util.Map;
-
 
 @RegisterSandbox(
         imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest",
@@ -43,23 +40,5 @@ public class TestBox extends Sandbox {
             String sessionId,
             int timeout) {
         super(managerApi, userId, sessionId, SandboxType.CUSTOM, timeout);
-    }
-
-    /**
-     * Execute IPython code
-     */
-    public String runIpythonCell(String code) {
-        Map<String, Object> arguments = new HashMap<>();
-        arguments.put("code", code);
-        return callTool("run_ipython_cell", arguments);
-    }
-
-    /**
-     * Execute shell command
-     */
-    public String runShellCommand(String command) {
-        Map<String, Object> arguments = new HashMap<>();
-        arguments.put("command", command);
-        return callTool("run_shell_command", arguments);
     }
 }
