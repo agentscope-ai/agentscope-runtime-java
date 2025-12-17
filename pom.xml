@@ -60,12 +60,10 @@
     </scm>
 
     <properties>
-        <revision>1.0.0-SNAPSHOT</revision>
+        <revision>1.0.0</revision>
 
         <a2a-sdk.version>0.3.2.Final</a2a-sdk.version>
         <spring-boot.version>3.4.5</spring-boot.version>
-        <spring-ai.version>1.0.1</spring-ai.version>
-        <spring-ai-alibaba.version>1.1.0.0-M3</spring-ai-alibaba.version>
         <nacos-client.version>3.1.0-beta</nacos-client.version>
 
         <surefireArgLine>-Xms512m -Xmx1024m</surefireArgLine>
