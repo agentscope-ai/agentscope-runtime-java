@@ -14,6 +14,22 @@
     <name>AgentScope Runtime Core</name>
     <description>Java Implementation for AgentScope Runtime</description>
     <url>https://github.com/agentscope-ai/agentscope-runtime-java</url>
+    <licenses>
+        <license>
+            <name>Apache 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>chickenlj</id>
+            <name>Jun Liu</name>
+            <email>ken.lj.hz@gmail.com</email>
+            <organization>Alibaba Cloud</organization>
+            <organizationUrl>https://aliyun.com</organizationUrl>
+        </developer>
+    </developers>
     <scm>
         <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>
         <developerConnection>git@github.com:agentscope-ai/agentscope-runtime-java.git</developerConnection>
