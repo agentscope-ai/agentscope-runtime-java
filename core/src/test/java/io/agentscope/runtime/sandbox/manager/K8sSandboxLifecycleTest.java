@@ -19,6 +19,7 @@ package io.agentscope.runtime.sandbox.manager;
 import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
 import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,11 @@ import java.util.UUID;
  * Tests sandbox creation, startup, status checking, stopping and cleanup functionality in Kubernetes environment
  */
 @EnabledIfEnvironmentVariable(named = "KUBECONFIG_PATH", matches = ".+")
+@EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class K8sSandboxLifecycleTest {
+    private static boolean isCI() {
+        return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
+    }
 
     private SandboxManager sandboxManager;
     private String testUserId;

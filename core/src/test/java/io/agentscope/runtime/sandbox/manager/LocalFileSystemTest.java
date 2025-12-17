@@ -23,6 +23,7 @@ import io.agentscope.runtime.sandbox.manager.model.fs.LocalFileSystemConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import java.io.File;
@@ -44,7 +45,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * - LOCAL_STORAGE_PATH: Local storage root directory path (optional, defaults to ./test_storage)
  */
 @EnabledIfDockerAvailable
+@EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class LocalFileSystemTest {
+    private static boolean isCI() {
+        return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
+    }
 
     private String localStoragePath;
     private SandboxManager manager;

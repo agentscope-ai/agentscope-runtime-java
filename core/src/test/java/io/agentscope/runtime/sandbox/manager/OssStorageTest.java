@@ -23,6 +23,7 @@ import io.agentscope.runtime.sandbox.manager.model.fs.OssConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.io.File;
@@ -47,7 +48,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * - OSS_BUCKET_NAME: OSS bucket name
  */
 @EnabledIfEnvironmentVariable(named = "OSS_ENDPOINT", matches = ".+")
+@EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class OssStorageTest {
+    private static boolean isCI() {
+        return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
+    }
 
     private String ossEndpoint;
     private String ossAccessKeyId;

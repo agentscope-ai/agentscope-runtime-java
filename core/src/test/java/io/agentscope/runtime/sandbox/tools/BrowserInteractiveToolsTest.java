@@ -24,6 +24,7 @@ import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,7 +34,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * These tests require pages with specific elements to work properly
  */
 @EnabledIfDockerAvailable
+@EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
 public class BrowserInteractiveToolsTest {
+    private static boolean isCI() {
+        return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
+    }
 
     private SandboxManager sandboxManager;
     private BrowserSandbox sandbox;
