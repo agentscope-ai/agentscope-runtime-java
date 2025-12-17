@@ -473,6 +473,12 @@
 
                     <!-- Ignore missing test patterns -->
                     <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+
+                    <!-- Exclude sandbox tests -->
+                    <excludes>
+                        <exclude>**/sandbox/**/*Test.java</exclude>
+                        <exclude>**/sandbox/**/*Tests.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <plugin>
