@@ -61,12 +61,12 @@ public class A2aRocketMQController extends A2aController {
     public void init() {
         try {
             if (!checkConfigParam()) {
-                logger.info("checkConfigParam rocketmq config param is not ready, ignore start rocketmq server!!!");
+                logger.info("checkConfigParam rocketmq config param is not ok, ignore rocketmq server!!!");
                 return;
             }
             this.producer = buildProducer();
             fluxSseSupport = new FluxSseSupport(this.producer);
-            pushConsumer = buildConsumer(buildMessageListener());
+            this.pushConsumer = buildConsumer(buildMessageListener());
         } catch (Exception e) {
             logger.info("A2aRocketMQController init error, please check the rocketmq config, e: " + e.getMessage());
         }
@@ -103,7 +103,7 @@ public class A2aRocketMQController extends A2aController {
                    }
                }
            } catch (Exception e) {
-               logger.info("error " + e.getMessage());
+               logger.info("consumer error " + e.getMessage());
                return ConsumeResult.FAILURE;
            }
            return ConsumeResult.SUCCESS;
@@ -117,7 +117,13 @@ public class A2aRocketMQController extends A2aController {
             this.producer = producer;
         }
 
-        public void subscribeObjectRocketmq(Flux<Object> multi, String WorkAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
+        public void subscribeObjectRocketmq(Flux<Object> multi, String workAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
+            if (null == multi || StringUtils.isEmpty(workAgentResponseTopic) || StringUtils.isEmpty(liteTopic) || StringUtils.isEmpty(msgId)) {
+                logger.info("subscribeObjectRocketmq param error");
+                completableFuture.complete(false);
+                return;
+            }
+
             AtomicLong count = new AtomicLong();
             Flux<Buffer> map = multi.map(new Function<Object, Buffer>() {
                 @Override
@@ -129,14 +135,14 @@ public class A2aRocketMQController extends A2aController {
                     return Buffer.buffer("data: " + toJsonString(o) + "\nid: " + count.getAndIncrement() + "\n\n");
                 }
             });
-            writeRocketmq(map, WorkAgentResponseTopic, liteTopic, msgId, completableFuture);
+            writeRocketmq(map, workAgentResponseTopic, liteTopic, msgId, completableFuture);
         }
 
-        public void writeRocketmq(Flux<Buffer> flux, String WorkAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
+        private void writeRocketmq(Flux<Buffer> flux, String workAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
             flux.subscribe(
                 event -> {
                     try {
-                       producer.send(buildMessage(WorkAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
+                       producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
                     } catch (ClientException error) {
                         logger.info("writeRocketmq send stream error: " + error.getMessage());
                     }
@@ -147,7 +153,7 @@ public class A2aRocketMQController extends A2aController {
                 },
                 () -> {
                     try {
-                       producer.send(buildMessage(WorkAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, null, msgId, true, true)));
+                       producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, null, msgId, true, true)));
                     } catch (ClientException e) {
                         logger.info("writeRocketmq send stream error: " + e.getMessage() );
                     }
