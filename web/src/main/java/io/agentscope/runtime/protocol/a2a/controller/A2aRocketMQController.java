@@ -41,7 +41,7 @@ import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.toJsonString;
 @Controller
 @RequestMapping("/a2a-rocketmq")
 public class A2aRocketMQController extends A2aController {
-    private static Logger logger = Logger.getLogger(A2aRocketMQController.class.getName());
+    private static final Logger logger = Logger.getLogger(A2aRocketMQController.class.getName());
     private Producer producer;
     private PushConsumer pushConsumer;
     private FluxSseSupport fluxSseSupport;
@@ -87,7 +87,7 @@ public class A2aRocketMQController extends A2aController {
                        Flux<ServerSentEvent<String>> serverSentEventFlux = handleStreamRequest(body, null);
                        CompletableFuture<Boolean> completableFuture = new CompletableFuture<>();
                        executor.execute(() -> {
-                           fluxSseSupport.subscribeObjectRocketmq(serverSentEventFlux.map(i -> (Object)i), request.getWorkAgentResponseTopic(), request.getLiteTopic(), messageView.getMessageId().toString(), completableFuture);
+                           fluxSseSupport.subscribeObjectRocketMQ(serverSentEventFlux.map(i -> (Object)i), request.getWorkAgentResponseTopic(), request.getLiteTopic(), messageView.getMessageId().toString(), completableFuture);
                        });
                        Boolean streamResult = completableFuture.get(15, TimeUnit.MINUTES);
                        return Boolean.TRUE.equals(streamResult) ? ConsumeResult.SUCCESS : ConsumeResult.FAILURE;
@@ -117,9 +117,9 @@ public class A2aRocketMQController extends A2aController {
             this.producer = producer;
         }
 
-        public void subscribeObjectRocketmq(Flux<Object> multi, String workAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
+        public void subscribeObjectRocketMQ(Flux<Object> multi, String workAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
             if (null == multi || StringUtils.isEmpty(workAgentResponseTopic) || StringUtils.isEmpty(liteTopic) || StringUtils.isEmpty(msgId)) {
-                logger.info("subscribeObjectRocketmq param error");
+                logger.info("subscribeObjectRocketMQ param error");
                 completableFuture.complete(false);
                 return;
             }
@@ -134,22 +134,22 @@ public class A2aRocketMQController extends A2aController {
                     return Buffer.buffer("data: " + toJsonString(o) + "\nid: " + count.getAndIncrement() + "\n\n");
                 }
             });
-            writeRocketmq(map, workAgentResponseTopic, liteTopic, msgId, completableFuture);
+            writeRocketMQ(map, workAgentResponseTopic, liteTopic, msgId, completableFuture);
         }
 
-        private void writeRocketmq(Flux<Buffer> flux, String workAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
+        private void writeRocketMQ(Flux<Buffer> flux, String workAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
             flux.subscribe(
                 //next
                 event -> {
                     try {
                        producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
                     } catch (ClientException error) {
-                        logger.info("writeRocketmq send stream error: " + error.getMessage());
+                        logger.info("writeRocketMQ send stream error: " + error.getMessage());
                     }
                 },
                 //error
                 error -> {
-                    logger.info("writeRocketmq send stream error: " + error.getMessage());
+                    logger.info("writeRocketMQ send stream error: " + error.getMessage());
                     completableFuture.complete(false);
                 },
                 //complete
@@ -157,7 +157,7 @@ public class A2aRocketMQController extends A2aController {
                     try {
                        producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, null, msgId, true, true)));
                     } catch (ClientException e) {
-                        logger.info("writeRocketmq send stream error: " + e.getMessage() );
+                        logger.info("writeRocketMQ send stream error: " + e.getMessage() );
                     }
                     completableFuture.complete(true);
                 }

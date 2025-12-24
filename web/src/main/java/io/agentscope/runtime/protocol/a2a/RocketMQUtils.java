@@ -23,7 +23,7 @@ import org.apache.rocketmq.shaded.commons.lang3.StringUtils;
 import static io.a2a.util.Utils.OBJECT_MAPPER;
 
 public class RocketMQUtils {
-    private static Logger logger = Logger.getLogger(RocketMQUtils.class.getName());
+    private static final Logger logger = Logger.getLogger(RocketMQUtils.class.getName());
     public static final String ROCKETMQ_ENDPOINT = System.getProperty("rocketMQEndpoint", "");
     public static final String ROCKETMQ_NAMESPACE = System.getProperty("rocketMQNamespace", "");
     public static final String BIZ_TOPIC = System.getProperty("bizTopic", "");
