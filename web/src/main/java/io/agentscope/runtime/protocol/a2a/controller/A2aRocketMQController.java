@@ -1,9 +1,10 @@
 package io.agentscope.runtime.protocol.a2a.controller;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -44,7 +45,13 @@ public class A2aRocketMQController extends A2aController {
     private Producer producer;
     private PushConsumer pushConsumer;
     private FluxSseSupport fluxSseSupport;
-    Executor executor = Executors.newFixedThreadPool(6);
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+        6,
+        6,
+        60, TimeUnit.SECONDS,
+        new ArrayBlockingQueue<>(10_0000),
+        new CallerRunsPolicy()
+    );
 
     public A2aRocketMQController(Runner runner, AgentCard agentCard, ObjectProvider<ProtocolConfig> protocolConfigs) {
         super(runner, agentCard, protocolConfigs);
@@ -88,7 +95,6 @@ public class A2aRocketMQController extends A2aController {
                        nonStreamingResponse = handleNonStreamRequest(body, null);
                    }
                } catch (JsonProcessingException e) {
-                   logger.info("JSON parsing error: " + e.getMessage());
                    error = new JSONRPCErrorResponse(null, new JSONParseError());
                } finally {
                    if (!streaming) {
