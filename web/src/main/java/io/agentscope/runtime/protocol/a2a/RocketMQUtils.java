@@ -20,7 +20,6 @@ import org.apache.rocketmq.client.apis.message.Message;
 import org.apache.rocketmq.client.apis.producer.Producer;
 import org.apache.rocketmq.client.apis.producer.ProducerBuilder;
 import org.apache.rocketmq.shaded.commons.lang3.StringUtils;
-
 import static io.a2a.util.Utils.OBJECT_MAPPER;
 
 public class RocketMQUtils {

@@ -65,7 +65,7 @@ public class A2aRocketMQController extends A2aController {
                 return;
             }
             this.producer = buildProducer();
-            fluxSseSupport = new FluxSseSupport(this.producer);
+            this.fluxSseSupport = new FluxSseSupport(this.producer);
             this.pushConsumer = buildConsumer(buildMessageListener());
         } catch (Exception e) {
             logger.info("A2aRocketMQController init error, please check the rocketmq config, e: " + e.getMessage());
@@ -85,7 +85,7 @@ public class A2aRocketMQController extends A2aController {
                try {
                    if (streaming) {
                        Flux<ServerSentEvent<String>> serverSentEventFlux = handleStreamRequest(body, null);
-                       CompletableFuture<Boolean> completableFuture = new CompletableFuture();
+                       CompletableFuture<Boolean> completableFuture = new CompletableFuture<>();
                        executor.execute(() -> {
                            fluxSseSupport.subscribeObjectRocketmq(serverSentEventFlux.map(i -> (Object)i), request.getWorkAgentResponseTopic(), request.getLiteTopic(), messageView.getMessageId().toString(), completableFuture);
                        });
@@ -123,7 +123,6 @@ public class A2aRocketMQController extends A2aController {
                 completableFuture.complete(false);
                 return;
             }
-
             AtomicLong count = new AtomicLong();
             Flux<Buffer> map = multi.map(new Function<Object, Buffer>() {
                 @Override
@@ -140,6 +139,7 @@ public class A2aRocketMQController extends A2aController {
 
         private void writeRocketmq(Flux<Buffer> flux, String workAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
             flux.subscribe(
+                //next
                 event -> {
                     try {
                        producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
@@ -147,10 +147,12 @@ public class A2aRocketMQController extends A2aController {
                         logger.info("writeRocketmq send stream error: " + error.getMessage());
                     }
                 },
+                //error
                 error -> {
                     logger.info("writeRocketmq send stream error: " + error.getMessage());
                     completableFuture.complete(false);
                 },
+                //complete
                 () -> {
                     try {
                        producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, null, msgId, true, true)));
