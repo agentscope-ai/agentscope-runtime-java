@@ -28,11 +28,14 @@ import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.function.Consumer;
 
 public class LocalDeployManager implements DeployManager {
     Logger logger = Logger.getLogger(LocalDeployManager.class.getName());
@@ -44,6 +47,7 @@ public class LocalDeployManager implements DeployManager {
     private final int port;
     private final List<Protocol> protocols;
     private final List<ProtocolConfig> protocolConfigs;
+    private final Consumer<CorsRegistry> corsConfigurer;
 
     private LocalDeployManager(LocalDeployerManagerBuilder builder) {
         this.endpointName = builder.endpointName;
@@ -51,6 +55,7 @@ public class LocalDeployManager implements DeployManager {
         this.port = builder.port;
         this.protocols = builder.protocols;
         this.protocolConfigs = builder.protocolConfigs;
+        this.corsConfigurer = builder.corsConfigurer;
     }
 
     @Override
@@ -93,6 +98,14 @@ public class LocalDeployManager implements DeployManager {
                             ctx.registerBean(protocolConfig.name(), ProtocolConfig.class, () -> protocolConfig);
                         }
                     }
+                    if (corsConfigurer != null) {
+                        ctx.registerBean(WebMvcConfigurer.class, () -> new WebMvcConfigurer() {
+                            @Override
+                            public void addCorsMappings(CorsRegistry registry) {
+                                corsConfigurer.accept(registry);
+                            }
+                        });
+                    }
 
                 })
                 .run();
@@ -134,6 +147,7 @@ public class LocalDeployManager implements DeployManager {
         private int port = 8080;
         private List<Protocol> protocols = List.of(Protocol.A2A, Protocol.ResponseAPI);
         private List<ProtocolConfig> protocolConfigs = List.of();
+        private Consumer<CorsRegistry> corsConfigurer;
 
         public LocalDeployerManagerBuilder endpointName(String endpointName) {
             this.endpointName = endpointName;
@@ -157,6 +171,11 @@ public class LocalDeployManager implements DeployManager {
         
         public LocalDeployerManagerBuilder protocolConfigs(List<ProtocolConfig> protocolConfigs) {
             this.protocolConfigs = protocolConfigs;
+            return this;
+        }
+
+        public LocalDeployerManagerBuilder corsConfigurer(Consumer<CorsRegistry> corsConfigurer) {
+            this.corsConfigurer = corsConfigurer;
             return this;
         }
 
