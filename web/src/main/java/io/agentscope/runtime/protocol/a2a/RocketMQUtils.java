@@ -46,6 +46,9 @@ public class RocketMQUtils {
     }
 
     public static PushConsumer buildConsumer(MessageListener messageListener) throws ClientException {
+        if (null == messageListener) {
+            throw new RuntimeException("buildConsumer messageListener is null");
+        }
         final ClientServiceProvider provider = ClientServiceProvider.loadService();
         SessionCredentialsProvider sessionCredentialsProvider = new StaticSessionCredentialsProvider(ACCESS_KEY, SECRET_KEY);
         ClientConfiguration clientConfiguration = ClientConfiguration.newBuilder()
@@ -63,7 +66,7 @@ public class RocketMQUtils {
     }
 
     public static Message buildMessage(String topic, String liteTopic, RocketMQResponse response) {
-        if (StringUtils.isEmpty(topic) || StringUtils.isEmpty(liteTopic)) {
+        if (StringUtils.isEmpty(topic) || StringUtils.isEmpty(liteTopic) || null == response) {
             logger.info("buildMessage param error topic: " + topic + ", liteTopic: " + liteTopic + ", response: " + response);
             return null;
         }
@@ -78,6 +81,9 @@ public class RocketMQUtils {
     }
 
     public static String toJsonString(Object o) {
+        if (o == null) {
+            return null;
+        }
         try {
             return OBJECT_MAPPER.writeValueAsString(o);
         } catch (JsonProcessingException ex) {
