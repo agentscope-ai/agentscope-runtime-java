@@ -32,7 +32,6 @@ import org.apache.rocketmq.client.apis.consumer.ConsumeResult;
 import org.apache.rocketmq.client.apis.consumer.FilterExpression;
 import org.apache.rocketmq.client.apis.consumer.FilterExpressionType;
 import org.apache.rocketmq.client.apis.consumer.PushConsumer;
-import org.apache.rocketmq.client.apis.message.Message;
 import org.apache.rocketmq.client.apis.producer.Producer;
 import org.apache.rocketmq.client.apis.producer.ProducerBuilder;
 import org.apache.rocketmq.client.apis.producer.SendReceipt;
@@ -42,18 +41,20 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import reactor.core.publisher.Flux;
-import static io.a2a.util.Utils.OBJECT_MAPPER;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.ACCESS_KEY;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.BIZ_CONSUMER_GROUP;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.BIZ_TOPIC;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.ROCKETMQ_ENDPOINT;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.ROCKETMQ_NAMESPACE;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.SECRET_KEY;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.buildMessage;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.checkConfigParam;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.toJsonString;
 
 @Controller
 @RequestMapping("/a2a-rocketmq")
 public class A2aRocketMQController extends A2aController {
     private static Logger logger = Logger.getLogger(A2aRocketMQController.class.getName());
-    private static final String ROCKETMQ_ENDPOINT = System.getProperty("rocketMQEndpoint", "");
-    private static final String ROCKETMQ_NAMESPACE = System.getProperty("rocketMQNamespace", "");
-    private static final String BIZ_TOPIC = System.getProperty("bizTopic", "");
-    private static final String BIZ_CONSUMER_GROUP = System.getProperty("bizConsumerGroup", "");
-    private static final String ACCESS_KEY = System.getProperty("rocketMQAK", "");
-    private static final String SECRET_KEY = System.getProperty("rocketMQSK", "");
 
     private Producer producer;
     private PushConsumer pushConsumer;
@@ -76,57 +77,6 @@ public class A2aRocketMQController extends A2aController {
             pushConsumer = buildConsumer();
         } catch (Exception e) {
             logger.info("A2aRocketMQController init error, please check the rocketmq config, e: " + e.getMessage());
-        }
-    }
-
-    private static class FluxSseSupport {
-        private final Producer producer;
-
-        private FluxSseSupport(Producer producer) {
-            this.producer = producer;
-        }
-
-        public void subscribeObjectRocketmq(Flux<Object> multi, RoutingContext rc,  String WorkAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
-            AtomicLong count = new AtomicLong();
-            Flux<Buffer> map = multi.map(new Function<Object, Buffer>() {
-                @Override
-                public Buffer apply(Object o) {
-                    if (o instanceof ServerSentEvent ev) {
-                        String id = !StringUtils.isEmpty(ev.id()) ? ev.id() : String.valueOf(count.getAndIncrement());
-                        return Buffer.buffer("data: " + ev.data() + "\nid: " + id + "\n\n");
-                    }
-                    return Buffer.buffer("data: " + toJsonString(o) + "\nid: " + count.getAndIncrement() + "\n\n");
-                }
-            });
-            writeRocketmq(map, rc, WorkAgentResponseTopic, liteTopic, msgId, completableFuture);
-        }
-
-        public void writeRocketmq(Flux<Buffer> flux, RoutingContext rc, String WorkAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
-            flux.subscribe(
-                event -> {
-                    // onNext: 接收到事件
-                    try {
-                        SendReceipt send = producer.send(buildMessage(WorkAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
-                        logger.info("rocketmq send stream success: " + send.getMessageId() + " time " +  System.currentTimeMillis());
-                    } catch (ClientException error) {
-                        logger.info("rocketmq send stream error: " + error.getMessage());
-                    }
-                },
-                error -> {
-                    logger.info("send stream error: " + error.getMessage());
-                    completableFuture.complete(false);
-                },
-                () -> {
-                    logger.info("send stream completed.");
-                    try {
-                        SendReceipt send = producer.send(buildMessage(WorkAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, null, msgId, true, true)));
-                        logger.info("rocketmq send stream success: " + send.getMessageId() + " time " + System.currentTimeMillis());
-                    } catch (ClientException e) {
-                        logger.info("rocketmq send stream error: " + e.getMessage() );
-                    }
-                    completableFuture.complete(true);
-                }
-            );
         }
     }
 
@@ -206,42 +156,54 @@ public class A2aRocketMQController extends A2aController {
             }).build();
     }
 
-    private static Message buildMessage(String topic, String liteTopic, RocketMQResponse response) {
-        if (StringUtils.isEmpty(topic) || StringUtils.isEmpty(liteTopic)) {
-            logger.info("buildMessage param error topic: " + topic + ", liteTopic: " + liteTopic + ", response: " + response);
-            return null;
+    private static class FluxSseSupport {
+        private final Producer producer;
+
+        private FluxSseSupport(Producer producer) {
+            this.producer = producer;
         }
-        String missionJsonStr = JSON.toJSONString(response);
-        final ClientServiceProvider provider = ClientServiceProvider.loadService();
-        final Message message = provider.newMessageBuilder()
-            .setTopic(topic)
-            .setBody(missionJsonStr.getBytes(StandardCharsets.UTF_8))
-            .setLiteTopic(liteTopic)
-            .build();
-        return message;
+
+        public void subscribeObjectRocketmq(Flux<Object> multi, RoutingContext rc,  String WorkAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
+            AtomicLong count = new AtomicLong();
+            Flux<Buffer> map = multi.map(new Function<Object, Buffer>() {
+                @Override
+                public Buffer apply(Object o) {
+                    if (o instanceof ServerSentEvent ev) {
+                        String id = !StringUtils.isEmpty(ev.id()) ? ev.id() : String.valueOf(count.getAndIncrement());
+                        return Buffer.buffer("data: " + ev.data() + "\nid: " + id + "\n\n");
+                    }
+                    return Buffer.buffer("data: " + toJsonString(o) + "\nid: " + count.getAndIncrement() + "\n\n");
+                }
+            });
+            writeRocketmq(map, rc, WorkAgentResponseTopic, liteTopic, msgId, completableFuture);
+        }
+
+        public void writeRocketmq(Flux<Buffer> flux, RoutingContext rc, String WorkAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
+            flux.subscribe(
+                event -> {
+                    try {
+                        SendReceipt send = producer.send(buildMessage(WorkAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
+                        logger.info("rocketmq send stream success: " + send.getMessageId() + " time " +  System.currentTimeMillis());
+                    } catch (ClientException error) {
+                        logger.info("rocketmq send stream error: " + error.getMessage());
+                    }
+                },
+                error -> {
+                    logger.info("send stream error: " + error.getMessage());
+                    completableFuture.complete(false);
+                },
+                () -> {
+                    logger.info("send stream completed.");
+                    try {
+                        SendReceipt send = producer.send(buildMessage(WorkAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, null, msgId, true, true)));
+                        logger.info("rocketmq send stream success: " + send.getMessageId() + " time " + System.currentTimeMillis());
+                    } catch (ClientException e) {
+                        logger.info("rocketmq send stream error: " + e.getMessage() );
+                    }
+                    completableFuture.complete(true);
+                }
+            );
+        }
     }
 
-    private static String toJsonString(Object o) {
-        try {
-            return OBJECT_MAPPER.writeValueAsString(o);
-        } catch (JsonProcessingException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
-    private static boolean checkConfigParam() {
-        if (StringUtils.isEmpty(ROCKETMQ_ENDPOINT) || StringUtils.isEmpty(BIZ_TOPIC) || StringUtils.isEmpty(BIZ_CONSUMER_GROUP)) {
-            if (StringUtils.isEmpty(ROCKETMQ_ENDPOINT)) {
-                logger.info("rocketMQEndpoint is empty");
-            }
-            if (StringUtils.isEmpty(BIZ_TOPIC)) {
-                logger.info("bizTopic is empty");
-            }
-            if (StringUtils.isEmpty(BIZ_CONSUMER_GROUP)) {
-                logger.info("bizConsumerGroup is empty");
-            }
-            return false;
-        }
-        return true;
-    }
 }
