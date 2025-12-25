@@ -1,6 +1,8 @@
 package io.agentscope.runtime.protocol.a2a.controller;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -11,6 +13,7 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.a2a.server.ServerCallContext;
 import io.a2a.spec.AgentCard;
 import io.a2a.spec.JSONParseError;
 import io.a2a.spec.JSONRPCErrorResponse;
@@ -84,7 +87,7 @@ public class A2aRocketMQController extends A2aController {
                boolean streaming = isStreamingRequest(body, null);
                try {
                    if (streaming) {
-                       Flux<ServerSentEvent<String>> serverSentEventFlux = handleStreamRequest(body, null);
+                       Flux<ServerSentEvent<String>> serverSentEventFlux = handleStreamRequest(body, new ServerCallContext(null,  Map.of(ContextKeys.IS_STREAM_KEY, true), Set.of()));
                        CompletableFuture<Boolean> completableFuture = new CompletableFuture<>();
                        executor.execute(() -> {
                            fluxSseSupport.subscribeObjectRocketMQ(serverSentEventFlux.map(i -> (Object)i), request.getWorkAgentResponseTopic(), request.getLiteTopic(), messageView.getMessageId().toString(), completableFuture);
@@ -92,7 +95,7 @@ public class A2aRocketMQController extends A2aController {
                        Boolean streamResult = completableFuture.get(15, TimeUnit.MINUTES);
                        return Boolean.TRUE.equals(streamResult) ? ConsumeResult.SUCCESS : ConsumeResult.FAILURE;
                    } else {
-                       nonStreamingResponse = handleNonStreamRequest(body, null);
+                       nonStreamingResponse = handleNonStreamRequest(body,  new ServerCallContext(null, Map.of(), Set.of()));
                    }
                } catch (JsonProcessingException e) {
                    error = new JSONRPCErrorResponse(null, new JSONParseError());
