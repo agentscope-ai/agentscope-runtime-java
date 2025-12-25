@@ -519,6 +519,27 @@ public class SandboxManager implements AutoCloseable {
                 logger.info("Added readonly mount: " + hostPath + " -> " + containerPath);
             }
         }
+        Map<String, String> nonCopyMounts = managerConfig.getFileSystemConfig().getNonCopyMount();
+        if(nonCopyMounts != null && !nonCopyMounts.isEmpty()){
+            logger.info("Adding non-copy mounts: " + nonCopyMounts.size() + " mount(s)");
+            for (Map.Entry<String, String> entry : nonCopyMounts.entrySet()) {
+                String hostPath = entry.getKey();
+                String containerPath = entry.getValue();
+                if (!java.nio.file.Paths.get(hostPath).isAbsolute()) {
+                    hostPath = java.nio.file.Paths.get(hostPath).toAbsolutePath().toString();
+                    logger.info("Converting relative path to absolute: " + hostPath);
+                }
+                java.io.File hostFile = new java.io.File(hostPath);
+                if (!hostFile.exists()) {
+                    logger.warning("NonCopy mount host path does not exist: " + hostPath + ", skipping");
+                    continue;
+                }
+                volumeBindings.add(new VolumeBinding(hostPath, containerPath, "rw"));
+                logger.info("Added non Copy mount: " + hostPath + " -> " + containerPath);
+            }
+        }
+
+
         Map<String, Object> runtimeConfig = Map.of();
         if (sandboxConfig != null) {
             runtimeConfig = sandboxConfig.getRuntimeConfig();
