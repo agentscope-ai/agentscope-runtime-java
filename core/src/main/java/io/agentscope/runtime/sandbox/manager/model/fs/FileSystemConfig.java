@@ -23,6 +23,7 @@ public class FileSystemConfig {
     private Map<String, String> readonlyMounts;
     private String storageFolderPath;
     private String mountDir;
+    private Map<String, String> nonCopyMount;
 
     protected FileSystemConfig(FileSystemType fileSystemType) {
         this.fileSystemType = fileSystemType;
@@ -33,6 +34,7 @@ public class FileSystemConfig {
         this.readonlyMounts = builder.readonlyMounts;
         this.storageFolderPath = builder.storageFolderPath;
         this.mountDir = builder.mountDir;
+        this.nonCopyMount = builder.nonCopyMounts;
     }
 
     public FileSystemType getFileSystemType() {
@@ -51,13 +53,16 @@ public class FileSystemConfig {
         return mountDir;
     }
 
+    public Map<String, String> getNonCopyMount() {
+        return nonCopyMount;
+    }
 
     public static abstract class Builder<T extends Builder<T>> {
         protected FileSystemType fileSystemType;
         protected Map<String, String> readonlyMounts;
         protected String storageFolderPath = "";
         protected String mountDir = "sessions_mount_dir";
-
+        protected Map<String, String> nonCopyMounts;
 
         protected Builder(FileSystemType fileSystemType) {
             this.fileSystemType = fileSystemType;
@@ -75,6 +80,14 @@ public class FileSystemConfig {
                 this.readonlyMounts = new HashMap<>();
             }
             this.readonlyMounts.put(hostPath, containerPath);
+            return self();
+        }
+
+        public T addNonCopyMount(String hostPath, String containerPath) {
+            if (this.nonCopyMounts == null) {
+                this.nonCopyMounts = new HashMap<>();
+            }
+            this.nonCopyMounts.put(hostPath, containerPath);
             return self();
         }
 

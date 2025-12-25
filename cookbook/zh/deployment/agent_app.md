@@ -46,6 +46,30 @@ agentApp.run("localhost",10001);
 
 ------
 
+## 配置跨域（CORS）
+
+**功能**
+
+允许在启动 `AgentApp` 时应用自定义的跨域策略，便于前端在不同域名或端口直接调用接口。
+
+**用法示例**
+
+```java
+AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.cors(registry -> registry.addMapping("/**")
+        .allowedOrigins("*")
+        .allowedMethods("GET", "POST", "PUT", "DELETE")
+        .allowCredentials(true));
+agentApp.run("localhost", 10001);
+```
+
+**说明**
+
+- 传入的 lambda 将直接作用于 Spring 的 `CorsRegistry`，可按需限制路径、来源、方法或自定义 `allowedHeaders` / `exposedHeaders` 等。
+- 若未调用 `cors(...)`，AgentApp 保持默认（不开启跨域）行为。
+
+------
+
 ## A2A 流式输出（SSE）
 
 **功能**

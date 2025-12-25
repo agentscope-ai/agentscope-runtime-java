@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import io.agentscope.runtime.LocalDeployManager;
@@ -29,6 +30,7 @@ import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.ProtocolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 
 /**
  * AgentApp class represents an application that runs as an agent.
@@ -66,6 +68,7 @@ public class AgentApp {
     private int port = 8090;
     private boolean stream = true;
     private String responseType = "sse";
+    private Consumer<CorsRegistry> corsConfigurer;
 
     private List<EndpointInfo> customEndpoints = new ArrayList<>();
     private List<ProtocolConfig> protocolConfigs;
@@ -149,6 +152,25 @@ public class AgentApp {
      */
     public AgentApp deployManager(DeployManager deployManager) {
         this.deployManager = deployManager;
+        return this;
+    }
+
+    /**
+     * Configure Cross-Origin Resource Sharing (CORS).
+     *
+     * <p>Usage example:</p>
+     * <pre>{@code
+     * app.cors(registry -> registry.addMapping("/**")
+     *         .allowedOrigins("https://example.com")
+     *         .allowedMethods("GET", "POST")
+     *         .allowCredentials(true));
+     * }</pre>
+     *
+     * @param corsConfigurer consumer to customize {@link CorsRegistry}
+     * @return this AgentApp instance for method chaining
+     */
+    public AgentApp cors(Consumer<CorsRegistry> corsConfigurer) {
+        this.corsConfigurer = corsConfigurer;
         return this;
     }
     
@@ -259,6 +281,7 @@ public class AgentApp {
                     .port(port)
                     .endpointName(endpointPath)
                     .protocolConfigs(protocolConfigs)
+                    .corsConfigurer(corsConfigurer)
                     .build();
         }
         

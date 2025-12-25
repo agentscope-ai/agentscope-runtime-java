@@ -49,6 +49,10 @@ public class AgentScopeDeployExample {
 		agentHandler.setSandboxService(buidSandboxService());
 
 		AgentApp agentApp = new AgentApp(agentHandler);
+        agentApp.cors(registry -> registry.addMapping("/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "POST", "PUT", "DELETE")
+                .allowCredentials(true));
 		agentApp.run(10001);
 	}
 

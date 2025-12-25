@@ -46,6 +46,30 @@ agentApp.run("localhost",10001);
 
 ------
 
+## Configuring Cross-Origin Resource Sharing (CORS)
+
+**Feature**
+
+Allow applying custom CORS policies when starting `AgentApp`, so that frontends on different domains or ports can directly call the APIs.
+
+**Usage Example**
+
+```java
+AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.cors(registry -> registry.addMapping("/**")
+        .allowedOrigins("*")
+        .allowedMethods("GET", "POST", "PUT", "DELETE")
+        .allowCredentials(true));
+agentApp.run("localhost", 10001);
+```
+
+**Notes**
+
+- The provided lambda is applied directly to Spring's `CorsRegistry`, so you can restrict paths, origins, methods, or customize `allowedHeaders` / `exposedHeaders` as needed.
+- If `cors(...)` is not called, `AgentApp` keeps the original default behavior (no CORS enabled).
+
+------
+
 ## A2A Streaming Output (SSE)
 
 **Features**
