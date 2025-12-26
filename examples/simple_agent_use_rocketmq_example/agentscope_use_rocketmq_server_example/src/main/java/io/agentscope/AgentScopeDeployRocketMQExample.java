@@ -64,7 +64,7 @@ public class AgentScopeDeployRocketMQExample {
 	}
 
 	public static ReActAgent.Builder agentBuilder(DashScopeChatModel model) {
-		return ReActAgent.builder().model(model).name(AGENT_NAME).sysPrompt("You are an example of A2A(Agent2Agent) Protocol Agent. You can answer some simple question according to your knowledge.");
+		return ReActAgent.builder().model(model).name(AGENT_NAME).sysPrompt("You are an example of A2A(Agent2Agent) Protocol(use RocketmqTransport) Agent. You can answer some simple question according to your knowledge.");
 	}
 
 	public static AgentScopeAgentHandler agent(ReActAgent.Builder builder) {

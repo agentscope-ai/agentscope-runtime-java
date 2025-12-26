@@ -40,8 +40,7 @@ public class A2aAgentCallerExample {
     private static final String WORK_AGENT_RESPONSE_TOPIC = System.getProperty("workAgentResponseTopic");
     private static final String WORK_AGENT_RESPONSE_GROUP_ID = System.getProperty("workAgentResponseGroupID");
     private static final String ROCKETMQ_NAMESPACE = System.getProperty("rocketMQNamespace");
-    private static final String agentName = "agentscope-a2a-rocketmq-example-agent";
-
+    private static final String AGENT_NAME = "agentscope-a2a-rocketmq-example-agent";
 
     // Can change this to false disable streaming.
     static boolean streaming = true;
@@ -55,7 +54,7 @@ public class A2aAgentCallerExample {
         rocketMQTransportConfig.setNamespace(ROCKETMQ_NAMESPACE);
         rocketMQTransportConfig.setHttpClient(new JdkA2AHttpClient());
         A2aAgentConfig a2aAgentConfig = new A2aAgentConfigBuilder().withTransport(RocketMQTransport.class, rocketMQTransportConfig).build();
-        A2aAgent agent = A2aAgent.builder().a2aAgentConfig(a2aAgentConfig).name("agentscope-a2a-example-agent").agentCardResolver(WellKnownAgentCardResolver.builder().baseUrl("http://localhost:10001").relativeCardPath("/.well-known/agent.json").build()).build();
+        A2aAgent agent = A2aAgent.builder().a2aAgentConfig(a2aAgentConfig).name(AGENT_NAME).agentCardResolver(WellKnownAgentCardResolver.builder().baseUrl("http://localhost:10001").relativeCardPath("/.well-known/agent.json").build()).build();
         startExample(agent);
     }
 
