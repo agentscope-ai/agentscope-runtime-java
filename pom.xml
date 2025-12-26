@@ -59,6 +59,8 @@
         <module>web</module>
         <module>maven_plugin</module>
         <module>starters/spring-boot-starter-runtime-a2a</module>
+        <module>examples/simple_agent_use_rocketmq_example/agentscope_use_rocketmq_server_example</module>
+        <module>examples/simple_agent_use_rocketmq_example/agentscope_use_rocketmq_client_example</module>
     </modules>
     <scm>
         <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>

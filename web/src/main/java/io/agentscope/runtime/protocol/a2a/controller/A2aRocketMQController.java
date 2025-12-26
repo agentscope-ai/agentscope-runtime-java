@@ -145,7 +145,7 @@ public class A2aRocketMQController extends A2aController {
                 //next
                 event -> {
                     try {
-                       producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
+                        producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
                     } catch (ClientException error) {
                         logger.info("writeRocketMQ send stream error: " + error.getMessage());
                     }

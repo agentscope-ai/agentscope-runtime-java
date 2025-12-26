@@ -45,6 +45,7 @@ public class AgentScopeDeployRocketMQExample {
 	private static final String ACCESS_KEY = System.getProperty("rocketMQAK", "");
 	private static final String SECRET_KEY = System.getProperty("rocketMQSK", "");
 	private static final String DASHSCOPE_API_KEY = System.getProperty("apiKey", "");
+	private static final String AGENT_NAME = "agentscope-a2a-rocketmq-example-agent";
 
 	public static void main(String[] args) {
 		if (!checkConfigParam()) {
@@ -63,7 +64,7 @@ public class AgentScopeDeployRocketMQExample {
 	}
 
 	public static ReActAgent.Builder agentBuilder(DashScopeChatModel model) {
-		return ReActAgent.builder().model(model).name("agentscope-a2a-example-agent").sysPrompt("You are an example of A2A(Agent2Agent) Protocol Agent. You can answer some simple question according to your knowledge.");
+		return ReActAgent.builder().model(model).name(AGENT_NAME).sysPrompt("You are an example of A2A(Agent2Agent) Protocol Agent. You can answer some simple question according to your knowledge.");
 	}
 
 	public static AgentScopeAgentHandler agent(ReActAgent.Builder builder) {
