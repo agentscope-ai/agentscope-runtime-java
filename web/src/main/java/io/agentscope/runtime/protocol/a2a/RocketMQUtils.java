@@ -3,7 +3,6 @@ package io.agentscope.runtime.protocol.a2a;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.logging.Logger;
 import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.rocketmq.a2a.common.RocketMQResponse;
@@ -20,10 +19,13 @@ import org.apache.rocketmq.client.apis.message.Message;
 import org.apache.rocketmq.client.apis.producer.Producer;
 import org.apache.rocketmq.client.apis.producer.ProducerBuilder;
 import org.apache.rocketmq.shaded.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static io.a2a.util.Utils.OBJECT_MAPPER;
 
 public class RocketMQUtils {
-    private static final Logger logger = Logger.getLogger(RocketMQUtils.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(RocketMQUtils.class.getName());
     public static final String ROCKETMQ_ENDPOINT = System.getProperty("rocketMQEndpoint", "");
     public static final String ROCKETMQ_NAMESPACE = System.getProperty("rocketMQNamespace", "");
     public static final String BIZ_TOPIC = System.getProperty("bizTopic", "");
@@ -46,6 +48,7 @@ public class RocketMQUtils {
 
     public static PushConsumer buildConsumer(MessageListener messageListener) throws ClientException {
         if (null == messageListener) {
+            logger.error("buildConsumer error, messageListener is null");
             throw new RuntimeException("buildConsumer messageListener is null");
         }
         final ClientServiceProvider provider = ClientServiceProvider.loadService();
@@ -66,7 +69,7 @@ public class RocketMQUtils {
 
     public static Message buildMessage(String topic, String liteTopic, RocketMQResponse response) {
         if (StringUtils.isEmpty(topic) || StringUtils.isEmpty(liteTopic) || null == response) {
-            logger.info("buildMessage param error topic: " + topic + ", liteTopic: " + liteTopic + ", response: " + response);
+            logger.error("buildMessage param error topic: {}, liteTopic: {}, response: {}", topic, liteTopic, JSON.toJSONString(response));
             return null;
         }
         String missionJsonStr = JSON.toJSONString(response);
@@ -93,13 +96,13 @@ public class RocketMQUtils {
     public static boolean checkConfigParam() {
         if (StringUtils.isEmpty(ROCKETMQ_ENDPOINT) || StringUtils.isEmpty(BIZ_TOPIC) || StringUtils.isEmpty(BIZ_CONSUMER_GROUP)) {
             if (StringUtils.isEmpty(ROCKETMQ_ENDPOINT)) {
-                logger.info("rocketMQEndpoint is empty");
+                logger.error("rocketMQEndpoint is empty");
             }
             if (StringUtils.isEmpty(BIZ_TOPIC)) {
-                logger.info("bizTopic is empty");
+                logger.error("bizTopic is empty");
             }
             if (StringUtils.isEmpty(BIZ_CONSUMER_GROUP)) {
-                logger.info("bizConsumerGroup is empty");
+                logger.error("bizConsumerGroup is empty");
             }
             return false;
         }

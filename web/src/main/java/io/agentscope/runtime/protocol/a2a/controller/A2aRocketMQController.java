@@ -10,7 +10,6 @@ import java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.logging.Logger;
 import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.a2a.server.ServerCallContext;
@@ -30,6 +29,8 @@ import org.apache.rocketmq.client.apis.consumer.MessageListener;
 import org.apache.rocketmq.client.apis.consumer.PushConsumer;
 import org.apache.rocketmq.client.apis.producer.Producer;
 import org.apache.rocketmq.shaded.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Controller;
@@ -44,7 +45,7 @@ import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.toJsonString;
 @Controller
 @RequestMapping("/a2a-rocketmq")
 public class A2aRocketMQController extends A2aController {
-    private static final Logger logger = Logger.getLogger(A2aRocketMQController.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(A2aRocketMQController.class.getName());
     private Producer producer;
     private PushConsumer pushConsumer;
     private FluxSseSupport fluxSseSupport;
@@ -64,14 +65,14 @@ public class A2aRocketMQController extends A2aController {
     public void init() {
         try {
             if (!checkConfigParam()) {
-                logger.info("checkConfigParam rocketmq config param is not ok, ignore rocketmq server!!!");
+                logger.error("checkConfigParam rocketmq config param is not ok, ignore rocketmq server!!!");
                 return;
             }
             this.producer = buildProducer();
             this.fluxSseSupport = new FluxSseSupport(this.producer);
             this.pushConsumer = buildConsumer(buildMessageListener());
         } catch (Exception e) {
-            logger.info("A2aRocketMQController init error, please check the rocketmq config, e: " + e.getMessage());
+            logger.error("A2aRocketMQController init error, please check the rocketmq config, e: {}", e.getMessage());
         }
     }
 
@@ -106,7 +107,7 @@ public class A2aRocketMQController extends A2aController {
                    }
                }
            } catch (Exception e) {
-               logger.info("consumer error " + e.getMessage());
+               logger.error("consumer error: {}", e.getMessage());
                return ConsumeResult.FAILURE;
            }
            return ConsumeResult.SUCCESS;
@@ -122,7 +123,7 @@ public class A2aRocketMQController extends A2aController {
 
         public void subscribeObjectRocketMQ(Flux<Object> multi, String workAgentResponseTopic, String liteTopic, String msgId, CompletableFuture<Boolean> completableFuture) {
             if (null == multi || StringUtils.isEmpty(workAgentResponseTopic) || StringUtils.isEmpty(liteTopic) || StringUtils.isEmpty(msgId)) {
-                logger.info("subscribeObjectRocketMQ param error");
+                logger.error("subscribeObjectRocketMQ param error, multi: {}, workAgentResponseTopic: {}, liteTopic: {}, msgId: {}", multi, workAgentResponseTopic, liteTopic, msgId);
                 completableFuture.complete(false);
                 return;
             }
@@ -147,12 +148,12 @@ public class A2aRocketMQController extends A2aController {
                     try {
                         producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, event.toString(), msgId, true, false)));
                     } catch (ClientException error) {
-                        logger.info("writeRocketMQ send stream error: " + error.getMessage());
+                        logger.error("writeRocketMQ send stream error: {}", error.getMessage());
                     }
                 },
                 //error
                 error -> {
-                    logger.info("writeRocketMQ send stream error: " + error.getMessage());
+                    logger.error("writeRocketMQ send stream error: {}", error.getMessage());
                     completableFuture.complete(false);
                 },
                 //complete
@@ -160,7 +161,7 @@ public class A2aRocketMQController extends A2aController {
                     try {
                        producer.send(buildMessage(workAgentResponseTopic, liteTopic, new RocketMQResponse(liteTopic, null, null, msgId, true, true)));
                     } catch (ClientException e) {
-                        logger.info("writeRocketMQ send stream error: " + e.getMessage() );
+                        logger.error("writeRocketMQ send stream error: {}", e.getMessage());
                     }
                     completableFuture.complete(true);
                 }
