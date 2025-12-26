@@ -33,17 +33,15 @@ import io.agentscope.runtime.protocol.a2a.ConfigurableAgentCard;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.a2a.common.RocketMQA2AConstant;
 import reactor.core.publisher.Flux;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.BIZ_CONSUMER_GROUP;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.BIZ_TOPIC;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.ROCKETMQ_ENDPOINT;
+import static io.agentscope.runtime.protocol.a2a.RocketMQUtils.ROCKETMQ_NAMESPACE;
 
 /**
  * Example demonstrating how to use AgentScope to proxy ReActAgent
  */
 public class AgentScopeDeployRocketMQExample {
-	private static final String ROCKETMQ_ENDPOINT = System.getProperty("rocketMQEndpoint", "");
-	private static final String ROCKETMQ_NAMESPACE = System.getProperty("rocketMQNamespace", "");
-	private static final String BIZ_TOPIC = System.getProperty("bizTopic", "");
-	private static final String BIZ_CONSUMER_GROUP = System.getProperty("bizConsumerGroup", "");
-	private static final String ACCESS_KEY = System.getProperty("rocketMQAK", "");
-	private static final String SECRET_KEY = System.getProperty("rocketMQSK", "");
 	private static final String DASHSCOPE_API_KEY = System.getProperty("apiKey", "");
 	private static final String AGENT_NAME = "agentscope-a2a-rocketmq-example-agent";
 
