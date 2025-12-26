@@ -96,13 +96,13 @@ public class RocketMQUtils {
     public static boolean checkConfigParam() {
         if (StringUtils.isEmpty(ROCKETMQ_ENDPOINT) || StringUtils.isEmpty(BIZ_TOPIC) || StringUtils.isEmpty(BIZ_CONSUMER_GROUP)) {
             if (StringUtils.isEmpty(ROCKETMQ_ENDPOINT)) {
-                logger.error("rocketMQEndpoint is empty");
+                logger.info("rocketMQEndpoint is empty");
             }
             if (StringUtils.isEmpty(BIZ_TOPIC)) {
-                logger.error("bizTopic is empty");
+                logger.info("bizTopic is empty");
             }
             if (StringUtils.isEmpty(BIZ_CONSUMER_GROUP)) {
-                logger.error("bizConsumerGroup is empty");
+                logger.info("bizConsumerGroup is empty");
             }
             return false;
         }

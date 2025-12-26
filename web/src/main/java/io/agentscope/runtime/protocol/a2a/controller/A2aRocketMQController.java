@@ -65,7 +65,7 @@ public class A2aRocketMQController extends A2aController {
     public void init() {
         try {
             if (!checkConfigParam()) {
-                logger.error("checkConfigParam rocketmq config param is not ok, ignore rocketmq server!!!");
+                logger.info("checkConfigParam rocketmq config param is not ok, ignore rocketmq server!!!");
                 return;
             }
             this.producer = buildProducer();
