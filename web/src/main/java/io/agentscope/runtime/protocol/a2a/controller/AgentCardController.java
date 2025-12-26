@@ -42,4 +42,8 @@ public class AgentCardController {
         return jsonRpcHandler.getAgentCard();
     }
 
+    @GetMapping(value = "/.well-known/agent-card.json", produces = MediaType.APPLICATION_JSON_VALUE)
+    public AgentCard getAgentCardInfo() {
+        return jsonRpcHandler.getAgentCard();
+    }
 }

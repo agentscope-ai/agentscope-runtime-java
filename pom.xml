@@ -59,6 +59,8 @@
         <module>web</module>
         <module>maven_plugin</module>
         <module>starters/spring-boot-starter-runtime-a2a</module>
+        <module>examples/simple_agent_use_rocketmq_example/agentscope_use_rocketmq_server_example</module>
+        <module>examples/simple_agent_use_rocketmq_example/agentscope_use_rocketmq_client_example</module>
     </modules>
     <scm>
         <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>
@@ -291,6 +293,18 @@
                 <groupId>com.aliyun</groupId>
                 <artifactId>alibabacloud-agentrun20250910</artifactId>
                 <version>2.0.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-a2a</artifactId>
+                <version>1.0.7</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.jboss.slf4j</groupId>
+                        <artifactId>slf4j-jboss-logmanager</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>

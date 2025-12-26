@@ -76,13 +76,15 @@ public class A2aController {
         return result;
     }
 
-    private boolean isStreamingRequest(String requestBody, ServerCallContext context) {
+    protected boolean isStreamingRequest(String requestBody, ServerCallContext context) {
         try {
             JsonNode node = Utils.OBJECT_MAPPER.readTree(requestBody);
             JsonNode method = node != null ? node.get("method") : null;
             String methodName = method != null ? method.asText() : null;
             if (methodName != null) {
-                context.getState().put(ContextKeys.METHOD_NAME_KEY, methodName);
+                if (null != context && null != context.getState()) {
+                    context.getState().put(ContextKeys.METHOD_NAME_KEY, methodName);
+                }
                 return SendStreamingMessageRequest.METHOD.equals(methodName) || TaskResubscriptionRequest.METHOD.equals(methodName);
             }
             return false;
@@ -91,7 +93,7 @@ public class A2aController {
         }
     }
 
-    private Flux<ServerSentEvent<String>> handleStreamRequest(String body, ServerCallContext context)
+    protected Flux<ServerSentEvent<String>> handleStreamRequest(String body, ServerCallContext context)
             throws JsonProcessingException {
         StreamingJSONRPCRequest<?> request = Utils.OBJECT_MAPPER.readValue(body, StreamingJSONRPCRequest.class);
         Flow.Publisher<? extends JSONRPCResponse<?>> publisher;
@@ -131,7 +133,7 @@ public class A2aController {
         }
     }
 
-    private JSONRPCResponse<?> handleNonStreamRequest(String body, ServerCallContext context)
+    protected JSONRPCResponse<?> handleNonStreamRequest(String body, ServerCallContext context)
             throws JsonProcessingException {
         NonStreamingJSONRPCRequest<?> request = Utils.OBJECT_MAPPER.readValue(body, NonStreamingJSONRPCRequest.class);
         if (request instanceof GetTaskRequest req) {
