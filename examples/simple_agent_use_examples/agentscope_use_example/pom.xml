@@ -52,13 +52,6 @@
             <artifactId>agentscope-runtime-web</artifactId>
             <version>1.0.0</version>
         </dependency>
-
-        <dependency>
-            <groupId>io.agentscope</groupId>
-            <artifactId>spring-boot-starter-agentscope-runtime-a2a-nacos</artifactId>
-            <version>1.0.3</version>
-        </dependency>
-
         <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
