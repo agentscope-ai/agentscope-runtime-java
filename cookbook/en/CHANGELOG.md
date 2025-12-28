@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.0.1
+
+### Fixed
+- Fixed cross domain configuration issue using AgentApp
+- Added read-write zero copy mounting support for sandbox file systems
+
 ## v1.0.0
 
 AgentScope Runtime Java v1.0 builds upon a solid foundation of efficient agent deployment and secure sandbox execution, introducing a unified "Agent as API" development experience that covers the complete agent lifecycle from local development to production deployment, and extends support for more sandbox types, protocol compatibility, and a richer built-in toolset.

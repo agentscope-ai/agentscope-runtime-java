@@ -29,7 +29,7 @@
 
     <groupId>io.agentscope</groupId>
     <artifactId>browser-agent-backend</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>Example::Browser Use Backend</name>
     <description>Java backend for AgentScope browser use demo</description>
 
