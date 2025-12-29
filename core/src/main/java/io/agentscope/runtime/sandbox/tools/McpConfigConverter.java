@@ -41,21 +41,21 @@ public class McpConfigConverter {
     private Set<String> whitelist;
     private Set<String> blacklist;
     private SandboxManager sandboxManager;
-    private SandboxType sandboxType;
+    private String sandboxType;
     private Sandbox sandbox = null;
 
-    public McpConfigConverter(Map<String, Object> serverConfigs, SandboxType sandboxType,
+    public McpConfigConverter(Map<String, Object> serverConfigs, String sandboxType,
                               Set<String> whitelist, Set<String> blacklist) {
         this(serverConfigs, sandboxType, whitelist, blacklist, null);
     }
 
-    public McpConfigConverter(Map<String, Object> serverConfigs, SandboxType sandboxType,
+    public McpConfigConverter(Map<String, Object> serverConfigs, String sandboxType,
                               Set<String> whitelist, Set<String> blacklist,
                               SandboxManager sandboxManager) {
         this(serverConfigs, sandboxType, whitelist, blacklist, sandboxManager, null);
     }
 
-    public McpConfigConverter(Map<String, Object> serverConfigs, SandboxType sandboxType,
+    public McpConfigConverter(Map<String, Object> serverConfigs, String sandboxType,
                               Set<String> whitelist, Set<String> blacklist,
                               SandboxManager sandboxManager, Sandbox sandbox) {
         this.serverConfigs = serverConfigs;
@@ -229,7 +229,7 @@ public class McpConfigConverter {
 
     public static class Builder {
         private Map<String, Object> serverConfigs;
-        private SandboxType sandboxType = SandboxType.BASE;
+        private String sandboxType = SandboxType.BASE;
         private Set<String> whitelist;
         private Set<String> blacklist;
         private SandboxManager sandboxManager;
@@ -244,7 +244,7 @@ public class McpConfigConverter {
             return this;
         }
 
-        public Builder sandboxType(SandboxType sandboxType) {
+        public Builder sandboxType(String sandboxType) {
             this.sandboxType = sandboxType;
             return this;
         }

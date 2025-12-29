@@ -29,7 +29,7 @@ public class DummySandbox implements AutoCloseable {
     private final String sandboxId;
     private final String userId;
     private final String sessionId;
-    private final SandboxType sandboxType;
+    private final String sandboxType;
     private boolean closed = false;
     
     public DummySandbox(SandboxManager managerApi, String userId, String sessionId) {
@@ -63,7 +63,7 @@ public class DummySandbox implements AutoCloseable {
         return sessionId;
     }
     
-    public SandboxType getSandboxType() {
+    public String getSandboxType() {
         return sandboxType;
     }
     

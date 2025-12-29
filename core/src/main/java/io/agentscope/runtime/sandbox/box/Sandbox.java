@@ -30,7 +30,7 @@ public abstract class Sandbox implements AutoCloseable {
     protected String sandboxId;
     protected final String userId;
     protected final String sessionId;
-    protected final SandboxType sandboxType;
+    protected final String sandboxType;
     protected final int timeout;
     protected final boolean autoRelease;
     protected boolean closed = false;
@@ -39,7 +39,7 @@ public abstract class Sandbox implements AutoCloseable {
             SandboxManager managerApi,
             String userId,
             String sessionId,
-            SandboxType sandboxType,
+            String sandboxType,
             int timeout) {
         this(managerApi, userId, sessionId, sandboxType, timeout, true);
     }
@@ -48,7 +48,7 @@ public abstract class Sandbox implements AutoCloseable {
             SandboxManager managerApi,
             String userId,
             String sessionId,
-            SandboxType sandboxType,
+            String sandboxType,
             int timeout,
             boolean autoRelease) {
         this.managerApi = managerApi;
@@ -87,7 +87,7 @@ public abstract class Sandbox implements AutoCloseable {
         return sessionId;
     }
 
-    public SandboxType getSandboxType() {
+    public String getSandboxType() {
         return sandboxType;
     }
 

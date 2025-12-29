@@ -15,29 +15,37 @@
  */
 package io.agentscope.runtime.sandbox.manager.model.container;
 
+import org.apache.commons.lang3.StringUtils;
+
+import java.lang.reflect.Field;
+
 /**
  * Sandbox type enumeration
  */
-public enum SandboxType {
-    BASE("base"),
-    BROWSER("browser"),
-    FILESYSTEM("filesystem"),
-    TRAINING("training"),
-    APPWORLD("appworld"),
-    BFCL("bfcl"),
-    WEBSHOP("webshop"),
-    GUI("gui"),
-    MOBILE("mobile"),
-    CUSTOM("custom"),
-    AGENTBAY("agentbay");
+public class SandboxType {
+    public static final String BASE = "base";
+    public static final String BROWSER = "browser";
+    public static final String FILESYSTEM = "filesystem";
+    public static final String TRAINING = "training";
+    public static final String APPWORLD = "appworld";
+    public static final String BFCL = "bfcl";
+    public static final String WEBSHOP = "webshop";
+    public static final String GUI = "gui";
+    public static final String MOBILE = "mobile";
+    public static final String CUSTOM = "custom";
+    public static final String AGENTBAY = "agentbay";
 
-    private final String typeName;
+    public static boolean isPredefinedType(String typeName) {
+        if (StringUtils.isBlank(typeName)) {
+            return false;
+        }
 
-    SandboxType(String typeName) {
-        this.typeName = typeName;
-    }
-
-    public String getTypeName() {
-        return typeName;
+        Field[] fields = SandboxType.class.getDeclaredFields();
+        for (Field field : fields) {
+            if (typeName.equals(field.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

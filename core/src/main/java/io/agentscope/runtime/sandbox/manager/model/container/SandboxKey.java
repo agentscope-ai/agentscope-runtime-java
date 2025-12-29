@@ -24,17 +24,17 @@ public class SandboxKey {
     private static final Logger logger = LoggerFactory.getLogger(SandboxKey.class);
     private final String userID;
     private final String sessionID;
-    private final SandboxType sandboxType;
+    private final String sandboxType;
     private final String imageID;
 
-    public SandboxKey(String userID, String sessionID, SandboxType sandboxType, String imageID) {
+    public SandboxKey(String userID, String sessionID, String sandboxType, String imageID) {
         this.userID = userID;
         this.sessionID = sessionID;
         this.sandboxType = sandboxType;
         this.imageID = imageID;
     }
 
-    public SandboxKey(String userID, String sessionID, SandboxType sandboxType) {
+    public SandboxKey(String userID, String sessionID, String sandboxType) {
         this(userID, sessionID, sandboxType, sandboxType == SandboxType.AGENTBAY ? "linux_latest" : "");
         if (sandboxType == SandboxType.AGENTBAY) {
             logger.warn("Creating SandboxKey without default \"linux_latest\" imageID for AGENTBAY type.");
@@ -49,7 +49,7 @@ public class SandboxKey {
         return sessionID;
     }
 
-    public SandboxType getSandboxType() {
+    public String getSandboxType() {
         return sandboxType;
     }
 

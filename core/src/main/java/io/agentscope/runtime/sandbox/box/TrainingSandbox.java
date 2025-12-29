@@ -16,7 +16,6 @@
 package io.agentscope.runtime.sandbox.box;
 
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +26,7 @@ public class TrainingSandbox extends Sandbox {
             SandboxManager managerApi,
             String userId,
             String sessionId,
-            SandboxType sandboxType) {
+            String sandboxType) {
         this(managerApi, userId, sessionId, sandboxType, 3000);
     }
     
@@ -35,7 +34,7 @@ public class TrainingSandbox extends Sandbox {
             SandboxManager managerApi,
             String userId,
             String sessionId,
-            SandboxType sandboxType,
+            String sandboxType,
             int timeout) {
         super(managerApi, userId, sessionId, sandboxType, timeout);
     }

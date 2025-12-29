@@ -47,7 +47,7 @@ public class ManagerConfig {
 
     private PortRange portRange;
     private int poolSize = 0;
-    private List<SandboxType> defaultSandboxType;
+    private List<String> defaultSandboxType;
 
     private BaseClientConfig clientConfig;
     private FileSystemConfig fileSystemConfig;
@@ -116,7 +116,7 @@ public class ManagerConfig {
         }
     }
 
-    public List<SandboxType> getDefaultSandboxType() {
+    public List<String> getDefaultSandboxType() {
         return defaultSandboxType;
     }
 
@@ -169,7 +169,7 @@ public class ManagerConfig {
         private int poolSize = 0;
         private String baseUrl;
         private String bearerToken;
-        private List<SandboxType> defaultSandboxType = List.of(SandboxType.BASE);
+        private List<String> defaultSandboxType = List.of(SandboxType.BASE);
         private String agentBayApiKey;
 
         private FileSystemConfig fileSystemConfig = LocalFileSystemConfig.builder().build();
@@ -222,7 +222,7 @@ public class ManagerConfig {
             return this;
         }
 
-        public Builder defaultSandboxType(List<SandboxType> defaultSandboxType) {
+        public Builder defaultSandboxType(List<String> defaultSandboxType) {
             this.defaultSandboxType = defaultSandboxType;
             return this;
         }
