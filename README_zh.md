@@ -64,14 +64,14 @@
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 
 <!-- Add AgentScope Agent adapter dependency -->
 <dependency>
     <groupId>io.agentscope</groupId>
     <artifactId>agentscope-runtime-agentscope</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
