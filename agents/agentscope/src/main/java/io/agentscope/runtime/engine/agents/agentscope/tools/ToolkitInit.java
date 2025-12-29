@@ -24,7 +24,6 @@ import io.agentscope.runtime.engine.agents.agentscope.tools.fs.*;
 import io.agentscope.runtime.engine.agents.agentscope.tools.mcp.AsMCPTool;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
 import io.agentscope.runtime.sandbox.tools.McpConfigConverter;
 
@@ -298,19 +297,19 @@ public class ToolkitInit {
     }
 
     public static List<AgentTool> getMcpTools(String serverConfigs,
-                                              SandboxType sandboxType,
+                                              String sandboxType,
                                               SandboxManager sandboxManager) {
         return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
     }
 
     public static List<AgentTool> getMcpTools(Map<String, Object> serverConfigs,
-                                              SandboxType sandboxType,
+                                              String sandboxType,
                                               SandboxManager sandboxManager) {
         return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
     }
 
     public static List<AgentTool> getMcpTools(String serverConfigs,
-                                              SandboxType sandboxType,
+                                              String sandboxType,
                                               SandboxManager sandboxManager,
                                               Set<String> whitelist,
                                               Set<String> blacklist) {
@@ -326,7 +325,7 @@ public class ToolkitInit {
     }
 
     public static List<AgentTool> getMcpTools(Map<String, Object> serverConfigs,
-                                              SandboxType sandboxType,
+                                              String sandboxType,
                                               SandboxManager sandboxManager,
                                               Set<String> whitelist,
                                               Set<String> blacklist) {
@@ -352,7 +351,7 @@ public class ToolkitInit {
     }
 
 //    public static List<AgentTool> getAllToolsWithMcp(String mcpServerConfigs,
-//                                                     SandboxType sandboxType,
+//                                                     String sandboxType,
 //                                                     SandboxManager sandboxManager) {
 //        List<AgentTool> allTools = new ArrayList<>(getAllTools());
 //
@@ -370,7 +369,7 @@ public class ToolkitInit {
 //    }
 
 //    public static List<AgentTool> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
-//                                                     SandboxType sandboxType,
+//                                                     String sandboxType,
 //                                                     SandboxManager sandboxManager) {
 //        List<AgentTool> allTools = new ArrayList<>(getAllTools());
 //
@@ -388,7 +387,7 @@ public class ToolkitInit {
 //    }
 
     public static List<MCPTool> createMcpToolInstances(String serverConfigs,
-                                                       SandboxType sandboxType,
+                                                       String sandboxType,
                                                        SandboxManager sandboxManager) {
         McpConfigConverter converter = McpConfigConverter.builder()
                 .serverConfigs(serverConfigs)
@@ -400,7 +399,7 @@ public class ToolkitInit {
     }
 
     public static List<MCPTool> createMcpToolInstances(Map<String, Object> serverConfigs,
-                                                       SandboxType sandboxType,
+                                                       String sandboxType,
                                                        SandboxManager sandboxManager) {
         McpConfigConverter converter = McpConfigConverter.builder()
                 .serverConfigs(serverConfigs)

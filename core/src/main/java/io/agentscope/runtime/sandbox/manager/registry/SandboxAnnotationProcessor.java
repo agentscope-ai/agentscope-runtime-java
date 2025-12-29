@@ -17,7 +17,6 @@ package io.agentscope.runtime.sandbox.manager.registry;
 
 import io.agentscope.runtime.sandbox.box.*;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,7 +43,7 @@ public class SandboxAnnotationProcessor {
         try {
             String imageName = annotation.imageName();
             String customType = annotation.customType();
-            SandboxType sandboxType = annotation.sandboxType();
+            String sandboxType = annotation.sandboxType();
             String securityLevel = annotation.securityLevel();
             int timeout = annotation.timeout();
             String description = annotation.description();

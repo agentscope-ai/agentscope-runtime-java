@@ -19,7 +19,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.util.RedisClientWrapper;
 
 import java.util.HashMap;
@@ -52,7 +51,7 @@ public class RedisContainerMapping {
                 prefix, 
                 key.getUserID(), 
                 key.getSessionID(), 
-                key.getSandboxType().getTypeName(),
+                key.getSandboxType(),
                 key.getImageID());
     }
 
@@ -184,10 +183,8 @@ public class RedisContainerMapping {
             
             String userID = parts[0];
             String sessionID = parts[1];
-            String sandboxTypeStr = parts[2];
-            
-            SandboxType sandboxType = SandboxType.valueOf(sandboxTypeStr.toUpperCase());
-            
+            String sandboxType = parts[2];
+
             return new SandboxKey(userID, sessionID, sandboxType);
         } catch (Exception e) {
             logger.warning("Failed to parse SandboxKey from: " + keyString + ", error: " + e.getMessage());
