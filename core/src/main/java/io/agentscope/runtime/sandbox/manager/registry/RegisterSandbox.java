@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
 public @interface RegisterSandbox {
     String imageName();
 
-    SandboxType sandboxType() default SandboxType.BASE;
+    String sandboxType() default SandboxType.BASE;
 
     String customType() default "";
 

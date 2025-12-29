@@ -175,13 +175,11 @@ public class SandboxRegistryServiceTest {
         assertTrue(customType.isCustom(), "Should be a custom type");
 
         // Use predefined type via DynamicSandboxType
-        DynamicSandboxType baseType = DynamicSandboxType.fromEnum(SandboxType.BASE);
+        DynamicSandboxType baseType = DynamicSandboxType.fromString(SandboxType.BASE);
         
         System.out.println("\nPredefined type: " + baseType.getTypeName());
-        System.out.println("Is enum type: " + baseType.isEnum());
         
         assertEquals("base", baseType.getTypeName(), "Type name should be base");
-        assertTrue(baseType.isEnum(), "Should be an enum type");
 
         // Get type by name (works for both predefined and custom types)
         try {
@@ -201,7 +199,7 @@ public class SandboxRegistryServiceTest {
         System.out.println("\n--- Test 5: List All Registrations ---");
 
         // List all predefined sandbox types
-        Map<SandboxType, SandboxConfig> allSandboxes = SandboxRegistryService.listAllSandboxesByType();
+        Map<String, SandboxConfig> allSandboxes = SandboxRegistryService.listAllSandboxesByType();
         System.out.println("\nPredefined Sandbox Types (" + allSandboxes.size() + "):");
         allSandboxes.forEach((type, config) -> 
             System.out.println("  " + type + " -> " + config.getImageName())

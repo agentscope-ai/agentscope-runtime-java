@@ -21,7 +21,7 @@ import java.util.Objects;
 
 public class SandboxConfig {
     private final String imageName;
-    private final SandboxType sandboxType;
+    private final String sandboxType;
     private final Map<String, Object> resourceLimits;
     private final String securityLevel;
     private final int timeout;
@@ -59,7 +59,7 @@ public class SandboxConfig {
         return imageName;
     }
 
-    public SandboxType getSandboxType() {
+    public String getSandboxType() {
         return sandboxType;
     }
 
@@ -110,7 +110,7 @@ public class SandboxConfig {
      */
     public static class Builder {
         private String imageName;
-        private SandboxType sandboxType;
+        private String sandboxType;
         private Map<String, Object> resourceLimits;
         private String securityLevel = "medium";
         private int timeout = 300;
@@ -123,7 +123,7 @@ public class SandboxConfig {
             return this;
         }
 
-        public Builder sandboxType(SandboxType sandboxType) {
+        public Builder sandboxType(String sandboxType) {
             this.sandboxType = sandboxType;
             return this;
         }

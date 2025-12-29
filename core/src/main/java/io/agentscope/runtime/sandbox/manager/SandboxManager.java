@@ -210,8 +210,8 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Initializing container pool with size: " + poolSize);
 
         while (poolQueue.size() < poolSize) {
-            for (SandboxType type : managerConfig.getDefaultSandboxType()) {
-                if (type == SandboxType.AGENTBAY) {
+            for (String type : managerConfig.getDefaultSandboxType()) {
+                if (Objects.equals(type, SandboxType.AGENTBAY)) {
                     logger.warning("Skipping AgentBay sandbox type for container pool initialization");
                     continue;
                 }
@@ -241,7 +241,7 @@ public class SandboxManager implements AutoCloseable {
         logger.info("Container pool initialization complete. Pool size: " + poolQueue.size());
     }
 
-    public ContainerModel createFromPool(SandboxType sandboxType, String imageId, Map<String, String> labels) {
+    public ContainerModel createFromPool(String sandboxType, String imageId, Map<String, String> labels) {
         int attempts = 0;
         int maxAttempts = poolSize + 1;
 
@@ -296,16 +296,16 @@ public class SandboxManager implements AutoCloseable {
         return createContainer(sandboxType, null, null, null, imageId, labels);
     }
 
-    public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID) {
+    public ContainerModel createFromPool(String sandboxType, String userID, String sessionID) {
         return createFromPool(sandboxType, userID, sessionID, null, null);
     }
 
     @RemoteWrapper
-    public ContainerModel createFromPool(SandboxType sandboxType, String userID, String sessionID, String imageId, Map<String, String> labels) {
+    public ContainerModel createFromPool(String sandboxType, String userID, String sessionID, String imageId, Map<String, String> labels) {
         if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
             logger.info("Remote mode: forwarding createFromPool(with userID/sessionID) to remote server");
             Map<String, Object> requestData = new HashMap<>();
-            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("sandboxType", sandboxType);
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
             requestData.put("imageId", imageId);
@@ -362,20 +362,20 @@ public class SandboxManager implements AutoCloseable {
         return containerModel;
     }
 
-    public ContainerModel createContainer(SandboxType sandboxType) {
+    public ContainerModel createContainer(String sandboxType) {
         return createContainer(sandboxType, null, null, null);
     }
 
-    public ContainerModel createContainer(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment) {
+    public ContainerModel createContainer(String sandboxType, String mountDir, String storagePath, Map<String, String> environment) {
         return createContainer(sandboxType, mountDir, storagePath, environment, null, null);
     }
 
     @RemoteWrapper
-    public ContainerModel createContainer(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String imageId, Map<String, String> labels) {
+    public ContainerModel createContainer(String sandboxType, String mountDir, String storagePath, Map<String, String> environment, String imageId, Map<String, String> labels) {
         if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
             logger.info("Remote mode: forwarding createContainer to remote server");
             Map<String, Object> requestData = new HashMap<>();
-            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("sandboxType", sandboxType);
             requestData.put("mountDir", mountDir);
             requestData.put("storagePath", storagePath);
             requestData.put("environment", environment);
@@ -615,19 +615,19 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
-    public ContainerModel getSandbox(SandboxType sandboxType, String userID, String sessionID) {
+    public ContainerModel getSandbox(String sandboxType, String userID, String sessionID) {
         return getSandbox(sandboxType, null, null, null, userID, sessionID, null, null);
     }
 
-    public ContainerModel getSandbox(SandboxType sandboxType, String userID, String sessionID, String imageId, Map<String, String> labels) {
+    public ContainerModel getSandbox(String sandboxType, String userID, String sessionID, String imageId, Map<String, String> labels) {
         return getSandbox(sandboxType, null, null, null, userID, sessionID, imageId, labels);
     }
 
-    public ContainerModel getSandbox(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID) {
+    public ContainerModel getSandbox(String sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID) {
         return getSandbox(sandboxType, mountDir, storagePath, environment, userID, sessionID, null, null);
     }
 
-    public ContainerModel getSandbox(SandboxType sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID, String imageId, Map<String, String> labels) {
+    public ContainerModel getSandbox(String sandboxType, String mountDir, String storagePath, Map<String, String> environment, String userID, String sessionID, String imageId, Map<String, String> labels) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
 
         if (redisEnabled && redisContainerMapping != null) {
@@ -657,11 +657,11 @@ public class SandboxManager implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public void startSandbox(SandboxType sandboxType, String userID, String sessionID) {
+    public void startSandbox(String sandboxType, String userID, String sessionID) {
         if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
             logger.info("Remote mode: forwarding startSandbox to remote server");
             Map<String, Object> requestData = new HashMap<>();
-            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("sandboxType", sandboxType);
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
             remoteHttpClient.makeRequest(
@@ -692,11 +692,11 @@ public class SandboxManager implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public void stopSandbox(SandboxType sandboxType, String userID, String sessionID) {
+    public void stopSandbox(String sandboxType, String userID, String sessionID) {
         if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
             logger.info("Remote mode: forwarding stopSandbox to remote server");
             Map<String, Object> requestData = new HashMap<>();
-            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("sandboxType", sandboxType);
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
             remoteHttpClient.makeRequest(
@@ -726,7 +726,7 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
-    public void removeSandbox(SandboxType sandboxType, String userID, String sessionID) {
+    public void removeSandbox(String sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
 
@@ -745,7 +745,7 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
-    public void stopAndRemoveSandbox(SandboxType sandboxType, String userID, String sessionID) {
+    public void stopAndRemoveSandbox(String sandboxType, String userID, String sessionID) {
         SandboxKey key = new SandboxKey(userID, sessionID, sandboxType);
         ContainerModel containerModel = sandboxMap.get(key);
 
@@ -787,11 +787,11 @@ public class SandboxManager implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public String getSandboxStatus(SandboxType sandboxType, String userID, String sessionID) {
+    public String getSandboxStatus(String sandboxType, String userID, String sessionID) {
         if (remoteHttpClient != null && remoteHttpClient.isConfigured()) {
             logger.info("Remote mode: forwarding getSandboxStatus to remote server");
             Map<String, Object> requestData = new HashMap<>();
-            requestData.put("sandboxType", sandboxType != null ? sandboxType.name() : null);
+            requestData.put("sandboxType", sandboxType);
             requestData.put("userID", userID);
             requestData.put("sessionID", sessionID);
             Object result = remoteHttpClient.makeRequest(
@@ -1166,7 +1166,7 @@ public class SandboxManager implements AutoCloseable {
         }
     }
 
-    public boolean releaseSandbox(SandboxType sandboxType, String userId, String sessionId) {
+    public boolean releaseSandbox(String sandboxType, String userId, String sessionId) {
         try {
             stopAndRemoveSandbox(sandboxType, userId, sessionId);
             logger.info("Released sandbox: type=" + sandboxType + ", user=" + userId + ", session=" + sessionId);
