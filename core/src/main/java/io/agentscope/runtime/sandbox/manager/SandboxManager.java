@@ -312,7 +312,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("labels", labels);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/createFromPool",
+                    "/sandbox/createFromPool",
                     requestData,
                     "data"
             );
@@ -383,7 +383,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("labels", labels);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/createContainer",
+                    "/sandbox/createContainer",
                     requestData,
                     "data"
             );
@@ -666,7 +666,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("sessionID", sessionID);
             remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/startSandbox",
+                    "/sandbox/startSandbox",
                     requestData,
                     "data"
             );
@@ -701,7 +701,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("sessionID", sessionID);
             remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/stopSandbox",
+                    "/sandbox/stopSandbox",
                     requestData,
                     "data"
             );
@@ -796,7 +796,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("sessionID", sessionID);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/getSandboxStatus",
+                    "/sandbox/getSandboxStatus",
                     requestData,
                     "data"
             );
@@ -844,7 +844,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("identity", identity);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/getInfo",
+                    "/sandbox/getInfo",
                     requestData,
                     "data"
             );
@@ -900,7 +900,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("identity", identity);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/release",
+                    "/sandbox/release",
                     requestData,
                     "data"
             );
@@ -1086,7 +1086,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("toolType", toolType);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/listTools",
+                    "/sandbox/listTools",
                     requestData,
                     "data"
             );
@@ -1118,7 +1118,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("arguments", arguments);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/callTool",
+                    "/sandbox/callTool",
                     requestData,
                     "data"
             );
@@ -1146,7 +1146,7 @@ public class SandboxManager implements AutoCloseable {
             requestData.put("overwrite", overwrite);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
-                    "/addMcpServers",
+                    "/sandbox/addMcpServers",
                     requestData,
                     "data"
             );
