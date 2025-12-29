@@ -18,16 +18,16 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class TabSelectTool extends BrowserSandboxTool {
 
-    Logger logger = Logger.getLogger(TabSelectTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(TabSelectTool.class);
 
     public TabSelectTool() {
         super("browser_tab_select", "browser", "Select a browser tab by index");
@@ -40,7 +40,7 @@ public class TabSelectTool extends BrowserSandboxTool {
         Map<String, Object> properties = new HashMap<>();
         properties.put("index", indexProperty);
 
-        List<String> required = Arrays.asList("index");
+        List<String> required = List.of("index");
 
         schema.put("type", "object");
         schema.put("properties", properties);
@@ -62,8 +62,7 @@ public class TabSelectTool extends BrowserSandboxTool {
             throw new RuntimeException("Only BrowserSandbox supported in browser tab select tool");
         } catch (Exception e) {
             String errorMsg = "Browser Tab Select Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

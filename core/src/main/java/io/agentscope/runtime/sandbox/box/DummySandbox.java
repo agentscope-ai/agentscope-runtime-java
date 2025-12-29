@@ -18,12 +18,13 @@ package io.agentscope.runtime.sandbox.box;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class DummySandbox implements AutoCloseable {
-    private static final Logger logger = Logger.getLogger(DummySandbox.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(DummySandbox.class);
     
     private final String sandboxId;
     private final String userId;
@@ -46,9 +47,8 @@ public class DummySandbox implements AutoCloseable {
         
         // For dummy sandbox, we just use a fixed ID
         this.sandboxId = "dummy-sandbox-" + userId + "-" + sessionId;
-        
-        logger.info("DummySandbox initialized: " + this.sandboxId + 
-                   " (This is a dummy sandbox, no real container created)");
+
+        logger.info("DummySandbox initialized: {} (This is a dummy sandbox, no real container created)", this.sandboxId);
     }
     
     public String getSandboxId() {
@@ -81,8 +81,7 @@ public class DummySandbox implements AutoCloseable {
     }
     
     public String callTool(String name, Map<String, Object> arguments) {
-        logger.info("DummySandbox.callTool() called with name=" + name + 
-                   " - returning dummy response");
+        logger.info("DummySandbox.callTool() called with name={} - returning dummy response", name);
         return "{\"status\": \"success\", \"message\": \"Dummy sandbox call\"}";
     }
     

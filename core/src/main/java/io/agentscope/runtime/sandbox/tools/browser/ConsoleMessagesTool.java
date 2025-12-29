@@ -18,13 +18,14 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
-import java.util.logging.Logger;
 
 public class ConsoleMessagesTool extends BrowserSandboxTool {
 
-    Logger logger = Logger.getLogger(ConsoleMessagesTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ConsoleMessagesTool.class);
 
     public ConsoleMessagesTool() {
         super("browser_console_messages", "browser", "Get console messages from the browser");
@@ -48,8 +49,7 @@ public class ConsoleMessagesTool extends BrowserSandboxTool {
             throw new RuntimeException("Only BrowserSandbox supported in browser console messages tool");
         } catch (Exception e) {
             String errorMsg = "Browser Console Messages Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

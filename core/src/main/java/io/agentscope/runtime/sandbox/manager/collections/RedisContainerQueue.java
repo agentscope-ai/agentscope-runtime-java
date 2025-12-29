@@ -19,15 +19,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.util.RedisClientWrapper;
-
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Redis-backed implementation of ContainerQueue
  */
 public class RedisContainerQueue implements ContainerQueue {
-    
-    private static final Logger logger = Logger.getLogger(RedisContainerQueue.class.getName());
+
+    private static final Logger logger = LoggerFactory.getLogger(RedisContainerQueue.class);
     
     private final RedisClientWrapper redisClient;
     private final String queueName;
@@ -37,22 +37,22 @@ public class RedisContainerQueue implements ContainerQueue {
         this.redisClient = redisClient;
         this.queueName = queueName;
         this.objectMapper = new ObjectMapper();
-        logger.info("Redis container queue initialized with name: " + queueName);
+        logger.info("Redis container queue initialized with name: {}", queueName);
     }
     
     @Override
     public void enqueue(ContainerModel item) {
         if (item == null) {
-            logger.warning("Attempted to enqueue null item, skipping");
+            logger.warn("Attempted to enqueue null item, skipping");
             return;
         }
         
         try {
             String json = objectMapper.writeValueAsString(item);
             redisClient.rpush(queueName, json);
-            logger.fine("Enqueued container: " + item.getContainerName());
+            logger.info("Enqueued container: {}", item.getContainerName());
         } catch (JsonProcessingException e) {
-            logger.severe("Failed to serialize container model: " + e.getMessage());
+            logger.error("Failed to serialize container model: {}", e.getMessage());
             throw new RuntimeException("Failed to enqueue container", e);
         }
     }
@@ -66,10 +66,10 @@ public class RedisContainerQueue implements ContainerQueue {
             }
             
             ContainerModel model = objectMapper.readValue(json, ContainerModel.class);
-            logger.fine("Dequeued container: " + model.getContainerName());
+            logger.info("Dequeued container: {}", model.getContainerName());
             return model;
         } catch (JsonProcessingException e) {
-            logger.severe("Failed to deserialize container model: " + e.getMessage());
+            logger.error("Failed to deserialize container model: {}", e.getMessage());
             throw new RuntimeException("Failed to dequeue container", e);
         }
     }
@@ -84,7 +84,7 @@ public class RedisContainerQueue implements ContainerQueue {
             
             return objectMapper.readValue(json, ContainerModel.class);
         } catch (JsonProcessingException e) {
-            logger.severe("Failed to deserialize container model: " + e.getMessage());
+            logger.error("Failed to deserialize container model: {}", e.getMessage());
             throw new RuntimeException("Failed to peek container", e);
         }
     }
@@ -104,7 +104,7 @@ public class RedisContainerQueue implements ContainerQueue {
     @Override
     public void clear() {
         redisClient.ltrim(queueName);
-        logger.info("Cleared Redis queue: " + queueName);
+        logger.info("Cleared Redis queue: {}", queueName);
     }
 }
 

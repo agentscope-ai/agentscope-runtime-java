@@ -18,12 +18,13 @@ package io.agentscope.runtime.sandbox.box;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.logging.Logger;
 
 public abstract class Sandbox implements AutoCloseable {
-    private static final Logger logger = Logger.getLogger(Sandbox.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(Sandbox.class);
 
     protected final SandboxManager managerApi;
     protected String sandboxId;
@@ -66,11 +67,9 @@ public abstract class Sandbox implements AutoCloseable {
                     );
                 }
                 this.sandboxId = containerModel.getContainerName();
-                logger.info("Sandbox initialized: " + this.sandboxId +
-                        " (type=" + sandboxType + ", user=" + userId +
-                        ", session=" + sessionId + ", autoRelease=" + autoRelease + ")");
+                logger.info("Sandbox initialized: {} (type={}, user={}, session={}, autoRelease={})", this.sandboxId, sandboxType, userId, sessionId, autoRelease);
             } catch (Exception e) {
-                logger.severe("Failed to initialize sandbox: " + e.getMessage());
+                logger.error("Failed to initialize sandbox: {}", e.getMessage());
                 throw new RuntimeException("Failed to initialize sandbox", e);
             }
         }
@@ -126,13 +125,13 @@ public abstract class Sandbox implements AutoCloseable {
 
         try {
             if (autoRelease) {
-                logger.info("Auto-releasing sandbox: " + sandboxId);
+                logger.info("Auto-releasing sandbox: {}", sandboxId);
                 managerApi.releaseSandbox(sandboxType, userId, sessionId);
             } else {
-                logger.info("Sandbox closed (not released, can be reused): " + sandboxId);
+                logger.info("Sandbox closed (not released, can be reused): {}", sandboxId);
             }
         } catch (Exception e) {
-            logger.severe("Failed to cleanup sandbox: " + e.getMessage());
+            logger.error("Failed to cleanup sandbox: {}", e.getMessage());
         }
     }
 
@@ -142,11 +141,11 @@ public abstract class Sandbox implements AutoCloseable {
      */
     public void release() {
         try {
-            logger.info("Manually releasing sandbox: " + sandboxId);
+            logger.info("Manually releasing sandbox: {}", sandboxId);
             managerApi.releaseSandbox(sandboxType, userId, sessionId);
             closed = true;
         } catch (Exception e) {
-            logger.severe("Failed to release sandbox: " + e.getMessage());
+            logger.error("Failed to release sandbox: {}", e.getMessage());
             throw new RuntimeException("Failed to release sandbox", e);
         }
     }

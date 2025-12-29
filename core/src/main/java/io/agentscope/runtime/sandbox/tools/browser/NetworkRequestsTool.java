@@ -18,16 +18,17 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
-import java.util.logging.Logger;
 
 /**
  * Browser network requests tool
  */
 public class NetworkRequestsTool extends BrowserSandboxTool {
 
-    Logger logger = Logger.getLogger(NetworkRequestsTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(NetworkRequestsTool.class);
 
     public NetworkRequestsTool() {
         super("browser_network_requests", "browser", "Get network requests from the browser");
@@ -51,8 +52,7 @@ public class NetworkRequestsTool extends BrowserSandboxTool {
             throw new RuntimeException("Only BrowserSandbox supported in browser network requests tool");
         } catch (Exception e) {
             String errorMsg = "Browser Network Requests Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

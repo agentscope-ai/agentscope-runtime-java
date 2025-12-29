@@ -19,16 +19,16 @@ package io.agentscope.runtime.sandbox.tools.base;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class RunPythonTool extends BaseSandboxTool {
 
-    Logger logger = Logger.getLogger(RunPythonTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(RunPythonTool.class);
 
     public RunPythonTool() {
         super("run_ipython_cell", "generic", "Execute Python code snippets and return the output or errors.");
@@ -40,7 +40,7 @@ public class RunPythonTool extends BaseSandboxTool {
         Map<String, Object> properties = new HashMap<>();
         properties.put("code", codeProperty);
 
-        List<String> required = Arrays.asList("code");
+        List<String> required = List.of("code");
 
         schema.put("type", "object");
         schema.put("properties", properties);
@@ -62,8 +62,7 @@ public class RunPythonTool extends BaseSandboxTool {
             throw new RuntimeException("Only BaseSandbox supported in run python tool");
         } catch (Exception e) {
             String errorMsg = "Run Python Code Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

@@ -28,6 +28,8 @@ import io.agentscope.runtime.engine.schemas.Message;
 import io.agentscope.runtime.engine.schemas.*;
 import io.agentscope.runtime.protocol.a2a.controller.ContextKeys;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
@@ -36,14 +38,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Logger;
 
 public class GraphAgentExecutor implements AgentExecutor {
     private final Runner runner;
 
     private final Map<String, Subscription> subscriptions;
 
-    Logger logger = Logger.getLogger(GraphAgentExecutor.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(GraphAgentExecutor.class);
 
     public GraphAgentExecutor(Runner runner) {
         this.runner = runner;
@@ -59,9 +60,9 @@ public class GraphAgentExecutor implements AgentExecutor {
             Task task = context.getTask();
             if (task == null) {
                 task = newTask(context.getMessage());
-                logger.info("Created new task: " + task.getId());
+                logger.info("Created new task: {}", task.getId());
             } else {
-                logger.info("Using existing task: " + task.getId());
+                logger.info("Using existing task: {}", task.getId());
             }
             if (isBlockRequest(context)) {
                 processTaskBlocking(context, eventQueue, task, resultFlux);
@@ -73,7 +74,7 @@ public class GraphAgentExecutor implements AgentExecutor {
             logger.info("Agent execution completed successfully");
 
         } catch (Exception e) {
-            logger.severe("Agent execution failed" + e.getMessage());
+            logger.error("Agent execution failed: {}", e.getMessage());
             eventQueue.enqueueEvent(A2A.toAgentMessage("Agent execution failed: " + e.getMessage()));
         }
     }
@@ -151,8 +152,8 @@ public class GraphAgentExecutor implements AgentExecutor {
                             if (output instanceof TextContent text) {
                                 String content = text.getText();
                                 accumulatedOutput.append(content);
-                                logger.info("Appended content chunk (" + content.length() + " chars), total so far: "
-                                        + accumulatedOutput.length());
+                                logger.info("Appended content chunk ({} chars), total so far: {}",
+                                        content.length(), accumulatedOutput.length());
                             }
                         }
                         // Todo: need to know whether the blocking mode should also handle tool calls and responses
@@ -210,7 +211,7 @@ public class GraphAgentExecutor implements AgentExecutor {
                     eventQueue.enqueueEvent(errorMessage);
                 })
                 .doFinally(signal -> {
-                    logger.info("Subscribe and process stream output terminated: " + signal);
+                    logger.info("Subscribe and process stream output terminated: {}", signal);
                     subscriptions.remove(context.getTaskId());
                 })
                 .blockLast();
@@ -223,9 +224,9 @@ public class GraphAgentExecutor implements AgentExecutor {
             eventQueue.enqueueEvent(task);
             logger.info("Starting streaming output processing");
             processStreamingOutput(resultFlux, taskUpdater, accumulatedOutput);
-            logger.info("Streaming output processing completed. Total output length: " + accumulatedOutput.length());
+            logger.info("Streaming output processing completed. Total output length: {}", accumulatedOutput.length());
         } catch (Exception e) {
-            logger.severe("Error processing streaming output" + e.getMessage());
+            logger.error("Error processing streaming output: {}", e.getMessage());
             taskUpdater.fail(taskUpdater.newAgentMessage(
                     List.of(new TextPart("Error processing streaming output: " + e.getMessage())),
                     Map.of()
@@ -266,8 +267,8 @@ public class GraphAgentExecutor implements AgentExecutor {
                                                 false
                                         );
                                         accumulatedOutput.append(content);
-                                        logger.info("Appended content chunk (" + content.length() + " chars), total so far: "
-                                                + accumulatedOutput.length());
+                                        logger.info("Appended content chunk ({} chars), total so far: {}",
+                                                content.length(), accumulatedOutput.length());
                                     }
                                 }
                             } else if (output instanceof Message message) {
@@ -340,7 +341,7 @@ public class GraphAgentExecutor implements AgentExecutor {
                         taskUpdater.fail(errorMessage);
                     })
                     .doFinally(signal -> {
-                        logger.info("Subscribe and process stream output terminated: " + signal);
+                        logger.info("Subscribe and process stream output terminated: {}", signal);
                         subscriptions.remove(taskUpdater.getTaskId());
                     })
                     .blockLast();

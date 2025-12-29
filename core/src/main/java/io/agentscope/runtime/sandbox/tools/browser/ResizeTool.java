@@ -18,16 +18,17 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class ResizeTool extends BrowserSandboxTool {
 
-    Logger logger = Logger.getLogger(ResizeTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ResizeTool.class);
 
     public ResizeTool() {
         super("browser_resize", "browser", "Resize the browser window");
@@ -67,8 +68,7 @@ public class ResizeTool extends BrowserSandboxTool {
             throw new RuntimeException("Only BrowserSandbox supported in browser resize tool");
         } catch (Exception e) {
             String errorMsg = "Browser Resize Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

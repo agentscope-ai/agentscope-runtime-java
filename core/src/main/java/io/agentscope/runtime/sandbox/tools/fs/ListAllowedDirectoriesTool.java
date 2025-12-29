@@ -18,14 +18,15 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class ListAllowedDirectoriesTool extends FsSandboxTool {
 
-    Logger logger = Logger.getLogger(ListAllowedDirectoriesTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ListAllowedDirectoriesTool.class);
 
     public ListAllowedDirectoriesTool() {
         super("fs_list_allowed_directories", "filesystem", "List allowed directories for the current session");
@@ -52,8 +53,7 @@ public class ListAllowedDirectoriesTool extends FsSandboxTool {
             throw new RuntimeException("Only FilesystemSandbox supported in list allowed directories tool");
         } catch (Exception e) {
             String errorMsg = "List Allowed Directories Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

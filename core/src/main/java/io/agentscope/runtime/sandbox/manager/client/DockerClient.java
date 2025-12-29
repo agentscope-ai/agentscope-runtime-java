@@ -28,13 +28,14 @@ import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.PortRange;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.util.PortManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 public class DockerClient extends BaseClient {
-    Logger logger = Logger.getLogger(DockerClient.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(DockerClient.class);
     private com.github.dockerjava.api.DockerClient client;
     private boolean connected = false;
     private DockerClientConfig config;
@@ -75,7 +76,7 @@ public class DockerClient extends BaseClient {
             this.connected = true;
             return true;
         } catch (Exception e) {
-            logger.severe("Failed to connect to Docker: " + e.getMessage());
+            logger.error("Failed to connect to Docker: {}", e.getMessage());
             this.connected = false;
             return false;
         }
@@ -101,7 +102,7 @@ public class DockerClient extends BaseClient {
             if (portManager != null) {
                 portMapping = findFreePorts(ports);
             } else {
-                logger.warning("Ports requested but no PortManager available. Cannot allocate ports.");
+                logger.warn("Ports requested but no PortManager available. Cannot allocate ports.");
             }
         }
 
@@ -111,15 +112,15 @@ public class DockerClient extends BaseClient {
         String containerId = response.getId();
 
         // Store port mapping in cache
-        if (portMapping != null && !portMapping.isEmpty()) {
+        if (!portMapping.isEmpty()) {
             List<Integer> hostPorts = new ArrayList<>(portMapping.values());
             portsCache.put(containerId, hostPorts);
-            logger.fine("Stored port mapping for container " + containerId + ": " + hostPorts);
+            logger.info("Stored port mapping for container {}: {}", containerId, hostPorts);
         }
 
         // Extract ports from portMapping
         List<String> portList = new ArrayList<>();
-        if (portMapping != null && !portMapping.isEmpty()) {
+        if (!portMapping.isEmpty()) {
             for (Integer port : portMapping.values()) {
                 portList.add(String.valueOf(port));
             }
@@ -148,7 +149,7 @@ public class DockerClient extends BaseClient {
             String containerPort = containerPorts.get(i);
             Integer hostPort = freePorts[i];
             portMapping.put(containerPort, hostPort);
-            logger.fine("Mapped container port " + containerPort + " to host port " + hostPort);
+            logger.info("Mapped container port {} to host port {}", containerPort, hostPort);
         }
 
         return portMapping;
@@ -182,7 +183,7 @@ public class DockerClient extends BaseClient {
             for (Integer port : ports) {
                 portManager.releasePort(port);
             }
-            logger.fine("Released " + ports.size() + " port(s) for container " + containerId);
+            logger.info("Released {} port(s) for container {}", ports.size(), containerId);
         }
 
         removeContainer(client, containerId);
@@ -205,9 +206,9 @@ public class DockerClient extends BaseClient {
 
                 if (this.config.getCertPath() != null && !this.config.getCertPath().isEmpty()) {
                     configBuilder.withDockerCertPath(this.config.getCertPath());
-                    logger.info("Connecting to Docker at " + dockerHost + " with TLS");
+                    logger.info("Connecting to Docker at {} with TLS", dockerHost);
                 } else {
-                    logger.info("Connecting to Docker at " + dockerHost + " without TLS");
+                    logger.info("Connecting to Docker at {} without TLS", dockerHost);
                 }
 
                 var config = configBuilder.build();
@@ -223,9 +224,7 @@ public class DockerClient extends BaseClient {
                 logger.info("Successfully connected to Docker using configured host and port");
                 return client;
             } catch (Exception e) {
-                logger.warning("Failed to connect to Docker using configured host (" +
-                        this.config.getHost() + ":" + this.config.getPort() +
-                        "): " + e.getMessage());
+                logger.warn("Failed to connect to Docker using configured host ({}:{}): {}", this.config.getHost(), this.config.getPort(), e.getMessage());
                 logger.info("Falling back to default Docker configuration");
             }
         }
@@ -346,7 +345,7 @@ public class DockerClient extends BaseClient {
 
         // Set runtime configuration from runtimeConfig map
         if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
-            logger.info("Applying runtime configuration: " + runtimeConfig);
+            logger.info("Applying runtime configuration: {}", runtimeConfig);
             hostConfig = applyRuntimeConfig(hostConfig, runtimeConfig);
             createCmd.withHostConfig(hostConfig);
         }
@@ -373,7 +372,7 @@ public class DockerClient extends BaseClient {
             Long memoryLimit = parseMemoryLimit(memLimitObj);
             if (memoryLimit != null) {
                 hostConfig = hostConfig.withMemory(memoryLimit);
-                logger.info("Applied memory limit: " + memoryLimit + " bytes");
+                logger.info("Applied memory limit: {} bytes", memoryLimit);
             }
         }
 
@@ -383,7 +382,7 @@ public class DockerClient extends BaseClient {
             Long nanoCpus = parseNanoCpus(nanoCpusObj);
             if (nanoCpus != null) {
                 hostConfig = hostConfig.withNanoCPUs(nanoCpus);
-                logger.info("Applied nano CPUs: " + nanoCpus);
+                logger.info("Applied nano CPUs: {}", nanoCpus);
             }
         }
 
@@ -393,9 +392,9 @@ public class DockerClient extends BaseClient {
             boolean enableGpu = parseBoolean(enableGpuObj);
             if (enableGpu) {
                 DeviceRequest gpuRequest = new DeviceRequest()
-                        .withCapabilities(Arrays.asList(Arrays.asList("gpu")))
+                        .withCapabilities(List.of(List.of("gpu")))
                         .withCount(-1);
-                hostConfig = hostConfig.withDeviceRequests(Arrays.asList(gpuRequest));
+                hostConfig = hostConfig.withDeviceRequests(Collections.singletonList(gpuRequest));
                 logger.info("Applied GPU support: enabled");
             }
         }
@@ -406,8 +405,8 @@ public class DockerClient extends BaseClient {
             Integer maxConnections = parseInteger(maxConnectionsObj);
             if (maxConnections != null) {
                 Ulimit ulimit = new Ulimit("nofile", maxConnections.longValue(), maxConnections.longValue());
-                hostConfig = hostConfig.withUlimits(Arrays.asList(ulimit));
-                logger.info("Applied max connections (nofile limit): " + maxConnections);
+                hostConfig = hostConfig.withUlimits(List.of(ulimit));
+                logger.info("Applied max connections (nofile limit): {}", maxConnections);
             }
         }
 
@@ -416,7 +415,7 @@ public class DockerClient extends BaseClient {
             Object privilegedObj = runtimeConfig.get("privileged");
             boolean privileged = parseBoolean(privilegedObj);
             hostConfig = hostConfig.withPrivileged(privileged);
-            logger.info("Applied privileged mode: " + privileged);
+            logger.info("Applied privileged mode: {}", privileged);
         }
 
         return hostConfig;
@@ -449,27 +448,19 @@ public class DockerClient extends BaseClient {
 
             double value = Double.parseDouble(numberPart);
 
-            switch (unitPart) {
-                case "k":
-                case "kb":
-                    return (long) (value * 1024);
-                case "m":
-                case "mb":
-                    return (long) (value * 1024 * 1024);
-                case "g":
-                case "gb":
-                    return (long) (value * 1024 * 1024 * 1024);
-                case "t":
-                case "tb":
-                    return (long) (value * 1024 * 1024 * 1024 * 1024);
-                case "":
-                    return (long) value;
-                default:
-                    logger.warning("Unknown memory unit: " + unitPart);
-                    return null;
-            }
+            return switch (unitPart) {
+                case "k", "kb" -> (long) (value * 1024);
+                case "m", "mb" -> (long) (value * 1024 * 1024);
+                case "g", "gb" -> (long) (value * 1024 * 1024 * 1024);
+                case "t", "tb" -> (long) (value * 1024 * 1024 * 1024 * 1024);
+                case "" -> (long) value;
+                default -> {
+                    logger.warn("Unknown memory unit: {}", unitPart);
+                    yield null;
+                }
+            };
         } catch (NumberFormatException e) {
-            logger.warning("Failed to parse memory limit: " + memLimitStr);
+            logger.warn("Failed to parse memory limit: {}", memLimitStr);
             return null;
         }
     }
@@ -492,7 +483,7 @@ public class DockerClient extends BaseClient {
         try {
             return Long.parseLong(nanoCpusObj.toString());
         } catch (NumberFormatException e) {
-            logger.warning("Failed to parse nano CPUs: " + nanoCpusObj);
+            logger.warn("Failed to parse nano CPUs: {}", nanoCpusObj);
             return null;
         }
     }
@@ -515,7 +506,7 @@ public class DockerClient extends BaseClient {
         try {
             return Integer.parseInt(obj.toString());
         } catch (NumberFormatException e) {
-            logger.warning("Failed to parse integer: " + obj);
+            logger.warn("Failed to parse integer: {}", obj);
             return null;
         }
     }
@@ -548,9 +539,9 @@ public class DockerClient extends BaseClient {
     public void startContainer(com.github.dockerjava.api.DockerClient client, String containerId) {
         try {
             client.startContainerCmd(containerId).exec();
-            logger.info("Container started successfully: " + containerId);
+            logger.info("Container started successfully: {}", containerId);
         } catch (Exception e) {
-            logger.severe("Failed to start container: " + e.getMessage());
+            logger.error("Failed to start container: {}", e.getMessage());
         }
     }
 
@@ -565,12 +556,12 @@ public class DockerClient extends BaseClient {
             String status = getContainerStatus(client, containerId);
             if ("running".equals(status)) {
                 client.stopContainerCmd(containerId).exec();
-                logger.info("Container stopped successfully: " + containerId);
+                logger.info("Container stopped successfully: {}", containerId);
             } else {
-                logger.info("Container is already stopped, status: " + status);
+                logger.info("Container is already stopped, status: {}", status);
             }
         } catch (Exception e) {
-            System.err.println("Failed to stop container: " + e.getMessage());
+            logger.error("Failed to stop container: {}", e.getMessage());
         }
     }
 
@@ -586,10 +577,9 @@ public class DockerClient extends BaseClient {
                     .withForce(true)
                     .withRemoveVolumes(true)
                     .exec();
-            logger.info("Container deleted successfully: " + containerId);
+            logger.info("Container deleted successfully: {}", containerId);
         } catch (Exception e) {
-            System.err.println("Failed to delete container: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to delete container: {}", e.getMessage());
         }
     }
 
@@ -605,7 +595,7 @@ public class DockerClient extends BaseClient {
             InspectContainerResponse response = client.inspectContainerCmd(containerId).exec();
             return response.getState().getStatus();
         } catch (Exception e) {
-            System.err.println("Failed to get container status: " + e.getMessage());
+            logger.error("Failed to get container status: {}", e.getMessage());
             return "unknown";
         }
     }
@@ -665,16 +655,16 @@ public class DockerClient extends BaseClient {
                 if (repoTags != null) {
                     for (String repoTag : repoTags) {
                         if (repoTag.equals(imageName)) {
-                            logger.info("Image found locally: " + imageName);
+                            logger.info("Image found locally: {}", imageName);
                             return true;
                         }
                     }
                 }
             }
-            logger.info("Image not found locally: " + imageName);
+            logger.info("Image not found locally: {}", imageName);
             return false;
         } catch (Exception e) {
-            logger.severe("Failed to check if image exists: " + e.getMessage());
+            logger.error("Failed to check if image exists: {}", e.getMessage());
             return false;
         }
     }
@@ -688,7 +678,7 @@ public class DockerClient extends BaseClient {
      */
     public boolean pullImage(com.github.dockerjava.api.DockerClient client, String imageName) {
         try {
-            logger.info("Pulling image: " + imageName);
+            logger.info("Pulling image: {}", imageName);
 
             PullImageCmd pullCmd = client.pullImageCmd(imageName);
 
@@ -696,18 +686,18 @@ public class DockerClient extends BaseClient {
                 @Override
                 public void onNext(PullResponseItem item) {
                     if (item.getStatus() != null) {
-                        logger.info("Pull progress: " + item.getStatus());
+                        logger.info("Pull progress: {}", item.getStatus());
                     }
                     if (item.getErrorDetail() != null) {
-                        logger.warning("Pull error: " + item.getErrorDetail().getMessage());
+                        logger.warn("Pull error: {}", item.getErrorDetail().getMessage());
                     }
                 }
             }).awaitCompletion();
 
-            logger.info("Successfully pulled image: " + imageName);
+            logger.info("Successfully pulled image: {}", imageName);
             return true;
         } catch (Exception e) {
-            logger.severe("Failed to pull image " + imageName + ": " + e.getMessage());
+            logger.error("Failed to pull image {}: {}", imageName, e.getMessage());
             return false;
         }
     }

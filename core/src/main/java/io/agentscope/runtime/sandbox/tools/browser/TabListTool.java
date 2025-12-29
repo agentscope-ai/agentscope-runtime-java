@@ -18,16 +18,17 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
-import java.util.logging.Logger;
 
 /**
  * Browser tab list tool
  */
 public class TabListTool extends BrowserSandboxTool {
 
-    Logger logger = Logger.getLogger(TabListTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(TabListTool.class);
 
     public TabListTool() {
         super("browser_tab_list", "browser", "List all browser tabs");
@@ -51,8 +52,7 @@ public class TabListTool extends BrowserSandboxTool {
             throw new RuntimeException("Only BrowserSandbox supported in browser tab list tool");
         } catch (Exception e) {
             String errorMsg = "Browser Tab List Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

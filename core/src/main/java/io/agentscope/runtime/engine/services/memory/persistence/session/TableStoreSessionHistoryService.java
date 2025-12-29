@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 
 import com.alicloud.openservices.tablestore.SyncClient;
 import com.aliyun.openservices.tablestore.agent.memory.MemoryStoreImpl;
@@ -38,6 +37,8 @@ import io.agentscope.runtime.engine.schemas.Message;
 import io.agentscope.runtime.engine.schemas.Session;
 import io.agentscope.runtime.engine.schemas.TextContent;
 import io.agentscope.runtime.engine.services.memory.service.SessionHistoryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * TableStore-based implementation of session history service
@@ -45,7 +46,7 @@ import io.agentscope.runtime.engine.services.memory.service.SessionHistoryServic
  */
 public class TableStoreSessionHistoryService implements SessionHistoryService {
 
-    private static final Logger logger = Logger.getLogger(TableStoreSessionHistoryService.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(TableStoreSessionHistoryService.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static final String SESSION_SECONDARY_INDEX_NAME = "agentscope_runtime_session_secondary_index";
@@ -109,8 +110,7 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
                     .build();
 
             memoryStore.initTable();
-            logger.info("TableStore session history service started with tables: " +
-                       sessionTableName + ", " + messageTableName);
+            logger.info("TableStore session history service started with tables: {}, {}", sessionTableName, messageTableName);
         });
     }
 
@@ -128,7 +128,7 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
     public CompletableFuture<Boolean> health() {
         return CompletableFuture.supplyAsync(() -> {
             if (memoryStore == null) {
-                logger.warning("TableStore session history service is not started");
+                logger.warn("TableStore session history service is not started");
                 return false;
             }
 
@@ -137,7 +137,7 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
                 memoryStore.listAllSessions();
                 return true;
             } catch (Exception e) {
-                logger.severe("TableStore session history service health check failed: " + e.getMessage());
+                logger.error("TableStore session history service health check failed: {}", e.getMessage());
                 return false;
             }
         });
@@ -155,7 +155,7 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
             memoryStore.putSession(tablestoreSession);
 
             Session session = new Session(sid, userId, new ArrayList<>());
-            logger.fine("Created session: " + sid + " for user: " + userId);
+            logger.info("Created session: {} for user: {}", sid, userId);
 
             return session;
         });
@@ -196,7 +196,7 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
     public CompletableFuture<Void> deleteSession(String userId, String sessionId) {
         return CompletableFuture.runAsync(() -> {
             memoryStore.deleteSessionAndMessages(userId, sessionId);
-            logger.fine("Deleted session: " + sessionId + " for user: " + userId);
+            logger.info("Deleted session: {} for user: {}", sessionId, userId);
         });
     }
 
@@ -254,10 +254,9 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
                     memoryStore.putMessage(tablestoreMessage);
                 }
 
-                logger.fine("Appended " + messages.size() + " messages to session: " + session.getId());
+                logger.info("Appended {} messages to session: {}", messages.size(), session.getId());
             } else {
-                logger.severe("Warning: Session " + session.getId() +
-                             " not found in TableStore storage for append_message.");
+                logger.error("Warning: Session {} not found in TableStore storage for append_message.", session.getId());
             }
         });
     }
@@ -301,7 +300,7 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
                 metadata.put("message_metadata", messageMetadataJson);
             }
         } catch (Exception e) {
-            logger.severe("Failed to serialize message: " + e.getMessage());
+            logger.error("Failed to serialize message: {}", e.getMessage());
         }
 
         tablestoreMessage.setMetadata(metadata);
@@ -366,7 +365,7 @@ public class TableStoreSessionHistoryService implements SessionHistoryService {
             }
 
         } catch (Exception e) {
-            logger.severe("Failed to deserialize message: " + e.getMessage());
+            logger.error("Failed to deserialize message: {}", e.getMessage());
         }
 
         return message;

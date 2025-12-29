@@ -18,6 +18,8 @@ package io.agentscope.runtime.sandbox.manager.util;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -27,11 +29,9 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class TrainingSandboxClient extends SandboxClient {
-    private static final Logger logger = Logger.getLogger(TrainingSandboxClient.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(TrainingSandboxClient.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final String baseUrl;
@@ -104,7 +104,7 @@ public class TrainingSandboxClient extends SandboxClient {
 
         while (System.currentTimeMillis() - startTime < timeoutMillis) {
             if (checkHealth()) {
-                logger.info("Training sandbox service is healthy: " + baseUrl);
+                logger.info("Training sandbox service is healthy: {}", baseUrl);
                 return;
             }
 
@@ -160,7 +160,7 @@ public class TrainingSandboxClient extends SandboxClient {
                     HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                logger.warning("Request failed: HTTP " + response.statusCode());
+                logger.warn("Request failed: HTTP {}", response.statusCode());
                 Map<String, Object> error = new HashMap<>();
                 error.put("error", "HTTP " + response.statusCode() + ": " + response.body());
                 return error;
@@ -170,8 +170,7 @@ public class TrainingSandboxClient extends SandboxClient {
             Map<String, Object> result = objectMapper.readValue(response.body(), Map.class);
             return result;
         } catch (Exception e) {
-            logger.severe("Error making request to " + endpoint + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error making request to {}: {}", endpoint, e.getMessage());
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
             return error;
@@ -224,7 +223,7 @@ public class TrainingSandboxClient extends SandboxClient {
         try {
             return objectMapper.writeValueAsString(response.get("data"));
         } catch (Exception e) {
-            logger.warning("Failed to serialize env profile data: " + e.getMessage());
+            logger.warn("Failed to serialize env profile data: {}", e.getMessage());
             return response.get("data").toString();
         }
     }
@@ -256,15 +255,15 @@ public class TrainingSandboxClient extends SandboxClient {
                     Map<String, Object> dataMap = (Map<String, Object>) data;
                     return dataMap;
                 } else {
-                    logger.warning("Unexpected 'data' type: " + (data != null ? data.getClass() : "null"));
+                    logger.warn("Unexpected 'data' type: {}", data != null ? data.getClass() : "null");
                     return new HashMap<>();
                 }
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "Failed to parse tools info data", e);
+                logger.error("Failed to parse tools info data{}", String.valueOf(e));
                 return new HashMap<>();
             }
         } catch (Exception e) {
-            logger.warning("Failed to serialize tools info data: " + e.getMessage());
+            logger.warn("Failed to serialize tools info data: {}", e.getMessage());
             return null;
         }
     }
@@ -290,7 +289,7 @@ public class TrainingSandboxClient extends SandboxClient {
         try {
             return objectMapper.writeValueAsString(response.get("data"));
         } catch (Exception e) {
-            logger.warning("Failed to serialize create instance data: " + e.getMessage());
+            logger.warn("Failed to serialize create instance data: {}", e.getMessage());
             return response.get("data").toString();
         }
     }
@@ -315,7 +314,7 @@ public class TrainingSandboxClient extends SandboxClient {
         try {
             return objectMapper.writeValueAsString(response.get("data"));
         } catch (Exception e) {
-            logger.warning("Failed to serialize step data: " + e.getMessage());
+            logger.warn("Failed to serialize step data: {}", e.getMessage());
             return response.get("data").toString();
         }
     }
@@ -340,7 +339,7 @@ public class TrainingSandboxClient extends SandboxClient {
         try {
             return objectMapper.writeValueAsString(response.get("data"));
         } catch (Exception e) {
-            logger.warning("Failed to serialize evaluate data: " + e.getMessage());
+            logger.warn("Failed to serialize evaluate data: {}", e.getMessage());
             return response.get("data").toString();
         }
     }
@@ -349,7 +348,7 @@ public class TrainingSandboxClient extends SandboxClient {
      * Release a training instance
      *
      * @param instanceId Instance ID
-     * @return true if released successfully
+     * @return "success" if released successfully
      */
     public String releaseInstance(String instanceId) {
         Map<String, Object> response = makeRequest(
@@ -376,39 +375,34 @@ public class TrainingSandboxClient extends SandboxClient {
             return null;
         }
 
-        switch (name) {
-            case "create_instance":
-                return createInstance(
-                        (String) arguments.get("env_type"),
-                        (String) arguments.get("task_id"),
-                        (String) arguments.get("instance_id"),
-                        getMapOrEmpty(arguments, "params")
-                );
-            case "release_instance":
-                return releaseInstance((String) arguments.get("instance_id"));
-            case "evaluate":
-                return evaluate(
-                        (String) arguments.get("instance_id"),
-                        getMapOrEmpty(arguments, "messages"),
-                        getMapOrEmpty(arguments, "params")
-                );
-            case "step":
-                return step(
-                        (String) arguments.get("instance_id"),
-                        getMapOrEmpty(arguments, "action"),
-                        getMapOrEmpty(arguments, "params")
-                );
-            case "get_task_ids":
-            case "get_env_profile":
-                return getEnvProfile(
-                        (String) arguments.get("env_type"),
-                        (String) arguments.getOrDefault("split", "train"),
-                        getMapOrEmpty(arguments, "params")
-                );
-            default:
-                logger.warning("Unknown tool name: " + name);
-                return null;
-        }
+        return switch (name) {
+            case "create_instance" -> createInstance(
+                    (String) arguments.get("env_type"),
+                    (String) arguments.get("task_id"),
+                    (String) arguments.get("instance_id"),
+                    getMapOrEmpty(arguments, "params")
+            );
+            case "release_instance" -> releaseInstance((String) arguments.get("instance_id"));
+            case "evaluate" -> evaluate(
+                    (String) arguments.get("instance_id"),
+                    getMapOrEmpty(arguments, "messages"),
+                    getMapOrEmpty(arguments, "params")
+            );
+            case "step" -> step(
+                    (String) arguments.get("instance_id"),
+                    getMapOrEmpty(arguments, "action"),
+                    getMapOrEmpty(arguments, "params")
+            );
+            case "get_task_ids", "get_env_profile" -> getEnvProfile(
+                    (String) arguments.get("env_type"),
+                    (String) arguments.getOrDefault("split", "train"),
+                    getMapOrEmpty(arguments, "params")
+            );
+            default -> {
+                logger.warn("Unknown tool name: {}", name);
+                yield null;
+            }
+        };
     }
 
     @SuppressWarnings("unchecked")

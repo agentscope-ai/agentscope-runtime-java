@@ -15,15 +15,17 @@
  */
 package io.agentscope.runtime.sandbox.manager.registry;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class SandboxRegistryInitializer {
-    private static final Logger logger = Logger.getLogger(SandboxRegistryInitializer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SandboxRegistryInitializer.class);
     private static boolean initialized = false;
 
     static {
@@ -47,7 +49,7 @@ public class SandboxRegistryInitializer {
             initialized = true;
             logger.info("SandboxRegistryService initialization completed successfully");
         } catch (Exception e) {
-            logger.severe("Failed to initialize SandboxRegistryService: " + e.getMessage());
+            logger.error("Failed to initialize SandboxRegistryService: {}", e.getMessage());
             throw new RuntimeException("Failed to initialize SandboxRegistryService", e);
         }
     }
@@ -60,7 +62,7 @@ public class SandboxRegistryInitializer {
             try {
                 Collection<Class<?>> classes = provider.getSandboxClasses();
                 if (classes == null) {
-                    logger.fine("Provider " + provider.getClass().getName() + " returned null class list, skipping");
+                    logger.info("Provider {} returned null class list, skipping", provider.getClass().getName());
                     continue;
                 }
 
@@ -72,23 +74,21 @@ public class SandboxRegistryInitializer {
                     registered.add(clazz);
                 }
 
-                logger.info("Sandbox SPI provider loaded: " + provider.getClass().getName()
-                        + ", provided=" + classes.size());
+                logger.info("Sandbox SPI provider loaded: {}, provided={}", provider.getClass().getName(), classes.size());
             } catch (Exception e) {
-                logger.warning("Failed to load sandboxes from provider " + provider.getClass().getName()
-                        + ": " + e.getMessage());
+                logger.warn("Failed to load sandboxes from provider {}: {}", provider.getClass().getName(), e.getMessage());
             }
         }
 
         if (registered.isEmpty()) {
-            logger.warning("No sandbox classes discovered via SPI; registry is empty until providers are added.");
+            logger.warn("No sandbox classes discovered via SPI; registry is empty until providers are added.");
             return;
         }
 
         String summary = registered.stream()
                 .map(Class::getSimpleName)
                 .collect(Collectors.joining(", "));
-        logger.info("Registered sandboxes via SPI: " + summary);
+        logger.info("Registered sandboxes via SPI: {}", summary);
     }
 
 

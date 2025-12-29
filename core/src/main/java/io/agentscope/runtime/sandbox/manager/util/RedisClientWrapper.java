@@ -20,18 +20,19 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
 
 /**
  * Redis Client wrapper for managing Redis connections and operations
  * Uses Lettuce as the underlying Redis client
  */
 public class RedisClientWrapper implements AutoCloseable {
-    
-    private static final Logger logger = Logger.getLogger(RedisClientWrapper.class.getName());
+
+    private static final Logger logger = LoggerFactory.getLogger(RedisClientWrapper.class);
     
     private final RedisClient redisClient;
     private final StatefulRedisConnection<String, String> connection;
@@ -43,7 +44,7 @@ public class RedisClientWrapper implements AutoCloseable {
      * @param config Redis manager configuration
      */
     public RedisClientWrapper(RedisManagerConfig config) {
-        logger.info("Initializing Redis client with server: " + config.getRedisServer() + ":" + config.getRedisPort());
+        logger.info("Initializing Redis client with server: {}:{}", config.getRedisServer(), config.getRedisPort());
         
         RedisURI.Builder uriBuilder = RedisURI.builder()
                 .withHost(config.getRedisServer())

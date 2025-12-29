@@ -22,6 +22,8 @@ import com.aliyun.teaopenapi.models.Config;
 import com.aliyun.teautil.models.RuntimeOptions;
 import io.agentscope.runtime.sandbox.manager.client.config.FcClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,10 +33,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 public class FcClient extends BaseClient {
-    private static final Logger logger = Logger.getLogger(FcClient.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(FcClient.class);
     private static final String HTTPS_PROTOCOL = "https";
     private static final int HTTPS_PORT = 443;
 
@@ -51,7 +52,7 @@ public class FcClient extends BaseClient {
         this.functionPrefix = fcClientConfig.getFcPrefix() != null ? fcClientConfig.getFcPrefix() : "agentscope-sandbox";
         this.fcClient = createFcClient();
 
-        logger.info("FunctionComputeClient initialized successfully with config: " + fcClientConfig);
+        logger.info("FunctionComputeClient initialized successfully with config: {}", fcClientConfig);
 
         testConnection();
     }
@@ -76,12 +77,12 @@ public class FcClient extends BaseClient {
 
             if (response != null && response.getBody() != null && response.getBody().getFunctions() != null) {
                 int funcCount = response.getBody().getFunctions().size();
-                logger.info("FunctionComputeClient FC connection test successful: " + funcCount + " functions");
+                logger.info("FunctionComputeClient FC connection test successful: {} functions", funcCount);
                 this.connected = true;
             }
         } catch (Exception e) {
-            logger.warning("FunctionComputeClient FC connection test failed: " + e.getMessage());
-            logger.warning("FunctionComputeClient This may not affect normal usage. If there are permission issues, please check AccessKey permission configuration.");
+            logger.warn("FunctionComputeClient FC connection test failed: {}", e.getMessage());
+            logger.warn("FunctionComputeClient This may not affect normal usage. If there are permission issues, please check AccessKey permission configuration.");
         }
     }
 
@@ -141,7 +142,7 @@ public class FcClient extends BaseClient {
             healthCheckConfig.setTimeoutSeconds(1);
             customContainerConfig.setHealthCheckConfig(healthCheckConfig);
 
-            logger.info("FunctionComputeClient building custom health check configuration: " + healthCheckConfig);
+            logger.info("FunctionComputeClient building custom health check configuration: {}", healthCheckConfig);
 
             // 3. Build function creation parameters
             CreateFunctionInput createFunctionInput = new CreateFunctionInput();
@@ -169,7 +170,7 @@ public class FcClient extends BaseClient {
                 logConfig.setEnableInstanceMetrics(true);
                 logConfig.setLogBeginRule("DefaultRegex");
                 createFunctionInput.setLogConfig(logConfig);
-                logger.info("Configuring log service: " + fcClientConfig.getFcLogProject() + "/" + fcClientConfig.getFcLogStore());
+                logger.info("Configuring log service: {}/{}", fcClientConfig.getFcLogProject(), fcClientConfig.getFcLogStore());
             }
 
             // 5. If VPC configuration exists
@@ -179,7 +180,7 @@ public class FcClient extends BaseClient {
                 vpcConfig.setVSwitchIds(fcClientConfig.getFcVswitchIds());
                 vpcConfig.setSecurityGroupId(fcClientConfig.getFcSecurityGroupId());
                 createFunctionInput.setVpcConfig(vpcConfig);
-                logger.info("Configuring VPC network: " + fcClientConfig.getFcVpcId());
+                logger.info("Configuring VPC network: {}", fcClientConfig.getFcVpcId());
             }
 
             // 6. Create function
@@ -192,9 +193,9 @@ public class FcClient extends BaseClient {
             CreateFunctionResponse response = fcClient.createFunctionWithOptions(createFunctionRequest, headers, runtimeOptions);
 
             logger.info("FunctionComputeClient function created successfully!");
-            logger.info("FunctionComputeClient function name: " + response.getBody().getFunctionName());
-            logger.info("FunctionComputeClient runtime: " + response.getBody().getRuntime());
-            logger.info("FunctionComputeClient create time: " + response.getBody().getCreatedTime());
+            logger.info("FunctionComputeClient function name: {}", response.getBody().getFunctionName());
+            logger.info("FunctionComputeClient runtime: {}", response.getBody().getRuntime());
+            logger.info("FunctionComputeClient create time: {}", response.getBody().getCreatedTime());
 
             // 7. Create HTTP trigger
             Map<String, String> triggerInfo = createHttpTrigger(functionName, sessionId);
@@ -210,7 +211,7 @@ public class FcClient extends BaseClient {
                     Thread.currentThread().interrupt();
                     throw new RuntimeException("Interrupted while waiting for function to be ready", e);
                 }
-                logger.info("Check function deployment status, function name: " + functionName);
+                logger.info("Check function deployment status, function name: {}", functionName);
             }
 
             // 9. Create session data
@@ -233,7 +234,7 @@ public class FcClient extends BaseClient {
             // 10. Register session
             fcSessionManager.createSession(sessionId, sessionData);
 
-            logger.info("FunctionComputeClient FC function " + sessionId + " created and registered session successfully");
+            logger.info("FunctionComputeClient FC function {} created and registered session successfully", sessionId);
 
             // 11. Parse URL
             URI parsedUrl;
@@ -253,16 +254,16 @@ public class FcClient extends BaseClient {
             return new ContainerCreateResult(sessionId, resultPorts, endpointPublicUrlDomain, HTTPS_PROTOCOL);
 
         } catch (Exception e) {
-            logger.severe("Create FC function failed: " + e.getMessage());
+            logger.error("Create FC function failed: {}", e.getMessage());
             // Provide more detailed error information
             String errorMsg = e.getMessage();
             if (errorMsg != null) {
                 if (errorMsg.contains("InvalidAccessKeyId")) {
-                    logger.severe("Authentication failed, please check if FC_ACCESS_KEY_ID is correct");
+                    logger.error("Authentication failed, please check if FC_ACCESS_KEY_ID is correct");
                 } else if (errorMsg.contains("SignatureDoesNotMatch")) {
-                    logger.severe("Signature mismatch, please check if FC_ACCESS_KEY_SECRET is correct");
+                    logger.error("Signature mismatch, please check if FC_ACCESS_KEY_SECRET is correct");
                 } else if (errorMsg.contains("Forbidden")) {
-                    logger.severe("Insufficient permissions, please check if AccessKey has FC service permissions");
+                    logger.error("Insufficient permissions, please check if AccessKey has FC service permissions");
                 }
             }
             throw new RuntimeException("FC function creation failed: " + e.getMessage(), e);
@@ -273,7 +274,7 @@ public class FcClient extends BaseClient {
     public void startContainer(String containerId) {
         Map<String, Object> session = fcSessionManager.getSession(containerId);
         if (session == null) {
-            logger.warning("FunctionComputeClient session record not found: " + containerId);
+            logger.warn("FunctionComputeClient session record not found: {}", containerId);
             return;
         }
 
@@ -286,7 +287,7 @@ public class FcClient extends BaseClient {
                 Thread.sleep(interval * 1000L);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                logger.warning("Interrupted while waiting for FC function to start");
+                logger.warn("Interrupted while waiting for FC function to start");
                 return;
             }
             String functionStatus = getContainerStatus(containerId);
@@ -295,14 +296,14 @@ public class FcClient extends BaseClient {
                 break;
             }
 
-            logger.info("FunctionComputeClient waiting for FC function to be ready... (" + (i + 1) + "/" + maxRetries + ") | " +
-                    "Current status: " + functionStatus + ", session: " + containerId);
+            logger.info("FunctionComputeClient waiting for FC function to be ready... ({}/{}) | Current status: {}, session: {}",
+                    i + 1, maxRetries, functionStatus, containerId);
         }
 
         String finalStatus = getContainerStatus(containerId);
         if (!"running".equals(finalStatus)) {
-            logger.warning("FunctionComputeClient start timeout: Waiting for FC function to enter running state exceeded " + timeoutSeconds +
-                    " seconds, final status: " + finalStatus + ", session: " + containerId);
+            logger.warn("FunctionComputeClient start timeout: Waiting for FC function to enter running state exceeded {} seconds, final status: {}, session: {}",
+                    timeoutSeconds, finalStatus, containerId);
             return;
         }
 
@@ -310,14 +311,14 @@ public class FcClient extends BaseClient {
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", "running");
         fcSessionManager.updateSession(containerId, updates);
-        logger.info("FunctionComputeClient FC function started: " + containerId);
+        logger.info("FunctionComputeClient FC function started: {}", containerId);
     }
 
     @Override
     public void stopContainer(String containerId) {
         Map<String, Object> session = fcSessionManager.getSession(containerId);
         if (session == null) {
-            logger.warning("FunctionComputeClient session record not found: " + containerId);
+            logger.warn("FunctionComputeClient session record not found: {}", containerId);
             return;
         }
 
@@ -327,9 +328,9 @@ public class FcClient extends BaseClient {
             Map<String, Object> updates = new HashMap<>();
             updates.put("status", "stopped");
             fcSessionManager.updateSession(containerId, updates);
-            logger.info("FunctionComputeClient FC function status set to stopped: " + containerId);
+            logger.info("FunctionComputeClient FC function status set to stopped: {}", containerId);
         } catch (Exception e) {
-            logger.severe("FunctionComputeClient stop FC function failed " + containerId + ": " + e.getMessage());
+            logger.error("FunctionComputeClient stop FC function failed {}: {}", containerId, e.getMessage());
         }
     }
 
@@ -341,7 +342,7 @@ public class FcClient extends BaseClient {
     public void removeContainer(String containerId, boolean force) {
         Map<String, Object> session = fcSessionManager.getSession(containerId);
         if (session == null) {
-            logger.warning("FunctionComputeClient session record not found, skipping deletion: " + containerId);
+            logger.warn("FunctionComputeClient session record not found, skipping deletion: {}", containerId);
             return;
         }
 
@@ -349,15 +350,15 @@ public class FcClient extends BaseClient {
         String triggerName = (String) session.get("trigger_name");
 
         try {
-            logger.info("FunctionComputeClient starting to delete FC function: " + functionName);
+            logger.info("FunctionComputeClient starting to delete FC function: {}", functionName);
 
             // 1. Delete trigger first (if exists)
             if (triggerName != null) {
                 try {
                     fcClient.deleteTriggerWithOptions(functionName, triggerName, new HashMap<>(), new RuntimeOptions());
-                    logger.info("FunctionComputeClient trigger deleted: " + triggerName);
+                    logger.info("FunctionComputeClient trigger deleted: {}", triggerName);
                 } catch (Exception triggerError) {
-                    logger.warning("FunctionComputeClient delete trigger failed (continuing to delete function): " + triggerError.getMessage());
+                    logger.warn("FunctionComputeClient delete trigger failed (continuing to delete function): {}", triggerError.getMessage());
                 }
             }
 
@@ -367,13 +368,13 @@ public class FcClient extends BaseClient {
             // 3. Delete session record
             fcSessionManager.deleteSession(containerId);
 
-            logger.info("FunctionComputeClient FC function deleted successfully: " + functionName);
+            logger.info("FunctionComputeClient FC function deleted successfully: {}", functionName);
         } catch (Exception e) {
-            logger.severe("FunctionComputeClient delete FC function failed: " + e.getMessage());
+            logger.error("FunctionComputeClient delete FC function failed: {}", e.getMessage());
             if (force) {
                 // Force cleanup - delete session record even if API call fails
                 fcSessionManager.deleteSession(containerId);
-                logger.warning("FunctionComputeClient force delete session record: " + containerId);
+                logger.warn("FunctionComputeClient force delete session record: {}", containerId);
             } else {
                 throw new RuntimeException("FunctionComputeClient FC function removal failed: " + e.getMessage(), e);
             }
@@ -384,7 +385,7 @@ public class FcClient extends BaseClient {
     public String getContainerStatus(String containerId) {
         Map<String, Object> session = fcSessionManager.getSession(containerId);
         if (session == null) {
-            logger.warning("FunctionComputeClient session record not found: " + containerId);
+            logger.warn("FunctionComputeClient session record not found: {}", containerId);
             return "not_found";
         }
 
@@ -406,7 +407,7 @@ public class FcClient extends BaseClient {
     public boolean inspectContainer(String containerIdOrName) {
         Map<String, Object> session = fcSessionManager.getSession(containerIdOrName);
         if (session == null) {
-            logger.warning("FunctionComputeClient session record not found: " + containerIdOrName);
+            logger.warn("FunctionComputeClient session record not found: {}", containerIdOrName);
             return false;
         }
 
@@ -416,11 +417,11 @@ public class FcClient extends BaseClient {
             functionQueryRequest.setQualifier("LATEST");
 
             GetFunctionResponse response = fcClient.getFunction(functionName, functionQueryRequest);
-            logger.info("FunctionComputeClient function inspect: " + response);
+            logger.info("FunctionComputeClient function inspect: {}", response);
 
             return response != null && response.getBody() != null;
         } catch (Exception e) {
-            logger.severe("FunctionComputeClient get FC function information failed: " + e.getMessage());
+            logger.error("FunctionComputeClient get FC function information failed: {}", e.getMessage());
             return false;
         }
     }
@@ -435,7 +436,7 @@ public class FcClient extends BaseClient {
             String status = getFunctionStatus(functionName);
             return "running".equals(status);
         } catch (Exception e) {
-            logger.severe("Error checking function status: " + e.getMessage());
+            logger.error("Error checking function status: {}", e.getMessage());
             return false;
         }
     }
@@ -462,7 +463,7 @@ public class FcClient extends BaseClient {
                 return "unknown";
             }
         } catch (Exception e) {
-            logger.severe("FunctionComputeClient get FC function status failed: " + e.getMessage());
+            logger.error("FunctionComputeClient get FC function status failed: {}", e.getMessage());
             // If API call fails, return status from session
             return "unknown";
         }
@@ -482,7 +483,7 @@ public class FcClient extends BaseClient {
         String triggerName = "sandbox-http-trigger-" + sessionId;
 
         try {
-            logger.info("FunctionComputeClient creating HTTP trigger: " + triggerName);
+            logger.info("FunctionComputeClient creating HTTP trigger: {}", triggerName);
 
             // Build trigger configuration as JSON string
             // Format: {"authType":"anonymous","methods":["GET","POST","PUT","DELETE","HEAD","OPTIONS"]}
@@ -503,8 +504,8 @@ public class FcClient extends BaseClient {
             RuntimeOptions runtime = new RuntimeOptions();
             CreateTriggerResponse response = fcClient.createTriggerWithOptions(functionName, createTriggerRequest, new HashMap<>(), runtime);
 
-            logger.info("FunctionComputeClient HTTP trigger created successfully: " + triggerName);
-            logger.info("FunctionComputeClient HTTP trigger response: " + response);
+            logger.info("FunctionComputeClient HTTP trigger created successfully: {}", triggerName);
+            logger.info("FunctionComputeClient HTTP trigger response: {}", response);
 
             // Extract trigger information from response
             Map<String, String> triggerInfo = new HashMap<>();
@@ -544,13 +545,13 @@ public class FcClient extends BaseClient {
             }
 
             logger.info("FunctionComputeClient trigger URL information:");
-            logger.info("FunctionComputeClient   - Internet URL: " + triggerInfo.get("url_internet"));
-            logger.info("FunctionComputeClient   - Intranet URL: " + triggerInfo.get("url_intranet"));
-            logger.info("FunctionComputeClient   - Trigger ID: " + triggerInfo.get("trigger_id"));
+            logger.info("FunctionComputeClient   - Internet URL: {}", triggerInfo.get("url_internet"));
+            logger.info("FunctionComputeClient   - Intranet URL: {}", triggerInfo.get("url_intranet"));
+            logger.info("FunctionComputeClient   - Trigger ID: {}", triggerInfo.get("trigger_id"));
 
             return triggerInfo;
         } catch (Exception e) {
-            logger.severe("FunctionComputeClient create HTTP trigger failed: " + e.getMessage());
+            logger.error("FunctionComputeClient create HTTP trigger failed: {}", e.getMessage());
             // Even if creation fails, return basic information for subsequent cleanup
             Map<String, String> triggerInfo = new HashMap<>();
             triggerInfo.put("trigger_name", triggerName);
@@ -588,12 +589,12 @@ public class FcClient extends BaseClient {
 }
 
 class FCSessionManager {
-    private static final Logger logger = Logger.getLogger(FCSessionManager.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(FCSessionManager.class);
     private final Map<String, Map<String, Object>> sessionMap = new ConcurrentHashMap<>();
 
     public void createSession(String sessionId, Map<String, Object> sessionData) {
         this.sessionMap.put(sessionId, sessionData);
-        logger.info("Created FC session: " + sessionId);
+        logger.info("Created FC session: {}", sessionId);
     }
 
     public Map<String, Object> getSession(String sessionId) {
@@ -604,13 +605,13 @@ class FCSessionManager {
         Map<String, Object> session = this.sessionMap.get(sessionId);
         if (session != null) {
             session.putAll(updates);
-            logger.info("Updated FC session: " + sessionId);
+            logger.info("Updated FC session: {}", sessionId);
         }
     }
 
     public void deleteSession(String sessionId) {
         this.sessionMap.remove(sessionId);
-        logger.info("Deleted FC session: " + sessionId);
+        logger.info("Deleted FC session: {}", sessionId);
     }
 
     public List<String> listSessions() {

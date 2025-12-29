@@ -23,18 +23,19 @@ import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.engine.schemas.*;
 import io.agentscope.runtime.protocol.responseapi.model.*;
 import io.agentscope.runtime.protocol.responseapi.model.Error;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.logging.Logger;
 
 /**
  * Handler for OpenAI Responses API requests.
  */
 public class ResponseApiHandler {
 
-    private static final Logger logger = Logger.getLogger(ResponseApiHandler.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ResponseApiHandler.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final Runner runner;
@@ -63,7 +64,7 @@ public class ResponseApiHandler {
 
             return handleStreamingFlux(eventFlux);
         } catch (Exception e) {
-            logger.severe("Error handling chat completion: " + e.getMessage());
+            logger.error("Error handling chat completion: {}", e.getMessage());
             return Flux.just(createErrorEvent("Error: " + e.getMessage(), "internal_error"));
         }
     }
@@ -90,7 +91,7 @@ public class ResponseApiHandler {
                                 return Flux.empty();
                             }
                         }).onErrorResume(e -> {
-                            logger.severe("Streaming error: " + e.getMessage());
+                            logger.error("Streaming error: {}", e.getMessage());
                             return Flux.just(createErrorEvent("Streaming error: " + e.getMessage(), "internal_error"));
                         })
                         .concatWith(Flux.just(
@@ -167,7 +168,7 @@ public class ResponseApiHandler {
             response.setUsage(buildUsagePlaceholder());
 
         } catch (Exception e) {
-            logger.severe("Error handling non-streaming response: " + e.getMessage());
+            logger.error("Error handling non-streaming response: {}", e.getMessage());
             Error error = new Error();
             error.setMessage(e.getMessage());
             error.setCode("internal_error");
@@ -246,8 +247,7 @@ public class ResponseApiHandler {
                 if (output instanceof TextContent text) {
                     String content = text.getText();
                     accumulatedOutput.append(content);
-                    logger.info("Appended content chunk (" + content.length() + " chars), total so far: "
-                            + accumulatedOutput.length());
+                    logger.info("Appended content chunk ({} chars), total so far: {}", content.length(), accumulatedOutput.length());
                 }
             }
             // Todo: need to know whether the blocking mode should also handle tool calls and responses
