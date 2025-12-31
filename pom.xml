@@ -115,6 +115,9 @@
         <testcontainers.version>1.21.3</testcontainers.version>
 
         <central.publishing.maven.version>0.7.0</central.publishing.maven.version>
+
+        <!-- other dependency-->
+        <picocli.version>4.7.7</picocli.version>
     </properties>
 
     <dependencyManagement>
@@ -312,6 +315,11 @@
                 <artifactId>spring-boot-starter-test</artifactId>
                 <version>${spring-boot.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>info.picocli</groupId>
+                <artifactId>picocli</artifactId>
+                <version>${picocli.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -644,6 +652,14 @@
                 </configuration>
             </plugin>
         </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </resource>
+        </resources>
     </build>
 
     <reporting>
@@ -732,5 +748,4 @@
             </build>
         </profile>
     </profiles>
-
 </project>
