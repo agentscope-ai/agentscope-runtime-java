@@ -21,19 +21,20 @@ import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxKey;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.util.RedisClientWrapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
 /**
  * Redis-backed implementation for container mapping
  * Maps SandboxKey to ContainerModel using Redis
  */
 public class RedisContainerMapping {
-    
-    private static final Logger logger = Logger.getLogger(RedisContainerMapping.class.getName());
+
+    private static final Logger logger = LoggerFactory.getLogger(RedisContainerMapping.class);
     
     private final RedisClientWrapper redisClient;
     private final String prefix;
@@ -44,7 +45,7 @@ public class RedisContainerMapping {
         this.prefix = (prefix != null && !prefix.isEmpty()) ?
                       (prefix.endsWith(":") ? prefix : prefix + ":") : "";
         this.objectMapper = new ObjectMapper();
-        logger.info("Redis container mapping initialized with prefix: " + this.prefix);
+        logger.info("Redis container mapping initialized with prefix: {}", this.prefix);
     }
 
     private String getFullKey(SandboxKey key) {
@@ -69,7 +70,7 @@ public class RedisContainerMapping {
 
     public void put(SandboxKey key, ContainerModel value) {
         if (key == null || value == null) {
-            logger.warning("Attempted to put null key or value, skipping");
+            logger.warn("Attempted to put null key or value, skipping");
             return;
         }
         
@@ -77,9 +78,9 @@ public class RedisContainerMapping {
             String fullKey = getFullKey(key);
             String json = objectMapper.writeValueAsString(value);
             redisClient.set(fullKey, json);
-            logger.fine("Put container in Redis: " + value.getContainerName() + " with key: " + fullKey);
+            logger.info("Put container in Redis: {} with key: {}", value.getContainerName(), fullKey);
         } catch (JsonProcessingException e) {
-            logger.severe("Failed to serialize container model: " + e.getMessage());
+            logger.error("Failed to serialize container model: {}", e.getMessage());
             throw new RuntimeException("Failed to put container in Redis", e);
         }
     }
@@ -98,10 +99,10 @@ public class RedisContainerMapping {
             }
             
             ContainerModel model = objectMapper.readValue(json, ContainerModel.class);
-            logger.fine("Retrieved container from Redis: " + model.getContainerName());
+            logger.info("Retrieved container from Redis: {}", model.getContainerName());
             return model;
         } catch (JsonProcessingException e) {
-            logger.severe("Failed to deserialize container model: " + e.getMessage());
+            logger.error("Failed to deserialize container model: {}", e.getMessage());
             throw new RuntimeException("Failed to get container from Redis", e);
         }
     }
@@ -116,7 +117,7 @@ public class RedisContainerMapping {
         boolean removed = deleted != null && deleted > 0;
         
         if (removed) {
-            logger.fine("Removed container from Redis with key: " + fullKey);
+            logger.info("Removed container from Redis with key: {}", fullKey);
         }
         
         return removed;
@@ -163,7 +164,7 @@ public class RedisContainerMapping {
                     }
                 }
             } catch (Exception e) {
-                logger.warning("Failed to deserialize container for key " + fullKey + ": " + e.getMessage());
+                logger.warn("Failed to deserialize container for key {}: {}", fullKey, e.getMessage());
             }
         }
         
@@ -178,7 +179,7 @@ public class RedisContainerMapping {
         try {
             String[] parts = keyString.split(":", 3);
             if (parts.length != 3) {
-                logger.warning("Invalid key format: " + keyString);
+                logger.warn("Invalid key format: {}", keyString);
                 return null;
             }
             
@@ -190,7 +191,7 @@ public class RedisContainerMapping {
             
             return new SandboxKey(userID, sessionID, sandboxType);
         } catch (Exception e) {
-            logger.warning("Failed to parse SandboxKey from: " + keyString + ", error: " + e.getMessage());
+            logger.warn("Failed to parse SandboxKey from: {}, error: {}", keyString, e.getMessage());
             return null;
         }
     }
@@ -202,8 +203,8 @@ public class RedisContainerMapping {
         for (String fullKey : fullKeys) {
             redisClient.delete(fullKey);
         }
-        
-        logger.info("Cleared all entries with prefix: " + prefix);
+
+        logger.info("Cleared all entries with prefix: {}", prefix);
     }
 
     public int size() {

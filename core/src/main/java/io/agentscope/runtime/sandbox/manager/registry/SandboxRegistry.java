@@ -18,18 +18,19 @@ package io.agentscope.runtime.sandbox.manager.registry;
 import io.agentscope.runtime.sandbox.manager.model.container.DynamicSandboxType;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 /**
  * Sandbox registry for managing sandbox configurations
  */
 public class SandboxRegistry {
-    private static final Logger logger = Logger.getLogger(SandboxRegistry.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SandboxRegistry.class);
 
     private static final Map<Class<?>, SandboxConfig> classRegistry = new ConcurrentHashMap<>();
     private static final Map<SandboxType, Class<?>> typeRegistry = new ConcurrentHashMap<>();
@@ -42,7 +43,7 @@ public class SandboxRegistry {
             Class.forName(SandboxRegistryInitializer.class.getName());
             logger.info("SandboxRegistryInitializer loaded and executed");
         } catch (ClassNotFoundException e) {
-            logger.warning("SandboxRegistryInitializer not found, annotation-based registration disabled");
+            logger.warn("SandboxRegistryInitializer not found, annotation-based registration disabled");
         }
     }
 
@@ -66,9 +67,7 @@ public class SandboxRegistry {
         typeRegistry.put(sandboxType, targetClass);
         typeConfigRegistry.put(sandboxType, config);
 
-        logger.info("Registered sandbox: type=" + sandboxType +
-                ", class=" + targetClass.getSimpleName() +
-                ", image=" + config.getImageName());
+        logger.info("Registered sandbox: type={}, class={}, image={}", sandboxType, targetClass.getSimpleName(), config.getImageName());
     }
 
     /**
@@ -85,7 +84,7 @@ public class SandboxRegistry {
                 .build();
         typeConfigRegistry.put(sandboxType, config);
 
-        logger.info("Registered sandbox: type=" + sandboxType + ", image=" + imageName);
+        logger.info("Registered sandbox: type={}, image={}", sandboxType, imageName);
     }
 
     /**
@@ -123,9 +122,7 @@ public class SandboxRegistry {
 
         typeConfigRegistry.put(sandboxType, config);
 
-        logger.info("Registered sandbox with full config: type=" + sandboxType +
-                ", image=" + imageName +
-                ", timeout=" + timeout + "s");
+        logger.info("Registered sandbox with full config: type={}, image={}, timeout={}s", sandboxType, imageName, timeout);
     }
 
     /**
@@ -220,7 +217,7 @@ public class SandboxRegistry {
         }
 
         if (config != null) {
-            logger.info("Unregistered sandbox: type=" + sandboxType);
+            logger.info("Unregistered sandbox: type={}", sandboxType);
             return true;
         }
         return false;
@@ -262,7 +259,7 @@ public class SandboxRegistry {
                 .build();
 
         customTypeRegistry.put(typeName.toLowerCase(), config);
-        logger.info("Registered custom sandbox type: name=" + typeName + ", image=" + imageName);
+        logger.info("Registered custom sandbox type: name={}, image={}", typeName, imageName);
     }
 
     /**
@@ -302,9 +299,7 @@ public class SandboxRegistry {
 
         customTypeRegistry.put(typeName.toLowerCase(), config);
 
-        logger.info("Registered custom sandbox type with full config: name=" + typeName +
-                ", image=" + imageName +
-                ", timeout=" + timeout + "s");
+        logger.info("Registered custom sandbox type with full config: name={}, image={}, timeout={}s", typeName, imageName, timeout);
     }
 
     /**

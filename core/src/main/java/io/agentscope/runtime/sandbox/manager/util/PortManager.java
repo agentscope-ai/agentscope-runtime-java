@@ -16,6 +16,8 @@
 package io.agentscope.runtime.sandbox.manager.util;
 
 import io.agentscope.runtime.sandbox.manager.model.container.PortRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,14 +25,13 @@ import java.net.ServerSocket;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 /**
  * Thread-safe port allocation manager
  * Manages port allocation and release to avoid port conflicts
  */
 public class PortManager {
-    private static final Logger logger = Logger.getLogger(PortManager.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(PortManager.class);
     
     private final Set<Integer> allocatedPorts = ConcurrentHashMap.newKeySet();
     
@@ -40,8 +41,7 @@ public class PortManager {
     
     public PortManager(PortRange portRange) {
         this.portRange = portRange;
-        logger.info("PortManager initialized with port range: " + 
-                   portRange.getStart() + "-" + portRange.getEnd());
+        logger.info("PortManager initialized with port range: {}-{}", portRange.getStart(), portRange.getEnd());
     }
     
     /**
@@ -61,12 +61,12 @@ public class PortManager {
             
             if (isPortAvailable(port)) {
                 allocatedPorts.add(port);
-                logger.fine("Allocated port: " + port);
+                logger.info("Allocated port: {}", port);
                 return port;
             }
         }
-        
-        logger.warning("No available ports in range " + startPort + "-" + endPort);
+
+        logger.warn("No available ports in range {}-{}", startPort, endPort);
         return -1;
     }
     
@@ -116,7 +116,7 @@ public class PortManager {
         for (int port : ports) {
             portSet.add(port);
         }
-        logger.fine("Registered " + ports.length + " port(s) for container: " + containerName);
+        logger.info("Registered {} port(s) for container: {}", ports.length, containerName);
     }
     
     /**
@@ -126,7 +126,7 @@ public class PortManager {
      */
     public synchronized void releasePort(int port) {
         if (allocatedPorts.remove(port)) {
-            logger.fine("Released port: " + port);
+            logger.info("Released port: {}", port);
         }
     }
     
@@ -141,7 +141,7 @@ public class PortManager {
             for (int port : ports) {
                 allocatedPorts.remove(port);
             }
-            logger.fine("Released " + ports.size() + " port(s) for container: " + containerName);
+            logger.info("Released {} port(s) for container: {}", ports.size(), containerName);
         }
     }
     

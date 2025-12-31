@@ -25,17 +25,18 @@ import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.Config;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
-import java.util.logging.Logger;
 
 /**
  * Kubernetes container management client implementation
  */
 public class KubernetesClient extends BaseClient {
 
-    private static final Logger logger = Logger.getLogger(KubernetesClient.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(KubernetesClient.class);
     private static final String DEFAULT_NAMESPACE = "default";
 
     private ApiClient apiClient;
@@ -70,7 +71,7 @@ public class KubernetesClient extends BaseClient {
                 if (!kubeconfigFile.exists()) {
                     throw new RuntimeException("Kubeconfig file not found: " + kubeconfigPath);
                 }
-                logger.info("Loading Kubernetes configuration from file: " + kubeconfigPath);
+                logger.info("Loading Kubernetes configuration from file: {}", kubeconfigPath);
                 this.apiClient = Config.fromConfig(kubeconfigPath);
             } else {
                 logger.info("Using default Kubernetes configuration");
@@ -87,7 +88,7 @@ public class KubernetesClient extends BaseClient {
                 this.connected = true;
                 return true;
             } catch (Exception e) {
-                logger.warning("API resources check failed, trying alternative connection test: " + e.getMessage());
+                logger.warn("API resources check failed, trying alternative connection test: {}", e.getMessage());
 
                 ProcessBuilder processBuilder = new ProcessBuilder("kubectl", "cluster-info");
                 Process process = processBuilder.start();
@@ -102,7 +103,7 @@ public class KubernetesClient extends BaseClient {
                 }
             }
         } catch (Exception e) {
-            logger.severe("Failed to connect to Kubernetes: " + e.getMessage());
+            logger.error("Failed to connect to Kubernetes: {}", e.getMessage());
             this.connected = false;
             return false;
         }
@@ -145,9 +146,9 @@ public class KubernetesClient extends BaseClient {
             }
 
             logger.info("Kubernetes configuration validated successfully");
-            logger.info("Using namespace: " + namespace);
+            logger.info("Using namespace: {}", namespace);
             if (kubeconfigPath != null) {
-                logger.info("Using kubeconfig: " + kubeconfigPath);
+                logger.info("Using kubeconfig: {}", kubeconfigPath);
             } else {
                 logger.info("Using default kubeconfig");
             }
@@ -179,7 +180,7 @@ public class KubernetesClient extends BaseClient {
             V1Deployment deployment = createDeploymentObject(deploymentName, imageName,
                     ports, portMapping, volumeBindings, environment, runtimeConfig);
             V1Deployment createdDeployment = appsApi.createNamespacedDeployment(namespace, deployment).execute();
-            logger.info("Deployment created: " + createdDeployment.getMetadata().getName());
+            logger.info("Deployment created: {}", createdDeployment.getMetadata().getName());
 
             List<String> exposedPorts = new ArrayList<>();
             String serviceIp = "localhost";
@@ -187,10 +188,14 @@ public class KubernetesClient extends BaseClient {
             if (!portMapping.isEmpty()) {
                 V1Service service = createLoadBalancerServiceObject(serviceName, deploymentName, portMapping);
                 V1Service createdService = coreApi.createNamespacedService(namespace, service).execute();
-                logger.info("LoadBalancer Service created: " + createdService.getMetadata().getName() +
-                        ", ports: " + createdService.getSpec().getPorts().stream()
-                        .map(p -> p.getPort() + "->" + p.getTargetPort())
-                        .toList());
+                if (createdService.getSpec() != null) {
+                    if (createdService.getSpec().getPorts() != null) {
+                        logger.info("LoadBalancer Service created: {}, ports: {}", createdService.getMetadata().getName(),
+                                createdService.getSpec().getPorts().stream()
+                                        .map(p -> p.getPort() + "->" + p.getTargetPort())
+                                        .toList());
+                    }
+                }
 
                 // Get exposed ports from portMapping
                 for (Integer port : portMapping.values()) {
@@ -202,9 +207,9 @@ public class KubernetesClient extends BaseClient {
                     String externalIP = waitForLoadBalancerExternalIP(deploymentName, 60);
                     if (externalIP != null && !externalIP.isEmpty()) {
                         serviceIp = externalIP;
-                        logger.info("Kubernetes LoadBalancer environment: using External IP " + externalIP);
+                        logger.info("Kubernetes LoadBalancer environment: using External IP {}", externalIP);
                     } else {
-                        logger.warning("Unable to get LoadBalancer External IP, trying pod node IP");
+                        logger.warn("Unable to get LoadBalancer External IP, trying pod node IP");
                         // Fallback to pod node IP
                         try {
                             serviceIp = getPodNodeIp(deploymentName);
@@ -212,12 +217,12 @@ public class KubernetesClient extends BaseClient {
                                 serviceIp = "localhost";
                             }
                         } catch (Exception e) {
-                            logger.warning("Failed to get pod node IP, using localhost: " + e.getMessage());
+                            logger.warn("Failed to get pod node IP, using localhost: {}", e.getMessage());
                             serviceIp = "localhost";
                         }
                     }
                 } catch (Exception e) {
-                    logger.warning("Failed to get LoadBalancer External IP, trying pod node IP: " + e.getMessage());
+                    logger.warn("Failed to get LoadBalancer External IP, trying pod node IP: {}", e.getMessage());
                     // Fallback to pod node IP
                     try {
                         serviceIp = getPodNodeIp(deploymentName);
@@ -225,7 +230,7 @@ public class KubernetesClient extends BaseClient {
                             serviceIp = "localhost";
                         }
                     } catch (Exception ex) {
-                        logger.warning("Failed to get pod node IP, using localhost: " + ex.getMessage());
+                        logger.warn("Failed to get pod node IP, using localhost: {}", ex.getMessage());
                         serviceIp = "localhost";
                     }
                 }
@@ -234,13 +239,13 @@ public class KubernetesClient extends BaseClient {
             return new ContainerCreateResult(deploymentName, exposedPorts, serviceIp);
 
         } catch (ApiException e) {
-            logger.severe("Failed to create container (Deployment/Service): " + e.getMessage());
+            logger.error("Failed to create container (Deployment/Service): {}", e.getMessage());
             try {
                 appsApi.deleteNamespacedDeployment(deploymentName, namespace).execute();
                 coreApi.deleteNamespacedService(serviceName, namespace).execute();
-                logger.info("Rolled back resources for: " + containerName);
+                logger.info("Rolled back resources for: {}", containerName);
             } catch (Exception cleanupEx) {
-                logger.warning("Failed to rollback after createContainer error: " + cleanupEx.getMessage());
+                logger.warn("Failed to rollback after createContainer error: {}", cleanupEx.getMessage());
             }
             throw new RuntimeException("Failed to create container", e);
         }
@@ -281,7 +286,7 @@ public class KubernetesClient extends BaseClient {
 
             return null;
         } catch (Exception e) {
-            logger.warning("Failed to get pod node IP: " + e.getMessage());
+            logger.warn("Failed to get pod node IP: {}", e.getMessage());
             return null;
         }
     }
@@ -300,11 +305,13 @@ public class KubernetesClient extends BaseClient {
                     environment, runtimeConfig);
 
             V1Deployment createdDeployment = appsApi.createNamespacedDeployment(namespace, deployment).execute();
-            logger.info("Deployment created successfully: " + createdDeployment.getMetadata().getName());
+            if (createdDeployment.getMetadata() != null) {
+                logger.info("Deployment created successfully: {}", createdDeployment.getMetadata().getName());
+            }
             return createdDeployment.getMetadata().getName();
 
         } catch (ApiException e) {
-            logger.severe("Failed to create deployment: " + e.getMessage());
+            logger.error("Failed to create deployment: {}", e.getMessage());
             throw new RuntimeException("Failed to create deployment", e);
         }
     }
@@ -425,12 +432,12 @@ public class KubernetesClient extends BaseClient {
                 .imagePullPolicy("IfNotPresent");
 
         if (runtimeConfig != null && !runtimeConfig.isEmpty()) {
-            logger.info("Applying runtime configuration to Kubernetes container: " + runtimeConfig);
+            logger.info("Applying runtime configuration to Kubernetes container: {}", runtimeConfig);
             container = applyRuntimeConfigToContainer(container, runtimeConfig);
         }
 
         V1PodSpec podSpec = new V1PodSpec()
-                .containers(Arrays.asList(container));
+                .containers(Collections.singletonList(container));
 
         if (!volumes.isEmpty()) {
             podSpec.volumes(volumes);
@@ -464,11 +471,14 @@ public class KubernetesClient extends BaseClient {
 
         try {
             V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, namespace).execute();
-            Integer replicas = deployment.getStatus().getReplicas();
+            Integer replicas = null;
+            if (deployment.getStatus() != null) {
+                replicas = deployment.getStatus().getReplicas();
+            }
             Integer readyReplicas = deployment.getStatus().getReadyReplicas();
-            logger.info("Deployment " + containerId + " replicas: " + replicas + ", ready: " + readyReplicas);
+            logger.info("Deployment {} replicas: {}, ready: {}", containerId, replicas, readyReplicas);
         } catch (ApiException e) {
-            logger.severe("Failed to start container: " + e.getMessage());
+            logger.error("Failed to start container: {}", e.getMessage());
             throw new RuntimeException("Failed to start container", e);
         }
     }
@@ -480,10 +490,10 @@ public class KubernetesClient extends BaseClient {
         }
         try {
             appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
-            logger.info("Deployment " + containerId + " deleted successfully");
+            logger.info("Deployment {} deleted successfully", containerId);
             deleteServiceIfExists(containerId);
         } catch (ApiException e) {
-            logger.severe("Failed to stop container: " + e.getMessage());
+            logger.error("Failed to stop container: {}", e.getMessage());
             throw new RuntimeException("Failed to stop container", e);
         }
     }
@@ -497,15 +507,15 @@ public class KubernetesClient extends BaseClient {
 
         try {
             appsApi.deleteNamespacedDeployment(containerId, namespace).execute();
-            logger.info("Deployment " + containerId + " deleted successfully");
+            logger.info("Deployment {} deleted successfully", containerId);
 
             deleteServiceIfExists(containerId);
 
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                logger.info("Deployment " + containerId + " already deleted");
+                logger.info("Deployment {} already deleted", containerId);
             } else {
-                logger.severe("Failed to remove container: " + e.getMessage());
+                logger.error("Failed to remove container: {}", e.getMessage());
                 throw new RuntimeException("Failed to remove container", e);
             }
         }
@@ -521,7 +531,7 @@ public class KubernetesClient extends BaseClient {
             V1Deployment deployment = appsApi.readNamespacedDeployment(containerId, namespace).execute();
             Integer replicas = deployment.getStatus().getReplicas();
             Integer readyReplicas = deployment.getStatus().getReadyReplicas();
-            if (readyReplicas != null && replicas != null && readyReplicas.equals(replicas)) {
+            if (readyReplicas != null && readyReplicas.equals(replicas)) {
                 return "Running";
             } else if (readyReplicas != null && readyReplicas > 0) {
                 return "PartiallyReady";
@@ -529,7 +539,7 @@ public class KubernetesClient extends BaseClient {
                 return "Pending";
             }
         } catch (ApiException e) {
-            logger.severe("Failed to get container status: " + e.getMessage());
+            logger.error("Failed to get container status: {}", e.getMessage());
             return "unknown";
         }
     }
@@ -543,7 +553,7 @@ public class KubernetesClient extends BaseClient {
             V1PodList podList = coreApi.listNamespacedPod(namespace).execute();
             return podList.getItems();
         } catch (ApiException e) {
-            logger.severe("Failed to list pods: " + e.getMessage());
+            logger.error("Failed to list pods: {}", e.getMessage());
             throw new RuntimeException("Failed to list pods", e);
         } catch (Exception e) {
             return new ArrayList<>();
@@ -559,7 +569,7 @@ public class KubernetesClient extends BaseClient {
             V1DeploymentList deploymentList = appsApi.listNamespacedDeployment(namespace).execute();
             return deploymentList.getItems();
         } catch (ApiException e) {
-            logger.severe("Failed to list deployments: " + e.getMessage());
+            logger.error("Failed to list deployments: {}", e.getMessage());
             throw new RuntimeException("Failed to list deployments", e);
         }
     }
@@ -583,20 +593,20 @@ public class KubernetesClient extends BaseClient {
                     V1LoadBalancerIngress firstIngress = ingress.get(0);
                     String externalIP = firstIngress.getIp();
                     if (externalIP != null && !externalIP.isEmpty()) {
-                        logger.info("LoadBalancer External IP: " + externalIP);
+                        logger.info("LoadBalancer External IP: {}", externalIP);
                         return externalIP;
                     }
                 }
             }
 
-            logger.info("LoadBalancer External IP not yet assigned for service: " + serviceName);
+            logger.info("LoadBalancer External IP not yet assigned for service: {}", serviceName);
             return null;
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                logger.warning("Service " + serviceName + " not found");
+                logger.warn("Service {} not found", serviceName);
                 return null;
             } else {
-                logger.severe("Failed to get LoadBalancer External IP: " + e.getMessage());
+                logger.error("Failed to get LoadBalancer External IP: {}", e.getMessage());
                 throw new RuntimeException("Failed to get LoadBalancer External IP", e);
             }
         }
@@ -620,7 +630,7 @@ public class KubernetesClient extends BaseClient {
             }
         }
 
-        logger.warning("Timeout waiting for LoadBalancer External IP for container: " + containerId);
+        logger.warn("Timeout waiting for LoadBalancer External IP for container: {}", containerId);
         return null;
     }
 
@@ -652,7 +662,7 @@ public class KubernetesClient extends BaseClient {
                         String.valueOf(memoryBytes));
                 limits.put("memory", memoryQuantity);
                 requests.put("memory", memoryQuantity);
-                logger.info("Applied memory limit: " + memoryBytes + " bytes");
+                logger.info("Applied memory limit: {} bytes", memoryBytes);
             }
         }
 
@@ -666,7 +676,7 @@ public class KubernetesClient extends BaseClient {
                         milliCpus + "m");
                 limits.put("cpu", cpuQuantity);
                 requests.put("cpu", cpuQuantity);
-                logger.info("Applied CPU limit: " + nanoCpus + " nanocpus (" + milliCpus + " millicores)");
+                logger.info("Applied CPU limit: {} nanocpus ({} millicores)", nanoCpus, milliCpus);
             }
         }
 
@@ -685,8 +695,8 @@ public class KubernetesClient extends BaseClient {
             Object maxConnectionsObj = runtimeConfig.get("max_connections");
             Integer maxConnections = parseInteger(maxConnectionsObj);
             if (maxConnections != null) {
-                logger.info("Max connections configuration noted: " + maxConnections +
-                        " (Note: Kubernetes doesn't directly support ulimits, consider using init containers or node-level configuration)");
+                logger.info("Max connections configuration noted: {} (Note: Kubernetes doesn't directly support ulimits, consider using init containers or node-level configuration)",
+                        maxConnections);
             }
         }
 
@@ -771,11 +781,11 @@ public class KubernetesClient extends BaseClient {
                     // No unit, assume bytes
                     return (long) value;
                 default:
-                    logger.warning("Unknown memory unit: " + unitPart);
+                    logger.warn("Unknown memory unit: {}", unitPart);
                     return null;
             }
         } catch (NumberFormatException e) {
-            logger.warning("Failed to parse memory limit: " + memLimitStr);
+            logger.warn("Failed to parse memory limit: {}", memLimitStr);
             return null;
         }
     }
@@ -798,7 +808,7 @@ public class KubernetesClient extends BaseClient {
         try {
             return Long.parseLong(nanoCpusObj.toString());
         } catch (NumberFormatException e) {
-            logger.warning("Failed to parse nano CPUs: " + nanoCpusObj);
+            logger.warn("Failed to parse nano CPUs: {}", nanoCpusObj);
             return null;
         }
     }
@@ -821,7 +831,7 @@ public class KubernetesClient extends BaseClient {
         try {
             return Integer.parseInt(obj.toString());
         } catch (NumberFormatException e) {
-            logger.warning("Failed to parse integer: " + obj);
+            logger.warn("Failed to parse integer: {}", obj);
             return null;
         }
     }
@@ -855,15 +865,15 @@ public class KubernetesClient extends BaseClient {
 
         try {
             coreApi.deleteNamespacedService(serviceName, namespace).execute();
-            logger.info("Service " + serviceName + " deleted successfully");
+            logger.info("Service {} deleted successfully", serviceName);
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                logger.info("Service " + serviceName + " does not exist, skipping deletion");
+                logger.info("Service {} does not exist, skipping deletion", serviceName);
             } else {
-                logger.warning("Failed to delete service " + serviceName + ": " + e.getMessage());
+                logger.warn("Failed to delete service {}: {}", serviceName, e.getMessage());
             }
         } catch (Exception e) {
-            logger.warning("Unexpected error while deleting service " + serviceName + ": " + e.getMessage());
+            logger.warn("Unexpected error while deleting service {}: {}", serviceName, e.getMessage());
         }
     }
 
@@ -895,7 +905,7 @@ public class KubernetesClient extends BaseClient {
             if (e.getCode() == 404) {
                 return false;
             }
-            logger.warning("Error inspecting container " + containerIdOrName + ": " + e.getMessage());
+            logger.warn("Error inspecting container {}: {}", containerIdOrName, e.getMessage());
             return false;
         }
     }

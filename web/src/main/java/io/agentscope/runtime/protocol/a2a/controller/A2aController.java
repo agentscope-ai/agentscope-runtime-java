@@ -27,6 +27,8 @@ import io.agentscope.runtime.protocol.a2a.AgentHandlerConfiguration;
 import io.agentscope.runtime.protocol.a2a.JSONRPCHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import org.reactivestreams.FlowAdapters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -39,13 +41,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.Flow;
-import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/a2a")
 public class A2aController {
 
-    Logger logger = Logger.getLogger(A2aController.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(A2aController.class);
 
     private final JSONRPCHandler jsonRpcHandler;
 
@@ -70,7 +71,7 @@ public class A2aController {
                 logger.info("Handling non-streaming request, returning JSON response");
             }
         } catch (JsonProcessingException e) {
-            logger.severe("JSON parsing error: " + e.getMessage());
+            logger.error("JSON parsing error: {}", e.getMessage());
             result = new JSONRPCErrorResponse(null, new JSONParseError());
         }
         return result;
@@ -118,7 +119,7 @@ public class A2aController {
             }
             return builder.build();
         } catch (Exception e) {
-            logger.severe("Error converting response to SSE: " + e.getMessage());
+            logger.error("Error converting response to SSE: {}", e.getMessage());
             return ServerSentEvent.<String>builder().data("{\"error\":\"Internal conversion error\"}").event("error")
                     .build();
         }

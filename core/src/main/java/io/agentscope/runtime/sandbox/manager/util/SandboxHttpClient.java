@@ -17,6 +17,8 @@ package io.agentscope.runtime.sandbox.manager.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -26,14 +28,13 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 /**
  * Sandbox HTTP Client
  * Used for HTTP communication with sandbox containers and calling tools within the sandbox
  */
 public class SandboxHttpClient extends SandboxClient {
-    private static final Logger logger = Logger.getLogger(SandboxHttpClient.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SandboxHttpClient.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final String sessionId;
@@ -88,7 +89,7 @@ public class SandboxHttpClient extends SandboxClient {
 
         while (System.currentTimeMillis() - startTime < timeoutMillis) {
             if (checkHealth()) {
-                logger.info("Sandbox service is healthy: " + baseUrl);
+                logger.info("Sandbox service is healthy: {}", baseUrl);
                 return;
             }
 
@@ -116,7 +117,7 @@ public class SandboxHttpClient extends SandboxClient {
                     HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                logger.warning("Failed to list tools: HTTP " + response.statusCode());
+                logger.warn("Failed to list tools: HTTP {}", response.statusCode());
                 return new HashMap<>();
             }
 
@@ -134,7 +135,7 @@ public class SandboxHttpClient extends SandboxClient {
 
             return tools;
         } catch (Exception e) {
-            logger.severe("Error listing tools: " + e.getMessage());
+            logger.error("Error listing tools: {}", e.getMessage());
             return new HashMap<>();
         }
     }
@@ -171,8 +172,7 @@ public class SandboxHttpClient extends SandboxClient {
 
             return response.body();
         } catch (Exception e) {
-            logger.severe("Error calling tool " + toolName + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error calling tool {}: {}", toolName, e.getMessage());
             return createErrorResponse("Error calling tool: " + e.getMessage());
         }
     }
@@ -196,7 +196,7 @@ public class SandboxHttpClient extends SandboxClient {
                     HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                logger.warning("Failed to add MCP servers: HTTP " + response.statusCode());
+                logger.warn("Failed to add MCP servers: HTTP {}", response.statusCode());
                 return new HashMap<>();
             }
 
@@ -204,7 +204,7 @@ public class SandboxHttpClient extends SandboxClient {
             Map<String, Object> result = objectMapper.readValue(response.body(), Map.class);
             return result;
         } catch (Exception e) {
-            logger.severe("Error adding MCP servers: " + e.getMessage());
+            logger.error("Error adding MCP servers: {}", e.getMessage());
             return new HashMap<>();
         }
     }
@@ -232,7 +232,7 @@ public class SandboxHttpClient extends SandboxClient {
 
             return response.body();
         } catch (Exception e) {
-            logger.severe("Error calling generic tool " + toolName + ": " + e.getMessage());
+            logger.error("Error calling generic tool {}: {}", toolName, e.getMessage());
             return createErrorResponse("Error calling generic tool: " + e.getMessage());
         }
     }

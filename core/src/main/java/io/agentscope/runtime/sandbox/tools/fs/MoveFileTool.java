@@ -18,16 +18,17 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class MoveFileTool extends FsSandboxTool {
 
-    Logger logger = Logger.getLogger(MoveFileTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(MoveFileTool.class);
 
     public MoveFileTool() {
         super("fs_move_file", "filesystem", "Move or rename a file or directory");
@@ -67,8 +68,7 @@ public class MoveFileTool extends FsSandboxTool {
             throw new RuntimeException("Only FilesystemSandbox supported in move file tool");
         } catch (Exception e) {
             String errorMsg = "Move File Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

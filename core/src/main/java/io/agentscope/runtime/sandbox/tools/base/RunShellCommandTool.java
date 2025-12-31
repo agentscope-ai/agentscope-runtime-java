@@ -18,16 +18,16 @@ package io.agentscope.runtime.sandbox.tools.base;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class RunShellCommandTool extends BaseSandboxTool {
 
-    Logger logger = Logger.getLogger(RunShellCommandTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(RunShellCommandTool.class);
 
     public RunShellCommandTool() {
         super("run_shell_command", "generic", "Execute shell commands and return the output or errors.");
@@ -39,7 +39,7 @@ public class RunShellCommandTool extends BaseSandboxTool {
         Map<String, Object> properties = new HashMap<>();
         properties.put("command", commandProperty);
 
-        List<String> required = Arrays.asList("command");
+        List<String> required = List.of("command");
 
         schema.put("type", "object");
         schema.put("properties", properties);
@@ -55,17 +55,16 @@ public class RunShellCommandTool extends BaseSandboxTool {
 
     public String run_shell_command(String command) {
         try {
-            logger.info("Run Shell Command: " + command);
+            logger.info("Run Shell Command: {}", command);
             if(sandbox instanceof BaseSandbox baseSandbox){
                 String result = baseSandbox.runShellCommand(command);
-                logger.info("Execute Result: " + result);
+                logger.info("Execute Result: {}", result);
                 return result;
             }
             throw new RuntimeException("Only BaseSandbox supported in run shell command tool");
         } catch (Exception e) {
             String errorMsg = "Run Shell Command Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

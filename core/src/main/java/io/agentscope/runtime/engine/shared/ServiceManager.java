@@ -16,13 +16,15 @@
 package io.agentscope.runtime.engine.shared;
 
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 /**
  * Abstract base class for service managers
@@ -30,7 +32,7 @@ import java.util.logging.Logger;
  */
 public abstract class ServiceManager implements AutoCloseable {
 
-    Logger logger = Logger.getLogger(ServiceManager.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ServiceManager.class);
 
     private final List<ServiceRegistration> services = new ArrayList<>();
     private final Map<String, Service> serviceInstances = new ConcurrentHashMap<>();
@@ -64,7 +66,7 @@ public abstract class ServiceManager implements AutoCloseable {
         }
 
         services.add(new ServiceRegistration(serviceClass, name, args));
-        logger.info("Registered service: " + name + "(" + serviceClass.getSimpleName() + ")");
+        logger.info("Registered service: {}({})", name, serviceClass.getSimpleName());
         return this;
     }
 
@@ -99,9 +101,9 @@ public abstract class ServiceManager implements AutoCloseable {
                                 .newInstance();
                         instance.start().get();
                         serviceInstances.put(registration.name, instance);
-                        logger.info("Successfully started service: " + registration.name);
+                        logger.info("Successfully started service: {}", registration.name);
                     } catch (Exception e) {
-                        logger.severe("Failed to start service: " + registration.name + " - " + e.getMessage());
+                        logger.error("Failed to start service: {} - {}", registration.name, e.getMessage());
                         throw new RuntimeException("Failed to start service: " + registration.name, e);
                     }
                 }
@@ -114,14 +116,14 @@ public abstract class ServiceManager implements AutoCloseable {
                         try {
                             service.start().get();
                         } catch (Exception e) {
-                            logger.severe("Failed to start pre-instantiated service: " + name + " - " + e.getMessage());
+                            logger.error("Failed to start pre-instantiated service: {} - {}", name, e.getMessage());
                             throw new RuntimeException("Failed to start pre-instantiated service: " + name, e);
                         }
                     }
                 }
 
             } catch (Exception e) {
-                logger.severe("Failed to start services" + e.getMessage());
+                logger.error("Failed to start services{}", e.getMessage());
                 // Ensure proper cleanup on initialization failure
                 stop().join();
                 throw new RuntimeException("Failed to start services", e);
@@ -141,7 +143,7 @@ public abstract class ServiceManager implements AutoCloseable {
                 try {
                     service.stop().get();
                 } catch (Exception e) {
-                    logger.severe("Error stopping service" + e.getMessage());
+                    logger.error("Error stopping service{}", e.getMessage());
                 }
             }
             serviceInstances.clear();
@@ -207,7 +209,7 @@ public abstract class ServiceManager implements AutoCloseable {
                 try {
                     healthStatus.put(name, service.health().get());
                 } catch (Exception e) {
-                    logger.severe("Health check failed for service " + name + " - " + e.getMessage());
+                    logger.error("Health check failed for service {} - {}", name, e.getMessage());
                     healthStatus.put(name, false);
                 }
             }

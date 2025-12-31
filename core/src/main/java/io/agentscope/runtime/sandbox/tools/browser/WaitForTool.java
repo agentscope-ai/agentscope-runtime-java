@@ -21,14 +21,15 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class WaitForTool extends BrowserSandboxTool {
 
-    Logger logger = Logger.getLogger(WaitForTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(WaitForTool.class);
 
     public WaitForTool() {
         super("browser_wait_for", "browser", "Wait for a condition in the browser");
@@ -70,8 +71,7 @@ public class WaitForTool extends BrowserSandboxTool {
             throw new RuntimeException("Only BrowserSandbox supported in browser wait for tool");
         } catch (Exception e) {
             String errorMsg = "Browser Wait For Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

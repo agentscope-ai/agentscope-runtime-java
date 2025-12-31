@@ -16,6 +16,9 @@
 package io.agentscope.runtime.sandbox.manager.remote;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -24,15 +27,14 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 /**
  * HTTP client for making remote calls to SandboxManager server.
  * This client handles the communication with the remote SandboxManager service.
  */
 public class RemoteHttpClient {
-    
-    private static final Logger logger = Logger.getLogger(RemoteHttpClient.class.getName());
+
+    private static final Logger logger = LoggerFactory.getLogger(RemoteHttpClient.class);
     private final HttpClient httpClient;
     private final String baseUrl;
     private final String bearerToken;
@@ -56,8 +58,8 @@ public class RemoteHttpClient {
      */
     public Object makeRequest(RequestMethod method, String endpoint, Map<String, Object> data, String successKey) {
         String url = baseUrl + (endpoint.startsWith("/") ? endpoint : "/" + endpoint);
-        
-        logger.info("Making " + method + " request to: " + url);
+
+        logger.info("Making {} request to: {}", method, url);
         
         try {
             HttpRequest request = buildHttpRequest(method, url, data);
@@ -68,7 +70,7 @@ public class RemoteHttpClient {
 
             if (statusCode < 200 || statusCode >= 300) {
                 String errorMessage = extractErrorMessage(body, statusCode);
-                logger.severe("HTTP error: " + statusCode + " - " + errorMessage);
+                logger.error("HTTP error: {} - {}", statusCode, errorMessage);
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("error", errorMessage);
                 if (successKey != null && !successKey.isEmpty()) {
@@ -78,7 +80,7 @@ public class RemoteHttpClient {
             }
 
             if (body == null || body.isEmpty()) {
-                logger.warning("Response body is empty");
+                logger.warn("Response body is empty");
                 return null;
             }
 
@@ -87,16 +89,15 @@ public class RemoteHttpClient {
 
             if (successKey != null && !successKey.isEmpty()) {
                 Object result = responseBody.get(successKey);
-                logger.info("Request successful, extracted data with key: " + successKey);
+                logger.info("Request successful, extracted data with key: {}", successKey);
                 return result;
             }
 
             return responseBody;
 
         } catch (Exception e) {
-            logger.severe("Error making request: " + e.getMessage());
-            e.printStackTrace();
-            
+            logger.error("Error making request: {}", e.getMessage());
+
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Error: " + e.getMessage());
             if (successKey != null && !successKey.isEmpty()) {
@@ -154,7 +155,7 @@ public class RemoteHttpClient {
                 return responseBody;
             }
         } catch (Exception parseException) {
-            logger.warning("Failed to parse error response: " + parseException.getMessage());
+            logger.warn("Failed to parse error response: {}", parseException.getMessage());
         }
         return "HTTP " + statusCode + " Error";
     }

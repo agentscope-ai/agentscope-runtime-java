@@ -20,12 +20,13 @@ import com.aliyun.agentrun20250910.models.*;
 import com.aliyun.teaopenapi.models.Config;
 import io.agentscope.runtime.sandbox.manager.client.config.AgentRunClientConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 /**
  * Client for managing AgentRun containers in the sandbox environment.
@@ -35,7 +36,7 @@ import java.util.logging.Logger;
  * API calls and status polling.
  */
 public class AgentRunClient extends BaseClient {
-    private static final Logger logger = Logger.getLogger(AgentRunClient.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(AgentRunClient.class);
 
     private static final int GET_AGENT_RUNTIME_STATUS_MAX_ATTEMPTS = 60;
     private static final int GET_AGENT_RUNTIME_STATUS_INTERVAL = 1; // seconds
@@ -63,9 +64,7 @@ public class AgentRunClient extends BaseClient {
                 ? config.getAgentRunPrefix() : "agentscope-sandbox";
         this.getAgentRuntimeStatusMaxAttempts = GET_AGENT_RUNTIME_STATUS_MAX_ATTEMPTS;
         this.getAgentRuntimeStatusInterval = GET_AGENT_RUNTIME_STATUS_INTERVAL;
-        logger.info("AgentRunClient initialized with config: " + config
-                + ", region: " + config.getAgentRunRegionId()
-                + ", prefix: " + this.agentRunPrefix);
+        logger.info("AgentRunClient initialized with config: {}, region: {}, prefix: {}", config, config.getAgentRunRegionId(), this.agentRunPrefix);
     }
 
     @Override
@@ -74,7 +73,7 @@ public class AgentRunClient extends BaseClient {
             this.connected = (client != null);
             return this.connected;
         } catch (Exception e) {
-            logger.severe("Failed to connect to AgentRun: " + e.getMessage());
+            logger.error("Failed to connect to AgentRun: {}", e.getMessage());
             this.connected = false;
             return false;
         }
@@ -89,7 +88,7 @@ public class AgentRunClient extends BaseClient {
     public ContainerCreateResult createContainer(String containerName, String imageName, List<String> ports,
                                   List<VolumeBinding> volumeBindings,
                                   Map<String, String> environment, Map<String, Object> runtimeConfig) {
-        logger.fine("Creating AgentRun session with image: " + imageName);
+        logger.info("Creating AgentRun session with image: {}", imageName);
 
         @SuppressWarnings("unused")
         int port = 80;
@@ -104,7 +103,7 @@ public class AgentRunClient extends BaseClient {
         try {
             String sessionId = (containerName != null && !containerName.isEmpty())
                     ? containerName : generateSessionId();
-            logger.info("Created AgentRun session: " + sessionId);
+            logger.info("Created AgentRun session: {}", sessionId);
             String agentRuntimeName = agentRunPrefix + "-" + sessionId;
 
             ContainerConfiguration containerConfig = new ContainerConfiguration();
@@ -196,24 +195,24 @@ public class AgentRunClient extends BaseClient {
                 sessionData.put("endpoint_domain", endpointPublicUrlDomain);
                 sessionData.put("endpoint_path", endpointPublicUrlPath);
                 sessionData.put("ports", agentRunPorts);
-                
-                logger.info("Domain (netloc): " + endpointPublicUrlDomain);
-                logger.info("Path: " + endpointPublicUrlPath);
-                logger.info("Ports entry: " + agentRunPorts.get(0));
+
+                logger.info("Domain (netloc): {}", endpointPublicUrlDomain);
+                logger.info("Path: {}", endpointPublicUrlPath);
+                logger.info("Ports entry: {}", agentRunPorts.get(0));
             } catch (URISyntaxException e) {
-                logger.warning("Failed to parse endpoint URL: " + endpointPublicUrl + ", error: " + e.getMessage());
+                logger.error("Failed to parse endpoint URL: {}, error: {}", endpointPublicUrl, e.getMessage());
                 agentRunPorts.add(String.valueOf(HTTPS_PORT));
                 sessionData.put("ports", agentRunPorts);
             }
 
             sessionManager.createSession(sessionId, sessionData);
-            logger.info("Success to create agent runtime with ID: " + agentRuntimeId + ", create session id: " + sessionId);
-            logger.info("endpoint_public_url: " + endpointPublicUrl);
+            logger.info("Success to create agent runtime with ID: {}, create session id: {}", agentRuntimeId, sessionId);
+            logger.info("endpoint_public_url: {}", endpointPublicUrl);
 
             return new ContainerCreateResult(sessionId, agentRunPorts, endpointPublicUrlDomain, HTTPS_PROTOCOL);
 
         } catch (Exception e) {
-            logger.severe("Failed to create AgentRun session: " + e.getMessage());
+            logger.error("Failed to create AgentRun session: {}", e.getMessage());
             throw new RuntimeException("Failed to create AgentRun session", e);
         }
     }
@@ -222,7 +221,7 @@ public class AgentRunClient extends BaseClient {
     public void startContainer(String containerId) {
         Map<String, Object> session = sessionManager.getSession(containerId);
         if (session == null) {
-            logger.warning("AgentRun session id not found: " + containerId);
+            logger.warn("AgentRun session id not found: {}", containerId);
             return;
         }
         String agentRuntimeId = (String) session.get("agent_runtime_id");
@@ -234,9 +233,9 @@ public class AgentRunClient extends BaseClient {
                     sessionManager.updateSession(containerId, Collections.singletonMap("status", "running"));
                 }
             }
-            logger.info("set agentRun session status to running: " + containerId);
+            logger.info("set agentRun session status to running: {}", containerId);
         } catch (Exception e) {
-            logger.severe("failed to set agentRun session status to running: " + containerId + ": " + e.getMessage());
+            logger.error("failed to set agentRun session status to running: {}: {}", containerId, e.getMessage());
         }
     }
 
@@ -244,15 +243,15 @@ public class AgentRunClient extends BaseClient {
     public void stopContainer(String containerId) {
         Map<String, Object> session = sessionManager.getSession(containerId);
         if (session == null) {
-            logger.warning("AgentRun session id not found: " + containerId);
+            logger.warn("AgentRun session id not found: {}", containerId);
             return;
         }
 
         try {
             sessionManager.updateSession(containerId, Collections.singletonMap("status", "stopped"));
-            logger.info("set agentRun session status to stopped: " + containerId);
+            logger.info("set agentRun session status to stopped: {}", containerId);
         } catch (Exception e) {
-            logger.severe("failed to set agentRun session status to stopped: " + containerId + ": " + e.getMessage());
+            logger.error("failed to set agentRun session status to stopped: {}: {}", containerId, e.getMessage());
         }
     }
 
@@ -260,29 +259,29 @@ public class AgentRunClient extends BaseClient {
     public void removeContainer(String containerId) {
         Map<String, Object> session = sessionManager.getSession(containerId);
         if (session == null) {
-            logger.warning("AgentRun session id not found: " + containerId);
+            logger.warn("AgentRun session id not found: {}", containerId);
             return;
         }
         String agentRuntimeId = (String) session.get("agent_runtime_id");
         try {
-            logger.info("Deleting agent runtime with ID: " + agentRuntimeId);
+            logger.info("Deleting agent runtime with ID: {}", agentRuntimeId);
 
             DeleteAgentRuntimeResponse response = client.deleteAgentRuntime(agentRuntimeId);
 
             if (response.getBody() != null && "SUCCESS".equals(response.getBody().getCode())) {
-                logger.info("Agent runtime deletion initiated successfully for ID: " + agentRuntimeId);
+                logger.info("Agent runtime deletion initiated successfully for ID: {}", agentRuntimeId);
 
                 Map<String, Object> pollStatus = pollAgentRuntimeStatus(agentRuntimeId);
                 String statusResult = (String) pollStatus.get("status");
-                logger.info("Agent runtime deletion status: " + statusResult);
+                logger.info("Agent runtime deletion status: {}", statusResult);
 
                 sessionManager.deleteSession(containerId);
-                logger.info("Successfully removed AgentRun session: " + containerId);
+                logger.info("Successfully removed AgentRun session: {}", containerId);
             } else {
-                logger.severe("Failed to delete agent runtime");
+                logger.warn("Failed to delete agent runtime");
             }
         } catch (Exception e) {
-            logger.severe("Exception occurred while deleting agent runtime: " + e.getMessage());
+            logger.error("Exception occurred while deleting agent runtime: {}", e.getMessage());
         }
     }
 
@@ -290,7 +289,7 @@ public class AgentRunClient extends BaseClient {
     public String getContainerStatus(String containerId) {
         Map<String, Object> session = sessionManager.getSession(containerId);
         if (session == null) {
-            logger.warning("AgentRun session id not found: " + containerId);
+            logger.warn("AgentRun session id not found: {}", containerId);
             return "unknown";
         }
         String agentRuntimeId = (String) session.get("agent_runtime_id");
@@ -336,7 +335,7 @@ public class AgentRunClient extends BaseClient {
     public Map<String, Object> inspect(String sessionId) {
         Map<String, Object> session = sessionManager.getSession(sessionId);
         if (session == null) {
-            logger.warning("AgentRun session id not found: " + sessionId);
+            logger.warn("AgentRun session id not found: {}", sessionId);
             return Collections.emptyMap();
         }
         String agentRuntimeId = (String) session.get("agent_runtime_id");
@@ -368,7 +367,7 @@ public class AgentRunClient extends BaseClient {
 
                  }
                  else{
-                     logger.warning("Failed to get agent runtime info for ID: " + agentRuntimeId);
+                     logger.warn("Failed to get agent runtime info for ID: {}", agentRuntimeId);
                      agentRuntimeInfo.put("error", "Failed to get agent runtime info");
                      agentRuntimeInfo.put("agent_runtime_id", agentRuntimeId);
                      agentRuntimeInfo.put("code", response.getBody() != null ? response.getBody().getCode() : null);
@@ -377,7 +376,7 @@ public class AgentRunClient extends BaseClient {
                  }
             }
         } catch (Exception e) {
-            logger.severe("Exception occurred while getting agent runtime info: " + e.getMessage());
+            logger.error("Exception occurred while getting agent runtime info: {}", e.getMessage());
             agentRuntimeInfo.put("error", e.getMessage());
             agentRuntimeInfo.put("message", "Exception occurred while getting agent runtime info: " + e.getMessage());
             agentRuntimeInfo.put("agent_runtime_id", agentRuntimeId);
@@ -481,17 +480,16 @@ public class AgentRunClient extends BaseClient {
         int maxAttempts = getAgentRuntimeStatusMaxAttempts;
         int intervalSeconds = getAgentRuntimeStatusInterval;
 
-        logger.info("Starting to poll agent runtime endpoint status for ID: " + agentRuntimeEndpointId);
+        logger.info("Starting to poll agent runtime endpoint status for ID: {}", agentRuntimeEndpointId);
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             Map<String, Object> statusResponse = getAgentRuntimeEndpointStatus(agentRuntimeId, agentRuntimeEndpointId);
 
             if (!Boolean.TRUE.equals(statusResponse.get("success"))) {
-                logger.warning("Attempt " + attempt + "/" + maxAttempts + ": Failed to get status - "
-                        + statusResponse.get("message"));
+                logger.warn("Attempt {}/{}: Failed to get status - {}", attempt, maxAttempts, statusResponse.get("message"));
                 if (attempt < maxAttempts) {
                     try {
-                        Thread.sleep(intervalSeconds * 1000);
+                        Thread.sleep(intervalSeconds * 1000L);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         break;
@@ -503,19 +501,19 @@ public class AgentRunClient extends BaseClient {
             String currentStatus = (String) statusResponse.get("status");
             String statusReason = (String) statusResponse.get("status_reason");
 
-            logger.info("Attempt " + attempt + "/" + maxAttempts + ": Status = " + currentStatus);
+            logger.info("Attempt {}/{}: Status = {}", attempt, maxAttempts, currentStatus);
             if (statusReason != null) {
-                logger.info("  Status reason: " + statusReason);
+                logger.info("  Status reason: {}", statusReason);
             }
 
             if (terminalStates.contains(currentStatus)) {
-                logger.info("Reached terminal state '" + currentStatus + "' after " + attempt + " attempts");
+                logger.info("Reached terminal state '{}' after {} attempts", currentStatus, attempt);
                 return statusResponse;
             }
 
             if (attempt < maxAttempts) {
                 try {
-                    Thread.sleep(intervalSeconds * 1000);
+                    Thread.sleep(intervalSeconds * 1000L);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -523,7 +521,7 @@ public class AgentRunClient extends BaseClient {
             }
         }
 
-        logger.warning("Exceeded maximum attempts (" + maxAttempts + ") without reaching a terminal state");
+        logger.warn("Exceeded maximum attempts ({}) without reaching a terminal state", maxAttempts);
         return getAgentRuntimeEndpointStatus(agentRuntimeId, agentRuntimeEndpointId);
     }
 
@@ -533,7 +531,7 @@ public class AgentRunClient extends BaseClient {
 
     private Map<String, Object> getAgentRuntimeStatus(String agentRuntimeId, String agentRuntimeVersion) {
         try {
-            logger.fine("Getting agent runtime status for ID: " + agentRuntimeId);
+            logger.info("Getting agent runtime status for ID: {}", agentRuntimeId);
 
             GetAgentRuntimeRequest request = new GetAgentRuntimeRequest();
             if (agentRuntimeVersion != null) {
@@ -544,7 +542,7 @@ public class AgentRunClient extends BaseClient {
             if (response.getBody() != null && "SUCCESS".equals(response.getBody().getCode())
                     && response.getBody().getData() != null) {
                 String status = response.getBody().getData().getStatus();
-                logger.fine("Agent runtime status for ID " + agentRuntimeId + ": " + status);
+                logger.info("Agent runtime status for ID {}: {}", agentRuntimeId, status);
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", true);
                 result.put("status", status);
@@ -561,7 +559,7 @@ public class AgentRunClient extends BaseClient {
             }
 
         } catch (Exception e) {
-            logger.severe("Exception occurred while getting agent runtime status: " + e.getMessage());
+            logger.error("Exception occurred while getting agent runtime status: {}", e.getMessage());
             Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("error", e.getMessage());
@@ -572,7 +570,7 @@ public class AgentRunClient extends BaseClient {
 
     private Map<String, Object> getAgentRuntimeEndpointStatus(String agentRuntimeId, String agentRuntimeEndpointId) {
         try {
-            logger.fine("Getting agent runtime endpoint status for ID: " + agentRuntimeEndpointId);
+            logger.info("Getting agent runtime endpoint status for ID: {}", agentRuntimeEndpointId);
 
             GetAgentRuntimeEndpointResponse response = client.getAgentRuntimeEndpoint(
                     agentRuntimeId, agentRuntimeEndpointId);
@@ -580,7 +578,7 @@ public class AgentRunClient extends BaseClient {
             if (response.getBody() != null && "SUCCESS".equals(response.getBody().getCode())
                     && response.getBody().getData() != null) {
                 String status = response.getBody().getData().getStatus();
-                logger.fine("Agent runtime endpoint status for ID " + agentRuntimeEndpointId + ": " + status);
+                logger.info("Agent runtime endpoint status for ID {}: {}", agentRuntimeEndpointId, status);
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", true);
                 result.put("status", status);
@@ -597,7 +595,7 @@ public class AgentRunClient extends BaseClient {
             }
 
         } catch (Exception e) {
-            logger.fine("Exception occurred while getting agent runtime endpoint status: " + e.getMessage());
+            logger.info("Exception occurred while getting agent runtime endpoint status: {}", e.getMessage());
             Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("error", e.getMessage());
@@ -617,17 +615,17 @@ public class AgentRunClient extends BaseClient {
         int maxAttempts = getAgentRuntimeStatusMaxAttempts;
         int intervalSeconds = getAgentRuntimeStatusInterval;
 
-        logger.info("Starting to poll agent runtime status for ID: " + agentRuntimeId);
+        logger.info("Starting to poll agent runtime status for ID: {}", agentRuntimeId);
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             Map<String, Object> statusResponse = getAgentRuntimeStatus(agentRuntimeId, agentRuntimeVersion);
 
             if (!Boolean.TRUE.equals(statusResponse.get("success"))) {
-                logger.warning("Attempt " + attempt + "/" + maxAttempts + ": Failed to get status - "
-                        + statusResponse.get("message"));
+                logger.warn("Attempt {}/{}: Failed to get status - {}", attempt, maxAttempts,
+                        statusResponse.get("message"));
                 if (attempt < maxAttempts) {
                     try {
-                        Thread.sleep(intervalSeconds * 1000);
+                        Thread.sleep(intervalSeconds * 1000L);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         break;
@@ -639,19 +637,19 @@ public class AgentRunClient extends BaseClient {
             String currentStatus = (String) statusResponse.get("status");
             String statusReason = (String) statusResponse.get("status_reason");
 
-            logger.info("Attempt " + attempt + "/" + maxAttempts + ": Status = " + currentStatus);
+            logger.info("Attempt {}/{}: Status = {}", attempt, maxAttempts, currentStatus);
             if (statusReason != null) {
-                logger.info("  Status reason: " + statusReason);
+                logger.info("  Status reason: {}", statusReason);
             }
 
             if (terminalStates.contains(currentStatus)) {
-                logger.info("Reached terminal state '" + currentStatus + "' after " + attempt + " attempts");
+                logger.info("Reached terminal state '{}' after {} attempts", currentStatus, attempt);
                 return statusResponse;
             }
 
             if (attempt < maxAttempts) {
                 try {
-                    Thread.sleep(intervalSeconds * 1000);
+                    Thread.sleep(intervalSeconds * 1000L);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -659,7 +657,7 @@ public class AgentRunClient extends BaseClient {
             }
         }
 
-        logger.warning("Exceeded maximum attempts (" + maxAttempts + ") without reaching a terminal state");
+        logger.warn("Exceeded maximum attempts ({}) without reaching a terminal state", maxAttempts);
         return getAgentRuntimeStatus(agentRuntimeId, agentRuntimeVersion);
     }
 
@@ -701,17 +699,17 @@ public class AgentRunClient extends BaseClient {
  * updating, and deletion of sessions.
  */
 class AgentRunSessionManager {
-    private static final Logger logger = Logger.getLogger(AgentRunSessionManager.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(AgentRunSessionManager.class);
     private final Map<String, Map<String, Object>> sessions;
 
     public AgentRunSessionManager() {
         this.sessions = new ConcurrentHashMap<>();
-        logger.fine("AgentRunSessionManager initialized");
+        logger.info("AgentRunSessionManager initialized");
     }
 
     public void createSession(String sessionId, Map<String, Object> sessionData) {
         sessions.put(sessionId, sessionData);
-        logger.info("Created AgentRun session: " + sessionId);
+        logger.info("Created AgentRun session: {}", sessionId);
     }
 
     public Map<String, Object> getSession(String sessionId) {
@@ -722,14 +720,14 @@ class AgentRunSessionManager {
         Map<String, Object> session = sessions.get(sessionId);
         if (session != null) {
             session.putAll(updates);
-            logger.fine("Updated AgentRun session: " + sessionId);
+            logger.info("Updated AgentRun session: {}", sessionId);
         }
     }
 
     public void deleteSession(String sessionId) {
         Map<String, Object> removed = sessions.remove(sessionId);
         if (removed != null) {
-            logger.info("Deleted AgentRun session: " + sessionId);
+            logger.info("Deleted AgentRun session: {}", sessionId);
         }
     }
 

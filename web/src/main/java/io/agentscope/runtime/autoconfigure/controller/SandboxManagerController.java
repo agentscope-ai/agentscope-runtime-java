@@ -17,6 +17,8 @@
 package io.agentscope.runtime.autoconfigure.controller;
 
 import io.agentscope.runtime.engine.Runner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +35,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 
@@ -45,7 +46,7 @@ import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 @RequestMapping("/sandbox")
 public class SandboxManagerController {
 
-    private static final Logger logger = Logger.getLogger(SandboxManagerController.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SandboxManagerController.class);
 
     private final Map<String, MethodInfo> endpointRegistry = new HashMap<>();
 
@@ -56,9 +57,9 @@ public class SandboxManagerController {
     public void registerEndpoints() {
         Class<?> clazz = SandboxManager.class;
 
-        logger.info("Scanning class: " + clazz.getName());
+        logger.info("Scanning class: {}", clazz.getName());
         Method[] methods = clazz.getDeclaredMethods();
-        logger.info("Found " + methods.length + " methods in SandboxManager");
+        logger.info("Found {} methods in SandboxManager", methods.length);
 
         for (Method method : methods) {
             RemoteWrapper annotation = method.getAnnotation(RemoteWrapper.class);
@@ -73,12 +74,11 @@ public class SandboxManagerController {
                 MethodInfo methodInfo = new MethodInfo(method, annotation);
                 endpointRegistry.put(path, methodInfo);
 
-                logger.info("Registered endpoint: " + annotation.method() + " " + path +
-                        " -> " + method.getName());
+                logger.info("Registered endpoint: {} {} -> {}", annotation.method(), path, method.getName());
             }
         }
 
-        logger.info("Total endpoints registered: " + endpointRegistry.size());
+        logger.info("Total endpoints registered: {}", endpointRegistry.size());
     }
 
     /**
@@ -141,21 +141,19 @@ public class SandboxManagerController {
         // Todo: fix this
         SandboxManager sandboxManager = runner.getSandboxManager();
 
-        logger.info("Handling " + httpMethod + " request for path: " + path);
+        logger.info("Handling {} request for path: {}", httpMethod, path);
 
         MethodInfo methodInfo = endpointRegistry.get(path);
 
         if (methodInfo == null) {
-            logger.warning("No endpoint found for path: " + path);
+            logger.warn("No endpoint found for path: {}", path);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Endpoint not found: " + path);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
 
         if (!methodInfo.annotation.method().name().equals(httpMethod.name())) {
-            logger.warning("HTTP method mismatch for path: " + path +
-                    " (expected: " + methodInfo.annotation.method() +
-                    ", got: " + httpMethod + ")");
+            logger.warn("HTTP method mismatch for path: {} (expected: {}, got: {})", path, methodInfo.annotation.method(), httpMethod);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Method not allowed");
             return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(errorResponse);
@@ -178,8 +176,7 @@ public class SandboxManagerController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            logger.severe("Error processing request: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error processing request: {}", e.getMessage());
 
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Error: " + e.getMessage());
@@ -255,7 +252,7 @@ public class SandboxManagerController {
                 Object enumConstant = Enum.valueOf((Class<Enum>) targetType, enumValue);
                 return enumConstant;
             } catch (IllegalArgumentException e) {
-                logger.warning("Invalid enum value '" + enumValue + "' for type " + targetType.getName());
+                logger.warn("Invalid enum value '{}' for type {}", enumValue, targetType.getName());
                 return null;
             }
         }

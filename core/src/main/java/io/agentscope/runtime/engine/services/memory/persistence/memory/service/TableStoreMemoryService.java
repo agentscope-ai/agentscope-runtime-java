@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.alicloud.openservices.tablestore.SyncClient;
@@ -42,6 +41,8 @@ import io.agentscope.runtime.engine.schemas.Content;
 import io.agentscope.runtime.engine.schemas.Message;
 import io.agentscope.runtime.engine.schemas.TextContent;
 import io.agentscope.runtime.engine.services.memory.service.MemoryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * TableStore-based implementation of memory service
@@ -49,7 +50,7 @@ import io.agentscope.runtime.engine.services.memory.service.MemoryService;
  */
 public class TableStoreMemoryService implements MemoryService {
 
-    private static final Logger logger = Logger.getLogger(TableStoreMemoryService.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(MemoryService.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static final String DEFAULT_SESSION_ID = "default";
@@ -96,7 +97,7 @@ public class TableStoreMemoryService implements MemoryService {
                     .build();
 
             knowledgeStore.initTable();
-            logger.info("TableStore memory service started with table: " + tableName);
+            logger.info("TableStore memory service started with table: {}", tableName);
         });
     }
 
@@ -114,7 +115,7 @@ public class TableStoreMemoryService implements MemoryService {
     public CompletableFuture<Boolean> health() {
         return CompletableFuture.supplyAsync(() -> {
             if (knowledgeStore == null) {
-                logger.warning("TableStore memory service is not started");
+                logger.warn("TableStore memory service is not started");
                 return false;
             }
 
@@ -126,7 +127,7 @@ public class TableStoreMemoryService implements MemoryService {
                 knowledgeStore.searchDocuments(request);
                 return true;
             } catch (Exception e) {
-                logger.severe("TableStore memory service health check failed: " + e.getMessage());
+                logger.error("TableStore memory service health check failed: {}", e.getMessage());
                 return false;
             }
         });
@@ -146,7 +147,7 @@ public class TableStoreMemoryService implements MemoryService {
                 knowledgeStore.putDocument(document);
             }
 
-            logger.fine("Added " + messages.size() + " messages to TableStore for user: " + userId);
+            logger.info("Added {} messages to TableStore for user: {}", messages.size(), userId);
         });
     }
 
@@ -258,8 +259,7 @@ public class TableStoreMemoryService implements MemoryService {
                 knowledgeStore.deleteDocument(hit.getDocument().getDocumentId());
             }
 
-            logger.fine("Deleted memory for user: " + userId +
-                       (sessionId.isPresent() ? ", session: " + sessionId.get() : ""));
+            logger.info("Deleted memory for user: {}{}", userId, sessionId.isPresent() ? ", session: " + sessionId.get() : "");
         });
     }
 
@@ -311,7 +311,7 @@ public class TableStoreMemoryService implements MemoryService {
                 metadata.put("message_metadata", metadataJson);
             }
         } catch (Exception e) {
-            logger.severe("Failed to serialize message content: " + e.getMessage());
+            logger.error("Failed to serialize message content: {}", e.getMessage());
         }
 
         document.setMetadata(metadata);
@@ -353,7 +353,7 @@ public class TableStoreMemoryService implements MemoryService {
                 message.setMetadata(messageMetadata);
             }
         } catch (Exception e) {
-            logger.severe("Failed to deserialize message content: " + e.getMessage());
+            logger.error("Failed to deserialize message content: {}", e.getMessage());
         }
 
         return message;

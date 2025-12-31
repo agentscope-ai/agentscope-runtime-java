@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,6 +44,8 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Mem0-based implementation of memory service
@@ -53,7 +54,7 @@ import org.apache.hc.core5.http.io.entity.StringEntity;
  */
 public class Mem0MemoryService implements MemoryService {
 
-    private static final Logger logger = Logger.getLogger(Mem0MemoryService.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(Mem0MemoryService.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String MEM0_API_BASE_URL = "https://api.mem0.ai";
     private static final String API_VERSION_V1 = "v1";
@@ -104,7 +105,7 @@ public class Mem0MemoryService implements MemoryService {
                 }
                 logger.info("Mem0 memory service stopped");
             } catch (Exception e) {
-                logger.severe("Failed to close HTTP client: " + e.getMessage());
+                logger.error("Failed to close HTTP client: {}", e.getMessage());
             }
         });
     }
@@ -134,7 +135,7 @@ public class Mem0MemoryService implements MemoryService {
                     return response.getCode() == 200;
                 }
             } catch (Exception e) {
-                logger.severe("Mem0 memory service health check failed: " + e.getMessage());
+                logger.error("Mem0 memory service health check failed: {}", e.getMessage());
                 return false;
             }
         });
@@ -180,14 +181,14 @@ public class Mem0MemoryService implements MemoryService {
                 try (CloseableHttpResponse response = httpClient.execute(request)) {
                     int statusCode = response.getCode();
                     if (statusCode >= 200 && statusCode < 300) {
-                        logger.fine("Added " + messages.size() + " messages to Mem0 for user: " + userId);
+                        logger.info("Added {} messages to Mem0 for user: {}", messages.size(), userId);
                     } else {
                         String responseBody = EntityUtils.toString(response.getEntity());
-                        logger.warning("Failed to add memory: " + statusCode + " - " + responseBody);
+                        logger.warn("Failed to add memory: {} - {}", statusCode, responseBody);
                     }
                 }
             } catch (Exception e) {
-                logger.severe("Failed to add memory: " + e.getMessage());
+                logger.error("Failed to add memory: {}", e.getMessage());
                 throw new RuntimeException("Failed to add memory", e);
             }
         });
@@ -272,12 +273,12 @@ public class Mem0MemoryService implements MemoryService {
                     if (response.getCode() == 200) {
                         return parseSearchResponse(responseBody);
                     } else {
-                        logger.warning("Failed to search memory: " + response.getCode() + " - " + responseBody);
+                        logger.warn("Failed to search memory: {} - {}", response.getCode(), responseBody);
                         return Collections.emptyList();
                     }
                 }
             } catch (Exception e) {
-                logger.severe("Failed to search memory: " + e.getMessage());
+                logger.error("Failed to search memory: {}", e.getMessage());
                 return Collections.emptyList();
             }
         });
@@ -341,12 +342,12 @@ public class Mem0MemoryService implements MemoryService {
 
                         return allMessages;
                     } else {
-                        logger.warning("Failed to list memory: " + response.getCode() + " - " + responseBody);
+                        logger.warn("Failed to list memory: {} - {}", response.getCode(), responseBody);
                         return Collections.emptyList();
                     }
                 }
             } catch (Exception e) {
-                logger.severe("Failed to list memory: " + e.getMessage());
+                logger.error("Failed to list memory: {}", e.getMessage());
                 return Collections.emptyList();
             }
         });
@@ -411,18 +412,18 @@ public class Mem0MemoryService implements MemoryService {
 
                     try (CloseableHttpResponse deleteResponse = httpClient.execute(deleteRequest)) {
                         if (deleteResponse.getCode() >= 200 && deleteResponse.getCode() < 300) {
-                            logger.fine("Deleted memory: " + memoryId);
+                            logger.info("Deleted memory: {}", memoryId);
                         } else {
                             String responseBody = EntityUtils.toString(deleteResponse.getEntity());
-                            logger.warning("Failed to delete memory " + memoryId + ": " + deleteResponse.getCode() + " - " + responseBody);
+                            logger.warn("Failed to delete memory {}: {} - {}", memoryId, deleteResponse.getCode(), responseBody);
                         }
                     }
                 }
 
                 String sessionInfo = sessionId.map(s -> ", session: " + s).orElse("");
-                logger.fine("Deleted " + memoryIds.size() + " memories for user: " + userId + sessionInfo);
+                logger.info("Deleted {} memories for user: {}{}", memoryIds.size(), userId, sessionInfo);
             } catch (Exception e) {
-                logger.severe("Failed to delete memory: " + e.getMessage());
+                logger.error("Failed to delete memory: {}", e.getMessage());
                 throw new RuntimeException("Failed to delete memory", e);
             }
         });
@@ -462,12 +463,12 @@ public class Mem0MemoryService implements MemoryService {
                         }
                         return new ArrayList<>(userIds);
                     } else {
-                        logger.warning("Failed to get all users: " + response.getCode() + " - " + responseBody);
+                        logger.warn("Failed to get all users: {} - {}", response.getCode(), responseBody);
                         return Collections.emptyList();
                     }
                 }
             } catch (Exception e) {
-                logger.severe("Failed to get all users: " + e.getMessage());
+                logger.error("Failed to get all users: {}", e.getMessage());
                 return Collections.emptyList();
             }
         });
@@ -544,7 +545,7 @@ public class Mem0MemoryService implements MemoryService {
             }
             return messages;
         } catch (Exception e) {
-            logger.severe("Failed to parse search response: " + e.getMessage());
+            logger.error("Failed to parse search response: {}", e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -569,7 +570,7 @@ public class Mem0MemoryService implements MemoryService {
             }
             return messages;
         } catch (Exception e) {
-            logger.severe("Failed to parse list response: " + e.getMessage());
+            logger.error("Failed to parse list response: {}", e.getMessage());
             return Collections.emptyList();
         }
     }

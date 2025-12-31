@@ -15,6 +15,8 @@
  */
 package io.agentscope.runtime.engine.services.memory.persistence.memory.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -27,7 +29,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -41,7 +42,7 @@ import io.agentscope.runtime.engine.services.memory.service.MemoryService;
  * Redis-based memory service implementation
  */
 public class RedisMemoryService implements MemoryService {
-    Logger logger = Logger.getLogger(RedisMemoryService.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(MemoryService.class);
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
@@ -128,7 +129,7 @@ public class RedisMemoryService implements MemoryService {
                 Set<String> keywords = Arrays.stream(query.toLowerCase().split("\\s+"))
                         .collect(Collectors.toSet());
 
-                logger.info("keywords: "+keywords);
+                logger.info("keywords: {}", keywords);
                 
                 HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
                 Map<String, String> allFields = hashOps.entries(key);

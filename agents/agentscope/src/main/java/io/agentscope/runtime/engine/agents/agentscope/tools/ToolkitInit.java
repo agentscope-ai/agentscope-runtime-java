@@ -27,15 +27,16 @@ import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
 import io.agentscope.runtime.sandbox.tools.McpConfigConverter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
 public class ToolkitInit {
-    private static final Logger logger = Logger.getLogger(ToolkitInit.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ToolkitInit.class);
 
     public static List<AgentTool> getAllTools(Sandbox sandbox) {
         return List.of(
@@ -421,10 +422,10 @@ public class ToolkitInit {
                 agentTools.add(new AsMCPTool(mcpTool));
             }
 
-            logger.info(String.format("Created %d MCP tools", agentTools.size()));
+            logger.info("Created {} MCP tools", agentTools.size());
             return agentTools;
         } catch (Exception e) {
-            logger.severe("Failed to create MCP tools: " + e.getMessage());
+            logger.error("Failed to create MCP tools: {}", e.getMessage());
             throw new RuntimeException("Failed to create MCP tools", e);
         }
     }

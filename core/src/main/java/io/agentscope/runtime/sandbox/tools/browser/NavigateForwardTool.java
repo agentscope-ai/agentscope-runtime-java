@@ -18,16 +18,17 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
-import java.util.logging.Logger;
 
 /**
  * Browser forward navigation tool
  */
 public class NavigateForwardTool extends BrowserSandboxTool {
 
-    Logger logger = Logger.getLogger(NavigateForwardTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(NavigateForwardTool.class);
 
     public NavigateForwardTool() {
         super("browser_navigate_forward", "browser", "Navigate forward in browser history");
@@ -51,8 +52,7 @@ public class NavigateForwardTool extends BrowserSandboxTool {
             throw new RuntimeException("Only BrowserSandbox supported in browser navigate forward tool");
         } catch (Exception e) {
             String errorMsg = "Browser Navigate Forward Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

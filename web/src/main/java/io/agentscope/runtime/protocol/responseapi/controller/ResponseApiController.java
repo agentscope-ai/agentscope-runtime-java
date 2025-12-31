@@ -21,11 +21,11 @@ import io.agentscope.runtime.protocol.ProtocolConfig;
 import io.agentscope.runtime.protocol.responseapi.ResponseApiHandler;
 import io.agentscope.runtime.protocol.responseapi.ResponseApiHandlerConfiguration;
 import io.agentscope.runtime.protocol.responseapi.model.ResponseApiRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.logging.Logger;
 
 /**
  * REST controller for OpenAI Responses API protocol endpoints.
@@ -34,7 +34,7 @@ import java.util.logging.Logger;
 @RequestMapping("/compatible-mode/v1")
 public class ResponseApiController {
 
-    private static final Logger logger = Logger.getLogger(ResponseApiController.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ResponseApiController.class);
 
     private final ResponseApiHandler responseApiHandler;
 

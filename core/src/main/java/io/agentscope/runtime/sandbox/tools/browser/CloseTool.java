@@ -18,12 +18,13 @@ package io.agentscope.runtime.sandbox.tools.browser;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
-import java.util.logging.Logger;
 
 public class CloseTool extends BrowserSandboxTool {
-    Logger logger = Logger.getLogger(CloseTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(CloseTool.class);
 
     public CloseTool() {
         super("browser_close", "browser", "Close the browser");
@@ -47,8 +48,7 @@ public class CloseTool extends BrowserSandboxTool {
             throw new RuntimeException("Only BrowserSandbox supported in browser close tool");
         } catch (Exception e) {
             String errorMsg = "Browser Close Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

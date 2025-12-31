@@ -24,13 +24,14 @@ import com.aliyun.agentbay.model.SessionResult;
 import com.aliyun.agentbay.session.CreateSessionParams;
 import com.aliyun.agentbay.session.Session;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class AgentBayClient extends BaseClient{
-    Logger logger = Logger.getLogger(AgentBayClient.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(AgentBayClient.class);
 
     private AgentBay agentBay;
     private String apiKey;
@@ -40,7 +41,7 @@ public class AgentBayClient extends BaseClient{
         try{
             agentBay = new AgentBay(apiKey);
         } catch (AgentBayException e) {
-            logger.severe("Failed to initialize AgentBay client: " + e.getMessage());
+            logger.error("Failed to initialize AgentBay client: {}", e.getMessage());
         }
     }
 
@@ -58,14 +59,14 @@ public class AgentBayClient extends BaseClient{
             SessionResult sessionResult = agentBay.create(params);
             if(sessionResult.isSuccess()){
                 String sessionId = sessionResult.getSessionId();
-                logger.info("AgentBay session created successfully: " + sessionId);
+                logger.info("AgentBay session created successfully: {}", sessionId);
                 return new ContainerCreateResult(sessionId);
             } else {
-                logger.severe("Failed to create AgentBay session: " + sessionResult.getErrorMessage());
+                logger.error("Failed to create AgentBay session: {}", sessionResult.getErrorMessage());
             }
         }
         catch (AgentBayException e){
-            logger.severe("Failed to create AgentBay session: " + e.getMessage());
+            logger.error("Failed to create AgentBay session: {}", e.getMessage());
         }
         return new ContainerCreateResult(null, null, null);
     }
@@ -90,18 +91,18 @@ public class AgentBayClient extends BaseClient{
         try{
             SessionResult getResult =  agentBay.get(containerId);
             if(!getResult.isSuccess()){
-                logger.warning("AgentBay session not found: " + containerId);
+                logger.warn("AgentBay session not found: {}", containerId);
                 return;
             }
             DeleteResult deleteResult = agentBay.delete(getResult.getSession(), false);
             if(deleteResult.isSuccess()){
-                logger.info("AgentBay session removed successfully: " + containerId);
+                logger.info("AgentBay session removed successfully: {}", containerId);
             } else {
-                logger.warning("Failed to remove AgentBay session: " + deleteResult.getErrorMessage());
+                logger.warn("Failed to remove AgentBay session: {}", deleteResult.getErrorMessage());
             }
 
         } catch (AgentBayException e) {
-            logger.severe("Failed to remove AgentBay session: " + e.getMessage());
+            logger.error("Failed to remove AgentBay session: {}", e.getMessage());
         }
     }
 
@@ -112,7 +113,7 @@ public class AgentBayClient extends BaseClient{
                 Session session = getResult.getSession();
                 SessionInfoResult infoResult = session.info();
                 if(infoResult.isSuccess()){
-                    logger.info("AgentBay session info retrieved successfully: " + sessionId);
+                    logger.info("AgentBay session info retrieved successfully: {}", sessionId);
                     return Map.of(
                             "sessionId", infoResult.getSessionInfo().getSessionId(),
                             "resourceId", infoResult.getSessionInfo().getResourceId(),
@@ -122,14 +123,14 @@ public class AgentBayClient extends BaseClient{
                             "requestId", infoResult.getRequestId()
                     );
                 } else {
-                    logger.warning("Failed to get AgentBay session info: " + infoResult.getErrorMessage());
+                    logger.warn("Failed to get AgentBay session info: {}", infoResult.getErrorMessage());
                     return Map.of("error", infoResult.getErrorMessage());
                 }
             } else {
-                logger.warning("AgentBay session not found: " + sessionId);
+                logger.warn("AgentBay session not found: {}", sessionId);
             }
         } catch (AgentBayException e) {
-            logger.severe("Failed to get AgentBay session info: " + e.getMessage());
+            logger.error("Failed to get AgentBay session info: {}", e.getMessage());
         }
         return null;
     }
@@ -140,10 +141,10 @@ public class AgentBayClient extends BaseClient{
             if(getResult.isSuccess()){
                 return getResult.getSession();
             } else {
-                logger.severe("AgentBay session not found: " + sessionId);
+                logger.error("AgentBay session not found: {}", sessionId);
             }
         } catch (AgentBayException e) {
-            logger.severe("Failed to get AgentBay session: " + e.getMessage());
+            logger.error("Failed to get AgentBay session: {}", e.getMessage());
         }
         return null;
     }
