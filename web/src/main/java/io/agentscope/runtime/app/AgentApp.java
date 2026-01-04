@@ -44,8 +44,7 @@ import io.agentscope.runtime.engine.services.memory.service.SessionHistoryServic
 import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.protocol.ProtocolConfig;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import lombok.Getter;
-import lombok.Setter;
+
 import okio.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -576,13 +575,43 @@ public class AgentApp {
 		AgentHandler get(Properties properties, ServiceComponentManager serviceComponentManager);
 	}
 
-	@Setter
-	@Getter
 	public static class ServiceComponentManager {
 		private StateService stateService;
 		private SessionHistoryService sessionHistoryService;
 		private MemoryService memoryService;
 		private SandboxService sandboxService;
+
+		public StateService getStateService() {
+			return stateService;
+		}
+
+		public void setStateService(StateService stateService) {
+			this.stateService = stateService;
+		}
+
+		public SessionHistoryService getSessionHistoryService() {
+			return sessionHistoryService;
+		}
+
+		public void setSessionHistoryService(SessionHistoryService sessionHistoryService) {
+			this.sessionHistoryService = sessionHistoryService;
+		}
+
+		public MemoryService getMemoryService() {
+			return memoryService;
+		}
+
+		public void setMemoryService(MemoryService memoryService) {
+			this.memoryService = memoryService;
+		}
+
+		public SandboxService getSandboxService() {
+			return sandboxService;
+		}
+
+		public void setSandboxService(SandboxService sandboxService) {
+			this.sandboxService = sandboxService;
+		}
 	}
 }
 

@@ -46,6 +46,21 @@ agentApp.run("localhost",10001);
 
 ------
 
+```java
+//Use launch parameters or environment variables
+// required items
+// 1、Specify attributes in environment variables or startup parameters[agent.app.handler.provider.class],It is an implementation of io.agentscope.runtime.app.AgentApp.AgentHandlerProvider,used for create an io.agentscope.runtime.adapters.AgentHandler instance.
+// 2、Specify attributes in environment variables or startup parameters[agent.app.sandbox.service.provider.class],It is an implementation of io.agentscope.runtime.app.AgentApp.SandboxServiceProvider,used for create an io.agentscope.runtime.engine.services.sandbox.SandboxService instance.
+String[] commandLine = new String[2];
+commandLine[0] = "-f";
+commandLine[1] = Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(".env")).getPath();//The path can be arbitrarily specified
+AgentApp agentApp = new AgentApp(commandLine);
+agentApp.run();
+
+```
+
+------
+
 ## Configuring Cross-Origin Resource Sharing (CORS)
 
 **Feature**
