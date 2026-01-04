@@ -16,6 +16,7 @@
 
 package io.agentscope.runtime.deployer;
 
+import java.net.URL;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -33,10 +34,21 @@ public class AgentScopeDeployWithCommandLineTests {
 
 	@Test
 	void testRunWithCommandLine(){
-		String[] commandLine = new String[2];
-		commandLine[0] = "-f";
-		commandLine[1] = Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(".env")).getPath();
-		AgentApp app = new AgentApp(commandLine);
+		URL resource = Thread.currentThread().getContextClassLoader().getResource(".env");
+		AgentApp app;
+		if (Objects.nonNull(resource)){
+			String[] commandLine = new String[2];
+			commandLine[0] = "-f";
+			commandLine[1] = Objects.requireNonNull(resource).getPath();
+			app = new AgentApp(commandLine);
+		}else{
+			// ci can not get the .env file, here it is injected through the system properties
+			System.setProperty("agent.app.port","7779");
+			System.setProperty("agent.app.handler.provider.class","io.agentscope.runtime.deployer.AgentScopeDeployWithCommandLineTests$MyAgentHandlerProvider");
+			System.setProperty("agent.app.sandbox.service.provider.class","io.agentscope.runtime.deployer.AgentScopeDeployWithCommandLineTests$MySandboxServiceProvider");
+			System.setProperty("AI_DASHSCOPE_API_KEY","your key");
+			app = new AgentApp(new String[0]);
+		}
 		app.run();
 	}
 
