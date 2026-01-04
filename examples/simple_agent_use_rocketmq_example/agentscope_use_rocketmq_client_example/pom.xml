@@ -37,6 +37,8 @@
         <agentscope-extensions.version>${revision}</agentscope-extensions.version>
 
         <logback.version>1.5.20</logback.version>
+        <spotless.version>2.44.5</spotless.version>
+
     </properties>
 
     <dependencies>
@@ -63,5 +65,29 @@
             <version>1.0.8</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <removeUnusedImports></removeUnusedImports>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotless-apply</id>
+                        <goals>
+                            <goal>apply</goal>
+                        </goals>
+                        <phase>process-sources</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
