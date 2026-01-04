@@ -46,6 +46,19 @@ agentApp.run("localhost",10001);
 
 ------
 
+```java
+//使用启动参数或环境变量
+// 必要项
+// 1、在环境变量或启动参数中指定属性[agent.app.handler.provider.class],它是一个io.agentscope.runtime.app.AgentApp.AgentHandlerProvider的实现，用于实例化io.agentscope.runtime.adapters.AgentHandler
+// 2、在环境变量或启动参数中指定属性[agent.app.sandbox.service.provider.class]，它是一个io.agentscope.runtime.app.AgentApp.SandboxServiceProvider的实现，用于实例化io.agentscope.runtime.engine.services.sandbox.SandboxService
+String[] commandLine = new String[2];
+commandLine[0] = "-f";
+commandLine[1] = Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(".env")).getPath();//The path can be arbitrarily specified
+AgentApp agentApp = new AgentApp(commandLine);
+agentApp.run();
+
+```
+
 ## 配置跨域（CORS）
 
 **功能**
