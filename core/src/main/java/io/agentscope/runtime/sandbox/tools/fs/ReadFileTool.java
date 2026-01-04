@@ -18,16 +18,16 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class ReadFileTool extends FsSandboxTool {
 
-    Logger logger = Logger.getLogger(ReadFileTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ReadFileTool.class);
 
     public ReadFileTool() {
         super("fs_read_file", "filesystem", "Read contents of a file");
@@ -39,7 +39,7 @@ public class ReadFileTool extends FsSandboxTool {
         Map<String, Object> properties = new HashMap<>();
         properties.put("path", pathProperty);
 
-        List<String> required = Arrays.asList("path");
+        List<String> required = List.of("path");
 
         schema.put("type", "object");
         schema.put("properties", properties);
@@ -61,8 +61,7 @@ public class ReadFileTool extends FsSandboxTool {
             throw new RuntimeException("Only FilesystemSandbox supported in read file tool");
         } catch (Exception e) {
             String errorMsg = "Read File Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

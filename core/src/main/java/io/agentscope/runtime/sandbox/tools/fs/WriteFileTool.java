@@ -18,16 +18,17 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class WriteFileTool extends FsSandboxTool {
 
-    Logger logger = Logger.getLogger(WriteFileTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(WriteFileTool.class);
 
     public WriteFileTool() {
         super("fs_write_file", "filesystem", "Write content to a file");
@@ -67,8 +68,7 @@ public class WriteFileTool extends FsSandboxTool {
             throw new RuntimeException("Only FilesystemSandbox supported in write file tool");
         } catch (Exception e) {
             String errorMsg = "Write File Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

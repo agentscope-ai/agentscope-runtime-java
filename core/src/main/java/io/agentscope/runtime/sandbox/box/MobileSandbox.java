@@ -19,13 +19,14 @@ import io.agentscope.runtime.sandbox.box.model.HostPrerequisiteError;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 @RegisterSandbox(
         imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-mobile:latest",
@@ -36,7 +37,7 @@ import java.util.logging.Logger;
         runtimeConfig = {"privileged=true"}
 )
 public class MobileSandbox extends Sandbox {
-    private static final Logger logger = Logger.getLogger(MobileSandbox.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(MobileSandbox.class);
     private static boolean hostCheckDone = false;
 
     public MobileSandbox(SandboxManager managerApi, String userId, String sessionId) {
@@ -67,7 +68,7 @@ public class MobileSandbox extends Sandbox {
         String arch = System.getProperty("os.arch").toLowerCase();
 
         if ("aarch64".equals(arch) || "arm64".equals(arch)) {
-            logger.warning("""
+            logger.warn("""
                     
                     ======================== WARNING ========================
                     ARM64/aarch64 architecture detected (e.g., Apple M-series).

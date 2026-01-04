@@ -18,13 +18,14 @@ package io.agentscope.runtime.sandbox.manager.registry;
 import io.agentscope.runtime.sandbox.box.*;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class SandboxAnnotationProcessor {
-    private static final Logger logger = Logger.getLogger(SandboxAnnotationProcessor.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SandboxAnnotationProcessor.class);
 
     /**
      * Process a single class with @RegisterSandbox annotation
@@ -75,21 +76,17 @@ public class SandboxAnnotationProcessor {
                         environment,
                         runtimeConfig
                 );
-                logger.info("Registered custom sandbox via annotation: " + 
-                           "type=" + customType + 
-                           ", class=" + clazz.getSimpleName() + 
-                           ", image=" + imageName);
+                logger.info("Registered custom sandbox via annotation: type={}, class={}, image={}",
+                           customType, clazz.getSimpleName(), imageName);
             } else {
                 SandboxRegistryService.register(clazz, config);
-                logger.info("Registered sandbox via annotation: " + 
-                           "type=" + sandboxType + 
-                           ", class=" + clazz.getSimpleName() + 
-                           ", image=" + imageName);
+                logger.info("Registered sandbox via annotation: type={}, class={}, image={}",
+                           sandboxType, clazz.getSimpleName(), imageName);
             }
             
         } catch (Exception e) {
-            logger.severe("Failed to process @RegisterSandbox annotation on class " + 
-                         clazz.getName() + ": " + e.getMessage());
+            logger.error("Failed to process @RegisterSandbox annotation on class {}: {}",
+                         clazz.getName(), e.getMessage());
             throw new RuntimeException("Failed to register sandbox: " + clazz.getName(), e);
         }
     }
@@ -100,8 +97,8 @@ public class SandboxAnnotationProcessor {
      * @param packageName Package name
      */
     public static void scanAndRegisterPackage(String packageName) {
-        logger.info("Scanning package for @RegisterSandbox annotations: " + packageName);
-        logger.warning("Package scanning not fully implemented. " +
+        logger.info("Scanning package for @RegisterSandbox annotations: {}", packageName);
+        logger.warn("Package scanning not fully implemented. " +
                       "Please call processClass() manually for each sandbox class " +
                       "or use a classpath scanner like Reflections library.");
     }
@@ -117,49 +114,49 @@ public class SandboxAnnotationProcessor {
             Class<?> baseSandboxClass = Class.forName(BaseSandbox.class.getName());
             processClass(baseSandboxClass);
         } catch (ClassNotFoundException e) {
-            logger.fine("BaseSandbox class not found, skipping: " + e.getMessage());
+            logger.info("BaseSandbox class not found, skipping: {}", e.getMessage());
         }
         
         try {
             Class<?> filesystemSandboxClass = Class.forName(FilesystemSandbox.class.getName());
             processClass(filesystemSandboxClass);
         } catch (ClassNotFoundException e) {
-            logger.fine("FilesystemSandbox class not found, skipping: " + e.getMessage());
+            logger.info("FilesystemSandbox class not found, skipping: {}", e.getMessage());
         }
         
         try {
             Class<?> browserSandboxClass = Class.forName(BrowserSandbox.class.getName());
             processClass(browserSandboxClass);
         } catch (ClassNotFoundException e) {
-            logger.fine("BrowserSandbox class not found, skipping: " + e.getMessage());
+            logger.info("BrowserSandbox class not found, skipping: {}", e.getMessage());
         }
         
         try {
             Class<?> dummySandboxClass = Class.forName(DummySandbox.class.getName());
             processClass(dummySandboxClass);
         } catch (ClassNotFoundException e) {
-            logger.fine("DummySandbox class not found, skipping: " + e.getMessage());
+            logger.info("DummySandbox class not found, skipping: {}", e.getMessage());
         }
         
         try {
             Class<?> bfclSandboxClass = Class.forName(BFCLSandbox.class.getName());
             processClass(bfclSandboxClass);
         } catch (ClassNotFoundException e) {
-            logger.fine("BFCLSandbox class not found, skipping: " + e.getMessage());
+            logger.info("BFCLSandbox class not found, skipping: {}", e.getMessage());
         }
         
         try {
             Class<?> appworldSandboxClass = Class.forName(APPWorldSandbox.class.getName());
             processClass(appworldSandboxClass);
         } catch (ClassNotFoundException e) {
-            logger.fine("APPWorldSandbox class not found, skipping: " + e.getMessage());
+            logger.info("APPWorldSandbox class not found, skipping: {}", e.getMessage());
         }
         
         try {
             Class<?> webshopSandboxClass = Class.forName(WebShopSandbox.class.getName());
             processClass(webshopSandboxClass);
         } catch (ClassNotFoundException e) {
-            logger.fine("WebShopSandbox class not found, skipping: " + e.getMessage());
+            logger.info("WebShopSandbox class not found, skipping: {}", e.getMessage());
         }
         
         logger.info("Finished registering sandbox classes");
@@ -172,7 +169,7 @@ public class SandboxAnnotationProcessor {
      */
     private static Map<String, String> parseKeyValueArray(String[] array) {
         Map<String, String> result = new HashMap<>();
-        if (array == null || array.length == 0) {
+        if (array == null) {
             return result;
         }
         
@@ -188,7 +185,7 @@ public class SandboxAnnotationProcessor {
                 value = resolveEnvironmentVariables(value);
                 result.put(key, value);
             } else {
-                logger.warning("Invalid key-value pair format: " + item);
+                logger.warn("Invalid key-value pair format: {}", item);
             }
         }
         
@@ -242,7 +239,7 @@ public class SandboxAnnotationProcessor {
                 result.append(envValue);
             } else {
                 result.append(defaultValue);
-                logger.fine("Environment variable '" + envVarName + "' not found, using default: '" + defaultValue + "'");
+                logger.info("Environment variable '{}' not found, using default: '{}'", envVarName, defaultValue);
             }
             
             startIndex = placeholderEnd + 1;
@@ -257,7 +254,7 @@ public class SandboxAnnotationProcessor {
      */
     private static Map<String, Object> parseKeyValueArrayAsObject(String[] array) {
         Map<String, Object> result = new HashMap<>();
-        if (array == null || array.length == 0) {
+        if (array == null) {
             return result;
         }
         
@@ -273,7 +270,7 @@ public class SandboxAnnotationProcessor {
                 Object parsedValue = parseValue(value);
                 result.put(key, parsedValue);
             } else {
-                logger.warning("Invalid key-value pair format: " + item);
+                logger.warn("Invalid key-value pair format: {}", item);
             }
         }
         
@@ -286,7 +283,7 @@ public class SandboxAnnotationProcessor {
      */
     private static Map<String, Object> parseResourceLimits(String[] array) {
         Map<String, Object> result = new HashMap<>();
-        if (array == null || array.length == 0) {
+        if (array == null) {
             return result;
         }
         
@@ -307,7 +304,7 @@ public class SandboxAnnotationProcessor {
                         double cpuValue = Double.parseDouble(value);
                         result.put("cpu", cpuValue);
                     } catch (NumberFormatException e) {
-                        logger.warning("Invalid CPU value: " + value);
+                        logger.warn("Invalid CPU value: {}", value);
                         result.put("cpu", value);
                     }
                 } else {

@@ -20,6 +20,9 @@ import io.agentscope.runtime.engine.DeployManager;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.Protocol;
 import io.agentscope.runtime.protocol.ProtocolConfig;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -34,11 +37,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 import java.util.function.Consumer;
 
 public class LocalDeployManager implements DeployManager {
-    Logger logger = Logger.getLogger(LocalDeployManager.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(LocalDeployManager.class);
 
     private ConfigurableApplicationContext applicationContext;
 
@@ -73,7 +75,7 @@ public class LocalDeployManager implements DeployManager {
             serverProps.put("server.address", this.host);
         }
 
-        logger.info("Starting streaming deployment for endpoint: " + endpointName);
+        logger.info("Starting streaming deployment for endpoint: {}", endpointName);
 
         this.applicationContext = new SpringApplicationBuilder()
                 .sources(LocalDeployConfig.class)
@@ -101,7 +103,7 @@ public class LocalDeployManager implements DeployManager {
                     if (corsConfigurer != null) {
                         ctx.registerBean(WebMvcConfigurer.class, () -> new WebMvcConfigurer() {
                             @Override
-                            public void addCorsMappings(CorsRegistry registry) {
+                            public void addCorsMappings(@NotNull CorsRegistry registry) {
                                 corsConfigurer.accept(registry);
                             }
                         });
@@ -110,7 +112,7 @@ public class LocalDeployManager implements DeployManager {
                 })
                 .run();
 
-        logger.info("Streaming deployment completed for endpoint: " + endpointName);
+        logger.info("Streaming deployment completed for endpoint: {}", endpointName);
     }
 
     /**

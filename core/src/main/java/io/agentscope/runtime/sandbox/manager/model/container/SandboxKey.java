@@ -15,11 +15,13 @@
  */
 package io.agentscope.runtime.sandbox.manager.model.container;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Objects;
-import java.util.logging.Logger;
 
 public class SandboxKey {
-    Logger logger = Logger.getLogger(SandboxKey.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SandboxKey.class);
     private final String userID;
     private final String sessionID;
     private final SandboxType sandboxType;
@@ -35,7 +37,7 @@ public class SandboxKey {
     public SandboxKey(String userID, String sessionID, SandboxType sandboxType) {
         this(userID, sessionID, sandboxType, sandboxType == SandboxType.AGENTBAY ? "linux_latest" : "");
         if (sandboxType == SandboxType.AGENTBAY) {
-            logger.warning("Creating SandboxKey without default \"linux_latest\" imageID for AGENTBAY type.");
+            logger.warn("Creating SandboxKey without default \"linux_latest\" imageID for AGENTBAY type.");
         }
     }
 

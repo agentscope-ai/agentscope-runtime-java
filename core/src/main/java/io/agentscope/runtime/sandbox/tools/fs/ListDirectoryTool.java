@@ -18,16 +18,16 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class ListDirectoryTool extends FsSandboxTool {
 
-    Logger logger = Logger.getLogger(ListDirectoryTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(ListDirectoryTool.class);
 
     public ListDirectoryTool() {
         super("fs_list_directory", "filesystem", "List contents of a directory");
@@ -39,7 +39,7 @@ public class ListDirectoryTool extends FsSandboxTool {
         Map<String, Object> properties = new HashMap<>();
         properties.put("path", pathProperty);
 
-        List<String> required = Arrays.asList("path");
+        List<String> required = List.of("path");
 
         schema.put("type", "object");
         schema.put("properties", properties);
@@ -61,8 +61,7 @@ public class ListDirectoryTool extends FsSandboxTool {
             throw new RuntimeException("Only FilesystemSandbox supported in list directory tool");
         } catch (Exception e) {
             String errorMsg = "List Directory Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }

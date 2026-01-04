@@ -29,10 +29,10 @@ import io.agentscope.runtime.sandbox.manager.client.AgentBayClient;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.logging.Logger;
-
 
 @RegisterSandbox(
         imageName = "agentbay-cloud",
@@ -43,7 +43,7 @@ import java.util.logging.Logger;
 )
 public class AgentBaySandbox extends CloudSandbox {
 
-    private static final Logger logger = Logger.getLogger(AgentBaySandbox.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(AgentBaySandbox.class);
     private String imageId;
     private Map<String, String> labels;
 
@@ -71,11 +71,9 @@ public class AgentBaySandbox extends CloudSandbox {
                 );
             }
             this.sandboxId = containerModel.getContainerId();
-            logger.info("Sandbox initialized: " + this.sandboxId +
-                    " (type=" + sandboxType + ", user=" + userId +
-                    ", session=" + sessionId + ", autoRelease=" + autoRelease + ")");
+            logger.info("Sandbox initialized: {} (type={}, user={}, session={}, autoRelease={})", this.sandboxId, sandboxType, userId, sessionId, autoRelease);
         } catch (Exception e) {
-            logger.severe("Failed to initialize sandbox: " + e.getMessage());
+            logger.error("Failed to initialize sandbox: {}", e.getMessage());
             throw new RuntimeException("Failed to initialize sandbox", e);
         }
     }
@@ -127,7 +125,7 @@ public class AgentBaySandbox extends CloudSandbox {
     public String callCloudTool(String toolName, Map<String, Object> parameters) {
         Session session = getSession();
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         if(Objects.equals(toolName, "run_shell_command")){
@@ -184,7 +182,7 @@ public class AgentBaySandbox extends CloudSandbox {
         Session session = getSession();
         code = code == null ? "" : code;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         CodeExecutionResult result = session.getCode().runCode(code, "python");
@@ -203,7 +201,7 @@ public class AgentBaySandbox extends CloudSandbox {
         Session session = getSession();
         command = command == null ? "" : command;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         CommandResult result = session.getCommand().executeCommand(command, 1000);
@@ -220,7 +218,7 @@ public class AgentBaySandbox extends CloudSandbox {
         Session session = getSession();
         path = path == null ? "" : path;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         FileContentResult result = session.getFileSystem().readFile(path);
@@ -237,7 +235,7 @@ public class AgentBaySandbox extends CloudSandbox {
         path = path == null ? "" : path;
         content = content == null ? "" : content;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         BoolResult result = session.getFileSystem().writeFile(path, content);
@@ -252,7 +250,7 @@ public class AgentBaySandbox extends CloudSandbox {
         Session session = getSession();
         path = path == null ? "" : path;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         DirectoryListResult result = session.getFileSystem().listDirectory(path);
@@ -269,7 +267,7 @@ public class AgentBaySandbox extends CloudSandbox {
         source = source == null ? "" : source;
         destination = destination == null ? "" : destination;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         BoolResult result = session.getFileSystem().moveFile(source, destination);
@@ -284,7 +282,7 @@ public class AgentBaySandbox extends CloudSandbox {
         Session session = getSession();
         path = path == null ? "" : path;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         DeleteResult result = session.getFileSystem().deleteFile(path);
@@ -299,7 +297,7 @@ public class AgentBaySandbox extends CloudSandbox {
         Session session = getSession();
         path = path == null ? "" : path;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         BoolResult result = session.getFileSystem().createDirectory(path);
@@ -313,7 +311,7 @@ public class AgentBaySandbox extends CloudSandbox {
     public String takeScreenShot() {
         Session session = getSession();
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         OperationResult result = session.getComputer().screenshot();
@@ -329,7 +327,7 @@ public class AgentBaySandbox extends CloudSandbox {
         Session session = getSession();
         url = url == null ? "" : url;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         Map<String, Object> response = new HashMap<>();
@@ -351,7 +349,7 @@ public class AgentBaySandbox extends CloudSandbox {
                 result = page.content();
                 browser.close();
             } catch (Exception e) {
-                logger.severe("Playwright integration failed: " + e.getMessage());
+                logger.error("Playwright integration failed: {}", e.getMessage());
             }
             response = Map.of(
                     "success", true,
@@ -359,7 +357,7 @@ public class AgentBaySandbox extends CloudSandbox {
                     "error", ""
             );
         } catch (Exception e) {
-            logger.severe("Browser navigate failed: " + e.getMessage());
+            logger.error("Browser navigate failed: {}", e.getMessage());
             response = Map.of(
                     "success", false,
                     "error", e.getMessage() != null ? e.getMessage() : ""
@@ -372,7 +370,7 @@ public class AgentBaySandbox extends CloudSandbox {
         Session session = getSession();
         selector = selector == null ? "" : selector;
         if (session == null) {
-            logger.severe("AgentBay session not found: " + this.sandboxId);
+            logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
         Map<String, Object> response = new HashMap<>();
@@ -385,7 +383,7 @@ public class AgentBaySandbox extends CloudSandbox {
                     "error", result.getMessage() != null ? result.getMessage() : ""
             );
         } catch (BrowserException e) {
-            logger.severe("Browser click failed: " + e.getMessage());
+            logger.error("Browser click failed: {}", e.getMessage());
             response = Map.of(
                     "success", false,
                     "error", e.getMessage() != null ? e.getMessage() : ""

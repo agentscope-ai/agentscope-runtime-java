@@ -24,6 +24,8 @@ import com.aliyun.oss.model.ObjectListing;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 import io.agentscope.runtime.sandbox.manager.model.fs.OssConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,13 +35,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.logging.Logger;
 
 /**
  * Storage Manager responsible for handling file downloads from local and cloud storage
  */
 public class StorageManager {
-    private static final Logger logger = Logger.getLogger(StorageManager.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(StorageManager.class);
 
     private final FileSystemConfig fileSystemConfig;
     private OSS ossClient;
@@ -54,7 +55,7 @@ public class StorageManager {
                     ossConfig.getOssAccessKeyId(),
                     ossConfig.getOssAccessKeySecret()
             );
-            logger.info("OSS client initialized with endpoint: " + ossConfig.getOssEndpoint());
+            logger.info("OSS client initialized with endpoint: {}", ossConfig.getOssEndpoint());
         }
     }
 
@@ -86,12 +87,12 @@ public class StorageManager {
      */
     public boolean downloadFolder(String storagePath, String localDir) {
         if (storagePath == null || storagePath.isEmpty()) {
-            logger.warning("Storage path is empty, skipping download");
+            logger.warn("Storage path is empty, skipping download");
             return false;
         }
 
         if (localDir == null || localDir.isEmpty()) {
-            logger.warning("Local directory is empty, skipping download");
+            logger.warn("Local directory is empty, skipping download");
             return false;
         }
 
@@ -103,7 +104,7 @@ public class StorageManager {
                 return copyLocalFolder(storagePath, localDir);
             }
         } catch (Exception e) {
-            logger.severe("Failed to download folder from " + storagePath + " to " + localDir + ": " + e.getMessage());
+            logger.error("Failed to download folder from {} to {}: {}", storagePath, localDir, e.getMessage());
             return false;
         }
     }
@@ -117,7 +118,7 @@ public class StorageManager {
      */
     private boolean downloadFromOss(String ossPrefix, String localDir) {
         if (ossClient == null || !(fileSystemConfig instanceof OssConfig ossConfig)) {
-            logger.severe("OSS client not initialized");
+            logger.error("OSS client not initialized");
             return false;
         }
 
@@ -133,7 +134,7 @@ public class StorageManager {
             // Ensure prefix ends with /
             String prefix = ossPrefix.endsWith("/") ? ossPrefix : ossPrefix + "/";
 
-            logger.info("Downloading from OSS bucket: " + bucketName + ", prefix: " + prefix + " to " + localDir);
+            logger.info("Downloading from OSS bucket: {}, prefix: {} to {}", bucketName, prefix, localDir);
 
             // List all objects
             ListObjectsRequest listObjectsRequest = new ListObjectsRequest(bucketName)
@@ -176,21 +177,20 @@ public class StorageManager {
                             }
                         }
                         downloadedCount++;
-                        logger.fine("Downloaded: " + objectKey + " to " + localFile.getAbsolutePath());
+                        logger.info("Downloaded: {} to {}", objectKey, localFile.getAbsolutePath());
                     } catch (Exception e) {
-                        logger.warning("Failed to download " + objectKey + ": " + e.getMessage());
+                        logger.warn("Failed to download {}: {}", objectKey, e.getMessage());
                     }
                 }
 
                 listObjectsRequest.setMarker(objectListing.getNextMarker());
             } while (objectListing.isTruncated());
 
-            logger.info("Downloaded " + downloadedCount + " files from OSS");
+            logger.info("Downloaded {} files from OSS", downloadedCount);
             return true;
 
         } catch (Exception e) {
-            logger.severe("Failed to download from OSS: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to download from OSS: {}", e.getMessage());
             return false;
         }
     }
@@ -208,7 +208,7 @@ public class StorageManager {
             Path target = Paths.get(targetPath);
 
             if (!Files.exists(source)) {
-                logger.warning("Source path does not exist: " + sourcePath);
+                logger.warn("Source path does not exist: {}", sourcePath);
                 return false;
             }
 
@@ -231,7 +231,7 @@ public class StorageManager {
                                     Files.copy(srcPath, destPath, StandardCopyOption.REPLACE_EXISTING);
                                 }
                             } catch (IOException e) {
-                                logger.warning("Failed to copy " + srcPath + ": " + e.getMessage());
+                                logger.warn("Failed to copy {}: {}", srcPath, e.getMessage());
                             }
                         });
             } else {
@@ -239,12 +239,11 @@ public class StorageManager {
                 Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            logger.info("Copied folder from " + sourcePath + " to " + targetPath);
+            logger.info("Copied folder from {} to {}", sourcePath, targetPath);
             return true;
 
         } catch (Exception e) {
-            logger.severe("Failed to copy local folder: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to copy local folder: {}", e.getMessage());
             return false;
         }
     }
@@ -258,19 +257,19 @@ public class StorageManager {
      */
     public boolean uploadFolder(String localDir, String storagePath) {
         if (localDir == null || localDir.isEmpty()) {
-            logger.warning("Local directory is empty, skipping upload");
+            logger.warn("Local directory is empty, skipping upload");
             return false;
         }
 
         if (storagePath == null || storagePath.isEmpty()) {
-            logger.warning("Storage path is empty, skipping upload");
+            logger.warn("Storage path is empty, skipping upload");
             return false;
         }
 
         // Check if local directory exists
         File localDirectory = new File(localDir);
         if (!localDirectory.exists()) {
-            logger.warning("Local directory does not exist: " + localDir);
+            logger.warn("Local directory does not exist: {}", localDir);
             return false;
         }
 
@@ -281,8 +280,7 @@ public class StorageManager {
                 return copyLocalFolder(localDir, storagePath);
             }
         } catch (Exception e) {
-            logger.severe("Failed to upload folder from " + localDir + " to " + storagePath + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to upload folder from {} to {}: {}", localDir, storagePath, e.getMessage());
             return false;
         }
     }
@@ -296,14 +294,14 @@ public class StorageManager {
      */
     private boolean uploadToOss(String localDir, String ossPrefix) {
         if (ossClient == null || !(fileSystemConfig instanceof OssConfig ossConfig)) {
-            logger.severe("OSS client not initialized");
+            logger.error("OSS client not initialized");
             return false;
         }
 
         try {
             File localDirectory = new File(localDir);
             if (!localDirectory.exists() || !localDirectory.isDirectory()) {
-                logger.warning("Local directory does not exist or is not a directory: " + localDir);
+                logger.warn("Local directory does not exist or is not a directory: {}", localDir);
                 return false;
             }
 
@@ -312,17 +310,16 @@ public class StorageManager {
             // Ensure prefix ends with /
             String prefix = ossPrefix.endsWith("/") ? ossPrefix : ossPrefix + "/";
 
-            logger.info("Uploading to OSS bucket: " + bucketName + ", prefix: " + prefix + " from " + localDir);
+            logger.info("Uploading to OSS bucket: {}, prefix: {} from {}", bucketName, prefix, localDir);
 
             int uploadedCount = 0;
             uploadedCount = uploadDirectoryToOss(localDirectory, bucketName, prefix, "");
 
-            logger.info("Uploaded " + uploadedCount + " files to OSS");
+            logger.info("Uploaded {} files to OSS", uploadedCount);
             return true;
 
         } catch (Exception e) {
-            logger.severe("Failed to upload to OSS: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Failed to upload to OSS: {}", e.getMessage());
             return false;
         }
     }
@@ -358,9 +355,9 @@ public class StorageManager {
                     // Upload file to OSS
                     ossClient.putObject(bucketName, objectKey, file);
                     uploadedCount++;
-                    logger.fine("Uploaded: " + file.getAbsolutePath() + " to " + objectKey);
+                    logger.info("Uploaded: {} to {}", file.getAbsolutePath(), objectKey);
                 } catch (Exception e) {
-                    logger.warning("Failed to upload " + file.getAbsolutePath() + " to " + objectKey + ": " + e.getMessage());
+                    logger.warn("Failed to upload {} to {}: {}", file.getAbsolutePath(), objectKey, e.getMessage());
                 }
             }
         }
@@ -377,7 +374,7 @@ public class StorageManager {
                 ossClient.shutdown();
                 logger.info("OSS client closed");
             } catch (Exception e) {
-                logger.warning("Failed to close OSS client: " + e.getMessage());
+                logger.warn("Failed to close OSS client: {}", e.getMessage());
             }
         }
     }

@@ -19,13 +19,14 @@ import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class MCPTool extends SandboxTool {
-    
-    private static final Logger logger = Logger.getLogger(MCPTool.class.getName());
+
+    private static final Logger logger = LoggerFactory.getLogger(MCPTool.class);
     
     private Map<String, Object> serverConfigs;
     private final String mcpToolName;
@@ -65,8 +66,7 @@ public class MCPTool extends SandboxTool {
     }
 
     public String executeMCPTool(Map<String, Object> arguments) {
-        logger.info(String.format("Executing MCP tool '%s' with arguments: %s",
-                mcpToolName, arguments));
+        logger.info("Executing MCP tool '{}' with arguments: {}", mcpToolName, arguments);
 
         if (sandbox == null) {
             throw new RuntimeException("Sandbox is not properly initialized for MCP tool");
@@ -76,7 +76,7 @@ public class MCPTool extends SandboxTool {
 
         String result = sandbox.callTool(mcpToolName, arguments);
 
-        logger.info(String.format("MCP tool '%s' execution result: %s", mcpToolName, result));
+        logger.info("MCP tool '{}' execution result: {}", mcpToolName, result);
         return result;
     }
 

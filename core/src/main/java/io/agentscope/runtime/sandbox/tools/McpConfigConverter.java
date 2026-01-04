@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,10 +29,12 @@ import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class McpConfigConverter {
 
-    private static final Logger logger = Logger.getLogger(McpConfigConverter.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(McpConfigConverter.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private Map<String, Object> serverConfigs;
@@ -120,7 +121,7 @@ public class McpConfigConverter {
                 toolsToAdd = processTools(box);
             }
             catch (Exception e){
-                logger.severe("Failed to create BaseSandbox: " + e.getMessage());
+                logger.error("Failed to create BaseSandbox: {}", e.getMessage());
                 throw new RuntimeException("Failed to create BaseSandbox", e);
             }
         }
@@ -142,7 +143,7 @@ public class McpConfigConverter {
         Map<String, Object> mcpServers = (Map<String, Object>) serverConfigs.get("mcpServers");
 
         for (String serverName : mcpServers.keySet()) {
-            logger.info("Processing MCP server: " + serverName);
+            logger.info("Processing MCP server: {}", serverName);
 
             Map<String, Object> tools = box.listTools(serverName);
 
@@ -153,11 +154,11 @@ public class McpConfigConverter {
                 Map<String, Object> toolInfo = (Map<String, Object>) toolEntry.getValue();
 
                 if (!whitelist.isEmpty() && !whitelist.contains(toolName)) {
-                    logger.fine("Skipping tool (not in whitelist): " + toolName);
+                    logger.info("Skipping tool (not in whitelist): {}", toolName);
                     continue;
                 }
                 if (!blacklist.isEmpty() && blacklist.contains(toolName)) {
-                    logger.fine("Skipping tool (in blacklist): " + toolName);
+                    logger.info("Skipping tool (in blacklist): {}", toolName);
                     continue;
                 }
 
@@ -182,11 +183,11 @@ public class McpConfigConverter {
                 );
 
                 toolsToAdd.add(mcpTool);
-                logger.info(String.format("Added MCP tool: %s (server: %s)", toolName, serverName));
+                logger.info("Added MCP tool: {} (server: {})", toolName, serverName);
             }
         }
 
-        logger.info(String.format("Total MCP tools added: %d", toolsToAdd.size()));
+        logger.info("Total MCP tools added: {}", toolsToAdd.size());
 
         return toolsToAdd;
     }
@@ -196,7 +197,7 @@ public class McpConfigConverter {
             return objectMapper.readValue(configStr, new TypeReference<Map<String, Object>>() {
             });
         } catch (Exception e) {
-            logger.severe("Failed to parse server config: " + e.getMessage());
+            logger.error("Failed to parse server config: {}", e.getMessage());
             throw new RuntimeException("Failed to parse server config string", e);
         }
     }

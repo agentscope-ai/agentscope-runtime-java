@@ -23,19 +23,20 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import io.agentscope.runtime.engine.schemas.Message;
 import io.agentscope.runtime.engine.schemas.Session;
 import io.agentscope.runtime.engine.services.memory.service.SessionHistoryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * In-memory implementation of session history service
  * Stores all session data in dictionary, suitable for development, testing and scenarios that don't require persistence
  */
 public class InMemorySessionHistoryService implements SessionHistoryService {
-    public static Logger logger = Logger.getLogger(InMemorySessionHistoryService.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(InMemorySessionHistoryService.class);
 
     private final Map<String, Map<String, Session>> sessions = new ConcurrentHashMap<>();
 
@@ -122,8 +123,7 @@ public class InMemorySessionHistoryService implements SessionHistoryService {
                 if (existingSession != null) {
                     existingSession.getMessages().addAll(messages);
                 } else {
-                    logger.severe("Warning: Session " + session.getId() +
-                            " not found in storage for append_message.");
+                    logger.error("Warning: Session {} not found in storage for append_message.", session.getId());
                 }
             }
         });

@@ -23,12 +23,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import io.agentscope.runtime.engine.services.memory.service.EmbeddingService;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple text embedding service implementation
@@ -36,7 +37,7 @@ import org.apache.commons.math3.linear.RealVector;
  */
 public class SimpleEmbeddingService implements EmbeddingService {
 
-    Logger logger = Logger.getLogger(SimpleEmbeddingService.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SimpleEmbeddingService.class);
     private static final int EMBEDDING_DIMENSION = 300; // Fixed dimension
 
     private final Map<String, Integer> vocabulary = new HashMap<>();
@@ -68,7 +69,7 @@ public class SimpleEmbeddingService implements EmbeddingService {
                 return embedding;
 
             } catch (Exception e) {
-                logger.severe("Failed to generate text embedding" + e.getMessage());
+                logger.error("Failed to generate text embedding{}", e.getMessage());
                 return createZeroVector();
             }
         });
@@ -95,7 +96,7 @@ public class SimpleEmbeddingService implements EmbeddingService {
             return dotProduct / (norm1 * norm2);
 
         } catch (Exception e) {
-            logger.severe("Failed to compute cosine similarity" + e.getMessage());
+            logger.error("Failed to compute cosine similarity{}", e.getMessage());
             return 0.0;
         }
     }
@@ -113,7 +114,7 @@ public class SimpleEmbeddingService implements EmbeddingService {
             return v1.getDistance(v2);
 
         } catch (Exception e) {
-            logger.severe("Failed to compute Euclidean distance" + e.getMessage());
+            logger.error("Failed to compute Euclidean distance{}", e.getMessage());
             return Double.MAX_VALUE;
         }
     }

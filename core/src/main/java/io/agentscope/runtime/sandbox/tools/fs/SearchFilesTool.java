@@ -18,16 +18,17 @@ package io.agentscope.runtime.sandbox.tools.fs;
 import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.tools.SandboxTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 public class SearchFilesTool extends FsSandboxTool {
 
-    Logger logger = Logger.getLogger(SearchFilesTool.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SearchFilesTool.class);
 
     public SearchFilesTool() {
         super("fs_search_files", "filesystem", "Search for files matching a pattern");
@@ -72,8 +73,7 @@ public class SearchFilesTool extends FsSandboxTool {
             throw new RuntimeException("Only FilesystemSandbox supported in search files tool");
         } catch (Exception e) {
             String errorMsg = "Search Files Error: " + e.getMessage();
-            logger.severe(errorMsg);
-            e.printStackTrace();
+            logger.error(errorMsg);
             return errorMsg;
         }
     }
