@@ -17,6 +17,7 @@
 package io.agentscope.runtime.autoconfigure.controller;
 
 import io.agentscope.runtime.engine.Runner;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +39,6 @@ import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 
 
@@ -55,7 +55,7 @@ public class SandboxManagerController {
 
     @PostConstruct
     public void registerEndpoints() {
-        Class<?> clazz = SandboxManager.class;
+        Class<?> clazz = SandboxService.class;
 
         logger.info("Scanning class: {}", clazz.getName());
         Method[] methods = clazz.getDeclaredMethods();
@@ -139,7 +139,7 @@ public class SandboxManagerController {
             RequestMethod httpMethod) {
 
         // Todo: fix this
-        SandboxManager sandboxManager = runner.getSandboxManager();
+        SandboxService sandboxService = runner.getSandboxService();
 
         logger.info("Handling {} request for path: {}", httpMethod, path);
 
@@ -162,7 +162,7 @@ public class SandboxManagerController {
         try {
             Object[] args = prepareArguments(methodInfo.method, requestData);
 
-            Object result = methodInfo.method.invoke(sandboxManager, args);
+            Object result = methodInfo.method.invoke(sandboxService, args);
 
             Map<String, Object> response = new HashMap<>();
             String successKey = methodInfo.annotation.successKey();

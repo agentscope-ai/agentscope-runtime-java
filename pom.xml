@@ -54,13 +54,19 @@
     </developers>
 
     <modules>
-        <module>core</module>
+        <module>engine-core</module>
         <module>agents</module>
         <module>web</module>
         <module>maven_plugin</module>
         <module>starters/spring-boot-starter-runtime-a2a</module>
         <module>examples/simple_agent_use_rocketmq_example/agentscope_use_rocketmq_server_example</module>
         <module>examples/simple_agent_use_rocketmq_example/agentscope_use_rocketmq_client_example</module>
+        <module>sandbox-core</module>
+        <module>sandbox-extensions/agentrun-extension</module>
+        <module>sandbox-extensions/fc-extension</module>
+        <module>sandbox-extensions/kubernetes-extension</module>
+        <module>sandbox-extensions/oss-extension</module>
+        <module>sandbox-extensions/redis-extension</module>
     </modules>
     <scm>
         <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>
@@ -118,6 +124,8 @@
 
         <!-- other dependency-->
         <picocli.version>4.7.7</picocli.version>
+
+        <slf4j.version>2.0.17</slf4j.version>
     </properties>
 
     <dependencyManagement>

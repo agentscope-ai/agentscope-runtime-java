@@ -46,7 +46,7 @@
     <dependencies>
         <dependency>
             <groupId>io.agentscope</groupId>
-            <artifactId>agentscope-runtime-core</artifactId>
+            <artifactId>agentscope-runtime-engine</artifactId>
             <version>1.0.1</version>
         </dependency>
 
