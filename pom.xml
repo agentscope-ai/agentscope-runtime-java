@@ -65,7 +65,6 @@
         <module>sandbox-extensions/agentrun-extension</module>
         <module>sandbox-extensions/fc-extension</module>
         <module>sandbox-extensions/kubernetes-extension</module>
-        <module>sandbox-extensions/oss-extension</module>
         <module>sandbox-extensions/redis-extension</module>
     </modules>
     <scm>

@@ -17,7 +17,7 @@ package io.agentscope.runtime.sandbox.box;
 
 import io.agentscope.runtime.sandbox.manager.SandboxService;
 import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
-import io.agentscope.runtime.sandbox.manager.fs.LocalFileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
 import java.util.Map;

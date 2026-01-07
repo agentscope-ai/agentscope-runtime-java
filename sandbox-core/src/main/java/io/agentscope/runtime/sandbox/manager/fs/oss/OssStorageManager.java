@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.sandbox.fs.oss;
+package io.agentscope.runtime.sandbox.manager.fs.oss;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;

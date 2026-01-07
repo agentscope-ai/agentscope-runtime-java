@@ -18,7 +18,7 @@ package io.agentscope.runtime.sandbox.manager;
 
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.fs.LocalFileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;

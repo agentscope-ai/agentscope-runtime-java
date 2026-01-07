@@ -18,7 +18,6 @@ package io.agentscope.runtime.autoconfigure.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
 import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 import org.slf4j.Logger;
@@ -261,8 +260,7 @@ public class SandboxManagerController {
 
         if (value instanceof String strValue) {
             String trimmed = strValue.trim();
-            if ((trimmed.startsWith("{") || trimmed.startsWith("[") && !targetType.isPrimitive()
-                    && targetType != String.class && !targetType.isEnum())) {
+            if (trimmed.startsWith("{") || trimmed.startsWith("[") && !targetType.isPrimitive()) {
                 try {
                     ObjectMapper mapper = new ObjectMapper();
                     return mapper.readValue(strValue, targetType);

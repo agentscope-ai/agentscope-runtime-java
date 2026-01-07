@@ -22,16 +22,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
 import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
-import io.agentscope.runtime.sandbox.manager.fs.LocalFileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Sandbox implements AutoCloseable, Serializable {
+public class Sandbox implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(Sandbox.class);
 
     protected SandboxService managerApi;

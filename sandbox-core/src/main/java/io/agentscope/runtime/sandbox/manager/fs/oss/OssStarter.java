@@ -13,17 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.fs.oss;
+package io.agentscope.runtime.sandbox.manager.fs.oss;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
 import io.agentscope.runtime.sandbox.manager.fs.StorageManager;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 
+import java.util.Map;
+
 public class OssStarter extends FileSystemStarter {
-    private String ossEndpoint;
-    private String ossAccessKeyId;
-    private String ossAccessKeySecret;
-    private String ossBucketName;
+    private final String ossEndpoint;
+    private final String ossAccessKeyId;
+    private final String ossAccessKeySecret;
+    private final String ossBucketName;
+
+    @JsonCreator
+    public OssStarter(
+            @JsonProperty("readonlyMounts") Map<String, String> readonlyMounts,
+            @JsonProperty("storageFolderPath") String storageFolderPath,
+            @JsonProperty("mountDir") String mountDir,
+            @JsonProperty("nonCopyMount") Map<String, String> nonCopyMount,
+            @JsonProperty("ossEndpoint") String ossEndpoint,
+            @JsonProperty("ossAccessKeyId") String ossAccessKeyId,
+            @JsonProperty("ossAccessKeySecret") String ossAccessKeySecret,
+            @JsonProperty("ossBucketName") String ossBucketName
+    ){
+        super(FileSystemType.OSS, readonlyMounts, storageFolderPath, mountDir, nonCopyMount);
+        this.ossEndpoint = ossEndpoint;
+        this.ossAccessKeyId = ossAccessKeyId;
+        this.ossAccessKeySecret = ossAccessKeySecret;
+        this.ossBucketName = ossBucketName;
+    }
 
     private OssStarter(Builder builder) {
         super(builder);

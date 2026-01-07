@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-package io.agentscope.runtime.sandbox.client.oss;
+package io.agentscope.runtime.sandbox.manager;
 
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.fs.oss.OssStarter;
-import io.agentscope.runtime.sandbox.manager.ManagerConfig;
-import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.fs.oss.OssStarter;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
@@ -32,7 +30,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * OSS Storage Functionality Test
@@ -60,7 +58,7 @@ public class OssStorageTest {
     private String ossAccessKeyId;
     private String ossAccessKeySecret;
     private String ossBucketName;
-    private SandboxService manager;
+    private SandboxService sandboxService;
 
     @BeforeEach
     void setUp() {
@@ -89,9 +87,9 @@ public class OssStorageTest {
 
     @AfterEach
     void tearDown() {
-        if (manager != null) {
+        if (sandboxService != null) {
             try {
-                manager.close();
+                sandboxService.close();
                 System.out.println("SandboxService closed successfully");
             } catch (Exception e) {
                 System.err.println("Error closing SandboxService: " + e.getMessage());
@@ -120,11 +118,12 @@ public class OssStorageTest {
 
             // 2. Create ManagerConfig
             ManagerConfig config = new ManagerConfig.Builder()
+                    .baseUrl("http://localhost:10001")
                     .build();
 
             // 3. Create SandboxService
-            manager = new SandboxService(config);
-            System.out.println("\nSandboxService with OSS storage created successfully");
+            sandboxService = new SandboxService(config);
+            sandboxService.start();
 
             // 4. Create container (will download data from OSS)
             System.out.println("\n--- Creating container ---");
@@ -132,7 +131,7 @@ public class OssStorageTest {
             String storagePath = "folder";  // Fixed: download all contents under folder/
             System.out.println("Downloading from OSS path: " + storagePath);
 
-            Sandbox sandbox = new BaseSandbox(manager, "oss_test_user", "oss_test_session_001", ossConfig);
+            Sandbox sandbox = new BaseSandbox(sandboxService, "oss_test_user", "oss_test_session_001", ossConfig);
 
             // Verify container created successfully
             Assertions.assertNotNull(sandbox, "Container creation should succeed");
@@ -156,7 +155,7 @@ public class OssStorageTest {
 
             // 8. Destroy container and upload data
             System.out.println("\n--- Destroying container and uploading data to OSS ---");
-            boolean released = manager.stopAndRemoveSandbox(sandbox.getSandboxId());
+            boolean released = sandboxService.stopAndRemoveSandbox(sandbox.getSandboxId());
             Assertions.assertTrue(released, "Container should be released successfully");
             System.out.println("Container destroyed, data uploaded to OSS: " + ossConfig.getStorageFolderPath());
 

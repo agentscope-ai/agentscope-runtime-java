@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.sandbox.manager.fs;
+package io.agentscope.runtime.sandbox.manager.fs.local;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.StorageManager;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 
 import java.util.Map;
@@ -25,13 +27,12 @@ public class LocalFileSystemStarter extends FileSystemStarter {
 
     @JsonCreator
     public LocalFileSystemStarter(
-            @JsonProperty("fileSystemType") FileSystemType fileSystemType,
             @JsonProperty("readonlyMounts") Map<String, String> readonlyMounts,
             @JsonProperty("storageFolderPath") String storageFolderPath,
             @JsonProperty("mountDir") String mountDir,
             @JsonProperty("nonCopyMount") Map<String, String> nonCopyMount
     ){
-        super(fileSystemType, readonlyMounts, storageFolderPath, mountDir, nonCopyMount);
+        super(FileSystemType.LOCAL, readonlyMounts, storageFolderPath, mountDir, nonCopyMount);
     }
 
     private LocalFileSystemStarter(Builder builder) {

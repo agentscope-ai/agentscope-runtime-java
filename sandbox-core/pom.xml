@@ -12,6 +12,7 @@
 
     <properties>
         <docker-java.version>3.7.0</docker-java.version>
+        <oss.version>3.18.4</oss.version>
     </properties>
 
     <dependencies>
@@ -32,6 +33,12 @@
             <groupId>com.github.docker-java</groupId>
             <artifactId>docker-java-transport-zerodep</artifactId>
             <version>${docker-java.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>${oss.version}</version>
         </dependency>
 
         <dependency>
