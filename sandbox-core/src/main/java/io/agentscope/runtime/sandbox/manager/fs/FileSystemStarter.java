@@ -16,18 +16,41 @@
 
 package io.agentscope.runtime.sandbox.manager.fs;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.EXISTING_PROPERTY,
+        property = "fileSystemType"
+)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = LocalFileSystemStarter.class, name = "LOCAL")
+})
 public abstract class FileSystemStarter implements Serializable {
-    private final FileSystemType fileSystemType;
+    private FileSystemType fileSystemType;
     private Map<String, String> readonlyMounts;
     private String storageFolderPath;
     private String mountDir;
     private Map<String, String> nonCopyMount;
+
+    protected FileSystemStarter(
+            FileSystemType fileSystemType,
+            Map<String, String> readonlyMounts,
+            String storageFolderPath,
+            String mountDir,
+            Map<String, String> nonCopyMount) {
+        this.fileSystemType = fileSystemType;
+        this.readonlyMounts = readonlyMounts;
+        this.storageFolderPath = storageFolderPath;
+        this.mountDir = mountDir;
+        this.nonCopyMount = nonCopyMount;
+    }
 
     protected FileSystemStarter(FileSystemType fileSystemType) {
         this.fileSystemType = fileSystemType;

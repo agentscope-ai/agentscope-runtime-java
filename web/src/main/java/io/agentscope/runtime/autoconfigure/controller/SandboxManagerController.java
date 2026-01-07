@@ -16,7 +16,10 @@
 
 package io.agentscope.runtime.autoconfigure.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.Runner;
+import io.agentscope.runtime.sandbox.box.BaseSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +77,7 @@ public class SandboxManagerController {
                 MethodInfo methodInfo = new MethodInfo(method, annotation);
                 endpointRegistry.put(path, methodInfo);
 
-                logger.info("Registered endpoint: {} {} -> {}", annotation.method(), path, method.getName());
+                logger.info("Registered endpoint: {} /sandbox{} -> {}", annotation.method(), path, method.getName());
             }
         }
 
@@ -142,6 +145,7 @@ public class SandboxManagerController {
         SandboxService sandboxService = runner.getSandboxService();
 
         logger.info("Handling {} request for path: {}", httpMethod, path);
+        System.out.println("Handling " + httpMethod + " request for path: " + path);
 
         MethodInfo methodInfo = endpointRegistry.get(path);
 
@@ -161,6 +165,12 @@ public class SandboxManagerController {
 
         try {
             Object[] args = prepareArguments(methodInfo.method, requestData);
+
+            ObjectMapper mapper = new ObjectMapper();
+            String sandboxJson = mapper.writeValueAsString(args[0]);
+            System.out.println(args[0] instanceof Sandbox);
+            System.out.println(sandboxJson);
+            Map<String, Object> request = Map.of("sandbox", sandboxJson);
 
             Object result = methodInfo.method.invoke(sandboxService, args);
 
@@ -261,7 +271,8 @@ public class SandboxManagerController {
             return value;
         }
 
-        return value;
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.convertValue(value, targetType);
     }
 
     private Object getDefaultValue(Class<?> type) {

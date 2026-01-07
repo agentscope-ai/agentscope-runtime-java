@@ -58,6 +58,7 @@ public class RemoteHttpClient {
      */
     public Object makeRequest(RequestMethod method, String endpoint, Map<String, Object> data, String successKey) {
         String url = baseUrl + (endpoint.startsWith("/") ? endpoint : "/" + endpoint);
+        System.out.println(data);
 
         logger.info("Making {} request to: {}", method, url);
         

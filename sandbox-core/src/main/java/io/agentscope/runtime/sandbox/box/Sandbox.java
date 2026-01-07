@@ -17,6 +17,9 @@
 
 package io.agentscope.runtime.sandbox.box;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
 import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
 import io.agentscope.runtime.sandbox.manager.fs.LocalFileSystemStarter;
@@ -31,14 +34,33 @@ import java.util.Map;
 public class Sandbox implements AutoCloseable, Serializable {
     private static final Logger logger = LoggerFactory.getLogger(Sandbox.class);
 
-    protected transient final SandboxService managerApi;
+    protected SandboxService managerApi;
     protected String sandboxId;
-    protected final String userId;
-    protected final String sessionId;
-    protected final String sandboxType;
+    protected String userId;
+    protected String sessionId;
+    protected String sandboxType;
     protected boolean closed = false;
     protected Map<String, String> environment;
     protected FileSystemStarter fileSystemStarter;
+
+    @JsonCreator
+    public Sandbox(
+            @JsonProperty("sandboxId") String sandboxId,
+            @JsonProperty("userId") String userId,
+            @JsonProperty("sessionId") String sessionId,
+            @JsonProperty("sandboxType") String sandboxType,
+            @JsonProperty("fileSystemStarter") FileSystemStarter fileSystemStarter,
+            @JsonProperty("environment") Map<String, String> environment,
+            @JsonProperty("closed") boolean closed
+    ) {
+        this.sandboxId = sandboxId;
+        this.userId = userId;
+        this.sessionId = sessionId;
+        this.sandboxType = sandboxType;
+        this.fileSystemStarter = fileSystemStarter;
+        this.environment = environment != null ? new HashMap<>(environment) : new HashMap<>();
+        this.closed = closed;
+    }
 
     public Sandbox(SandboxService managerApi,
                    String userId,
@@ -117,10 +139,11 @@ public class Sandbox implements AutoCloseable, Serializable {
         return environment;
     }
 
-    public FileSystemStarter getFileSystemConfig() {
+    public FileSystemStarter getFileSystemStarter() {
         return fileSystemStarter;
     }
 
+    @JsonIgnore
     public ContainerModel getInfo() {
         return managerApi.getInfo(sandboxId);
     }
@@ -155,7 +178,7 @@ public class Sandbox implements AutoCloseable, Serializable {
 
         try {
             logger.info("Auto-releasing sandbox: {}", sandboxId);
-            if(!managerApi.stopAndRemoveSandbox(sandboxId)){
+            if (!managerApi.stopAndRemoveSandbox(sandboxId)) {
                 logger.warn("Sandbox {} failed to remove", sandboxId);
             }
         } catch (Exception e) {

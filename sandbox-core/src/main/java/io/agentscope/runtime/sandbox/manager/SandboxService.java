@@ -16,6 +16,8 @@
 
 package io.agentscope.runtime.sandbox.manager;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.client.container.BaseClient;
 import io.agentscope.runtime.sandbox.manager.client.container.ContainerCreateResult;
@@ -70,10 +72,12 @@ public class SandboxService implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public ContainerModel createContainer(Sandbox sandbox) {
+    public ContainerModel createContainer(Sandbox sandbox) throws JsonProcessingException {
         if (this.remoteHttpClient != null) {
             logger.info("Creating container in remote mode via RemoteHttpClient");
-            Map<String, Object> request = Map.of("sandbox", sandbox);
+            ObjectMapper mapper = new ObjectMapper();
+            String sandboxJson = mapper.writeValueAsString(sandbox);
+            Map<String, Object> request = Map.of("sandbox", sandboxJson);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
                     "/sandbox/createContainer",
@@ -95,7 +99,7 @@ public class SandboxService implements AutoCloseable {
         }
 
         Map<String, String> environment = sandbox.getEnvironment();
-        FileSystemStarter fileSystemStarter = sandbox.getFileSystemConfig();
+        FileSystemStarter fileSystemStarter = sandbox.getFileSystemStarter();
         String sandboxType = sandbox.getSandboxType();
         ContainerClientType containerClientType = managerConfig.getClientConfig().getContainerClientType();
         StorageManager storageManager = fileSystemStarter.createStorageManager();
@@ -142,7 +146,7 @@ public class SandboxService implements AutoCloseable {
         if (!file.exists()) {
             boolean ignored = file.mkdirs();
         }
-        String storagePath = sandbox.getFileSystemConfig().getStorageFolderPath();
+        String storagePath = sandbox.getFileSystemStarter().getStorageFolderPath();
         // Todo：Currently using global storage path if not provided, still need to wait for next movement of python version
         if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerClientType != ContainerClientType.AGENTRUN && containerClientType != ContainerClientType.FC) {
             logger.info("Downloading from storage path: {} to mount dir: {}", storagePath, mountDir);
