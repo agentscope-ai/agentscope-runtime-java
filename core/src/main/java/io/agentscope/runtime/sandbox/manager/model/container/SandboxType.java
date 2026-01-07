@@ -32,7 +32,6 @@ public class SandboxType {
     public static final String WEBSHOP = "webshop";
     public static final String GUI = "gui";
     public static final String MOBILE = "mobile";
-    public static final String CUSTOM = "custom";
     public static final String AGENTBAY = "agentbay";
 
     public static boolean isPredefinedType(String typeName) {

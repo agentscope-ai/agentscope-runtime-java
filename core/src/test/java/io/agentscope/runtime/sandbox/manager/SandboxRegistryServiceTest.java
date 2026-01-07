@@ -80,10 +80,10 @@ public class SandboxRegistryServiceTest {
         String customImage = "testcompany/custom-sandbox:latest";
 
         // Register custom sandbox type
-        SandboxRegistryService.registerCustomType(customTypeName, customImage);
+        SandboxRegistryService.register(customTypeName, customImage);
 
         // Retrieve custom type configuration
-        Optional<String> retrievedImage = SandboxRegistryService.getCustomTypeImage(customTypeName);
+        Optional<String> retrievedImage = SandboxRegistryService.getImageByType(customTypeName);
         assertTrue(retrievedImage.isPresent(), "Custom type should be registered");
         
         retrievedImage.ifPresent(image -> {
@@ -92,7 +92,7 @@ public class SandboxRegistryServiceTest {
         });
 
         // Check if custom type is registered
-        boolean isCustomRegistered = SandboxRegistryService.isCustomTypeRegistered(customTypeName);
+        boolean isCustomRegistered = SandboxRegistryService.isRegistered(customTypeName);
         System.out.println("Custom type registered: " + isCustomRegistered);
         assertTrue(isCustomRegistered, "Custom type should be registered");
     }
@@ -121,7 +121,7 @@ public class SandboxRegistryServiceTest {
         runtimeConfig.put("shm_size", "512m");
 
         // Register with full configuration
-        SandboxRegistryService.registerCustomType(
+        SandboxRegistryService.register(
             customTypeName,
             "testcompany/advanced-sandbox:v1.0",
             resourceLimits,
@@ -133,7 +133,7 @@ public class SandboxRegistryServiceTest {
         );
 
         // Retrieve and display configuration
-        Optional<SandboxConfig> config = SandboxRegistryService.getCustomTypeConfig(customTypeName);
+        Optional<SandboxConfig> config = SandboxRegistryService.getConfigByType(customTypeName);
         assertTrue(config.isPresent(), "Custom configuration should exist");
         
         config.ifPresent(cfg -> {
@@ -183,7 +183,7 @@ public class SandboxRegistryServiceTest {
 
         // Get type by name (works for both predefined and custom types)
         try {
-            DynamicSandboxType retrievedType = DynamicSandboxType.valueOf("BROWSER");
+            DynamicSandboxType retrievedType = DynamicSandboxType.valueOf("browser");
             System.out.println("\nRetrieved type: " + retrievedType.getTypeName());
             assertEquals("browser", retrievedType.getTypeName(), "Retrieved type name should match");
         } catch (IllegalArgumentException e) {
@@ -209,7 +209,7 @@ public class SandboxRegistryServiceTest {
         assertTrue(allSandboxes.containsKey(SandboxType.BASE), "Should contain BASE type");
 
         // List all custom sandbox types
-        Map<String, SandboxConfig> customTypes = SandboxRegistryService.listAllCustomTypes();
+        Map<String, SandboxConfig> customTypes = SandboxRegistryService.listAllSandboxesByType();
         System.out.println("\nCustom Sandbox Types (" + customTypes.size() + "):");
         customTypes.forEach((name, config) -> 
             System.out.println("  " + name + " -> " + config.getImageName())
@@ -280,14 +280,14 @@ public class SandboxRegistryServiceTest {
         String image2 = "testcompany/sandbox:v2";
 
         // First registration
-        SandboxRegistryService.registerCustomType(typeName, image1);
-        Optional<String> firstImage = SandboxRegistryService.getCustomTypeImage(typeName);
+        SandboxRegistryService.register(typeName, image1);
+        Optional<String> firstImage = SandboxRegistryService.getImageByType(typeName);
         assertTrue(firstImage.isPresent(), "First registration should succeed");
         assertEquals(image1, firstImage.get(), "Should be the first image");
 
         // Second registration (overwrite)
-        SandboxRegistryService.registerCustomType(typeName, image2);
-        Optional<String> secondImage = SandboxRegistryService.getCustomTypeImage(typeName);
+        SandboxRegistryService.register(typeName, image2);
+        Optional<String> secondImage = SandboxRegistryService.getImageByType(typeName);
         assertTrue(secondImage.isPresent(), "Second registration should succeed");
         
         System.out.println("First image: " + image1);

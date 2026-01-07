@@ -174,11 +174,11 @@ public class CustomSandboxTest {
     public void testMyCustomSandboxRegistration() {
         System.out.println("\n--- Test MyCustomSandbox Registration ---");
 
-        boolean customRegistered = SandboxRegistryService.isCustomTypeRegistered("custom_sandbox");
+        boolean customRegistered = SandboxRegistryService.isRegistered("custom_sandbox");
         assertTrue(customRegistered, "MyCustomSandbox should be registered");
         System.out.println("✓ MyCustomSandbox registered (custom type: custom_sandbox)");
 
-        SandboxRegistryService.getCustomTypeConfig("custom_sandbox").ifPresent(config -> {
+        SandboxRegistryService.getConfigByType("custom_sandbox").ifPresent(config -> {
             System.out.println("\nConfiguration:");
             System.out.println("  Image: " + config.getImageName());
             System.out.println("  Security Level: " + config.getSecurityLevel());
@@ -202,11 +202,11 @@ public class CustomSandboxTest {
     public void testAdvancedCustomSandboxRegistration() {
         System.out.println("\n--- Test AdvancedCustomSandbox Registration ---");
 
-        boolean advancedRegistered = SandboxRegistryService.isCustomTypeRegistered("advanced_sandbox");
+        boolean advancedRegistered = SandboxRegistryService.isRegistered("advanced_sandbox");
         assertTrue(advancedRegistered, "AdvancedCustomSandbox should be registered");
         System.out.println("✓ AdvancedCustomSandbox registered (custom type: advanced_sandbox)");
 
-        SandboxRegistryService.getCustomTypeConfig("advanced_sandbox").ifPresent(config -> {
+        SandboxRegistryService.getConfigByType("advanced_sandbox").ifPresent(config -> {
             System.out.println("\nConfiguration:");
             System.out.println("  Image: " + config.getImageName());
             System.out.println("  Security Level: " + config.getSecurityLevel());
@@ -255,15 +255,15 @@ public class CustomSandboxTest {
 
         assertTrue(SandboxRegistryService.isRegistered(SandboxType.BASE), 
             "CustomPythonSandbox should be registered");
-        assertTrue(SandboxRegistryService.isCustomTypeRegistered("custom_sandbox"), 
+        assertTrue(SandboxRegistryService.isRegistered("custom_sandbox"),
             "MyCustomSandbox should be registered");
-        assertTrue(SandboxRegistryService.isCustomTypeRegistered("advanced_sandbox"), 
+        assertTrue(SandboxRegistryService.isRegistered("advanced_sandbox"),
             "AdvancedCustomSandbox should be registered");
 
         System.out.println("✓ All custom sandboxes successfully registered");
 
         Map<String, io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig> customTypes = 
-            SandboxRegistryService.listAllCustomTypes();
+            SandboxRegistryService.listAllSandboxesByType();
         System.out.println("\nRegistered custom types count: " + customTypes.size());
         customTypes.forEach((name, config) -> 
             System.out.println("  - " + name + " -> " + config.getImageName())
@@ -281,12 +281,12 @@ public class CustomSandboxTest {
             assertTrue(image.contains("runtime-sandbox-python"));
         });
 
-        SandboxRegistryService.getCustomTypeImage("custom_sandbox").ifPresent(image -> {
+        SandboxRegistryService.getImageByType("custom_sandbox").ifPresent(image -> {
             System.out.println("MyCustomSandbox image: " + image);
             assertFalse(image.isEmpty());
         });
 
-        SandboxRegistryService.getCustomTypeImage("advanced_sandbox").ifPresent(image -> {
+        SandboxRegistryService.getImageByType("advanced_sandbox").ifPresent(image -> {
             System.out.println("AdvancedCustomSandbox image: " + image);
             assertEquals("my-registry/my-advanced-sandbox:latest", image);
         });
@@ -314,7 +314,7 @@ public class CustomSandboxTest {
     public void testAnnotationConfigurationCompleteness() {
         System.out.println("\n--- Verify Annotation Configuration Completeness ---");
 
-        SandboxRegistryService.getCustomTypeConfig("advanced_sandbox").ifPresentOrElse(
+        SandboxRegistryService.getConfigByType("advanced_sandbox").ifPresentOrElse(
             config -> {
                 System.out.println("Verifying AdvancedCustomSandbox configuration...");
                 

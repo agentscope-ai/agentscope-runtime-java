@@ -15,7 +15,6 @@
  */
 package io.agentscope.runtime.sandbox.manager.registry;
 
-import io.agentscope.runtime.sandbox.manager.model.container.DynamicSandboxType;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import org.slf4j.Logger;
@@ -35,8 +34,6 @@ public class SandboxRegistryService {
     private static final Map<Class<?>, SandboxConfig> classRegistry = new ConcurrentHashMap<>();
     private static final Map<String, Class<?>> typeRegistry = new ConcurrentHashMap<>();
     private static final Map<String, SandboxConfig> typeConfigRegistry = new ConcurrentHashMap<>();
-
-    private static final Map<String, SandboxConfig> customTypeRegistry = new ConcurrentHashMap<>();
 
     static {
         try {
@@ -230,7 +227,6 @@ public class SandboxRegistryService {
         classRegistry.clear();
         typeRegistry.clear();
         typeConfigRegistry.clear();
-        customTypeRegistry.clear();
         logger.info("Cleared all sandbox registrations");
     }
 
@@ -241,112 +237,6 @@ public class SandboxRegistryService {
      */
     public static int getRegisteredCount() {
         return typeConfigRegistry.size();
-    }
-
-    /**
-     * Register a custom sandbox type by string name
-     * This supports dynamic type registration.
-     *
-     * @param typeName  The custom type name
-     * @param imageName The Docker image name
-     */
-    public static void registerCustomType(String typeName, String imageName) {
-        DynamicSandboxType.custom(typeName);
-
-        SandboxConfig config = new SandboxConfig.Builder()
-                .sandboxType(SandboxType.BASE) // Placeholder, actual type is identified by string name
-                .imageName(imageName)
-                .build();
-
-        customTypeRegistry.put(typeName.toLowerCase(), config);
-        logger.info("Registered custom sandbox type: name={}, image={}", typeName, imageName);
-    }
-
-    /**
-     * Register a custom sandbox type with full configuration
-     *
-     * @param typeName       The custom type name
-     * @param imageName      The Docker image name
-     * @param resourceLimits Resource limits
-     * @param securityLevel  Security level
-     * @param timeout        Timeout in seconds
-     * @param description    Description
-     * @param environment    Environment variables
-     * @param runtimeConfig  Runtime configuration
-     */
-    public static void registerCustomType(
-            String typeName,
-            String imageName,
-            Map<String, Object> resourceLimits,
-            String securityLevel,
-            int timeout,
-            String description,
-            Map<String, String> environment,
-            Map<String, Object> runtimeConfig) {
-
-        // Create dynamic type to ensure it's registered in the type system
-        DynamicSandboxType.custom(typeName);
-
-        // Create full config for the custom type
-        SandboxConfig config = new SandboxConfig.Builder()
-                .sandboxType(SandboxType.BASE) // Placeholder
-                .imageName(imageName)
-                .resourceLimits(resourceLimits)
-                .securityLevel(securityLevel)
-                .timeout(timeout)
-                .description(description)
-                .environment(environment)
-                .runtimeConfig(runtimeConfig)
-                .build();
-
-        customTypeRegistry.put(typeName.toLowerCase(), config);
-
-        logger.info("Registered custom sandbox type with full config: name={}, image={}, timeout={}s", typeName, imageName, timeout);
-    }
-
-    /**
-     * Get configuration for a custom sandbox type by name
-     *
-     * @param typeName The custom type name
-     * @return Optional containing the configuration if found
-     */
-    public static Optional<SandboxConfig> getCustomTypeConfig(String typeName) {
-        if (typeName == null) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(customTypeRegistry.get(typeName.toLowerCase()));
-    }
-
-    /**
-     * Get image name for a custom sandbox type
-     *
-     * @param typeName The custom type name
-     * @return Optional containing the image name if found
-     */
-    public static Optional<String> getCustomTypeImage(String typeName) {
-        return getCustomTypeConfig(typeName).map(SandboxConfig::getImageName);
-    }
-
-    /**
-     * Check if a custom type is registered
-     *
-     * @param typeName The custom type name
-     * @return true if registered, false otherwise
-     */
-    public static boolean isCustomTypeRegistered(String typeName) {
-        if (typeName == null) {
-            return false;
-        }
-        return customTypeRegistry.containsKey(typeName.toLowerCase());
-    }
-
-    /**
-     * List all registered custom sandbox types
-     *
-     * @return A copy of the custom type registry
-     */
-    public static Map<String, SandboxConfig> listAllCustomTypes() {
-        return new HashMap<>(customTypeRegistry);
     }
 }
 
