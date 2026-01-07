@@ -18,31 +18,21 @@ package io.agentscope.runtime.autoconfigure.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.engine.Runner;
-import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.PostConstruct;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.annotation.PostConstruct;
-
-import io.agentscope.runtime.sandbox.manager.remote.RemoteWrapper;
 
 
 @RestController
@@ -124,7 +114,7 @@ public class SandboxManagerController {
         String requestUri = request.getRequestURI();
         String contextPath = request.getContextPath();
         String path = requestUri.substring(contextPath.length());
-        
+
         // Remove /sandbox prefix to match registered endpoints
         if (path.startsWith("/sandbox")) {
             path = path.substring("/sandbox".length());
@@ -132,7 +122,7 @@ public class SandboxManagerController {
                 path = "/";
             }
         }
-        
+
         return path;
     }
 
@@ -168,8 +158,6 @@ public class SandboxManagerController {
 
             ObjectMapper mapper = new ObjectMapper();
             String sandboxJson = mapper.writeValueAsString(args[0]);
-            System.out.println(args[0] instanceof Sandbox);
-            System.out.println(sandboxJson);
             Map<String, Object> request = Map.of("sandbox", sandboxJson);
 
             Object result = methodInfo.method.invoke(sandboxService, args);
@@ -269,6 +257,19 @@ public class SandboxManagerController {
 
         if (Map.class.isAssignableFrom(targetType) && value instanceof Map) {
             return value;
+        }
+
+        if (value instanceof String strValue) {
+            String trimmed = strValue.trim();
+            if ((trimmed.startsWith("{") || trimmed.startsWith("[") && !targetType.isPrimitive()
+                    && targetType != String.class && !targetType.isEnum())) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    return mapper.readValue(strValue, targetType);
+                } catch (Exception e) {
+                    logger.warn("Failed to parse JSON string to {}: {}", targetType.getName(), e.getMessage());
+                }
+            }
         }
 
         ObjectMapper mapper = new ObjectMapper();
