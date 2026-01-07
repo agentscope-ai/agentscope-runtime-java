@@ -18,6 +18,8 @@ package io.agentscope.runtime.sandbox.manager.model.container;
 import org.apache.commons.lang3.StringUtils;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Sandbox type enumeration
@@ -46,5 +48,20 @@ public class SandboxType {
             }
         }
         return false;
+    }
+
+    public static List<String> getAllPredefinedTypes() {
+        List<String> types = new ArrayList<>();
+        Field[] fields = SandboxType.class.getDeclaredFields();
+        for (Field field : fields) {
+            if (field.getType().equals(String.class)) {
+                try {
+                    types.add((String) field.get(null));
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return types;
     }
 }

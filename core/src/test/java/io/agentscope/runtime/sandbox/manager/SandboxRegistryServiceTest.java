@@ -209,7 +209,7 @@ public class SandboxRegistryServiceTest {
         assertTrue(allSandboxes.containsKey(SandboxType.BASE), "Should contain BASE type");
 
         // List all custom sandbox types
-        Map<String, SandboxConfig> customTypes = SandboxRegistryService.listAllSandboxesByType();
+        Map<String, SandboxConfig> customTypes = SandboxRegistryService.listAllCustomSandboxes();
         System.out.println("\nCustom Sandbox Types (" + customTypes.size() + "):");
         customTypes.forEach((name, config) -> 
             System.out.println("  " + name + " -> " + config.getImageName())

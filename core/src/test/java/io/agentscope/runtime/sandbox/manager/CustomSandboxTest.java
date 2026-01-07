@@ -262,8 +262,8 @@ public class CustomSandboxTest {
 
         System.out.println("✓ All custom sandboxes successfully registered");
 
-        Map<String, io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig> customTypes = 
-            SandboxRegistryService.listAllSandboxesByType();
+        Map<String, io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig> customTypes =
+            SandboxRegistryService.listAllCustomSandboxes();
         System.out.println("\nRegistered custom types count: " + customTypes.size());
         customTypes.forEach((name, config) -> 
             System.out.println("  - " + name + " -> " + config.getImageName())

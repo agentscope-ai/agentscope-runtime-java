@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -189,6 +190,25 @@ public class SandboxRegistryService {
     public static Map<String, SandboxConfig> listAllSandboxesByType() {
         return new HashMap<>(typeConfigRegistry);
     }
+
+    /**
+     * List all registered custom sandbox types
+     *
+     * @return A map of custom sandbox types to their configurations
+     */
+    public static Map<String, SandboxConfig> listAllCustomSandboxes() {
+        if (typeConfigRegistry == null) {
+            return new HashMap<>();
+        }
+
+        Map<String, SandboxConfig> customSandboxes = new HashMap<>(typeConfigRegistry);
+        List<String> predefinedTypes = SandboxType.getAllPredefinedTypes();
+        if (predefinedTypes != null) {
+            customSandboxes.keySet().removeAll(predefinedTypes);
+        }
+        return customSandboxes;
+    }
+
 
     /**
      * Check if a sandbox type is registered
