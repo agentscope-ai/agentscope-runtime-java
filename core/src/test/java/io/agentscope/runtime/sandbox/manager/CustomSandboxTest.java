@@ -70,7 +70,7 @@ public class CustomSandboxTest {
     
     @RegisterSandbox(
         imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-custom_sandbox:latest",
-        customType = "custom_sandbox",
+        sandboxType = "custom_sandbox",
         securityLevel = "medium",
         timeout = 60,
         description = "my sandbox",
@@ -90,7 +90,7 @@ public class CustomSandboxTest {
     
     @RegisterSandbox(
         imageName = "my-registry/my-advanced-sandbox:latest",
-        customType = "advanced_sandbox",
+        sandboxType = "advanced_sandbox",
         securityLevel = "high",
         timeout = 120,
         description = "Advanced custom sandbox with full configuration",

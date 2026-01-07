@@ -29,8 +29,6 @@ public @interface RegisterSandbox {
 
     String sandboxType() default SandboxType.BASE;
 
-    String customType() default "";
-
     String securityLevel() default "medium";
 
     int timeout() default 300;
