@@ -372,13 +372,31 @@ public class Main {
 * **AgentBay沙箱（AgentBay Sandbox）**：基于 AgentBay 云服务的沙箱实现，支持多种镜像类型（Linux、Windows、Browser、CodeSpace、Mobile等）
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", AgentBaySandbox.class)) {
-    System.out.println(sandbox.listTools());
-    if (sandbox instanceof AgentBaySandbox agentBaySandbox) {
-        String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
-        System.out.println("Sandbox execution result: " + pythonResult);
-        String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
-        System.out.println("Shell command result: " + shellResult);
+import io.agentscope.runtime.sandbox.box.AgentBaySandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .agentBayApiKey(System.getenv("AGENTBAY_API_KEY"))
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+//        连接沙箱（沙箱会在执行后自动删除）
+        try (AgentBaySandbox agentBaySandbox = new AgentBaySandbox(sandboxService, "user", "session", "linux_latest")) {
+            System.out.println(agentBaySandbox.listTools());
+            String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
+            System.out.println("Sandbox execution result: " + pythonResult);
+            String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
+            System.out.println("Shell command result: " + shellResult);
+        }
     }
 }
 ```

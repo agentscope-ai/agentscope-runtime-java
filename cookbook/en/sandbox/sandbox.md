@@ -365,13 +365,31 @@ public class Main {
 * **AgentBay Sandbox**: A sandbox implementation based on AgentBay cloud service, supporting multiple image types (Linux, Windows, Browser, CodeSpace, Mobile, etc.)
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", AgentBaySandbox.class)) {
-    System.out.println(sandbox.listTools());
-    if (sandbox instanceof AgentBaySandbox agentBaySandbox) {
-        String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
-        System.out.println("Sandbox execution result: " + pythonResult);
-        String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
-        System.out.println("Shell command result: " + shellResult);
+import io.agentscope.runtime.sandbox.box.AgentBaySandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .agentBayApiKey(System.getenv("AGENTBAY_API_KEY"))
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to an AgentBay sandbox (automatically deleted after execution)
+        try (AgentBaySandbox agentBaySandbox = new AgentBaySandbox(sandboxService, "user", "session", "linux_latest")) {
+            System.out.println(agentBaySandbox.listTools());
+            String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
+            System.out.println("Sandbox execution result: " + pythonResult);
+            String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
+            System.out.println("Shell command result: " + shellResult);
+        }
     }
 }
 ```

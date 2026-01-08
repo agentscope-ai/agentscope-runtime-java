@@ -25,7 +25,6 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
-import io.agentscope.runtime.sandbox.manager.client.container.ContainerCreateResult;
 import io.agentscope.runtime.sandbox.manager.client.container.agentbay.AgentBayClient;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 import org.slf4j.Logger;
@@ -43,45 +42,41 @@ import java.util.*;
 public class AgentBaySandbox extends CloudSandbox {
 
     private static final Logger logger = LoggerFactory.getLogger(AgentBaySandbox.class);
-    private String imageId;
-    private Map<String, String> labels;
-    private AgentBayClient agentBayClient;
+    private final String imageId;
+    private final Map<String, String> labels;
+
+    public Map<String, String> getLabels() {
+        return labels;
+    }
+
+    public String getImageId() {
+        return imageId;
+    }
 
     public AgentBaySandbox(SandboxService managerApi, String userId, String sessionId) {
         this(managerApi, userId, sessionId, "linux_latest");
     }
 
     public AgentBaySandbox(SandboxService managerApi, String userId, String sessionId, String imageId) {
-        this(managerApi, userId, sessionId, imageId, null);
+        this(managerApi, userId, sessionId, imageId, Map.of());
     }
 
     public AgentBaySandbox(SandboxService managerApi, String userId, String sessionId,
                            String imageId, Map<String, String> labels) {
         super(managerApi, userId, sessionId, "agentbay");
-        this.agentBayClient = this.managerApi.getAgentBayClient();
-        if (this.agentBayClient == null) {
-            throw new RuntimeException("AgentBay client is not initialized.");
-        }
+        this.labels = labels;
         if (imageId == null || imageId.isEmpty()) {
             this.imageId = "linux_latest";
         } else {
             this.imageId = imageId;
         }
         try {
-            ContainerCreateResult createResult = agentBayClient.createContainer(imageId, labels);
-            if (createResult == null) {
-                logger.error("Failed to create AgentBay sandbox.");
-                return;
+            this.sandboxId = managerApi.createAgentBayContainer(this);
+            if (this.sandboxId == null) {
+                logger.error("Failed to initialize sandbox");
             }
-            this.sandboxId = createResult.getContainerId();
-            if (this.sandboxId == null || this.sandboxId.isEmpty()) {
-                logger.error("Failed to create AgentBay sandbox.");
-                return;
-            }
-            logger.info("Sandbox initialized: {} (type={}, user={}, session={}， imageId={})", this.sandboxId, sandboxType, userId, sessionId, imageId);
         } catch (Exception e) {
             logger.error("Failed to initialize sandbox: {}", e.getMessage());
-            throw new RuntimeException("Failed to initialize sandbox", e);
         }
     }
 
@@ -333,22 +328,18 @@ public class AgentBaySandbox extends CloudSandbox {
             logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
-        Map<String, Object> response = new HashMap<>();
+        Map<String, Object> response;
         String result = "";
         try {
             String endpointUrl = session.getBrowser().getEndpointUrl();
 
             try (Playwright playwright = Playwright.create()) {
                 Browser browser = playwright.chromium().connectOverCDP(endpointUrl);
-
                 Page page = browser.newPage();
-
                 // Navigate to a website
                 page.navigate(url);
-
                 // Wait for page load
                 page.waitForTimeout(2000);
-
                 result = page.content();
                 browser.close();
             } catch (Exception e) {
@@ -376,8 +367,8 @@ public class AgentBaySandbox extends CloudSandbox {
             logger.error("AgentBay session not found: {}", this.sandboxId);
             return "AgentBay session not found: " + this.sandboxId;
         }
-        Map<String, Object> response = new HashMap<>();
-        ActResult result = null;
+        Map<String, Object> response;
+        ActResult result;
         try {
             session.getBrowser().initialize(new BrowserOption());
             result = session.getBrowser().getAgent().click(null, selector);

@@ -18,6 +18,7 @@ package io.agentscope.runtime.sandbox.manager;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.runtime.sandbox.box.AgentBaySandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.client.container.BaseClient;
 import io.agentscope.runtime.sandbox.manager.client.container.ContainerCreateResult;
@@ -74,6 +75,17 @@ public class SandboxService implements AutoCloseable {
             agentBayClient = new AgentBayClient(managerConfig.getAgentBayApiKey());
         }
         logger.info("SandboxService started.");
+    }
+
+    public String createAgentBayContainer(AgentBaySandbox sandbox) {
+        if (agentBayClient == null) {
+            throw new RuntimeException("AgentBay client is not initialized.");
+        }
+        ContainerCreateResult createResult = agentBayClient.createContainer(sandbox.getImageId(), sandbox.getLabels());
+        String agentBayId = "agentbay_" + sandbox.getImageId() + "_" + sandbox.getLabels().toString();
+        ContainerModel containerModel = ContainerModel.builder().containerId(createResult.getContainerId()).containerName(agentBayId).build();
+        sandboxMap.addSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), agentBayId), containerModel);
+        return createResult.getContainerId();
     }
 
     @RemoteWrapper
@@ -311,6 +323,11 @@ public class SandboxService implements AutoCloseable {
 
     @RemoteWrapper
     public void stopSandbox(ContainerModel containerModel) {
+        if(containerModel.getContainerName().startsWith("agentbay_")) {
+            logger.info("Stopping sandbox managed by AgentBay via AgentBayClient");
+            agentBayClient.stopContainer(containerModel.getContainerId());
+            return;
+        }
         if (this.remoteHttpClient != null) {
             logger.info("Stopping sandbox in remote mode via RemoteHttpClient");
             Map<String, Object> request = Map.of("containerModel", containerModel);
@@ -320,9 +337,6 @@ public class SandboxService implements AutoCloseable {
                     request,
                     "data"
             );
-            return;
-        }
-        if (containerModel == null) {
             return;
         }
         containerClient.stopContainer(containerModel.getContainerId());
@@ -339,6 +353,10 @@ public class SandboxService implements AutoCloseable {
 
     @RemoteWrapper
     public boolean removeSandbox(ContainerModel containerModel) {
+        if(containerModel.getContainerName().startsWith("agentbay_")) {
+            logger.warn("AgentBay sandbox can only be stopped, not removed via AgentBayClient");
+            return true;
+        }
         if (this.remoteHttpClient != null) {
             logger.info("Removing sandbox in remote mode via RemoteHttpClient");
             Map<String, Object> request = Map.of("containerModel", containerModel);
@@ -349,9 +367,6 @@ public class SandboxService implements AutoCloseable {
                     "data"
             );
             return true;
-        }
-        if (containerModel == null) {
-            return false;
         }
         containerClient.removeContainer(containerModel.getContainerId());
         logger.info("Container removed: {}", containerModel.getContainerId());
@@ -397,7 +412,7 @@ public class SandboxService implements AutoCloseable {
             }
             return "unknown";
         }
-        if(containerModel==null){
+        if (containerModel == null) {
             return "not_found";
         }
         return containerClient.getContainerStatus(containerModel.getContainerId());

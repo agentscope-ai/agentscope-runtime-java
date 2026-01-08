@@ -103,22 +103,6 @@ public class Sandbox implements AutoCloseable {
         this.sandboxType = sandboxType;
         this.fileSystemConfig = fileSystemConfig;
         this.environment = new HashMap<>(environment);
-
-        if(!Objects.equals(sandboxType, "agentbay")){
-            try {
-                ContainerModel containerModel = managerApi.createContainer(this);
-                if (containerModel == null) {
-                    throw new RuntimeException(
-                            "No sandbox available. Please check if sandbox images exist."
-                    );
-                }
-                this.sandboxId = containerModel.getContainerId();
-                logger.info("Sandbox initialized: {} (type={}, user={}, session={})", this.sandboxId, sandboxType, userId, sessionId);
-            } catch (Exception e) {
-                logger.error("Failed to initialize sandbox: {}", e.getMessage());
-                throw new RuntimeException("Failed to initialize sandbox", e);
-            }
-        }
     }
 
     public String getSandboxId() {
@@ -145,8 +129,27 @@ public class Sandbox implements AutoCloseable {
         return fileSystemConfig;
     }
 
+    private void initializeSandbox(){
+        if (sandboxId == null || sandboxId.isEmpty()) {
+            try {
+                ContainerModel containerModel = managerApi.createContainer(this);
+                if (containerModel == null) {
+                    throw new RuntimeException(
+                            "No sandbox available. Please check if sandbox images exist."
+                    );
+                }
+                this.sandboxId = containerModel.getContainerId();
+                logger.info("Sandbox initialized: {} (type={}, user={}, session={})", this.sandboxId, sandboxType, userId, sessionId);
+            } catch (Exception e) {
+                logger.error("Failed to initialize sandbox: {}", e.getMessage());
+                throw new RuntimeException("Failed to initialize sandbox", e);
+            }
+        }
+    }
+
     @JsonIgnore
     public ContainerModel getInfo() {
+        initializeSandbox();
         return managerApi.getInfo(sandboxId);
     }
 
@@ -155,10 +158,12 @@ public class Sandbox implements AutoCloseable {
     }
 
     public Map<String, Object> listTools(String toolType) {
+        initializeSandbox();
         return managerApi.listTools(sandboxId, toolType);
     }
 
     public String callTool(String name, Map<String, Object> arguments) {
+        initializeSandbox();
         return managerApi.callTool(sandboxId, name, arguments);
     }
 
@@ -167,12 +172,13 @@ public class Sandbox implements AutoCloseable {
     }
 
     public Map<String, Object> addMcpServers(Map<String, Object> serverConfigs, boolean overwrite) {
+        initializeSandbox();
         return managerApi.addMcpServers(sandboxId, serverConfigs, overwrite);
     }
 
     @Override
     public void close() {
-        if (closed) {
+        if (closed || sandboxId == null || sandboxId.isEmpty()) {
             return;
         }
 

@@ -244,7 +244,7 @@ public class DockerLifecycleTest {
         System.out.println("Created sandbox: " + containerId);
 
         // Stop and remove sandbox
-        sandboxService.stopAndRemoveSandbox(testUserId, testSessionId, "base");
+        boolean result = sandboxService.stopAndRemoveSandbox(testUserId, testSessionId, "base");
         System.out.println("Sandbox stopped and removed");
 
         // Verify sandbox has been deleted
