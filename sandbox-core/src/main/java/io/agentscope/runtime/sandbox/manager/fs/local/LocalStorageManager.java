@@ -16,7 +16,7 @@
 
 package io.agentscope.runtime.sandbox.manager.fs.local;
 
-import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.FileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.fs.StorageManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +31,8 @@ import java.nio.file.StandardCopyOption;
 public class LocalStorageManager extends StorageManager {
     Logger logger = LoggerFactory.getLogger(LocalStorageManager.class);
 
-    public LocalStorageManager(FileSystemStarter fileSystemStarter) {
-        super(fileSystemStarter);
+    public LocalStorageManager(FileSystemConfig fileSystemConfig) {
+        super(fileSystemConfig);
     }
 
     @Override

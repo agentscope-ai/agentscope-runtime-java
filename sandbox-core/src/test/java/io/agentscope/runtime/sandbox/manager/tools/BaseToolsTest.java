@@ -46,7 +46,7 @@ public class BaseToolsTest {
         try {
             BaseClientStarter clientConfig = DockerClientStarter.builder().build();
             ManagerConfig managerConfig = ManagerConfig.builder()
-                    .clientConfig(clientConfig)
+                    .clientStarter(clientConfig)
                     .build();
             SandboxService sandboxService = new SandboxService(managerConfig);
             sandboxService.start();

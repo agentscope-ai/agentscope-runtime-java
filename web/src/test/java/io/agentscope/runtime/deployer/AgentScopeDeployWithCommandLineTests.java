@@ -69,7 +69,7 @@ public class AgentScopeDeployWithCommandLineTests {
 		public SandboxService get(Properties properties) {
 			BaseClientStarter clientConfig = DockerClientStarter.builder().build();
 			ManagerConfig managerConfig = ManagerConfig.builder()
-					.clientConfig(clientConfig)
+					.clientStarter(clientConfig)
 					.build();
 			return new SandboxService(managerConfig);
 		}

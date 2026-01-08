@@ -24,10 +24,10 @@ import org.slf4j.LoggerFactory;
 public abstract class StorageManager{
     private static final Logger logger = LoggerFactory.getLogger(StorageManager.class);
 
-    protected final FileSystemStarter fileSystemStarter;
+    protected final FileSystemConfig fileSystemConfig;
 
-    public StorageManager(FileSystemStarter fileSystemStarter) {
-        this.fileSystemStarter = fileSystemStarter;
+    public StorageManager(FileSystemConfig fileSystemConfig) {
+        this.fileSystemConfig = fileSystemConfig;
     }
 
     /**

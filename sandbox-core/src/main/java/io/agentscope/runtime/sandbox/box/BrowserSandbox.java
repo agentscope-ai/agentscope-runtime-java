@@ -16,8 +16,8 @@
 package io.agentscope.runtime.sandbox.box;
 
 import io.agentscope.runtime.sandbox.manager.SandboxService;
-import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
-import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.FileSystemConfig;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
 import java.util.HashMap;
@@ -35,7 +35,7 @@ public class BrowserSandbox extends Sandbox {
     private final String baseUrl;
 
     public BrowserSandbox(SandboxService managerApi, String userId, String sessionId) {
-        this(managerApi, userId, sessionId, null, LocalFileSystemStarter.builder().build(), Map.of());
+        this(managerApi, userId, sessionId, null, LocalFileSystemConfig.builder().build(), Map.of());
     }
 
     public BrowserSandbox(
@@ -43,15 +43,15 @@ public class BrowserSandbox extends Sandbox {
             String userId,
             String sessionId,
             String baseUrl) {
-        this(managerApi, userId, sessionId, baseUrl, LocalFileSystemStarter.builder().build(), Map.of());
+        this(managerApi, userId, sessionId, baseUrl, LocalFileSystemConfig.builder().build(), Map.of());
     }
 
     public BrowserSandbox(
             SandboxService managerApi,
             String userId,
             String sessionId,
-            FileSystemStarter fileSystemStarter) {
-        this(managerApi, userId, sessionId, null, fileSystemStarter, Map.of());
+            FileSystemConfig fileSystemConfig) {
+        this(managerApi, userId, sessionId, null, fileSystemConfig, Map.of());
     }
 
     public BrowserSandbox(
@@ -59,7 +59,7 @@ public class BrowserSandbox extends Sandbox {
             String userId,
             String sessionId,
             Map<String, String> environment) {
-        this(managerApi, userId, sessionId, null, LocalFileSystemStarter.builder().build(), environment);
+        this(managerApi, userId, sessionId, null, LocalFileSystemConfig.builder().build(), environment);
     }
 
     public BrowserSandbox(
@@ -67,9 +67,9 @@ public class BrowserSandbox extends Sandbox {
             String userId,
             String sessionId,
             String baseUrl,
-            FileSystemStarter fileSystemStarter,
+            FileSystemConfig fileSystemConfig,
             Map<String, String> environment) {
-        super(managerApi, userId, sessionId, "browser", fileSystemStarter, environment);
+        super(managerApi, userId, sessionId, "browser", fileSystemConfig, environment);
         this.baseUrl = baseUrl;
     }
 

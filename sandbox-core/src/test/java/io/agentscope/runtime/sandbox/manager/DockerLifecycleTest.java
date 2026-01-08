@@ -57,7 +57,7 @@ public class DockerLifecycleTest {
         try {
             BaseClientStarter clientConfig = DockerClientStarter.builder().build();
             ManagerConfig config = new ManagerConfig.Builder()
-                    .clientConfig(clientConfig)
+                    .clientStarter(clientConfig)
                     .build();
             sandboxService = new SandboxService(config);
             sandboxService.start();

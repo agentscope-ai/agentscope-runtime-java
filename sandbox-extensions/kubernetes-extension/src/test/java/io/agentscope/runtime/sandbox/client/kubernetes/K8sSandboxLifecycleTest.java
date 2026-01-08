@@ -55,13 +55,13 @@ public class K8sSandboxLifecycleTest {
             BaseClientStarter clientConfig = KubernetesClientStarter.builder().kubeConfigPath(System.getenv("KUBECONFIG_PATH")).build();
             System.out.println(System.getenv("KUBECONFIG_PATH"));
             ManagerConfig config = new ManagerConfig.Builder()
-                    .clientConfig(clientConfig)
+                    .clientStarter(clientConfig)
                     .build();
             sandboxService = new SandboxService(config);
             sandboxService.start();
-            System.out.println("Kubernetes SandboxManager initialized successfully");
+            System.out.println("Kubernetes SandboxService initialized successfully");
         } catch (Exception e) {
-            System.err.println("Failed to initialize Kubernetes SandboxManager: " + e.getMessage());
+            System.err.println("Failed to initialize Kubernetes SandboxService: " + e.getMessage());
             throw new RuntimeException("Failed to initialize test environment", e);
         }
     }

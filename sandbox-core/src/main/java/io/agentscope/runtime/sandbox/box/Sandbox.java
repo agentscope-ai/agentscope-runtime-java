@@ -21,14 +21,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
-import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
-import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.FileSystemConfig;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class Sandbox implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(Sandbox.class);
@@ -40,7 +41,7 @@ public class Sandbox implements AutoCloseable {
     protected String sandboxType;
     protected boolean closed = false;
     protected Map<String, String> environment;
-    protected FileSystemStarter fileSystemStarter;
+    protected FileSystemConfig fileSystemConfig;
 
     @JsonCreator
     public Sandbox(
@@ -48,7 +49,7 @@ public class Sandbox implements AutoCloseable {
             @JsonProperty("userId") String userId,
             @JsonProperty("sessionId") String sessionId,
             @JsonProperty("sandboxType") String sandboxType,
-            @JsonProperty("fileSystemStarter") FileSystemStarter fileSystemStarter,
+            @JsonProperty("fileSystemConfig") FileSystemConfig fileSystemConfig,
             @JsonProperty("environment") Map<String, String> environment,
             @JsonProperty("closed") boolean closed
     ) {
@@ -56,7 +57,7 @@ public class Sandbox implements AutoCloseable {
         this.userId = userId;
         this.sessionId = sessionId;
         this.sandboxType = sandboxType;
-        this.fileSystemStarter = fileSystemStarter;
+        this.fileSystemConfig = fileSystemConfig;
         this.environment = environment != null ? new HashMap<>(environment) : new HashMap<>();
         this.closed = closed;
     }
@@ -66,16 +67,16 @@ public class Sandbox implements AutoCloseable {
                    String sessionId,
                    String sandboxType
     ) {
-        this(managerApi, userId, sessionId, sandboxType, LocalFileSystemStarter.builder().build(), Map.of());
+        this(managerApi, userId, sessionId, sandboxType, LocalFileSystemConfig.builder().build(), Map.of());
     }
 
     public Sandbox(SandboxService managerApi,
                    String userId,
                    String sessionId,
                    String sandboxType,
-                   FileSystemStarter fileSystemStarter
+                   FileSystemConfig fileSystemConfig
     ) {
-        this(managerApi, userId, sessionId, sandboxType, fileSystemStarter, Map.of());
+        this(managerApi, userId, sessionId, sandboxType, fileSystemConfig, Map.of());
     }
 
     public Sandbox(
@@ -85,7 +86,7 @@ public class Sandbox implements AutoCloseable {
             String sandboxType,
             Map<String, String> environment
     ) {
-        this(managerApi, userId, sessionId, sandboxType, LocalFileSystemStarter.builder().build(), environment);
+        this(managerApi, userId, sessionId, sandboxType, LocalFileSystemConfig.builder().build(), environment);
     }
 
     public Sandbox(
@@ -93,28 +94,30 @@ public class Sandbox implements AutoCloseable {
             String userId,
             String sessionId,
             String sandboxType,
-            FileSystemStarter fileSystemStarter,
+            FileSystemConfig fileSystemConfig,
             Map<String, String> environment
     ) {
         this.managerApi = managerApi;
         this.userId = userId;
         this.sessionId = sessionId;
         this.sandboxType = sandboxType;
-        this.fileSystemStarter = fileSystemStarter;
+        this.fileSystemConfig = fileSystemConfig;
         this.environment = new HashMap<>(environment);
 
-        try {
-            ContainerModel containerModel = managerApi.createContainer(this);
-            if (containerModel == null) {
-                throw new RuntimeException(
-                        "No sandbox available. Please check if sandbox images exist."
-                );
+        if(!Objects.equals(sandboxType, "agentbay")){
+            try {
+                ContainerModel containerModel = managerApi.createContainer(this);
+                if (containerModel == null) {
+                    throw new RuntimeException(
+                            "No sandbox available. Please check if sandbox images exist."
+                    );
+                }
+                this.sandboxId = containerModel.getContainerId();
+                logger.info("Sandbox initialized: {} (type={}, user={}, session={})", this.sandboxId, sandboxType, userId, sessionId);
+            } catch (Exception e) {
+                logger.error("Failed to initialize sandbox: {}", e.getMessage());
+                throw new RuntimeException("Failed to initialize sandbox", e);
             }
-            this.sandboxId = containerModel.getContainerId();
-            logger.info("Sandbox initialized: {} (type={}, user={}, session={})", this.sandboxId, sandboxType, userId, sessionId);
-        } catch (Exception e) {
-            logger.error("Failed to initialize sandbox: {}", e.getMessage());
-            throw new RuntimeException("Failed to initialize sandbox", e);
         }
     }
 
@@ -138,8 +141,8 @@ public class Sandbox implements AutoCloseable {
         return environment;
     }
 
-    public FileSystemStarter getFileSystemStarter() {
-        return fileSystemStarter;
+    public FileSystemConfig getFileSystemStarter() {
+        return fileSystemConfig;
     }
 
     @JsonIgnore

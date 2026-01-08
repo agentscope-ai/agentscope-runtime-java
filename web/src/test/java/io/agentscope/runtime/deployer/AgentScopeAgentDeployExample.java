@@ -61,7 +61,7 @@ public class AgentScopeAgentDeployExample {
 	private static SandboxService buidSandboxService() {
 		BaseClientStarter clientConfig = DockerClientStarter.builder().build();
 		ManagerConfig managerConfig = ManagerConfig.builder()
-				.clientConfig(clientConfig)
+				.clientStarter(clientConfig)
 				.build();
 		SandboxService sandboxService = new SandboxService(managerConfig);
 		return sandboxService;

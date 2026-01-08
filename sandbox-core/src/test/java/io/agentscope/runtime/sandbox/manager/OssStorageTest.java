@@ -18,7 +18,7 @@ package io.agentscope.runtime.sandbox.manager;
 
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.fs.oss.OssStarter;
+import io.agentscope.runtime.sandbox.manager.fs.oss.OssConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -106,7 +106,7 @@ public class OssStorageTest {
 
         try {
             // 1. Configure OSS storage
-            OssStarter ossConfig = OssStarter.builder()
+            OssConfig ossConfig = OssConfig.builder()
                     .ossEndpoint(ossEndpoint)
                     .ossAccessKeyId(ossAccessKeyId)
                     .ossAccessKeySecret(ossAccessKeySecret)
@@ -172,7 +172,7 @@ public class OssStorageTest {
         System.out.println("\n--- Testing OSS Config Validation ---");
 
         // Create OSS configuration
-        OssStarter ossConfig = OssStarter.builder()
+        OssConfig ossConfig = OssConfig.builder()
                 .ossEndpoint(ossEndpoint)
                 .ossAccessKeyId(ossAccessKeyId)
                 .ossAccessKeySecret(ossAccessKeySecret)

@@ -34,7 +34,7 @@ public class OssStorageManager extends StorageManager {
     Logger logger = LoggerFactory.getLogger(OssStorageManager.class);
     private final OSS ossClient;
 
-    public OssStorageManager(OssStarter ossStarter) {
+    public OssStorageManager(OssConfig ossStarter) {
         super(ossStarter);
         this.ossClient = new OSSClientBuilder().build(
                 ossStarter.getOssEndpoint(),
@@ -72,7 +72,7 @@ public class OssStorageManager extends StorageManager {
      * @return whether download succeeded
      */
     private boolean downloadFromOss(String ossPrefix, String localDir) {
-        if (ossClient == null || !(fileSystemStarter instanceof OssStarter ossStarter)) {
+        if (ossClient == null || !(fileSystemConfig instanceof OssConfig ossStarter)) {
             logger.error("OSS client not initialized");
             return false;
         }

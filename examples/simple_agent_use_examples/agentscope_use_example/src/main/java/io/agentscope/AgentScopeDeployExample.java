@@ -45,7 +45,7 @@ public class AgentScopeDeployExample {
 		agentHandler.setStateService(new InMemoryStateService());
 		agentHandler.setSessionHistoryService(new InMemorySessionHistoryService());
 		agentHandler.setMemoryService(new InMemoryMemoryService());
-		agentHandler.setSandboxService(buidSandboxService());
+		agentHandler.setSandboxService(buildSandboxService());
 
 		AgentApp agentApp = new AgentApp(agentHandler);
         agentApp.cors(registry -> registry.addMapping("/**")
@@ -56,10 +56,10 @@ public class AgentScopeDeployExample {
 	}
 
 	@NotNull
-	private static SandboxService buidSandboxService() {
+	private static SandboxService buildSandboxService() {
 		BaseClientStarter clientConfig = DockerClientStarter.builder().build();
 		ManagerConfig managerConfig = ManagerConfig.builder()
-				.clientConfig(clientConfig)
+				.clientStarter(clientConfig)
 				.build();
         SandboxService sandboxService = new SandboxService(
                 managerConfig

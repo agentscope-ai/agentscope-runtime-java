@@ -17,20 +17,20 @@ package io.agentscope.runtime.sandbox.manager.fs.oss;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.FileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.fs.StorageManager;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 
 import java.util.Map;
 
-public class OssStarter extends FileSystemStarter {
+public class OssConfig extends FileSystemConfig {
     private final String ossEndpoint;
     private final String ossAccessKeyId;
     private final String ossAccessKeySecret;
     private final String ossBucketName;
 
     @JsonCreator
-    public OssStarter(
+    public OssConfig(
             @JsonProperty("readonlyMounts") Map<String, String> readonlyMounts,
             @JsonProperty("storageFolderPath") String storageFolderPath,
             @JsonProperty("mountDir") String mountDir,
@@ -47,7 +47,7 @@ public class OssStarter extends FileSystemStarter {
         this.ossBucketName = ossBucketName;
     }
 
-    private OssStarter(Builder builder) {
+    private OssConfig(Builder builder) {
         super(builder);
         this.ossEndpoint = builder.ossEndpoint;
         this.ossAccessKeyId = builder.ossAccessKeyId;
@@ -80,7 +80,7 @@ public class OssStarter extends FileSystemStarter {
         return new OssStorageManager(this);
     }
 
-    public static class Builder extends FileSystemStarter.Builder<Builder> {
+    public static class Builder extends FileSystemConfig.Builder<Builder> {
         private String ossEndpoint = "http://oss-cn-hangzhou.aliyuncs.com";
         private String ossAccessKeyId;
         private String ossAccessKeySecret;
@@ -116,8 +116,8 @@ public class OssStarter extends FileSystemStarter {
         }
 
         @Override
-        public OssStarter build() {
-            return new OssStarter(this);
+        public OssConfig build() {
+            return new OssConfig(this);
         }
     }
 }

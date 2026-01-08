@@ -18,8 +18,8 @@ package io.agentscope.runtime.sandbox.manager.fs;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
-import io.agentscope.runtime.sandbox.manager.fs.oss.OssStarter;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemConfig;
+import io.agentscope.runtime.sandbox.manager.fs.oss.OssConfig;
 import io.agentscope.runtime.sandbox.manager.model.fs.FileSystemType;
 
 import java.util.HashMap;
@@ -31,17 +31,17 @@ import java.util.Map;
         property = "fileSystemType"
 )
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = LocalFileSystemStarter.class, name = "LOCAL"),
-        @JsonSubTypes.Type(value = OssStarter.class, name = "OSS")
+        @JsonSubTypes.Type(value = LocalFileSystemConfig.class, name = "LOCAL"),
+        @JsonSubTypes.Type(value = OssConfig.class, name = "OSS")
 })
-public abstract class FileSystemStarter {
+public abstract class FileSystemConfig {
     private final FileSystemType fileSystemType;
     private Map<String, String> readonlyMounts;
     private String storageFolderPath;
     private String mountDir;
     private Map<String, String> nonCopyMount;
 
-    protected FileSystemStarter(
+    protected FileSystemConfig(
             FileSystemType fileSystemType,
             Map<String, String> readonlyMounts,
             String storageFolderPath,
@@ -54,13 +54,13 @@ public abstract class FileSystemStarter {
         this.nonCopyMount = nonCopyMount;
     }
 
-    protected FileSystemStarter(FileSystemType fileSystemType) {
+    protected FileSystemConfig(FileSystemType fileSystemType) {
         this.fileSystemType = fileSystemType;
     }
 
     public abstract StorageManager createStorageManager();
 
-    protected FileSystemStarter(Builder<?> builder) {
+    protected FileSystemConfig(Builder<?> builder) {
         this.fileSystemType = builder.fileSystemType;
         this.readonlyMounts = builder.readonlyMounts;
         this.storageFolderPath = builder.storageFolderPath;
@@ -132,6 +132,6 @@ public abstract class FileSystemStarter {
             return self();
         }
 
-        public abstract FileSystemStarter build();
+        public abstract FileSystemConfig build();
     }
 }

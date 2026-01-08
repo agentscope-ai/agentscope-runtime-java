@@ -36,9 +36,9 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/sandbox")
-public class SandboxManagerController {
+public class SandboxServiceController {
 
-    private static final Logger logger = LoggerFactory.getLogger(SandboxManagerController.class);
+    private static final Logger logger = LoggerFactory.getLogger(SandboxServiceController.class);
 
     private final Map<String, MethodInfo> endpointRegistry = new HashMap<>();
 
@@ -51,7 +51,7 @@ public class SandboxManagerController {
 
         logger.info("Scanning class: {}", clazz.getName());
         Method[] methods = clazz.getDeclaredMethods();
-        logger.info("Found {} methods in SandboxManager", methods.length);
+        logger.info("Found {} methods in SandboxService", methods.length);
 
         for (Method method : methods) {
             RemoteWrapper annotation = method.getAnnotation(RemoteWrapper.class);

@@ -17,8 +17,8 @@ package io.agentscope.runtime.sandbox.box;
 
 import io.agentscope.runtime.sandbox.box.model.HostPrerequisiteError;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
-import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
-import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.FileSystemConfig;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
 import org.slf4j.Logger;
@@ -54,9 +54,9 @@ public class MobileSandbox extends Sandbox {
             SandboxService managerApi,
             String userId,
             String sessionId,
-            FileSystemStarter fileSystemStarter
+            FileSystemConfig fileSystemConfig
     ) {
-        this(managerApi, userId, sessionId, fileSystemStarter, Map.of());
+        this(managerApi, userId, sessionId, fileSystemConfig, Map.of());
     }
 
     public MobileSandbox(
@@ -65,14 +65,14 @@ public class MobileSandbox extends Sandbox {
             String sessionId,
             Map<String, String> environment
     ) {
-        this(managerApi, userId, sessionId, LocalFileSystemStarter.builder().build(), environment);
+        this(managerApi, userId, sessionId, LocalFileSystemConfig.builder().build(), environment);
     }
 
     public MobileSandbox(
             SandboxService managerApi,
             String userId,
             String sessionId,
-            FileSystemStarter fileSystemStarter,
+            FileSystemConfig fileSystemConfig,
             Map<String, String> environment) {
         super(managerApi, userId, sessionId, "mobile");
         if (!hostCheckDone) {

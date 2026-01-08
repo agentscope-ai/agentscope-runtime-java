@@ -16,8 +16,8 @@
 package io.agentscope.runtime.sandbox.box;
 
 import io.agentscope.runtime.sandbox.manager.SandboxService;
-import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
-import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.FileSystemConfig;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemConfig;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,8 +32,8 @@ public class TrainingSandbox extends Sandbox {
             String userId,
             String sessionId,
             String sandboxType,
-            FileSystemStarter fileSystemStarter) {
-        this(managerApi, userId, sessionId, sandboxType, fileSystemStarter, Map.of());
+            FileSystemConfig fileSystemConfig) {
+        this(managerApi, userId, sessionId, sandboxType, fileSystemConfig, Map.of());
     }
 
     public TrainingSandbox(
@@ -42,7 +42,7 @@ public class TrainingSandbox extends Sandbox {
             String sessionId,
             String sandboxType,
             Map<String, String> environment) {
-        this(managerApi, userId, sessionId, sandboxType, LocalFileSystemStarter.builder().build(), environment);
+        this(managerApi, userId, sessionId, sandboxType, LocalFileSystemConfig.builder().build(), environment);
     }
 
     public TrainingSandbox(
@@ -50,10 +50,10 @@ public class TrainingSandbox extends Sandbox {
             String userId,
             String sessionId,
             String sandboxType,
-            FileSystemStarter fileSystemStarter,
+            FileSystemConfig fileSystemConfig,
             Map<String, String> environment
     ) {
-        super(managerApi, userId, sessionId, sandboxType, fileSystemStarter, environment);
+        super(managerApi, userId, sessionId, sandboxType, fileSystemConfig, environment);
     }
 
     /**

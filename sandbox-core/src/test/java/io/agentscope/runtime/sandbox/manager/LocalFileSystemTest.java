@@ -18,7 +18,7 @@ package io.agentscope.runtime.sandbox.manager;
 
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.local.LocalFileSystemConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
@@ -107,7 +107,7 @@ public class LocalFileSystemTest {
             createInitialTestFiles(testFolder.getAbsolutePath());
 
             // 2. Configure local file system storage
-            LocalFileSystemStarter localFileSystemStarter = LocalFileSystemStarter.builder()
+            LocalFileSystemConfig localFileSystemStarter = LocalFileSystemConfig.builder()
                     .storageFolderPath(localStoragePath)
                     .build();
 
@@ -176,7 +176,7 @@ public class LocalFileSystemTest {
         System.out.println("\n--- Testing Local File System Config Validation ---");
 
         // Create local file system configuration
-        LocalFileSystemStarter localFileSystemStarter = LocalFileSystemStarter.builder()
+        LocalFileSystemConfig localFileSystemStarter = LocalFileSystemConfig.builder()
                 .storageFolderPath(localStoragePath)
                 .mountDir("custom_mount_dir")
                 .build();

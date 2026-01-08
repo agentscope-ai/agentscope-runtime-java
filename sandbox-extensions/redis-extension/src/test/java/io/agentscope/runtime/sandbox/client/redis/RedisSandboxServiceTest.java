@@ -37,7 +37,7 @@ import java.util.Map;
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @EnabledIf(value = "isCI", disabledReason = "this test is designed to run only in the GitHub CI environment.")
-public class RedisSandboxManagerTest {
+public class RedisSandboxServiceTest {
 
     private static boolean isCI() {
         return "true".equalsIgnoreCase(System.getProperty("CI", System.getenv("CI")));
@@ -58,12 +58,12 @@ public class RedisSandboxManagerTest {
 
     @Test
     @Order(1)
-    public void testSandboxManagerWithRedis() {
+    public void testSandboxServiceWithRedis() {
         RedisManagerConfig redisConfig = createRedisConfig("_test_runtime_sandbox_occupied_ports", "_test_runtime_sandbox_pool");
         ManagerConfig config = ManagerConfig.builder().containerPrefixKey("redis_test_").portRange(new PortRange(50000, 51000)).sandboxMap(new RedisSandboxMap(redisConfig)).build();
         try (SandboxService service = new SandboxService(config)) {
             service.start();
-            Assertions.assertNotNull(service, "SandboxManager should be initialized");
+            Assertions.assertNotNull(service, "SandboxService should be initialized");
             Sandbox sandbox = new BaseSandbox(service, TEST_USER_ID, TEST_SESSION_ID);
             Assertions.assertNotNull(sandbox, "Container should be created");
             Map<String, ContainerModel> allSandboxes = service.getAllSandboxes();
@@ -76,11 +76,11 @@ public class RedisSandboxManagerTest {
 
     @Test
     @Order(2)
-    public void testSandboxManagerWithoutRedis() {
+    public void testSandboxServiceWithoutRedis() {
         ManagerConfig config = ManagerConfig.builder().containerPrefixKey("inmemory_test_").portRange(new PortRange(51000, 52000)).build();
         try (SandboxService service = new SandboxService(config)) {
             service.start();
-            Assertions.assertNotNull(service, "SandboxManager should be initialized");
+            Assertions.assertNotNull(service, "SandboxService should be initialized");
             Sandbox sandbox = new BaseSandbox(service, "memory_user", "memory_session");
             Assertions.assertNotNull(sandbox, "Container should be created");
             Assertions.assertNotNull(sandbox.getSandboxId(), "Container should have a ID");
@@ -119,7 +119,7 @@ public class RedisSandboxManagerTest {
         ManagerConfig config = ManagerConfig.builder().containerPrefixKey("pool_test_").sandboxMap(new RedisSandboxMap(redisConfig)).portRange(new PortRange(53000, 54000)).build();
         try (SandboxService service = new SandboxService(config)) {
             service.start();
-            Assertions.assertNotNull(service, "SandboxManager should be initialized");
+            Assertions.assertNotNull(service, "SandboxService should be initialized");
             Sandbox sandbox = new BaseSandbox(service, TEST_USER_ID, TEST_SESSION_ID);
             Assertions.assertNotNull(sandbox, "Container should be created from pool");
             Assertions.assertNotNull(sandbox.getSandboxId(), "Container should have a name");

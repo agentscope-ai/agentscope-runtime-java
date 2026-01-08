@@ -25,19 +25,22 @@ import io.agentscope.runtime.sandbox.manager.utils.SandboxMap;
 public class ManagerConfig {
     private final String containerPrefixKey;
     private final PortRange portRange;
-    private final BaseClientStarter clientConfig;
+    private final BaseClientStarter clientStarter;
     private final SandboxMap sandboxMap;  // SandboxKey -> ContainerModel, managed in SandboxService
 
     private final String baseUrl;
     private final String bearerToken;
 
+    private final String agentBayApiKey;
+
     private ManagerConfig(Builder builder) {
         this.containerPrefixKey = builder.containerPrefixKey;
         this.portRange = builder.portRange;
-        this.clientConfig = builder.clientConfig;
+        this.clientStarter = builder.clientStarter;
         this.sandboxMap = builder.sandboxMap;
         this.baseUrl = builder.baseUrl;
         this.bearerToken = builder.bearerToken;
+        this.agentBayApiKey = builder.agentBayApiKey;
     }
 
     public String getContainerPrefixKey() {
@@ -48,8 +51,8 @@ public class ManagerConfig {
         return portRange;
     }
 
-    public BaseClientStarter getClientConfig() {
-        return clientConfig;
+    public BaseClientStarter getClientStarter() {
+        return clientStarter;
     }
 
     public SandboxMap getSandboxMap() {
@@ -64,6 +67,10 @@ public class ManagerConfig {
         return bearerToken;
     }
 
+    public String getAgentBayApiKey() {
+        return agentBayApiKey;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -72,10 +79,12 @@ public class ManagerConfig {
         private String containerPrefixKey = "sandbox_container_";
         private PortRange portRange = new PortRange(49152, 59152);
         ;
-        private BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        private BaseClientStarter clientStarter = DockerClientStarter.builder().build();
         private SandboxMap sandboxMap = new InMemorySandboxMap();
         private String baseUrl;
         private String bearerToken;
+
+        private String agentBayApiKey;
 
         public Builder containerPrefixKey(String containerPrefixKey) {
             this.containerPrefixKey = containerPrefixKey;
@@ -87,8 +96,8 @@ public class ManagerConfig {
             return this;
         }
 
-        public Builder clientConfig(BaseClientStarter clientConfig) {
-            this.clientConfig = clientConfig;
+        public Builder clientStarter(BaseClientStarter clientStarter) {
+            this.clientStarter = clientStarter;
             return this;
         }
 
@@ -104,6 +113,11 @@ public class ManagerConfig {
 
         public Builder bearerToken(String bearerToken) {
             this.bearerToken = bearerToken;
+            return this;
+        }
+
+        public Builder agentBayApiKey(String agentBayApiKey) {
+            this.agentBayApiKey = agentBayApiKey;
             return this;
         }
 

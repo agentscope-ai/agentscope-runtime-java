@@ -21,10 +21,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.client.container.BaseClient;
 import io.agentscope.runtime.sandbox.manager.client.container.ContainerCreateResult;
+import io.agentscope.runtime.sandbox.manager.client.container.agentbay.AgentBayClient;
 import io.agentscope.runtime.sandbox.manager.client.sandbox.SandboxClient;
 import io.agentscope.runtime.sandbox.manager.client.sandbox.SandboxHttpClient;
 import io.agentscope.runtime.sandbox.manager.client.sandbox.TrainingSandboxClient;
-import io.agentscope.runtime.sandbox.manager.fs.FileSystemStarter;
+import io.agentscope.runtime.sandbox.manager.fs.FileSystemConfig;
 import io.agentscope.runtime.sandbox.manager.fs.StorageManager;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerClientType;
 import io.agentscope.runtime.sandbox.manager.model.container.ContainerModel;
@@ -52,6 +53,7 @@ public class SandboxService implements AutoCloseable {
     private final SandboxMap sandboxMap;
     private static final String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     private final RemoteHttpClient remoteHttpClient;
+    private AgentBayClient agentBayClient;
 
     public SandboxService(ManagerConfig managerConfig) {
         this.managerConfig = managerConfig;
@@ -66,8 +68,11 @@ public class SandboxService implements AutoCloseable {
     }
 
     public void start() {
-        logger.info("Initializing SandboxService with container manager: {}", this.managerConfig.getClientConfig().getContainerClientType());
-        this.containerClient = this.managerConfig.getClientConfig().startClient(new PortManager(this.managerConfig.getPortRange()));
+        logger.info("Initializing SandboxService with container manager: {}", this.managerConfig.getClientStarter().getContainerClientType());
+        this.containerClient = this.managerConfig.getClientStarter().startClient(new PortManager(this.managerConfig.getPortRange()));
+        if (managerConfig.getAgentBayApiKey() != null && !managerConfig.getAgentBayApiKey().isEmpty()) {
+            agentBayClient = new AgentBayClient(managerConfig.getAgentBayApiKey());
+        }
         logger.info("SandboxService started.");
     }
 
@@ -99,10 +104,10 @@ public class SandboxService implements AutoCloseable {
         }
 
         Map<String, String> environment = sandbox.getEnvironment();
-        FileSystemStarter fileSystemStarter = sandbox.getFileSystemStarter();
+        FileSystemConfig fileSystemConfig = sandbox.getFileSystemStarter();
         String sandboxType = sandbox.getSandboxType();
-        ContainerClientType containerClientType = managerConfig.getClientConfig().getContainerClientType();
-        StorageManager storageManager = fileSystemStarter.createStorageManager();
+        ContainerClientType containerClientType = managerConfig.getClientStarter().getContainerClientType();
+        StorageManager storageManager = fileSystemConfig.createStorageManager();
 
         for (Map.Entry<String, String> entry : environment.entrySet()) {
             String value = entry.getValue();
@@ -113,7 +118,7 @@ public class SandboxService implements AutoCloseable {
         }
 
         String workdir = "/workspace";
-        String default_mount_dir = fileSystemStarter.getMountDir();
+        String default_mount_dir = fileSystemConfig.getMountDir();
         String[] portsArray = {"80/tcp"};
         List<String> ports = Arrays.asList(portsArray);
         String imageName = SandboxRegistryService.getImageByType(sandboxType).orElse("agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-base:latest");
@@ -163,7 +168,7 @@ public class SandboxService implements AutoCloseable {
         if (containerClientType != ContainerClientType.AGENTRUN && containerClientType != ContainerClientType.FC) {
             volumeBindings.add(new VolumeBinding(mountDir, workdir, "rw"));
         }
-        Map<String, String> readonlyMounts = fileSystemStarter.getReadonlyMounts();
+        Map<String, String> readonlyMounts = fileSystemConfig.getReadonlyMounts();
         if (readonlyMounts != null && !readonlyMounts.isEmpty()) {
             logger.info("Adding readonly mounts: {} mount(s)", readonlyMounts.size());
             for (Map.Entry<String, String> entry : readonlyMounts.entrySet()) {
@@ -182,7 +187,7 @@ public class SandboxService implements AutoCloseable {
                 logger.info("Added readonly mount: {} -> {}", hostPath, containerPath);
             }
         }
-        Map<String, String> nonCopyMounts = fileSystemStarter.getNonCopyMount();
+        Map<String, String> nonCopyMounts = fileSystemConfig.getNonCopyMount();
         if (nonCopyMounts != null && !nonCopyMounts.isEmpty()) {
             logger.info("Adding non-copy mounts: {} mount(s)", nonCopyMounts.size());
             for (Map.Entry<String, String> entry : nonCopyMounts.entrySet()) {
@@ -364,6 +369,10 @@ public class SandboxService implements AutoCloseable {
         return removeSandbox(containerId);
     }
 
+    public boolean release(String containerId) {
+        return stopAndRemoveSandbox(containerId);
+    }
+
     public String getSandboxStatus(String userId, String sessionId, String sandboxType) {
         return getSandboxStatus(sandboxMap.getSandbox(new SandboxKey(userId, sessionId, sandboxType)));
     }
@@ -530,5 +539,9 @@ public class SandboxService implements AutoCloseable {
             logger.error("Error adding MCP servers: {}", e.getMessage());
             return new HashMap<>();
         }
+    }
+
+    public AgentBayClient getAgentBayClient() {
+        return agentBayClient;
     }
 }
