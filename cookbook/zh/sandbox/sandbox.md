@@ -331,6 +331,71 @@ public class Main {
 }
 ```
 
+* **移动端沙箱（Mobile Sandbox）**: 基于 Android 模拟器的沙箱，可进行移动端操作，如点击、滑动、输入文本和截屏等。
+
+  <img src="https://img.alicdn.com/imgextra/i4/O1CN01yPnBC21vOi45fLy7V_!!6000000006163-2-tps-544-865.png" alt="Mobile Sandbox" height="500">
+
+  - **运行环境要求**
+
+    - **Linux 主机**:
+      该沙箱在 Linux 主机上运行时，需要内核加载 `binder` 和 `ashmem` 模块。如果缺失，请在主机上执行以下命令来安装和加载所需模块：
+
+    ```bash
+        # 1. 安装额外的内核模块
+        sudo apt update && sudo apt install -y linux-modules-extra-`uname -r`
+    
+        # 2. 加载模块并创建设备节点
+        sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
+        sudo modprobe ashmem_linux
+    ```
+
+    - **架构兼容性**:
+      在 ARM64/aarch64 架构（如 Apple M 系列芯片）上运行时，可能会遇到兼容性或性能问题，建议在 x86_64 架构的主机上运行。
+
+```java
+import io.agentscope.runtime.sandbox.box.MobileSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        try (MobileSandbox mobileSandbox = new MobileSandbox(sandboxService, "userId", "sessionId")) {
+            System.out.println("列举所有工具");
+            System.out.println(mobileSandbox.listTools(""));
+            
+            System.out.println("获取屏幕分辨率：");
+            System.out.println(mobileSandbox.mobileGetScreenResolution());
+            
+            System.out.println("在坐标（500，1000）处点击");
+            System.out.println(mobileSandbox.mobileTap(500,1000));
+            
+            System.out.println("输入文本：");
+            System.out.println(mobileSandbox.mobileInputText("来自 AgentScope 的问候！"));
+            
+            System.out.println("发送 Home 按键请求：");
+            System.out.println(mobileSandbox.mobileKeyEvent(3));
+            
+            System.out.println("截取屏幕：");
+            String screenshotResult = mobileSandbox.mobileGetScreenshot();
+            System.out.println(screenshotResult);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
 * **TrainingSandbox**：训练评估沙箱，详情请参考：[训练用沙箱](training_sandbox.md)。
 
 ```java

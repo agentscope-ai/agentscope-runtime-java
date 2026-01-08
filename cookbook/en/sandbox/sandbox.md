@@ -325,6 +325,71 @@ public class Main {
 }
 ```
 
+* **Mobile Sandbox**: A sandbox based on an Android emulator, enabling mobile-specific operations such as tapping, swiping, text input, and taking screenshots.
+
+  <img src="https://img.alicdn.com/imgextra/i4/O1CN01yPnBC21vOi45fLy7V_!!6000000006163-2-tps-544-865.png" alt="Mobile Sandbox" height="500">
+
+
+- **Runtime Environment Requirements**
+
+    - **Linux Host**:  
+      When running the sandbox on a Linux host, the kernel must have the `binder` and `ashmem` modules loaded. If these modules are missing, install and load them by executing the following commands on the host:
+
+  ```bash
+      # 1. Install additional kernel modules
+      sudo apt update && sudo apt install -y linux-modules-extra-$(uname -r)
+  
+      # 2. Load kernel modules and create device nodes
+      sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
+      sudo modprobe ashmem_linux
+  ```
+
+    - **Architecture Compatibility**:  
+      When running on ARM64/aarch64 architectures (e.g., Apple M-series chips), compatibility or performance issues may occur. It is recommended to run the sandbox on an x86_64 architecture host.
+
+```java
+import io.agentscope.runtime.sandbox.box.MobileSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        try (MobileSandbox mobileSandbox = new MobileSandbox(sandboxService, "userId", "sessionId")) {
+            System.out.println("Listing all available tools:");
+            System.out.println(mobileSandbox.listTools(""));
+
+            System.out.println("Getting screen resolution:");
+            System.out.println(mobileSandbox.mobileGetScreenResolution());
+
+            System.out.println("Tapping at coordinates (500, 1000):");
+            System.out.println(mobileSandbox.mobileTap(500, 1000));
+
+            System.out.println("Inputting text:");
+            System.out.println(mobileSandbox.mobileInputText("Greetings from AgentScope!"));
+
+            System.out.println("Sending HOME key event (key code 3):");
+            System.out.println(mobileSandbox.mobileKeyEvent(3));
+
+            System.out.println("Taking a screenshot:");
+            String screenshotResult = mobileSandbox.mobileGetScreenshot();
+            System.out.println(screenshotResult);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
 * **TrainingSandbox**: Training and evaluation sandbox. For details, please refer to: [Training Sandbox](training_sandbox.md).
 
 ```java
