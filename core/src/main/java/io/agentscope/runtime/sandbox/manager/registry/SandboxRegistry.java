@@ -33,8 +33,8 @@ public class SandboxRegistry {
     private static final Logger logger = LoggerFactory.getLogger(SandboxRegistry.class);
 
     private static final Map<Class<?>, SandboxConfig> classRegistry = new ConcurrentHashMap<>();
-    private static final Map<SandboxType, Class<?>> typeRegistry = new ConcurrentHashMap<>();
-    private static final Map<SandboxType, SandboxConfig> typeConfigRegistry = new ConcurrentHashMap<>();
+    private static final Map<String, Class<?>> typeRegistry = new ConcurrentHashMap<>();
+    private static final Map<String, SandboxConfig> typeConfigRegistry = new ConcurrentHashMap<>();
 
     private static final Map<String, SandboxConfig> customTypeRegistry = new ConcurrentHashMap<>();
 
@@ -61,7 +61,7 @@ public class SandboxRegistry {
             throw new IllegalArgumentException("Sandbox configuration cannot be null");
         }
 
-        SandboxType sandboxType = config.getSandboxType();
+        String sandboxType = config.getSandboxType();
 
         classRegistry.put(targetClass, config);
         typeRegistry.put(sandboxType, targetClass);
@@ -77,7 +77,7 @@ public class SandboxRegistry {
      * @param sandboxType The sandbox type
      * @param imageName   The Docker image name
      */
-    public static void register(SandboxType sandboxType, String imageName) {
+    public static void register(String sandboxType, String imageName) {
         SandboxConfig config = new SandboxConfig.Builder()
                 .sandboxType(sandboxType)
                 .imageName(imageName)
@@ -100,7 +100,7 @@ public class SandboxRegistry {
      * @param runtimeConfig  Runtime configuration
      */
     public static void register(
-            SandboxType sandboxType,
+            String sandboxType,
             String imageName,
             Map<String, Object> resourceLimits,
             String securityLevel,
@@ -141,7 +141,7 @@ public class SandboxRegistry {
      * @param sandboxType The sandbox type
      * @return Optional containing the configuration if found
      */
-    public static Optional<SandboxConfig> getConfigByType(SandboxType sandboxType) {
+    public static Optional<SandboxConfig> getConfigByType(String sandboxType) {
         return Optional.ofNullable(typeConfigRegistry.get(sandboxType));
     }
 
@@ -161,7 +161,7 @@ public class SandboxRegistry {
      * @param sandboxType The sandbox type
      * @return Optional containing the image name if found
      */
-    public static Optional<String> getImageByType(SandboxType sandboxType) {
+    public static Optional<String> getImageByType(String sandboxType) {
         return getConfigByType(sandboxType).map(SandboxConfig::getImageName);
     }
 
@@ -171,7 +171,7 @@ public class SandboxRegistry {
      * @param sandboxType The sandbox type
      * @return Optional containing the class if found
      */
-    public static Optional<Class<?>> getClassesByType(SandboxType sandboxType) {
+    public static Optional<Class<?>> getClassesByType(String sandboxType) {
         return Optional.ofNullable(typeRegistry.get(sandboxType));
     }
 
@@ -189,7 +189,7 @@ public class SandboxRegistry {
      *
      * @return A copy of the type-based registry
      */
-    public static Map<SandboxType, SandboxConfig> listAllSandboxesByType() {
+    public static Map<String, SandboxConfig> listAllSandboxesByType() {
         return new HashMap<>(typeConfigRegistry);
     }
 
@@ -199,7 +199,7 @@ public class SandboxRegistry {
      * @param sandboxType The sandbox type to check
      * @return true if registered, false otherwise
      */
-    public static boolean isRegistered(SandboxType sandboxType) {
+    public static boolean isRegistered(String sandboxType) {
         return typeConfigRegistry.containsKey(sandboxType);
     }
 
@@ -209,7 +209,7 @@ public class SandboxRegistry {
      * @param sandboxType The sandbox type to unregister
      * @return true if unregistered successfully, false if not found
      */
-    public static boolean unregister(SandboxType sandboxType) {
+    public static boolean unregister(String sandboxType) {
         SandboxConfig config = typeConfigRegistry.remove(sandboxType);
         Class<?> clazz = typeRegistry.remove(sandboxType);
         if (clazz != null) {

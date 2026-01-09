@@ -25,27 +25,28 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DynamicSandboxType {
     private static final Map<String, DynamicSandboxType> CUSTOM_TYPES = new ConcurrentHashMap<>();
 
-    public static final DynamicSandboxType BASE = fromEnum(SandboxType.BASE);
-    public static final DynamicSandboxType BROWSER = fromEnum(SandboxType.BROWSER);
-    public static final DynamicSandboxType FILESYSTEM = fromEnum(SandboxType.FILESYSTEM);
-    public static final DynamicSandboxType TRAINING = fromEnum(SandboxType.TRAINING);
-    public static final DynamicSandboxType APPWORLD = fromEnum(SandboxType.APPWORLD);
-    public static final DynamicSandboxType BFCL = fromEnum(SandboxType.BFCL);
-    public static final DynamicSandboxType WEBSHOP = fromEnum(SandboxType.WEBSHOP);
-    public static final DynamicSandboxType GUI = fromEnum(SandboxType.GUI);
-    public static final DynamicSandboxType MOBILE = fromEnum(SandboxType.MOBILE);
-    public static final DynamicSandboxType AGENTBAY = fromEnum(SandboxType.AGENTBAY);
+    public static final DynamicSandboxType BASE = fromString(SandboxType.BASE);
+    public static final DynamicSandboxType BROWSER = fromString(SandboxType.BROWSER);
+    public static final DynamicSandboxType FILESYSTEM = fromString(SandboxType.FILESYSTEM);
+    public static final DynamicSandboxType TRAINING = fromString(SandboxType.TRAINING);
+    public static final DynamicSandboxType APPWORLD = fromString(SandboxType.APPWORLD);
+    public static final DynamicSandboxType BFCL = fromString(SandboxType.BFCL);
+    public static final DynamicSandboxType WEBSHOP = fromString(SandboxType.WEBSHOP);
+    public static final DynamicSandboxType GUI = fromString(SandboxType.GUI);
+    public static final DynamicSandboxType MOBILE = fromString(SandboxType.MOBILE);
+    public static final DynamicSandboxType AGENTBAY = fromString(SandboxType.AGENTBAY);
 
     private final String typeName;
-    private final SandboxType enumType;
 
-    private DynamicSandboxType(String typeName, SandboxType enumType) {
+    private final boolean isCustom;
+
+    private DynamicSandboxType(String typeName, boolean isCustom) {
         this.typeName = typeName;
-        this.enumType = enumType;
+        this.isCustom = isCustom;
     }
 
-    public static DynamicSandboxType fromEnum(SandboxType sandboxType) {
-        return new DynamicSandboxType(sandboxType.getTypeName(), sandboxType);
+    public static DynamicSandboxType fromString(String sandboxType) {
+        return new DynamicSandboxType(sandboxType, false);
     }
 
     public static DynamicSandboxType custom(String typeName) {
@@ -56,13 +57,14 @@ public class DynamicSandboxType {
         String normalizedName = typeName.toLowerCase();
 
         try {
-            SandboxType enumType = SandboxType.valueOf(typeName.toUpperCase());
-            return fromEnum(enumType);
+            if (SandboxType.isPredefinedType(typeName.toUpperCase())) {
+                return fromString(typeName);
+            }
         } catch (IllegalArgumentException e) {
             // Not a predefined type, create or get custom type
         }
 
-        return CUSTOM_TYPES.computeIfAbsent(normalizedName, name -> new DynamicSandboxType(name, null));
+        return CUSTOM_TYPES.computeIfAbsent(normalizedName, name -> new DynamicSandboxType(name, true));
     }
 
     public static DynamicSandboxType valueOf(String typeName) {
@@ -70,10 +72,9 @@ public class DynamicSandboxType {
             throw new IllegalArgumentException("Type name cannot be null or empty");
         }
 
-        try {
-            SandboxType enumType = SandboxType.valueOf(typeName.toUpperCase());
-            return fromEnum(enumType);
-        } catch (IllegalArgumentException e) {
+        if (SandboxType.isPredefinedType(typeName.toUpperCase())) {
+            return fromString(typeName);
+        } else {
             String normalizedName = typeName.toLowerCase();
             DynamicSandboxType customType = CUSTOM_TYPES.get(normalizedName);
             if (customType != null) {
@@ -83,27 +84,12 @@ public class DynamicSandboxType {
         }
     }
 
-    public boolean isEnum() {
-        return enumType != null;
-    }
-
     public boolean isCustom() {
-        return enumType == null;
-    }
-
-    public SandboxType getEnumType() {
-        return enumType;
+        return isCustom;
     }
 
     public String getTypeName() {
         return typeName;
-    }
-
-    public SandboxType toEnum() {
-        if (enumType == null) {
-            throw new UnsupportedOperationException("Cannot convert custom type '" + typeName + "' to SandboxType enum");
-        }
-        return enumType;
     }
 
     public static Map<String, DynamicSandboxType> getCustomTypes() {

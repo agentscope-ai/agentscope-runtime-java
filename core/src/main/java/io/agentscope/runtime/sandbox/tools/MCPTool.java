@@ -18,7 +18,6 @@ package io.agentscope.runtime.sandbox.tools;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,11 +29,11 @@ public class MCPTool extends SandboxTool {
     
     private Map<String, Object> serverConfigs;
     private final String mcpToolName;
-    private final SandboxType sandboxType;
+    private final String sandboxType;
 
     public MCPTool(String name, String toolType, String description, 
                    Map<String, Object> schema, Map<String, Object> serverConfigs,
-                   SandboxType sandboxType) {
+                   String sandboxType) {
         super(name, toolType, description);
         this.mcpToolName = name;
         this.schema = schema;
@@ -44,7 +43,7 @@ public class MCPTool extends SandboxTool {
 
     public MCPTool(String name, String toolType, String description,
                    Map<String, Object> schema, Map<String, Object> serverConfigs,
-                   SandboxType sandboxType, SandboxManager sandboxManager) {
+                   String sandboxType, SandboxManager sandboxManager) {
         super(name, toolType, description, sandboxManager);
         this.mcpToolName = name;
         this.schema = schema;

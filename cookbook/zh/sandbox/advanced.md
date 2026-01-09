@@ -7,8 +7,8 @@
 #### ManagerConfig 配置
 
 | Parameter             | Type                 | Description                         | Default                 | Notes                                                        |
-| --------------------- | -------------------- | ----------------------------------- | ----------------------- | ------------------------------------------------------------ |
-| `defaultSandboxType`  | `List<SandboxType>`  | 默认沙箱类型（可多个）              | `SandboxType.BASE`      | 可以是单个类型，也可以是多个类型的列表，从而启用多个独立的沙箱预热池。合法取值包括 `BASE`、`BROWSER`、`FILESYSTEM`、`GUI` 等 |
+| --------------------- |----------------------| ----------------------------------- | ----------------------- | ------------------------------------------------------------ |
+| `defaultSandboxType`  | `List<String>`       | 默认沙箱类型（可多个）              | `SandboxType.BASE`      | 可以是单个类型，也可以是多个类型的列表，从而启用多个独立的沙箱预热池。合法取值包括 `BASE`、`BROWSER`、`FILESYSTEM`、`GUI` 等 |
 | `bearerToken`         | `String`             | 调用远程runtime沙箱的身份验证令牌   | `null`                  | 如果设置为 `null`，将在连接的时候不会进行身份验证            |
 | `baseUrl`             | `String`             | 调用远程runtime沙箱的服务器绑定地址 | `null`                  | 如果设置为 `null`，将默认使用本地沙箱管理                    |
 | `containerDeployment` | `BaseClientConfig`   | 容器运行时                          | `DockerClientConfig`    | 目前支持  `Docker`、`K8s` 和 `AgentRun`                      |
@@ -178,12 +178,11 @@ pip install -e .
 ```java
 import io.agentscope.runtime.sandbox.box.Sandbox;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
 @RegisterSandbox(
         imageName = "YOUR-IMAGE-NAME",
-        sandboxType = SandboxType.CUSTOM,
+        sandboxType = "CustomSandboxType",
         securityLevel = "medium",
         timeout = 30,
         description = "YOUR Sandbox"
@@ -199,7 +198,7 @@ public class CustomSandbox extends Sandbox {
             String userId,
             String sessionId,
             int timeout) {
-        super(managerApi, userId, sessionId, SandboxType.CUSTOM, timeout);
+        super(managerApi, userId, sessionId, "CustomSandboxType", timeout);
     }
 }
 ```

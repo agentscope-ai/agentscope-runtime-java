@@ -6,14 +6,14 @@
 
 #### ManagerConfig Configuration
 
-| Parameter            | Type  | Description            | Default                    | Notes                                                        |
-| ----------------------| ------------ | ---------------------- | -------------------------- | ------------------------------------------------------------ |
-| `defaultSandboxType` | `List<SandboxType>` | Default sandbox type(s) (can be multiple) | `SandboxType.BASE`  | Can be a single type or a list of multiple types, enabling multiple independent sandbox warm-up pools. Valid values include `BASE`, `BROWSER`, `FILESYSTEM`, `GUI`, etc. |
-| `bearerToken` | `String` | Authentication token for calling remote runtime sandbox | `null`                    | If set to `null`, no authentication will be performed when connecting |
-| `baseUrl` | `String` | Server binding address for calling remote runtime sandbox | `null`                 | If set to `null`, local sandbox management will be used by default |
-| `containerDeployment` | `BaseClientConfig` | Container runtime      | `DockerClientConfig` | Currently supports `Docker`, `K8s`, and `AgentRun`              |
-| `poolSize` | `int` | Warm-up container pool size    | `0`       | Cached containers for faster startup. The `poolSize` parameter controls the number of pre-created containers cached in ready state. When a user requests a new sandbox, the system will first try to allocate from this warm-up pool, significantly reducing startup time compared to creating containers from scratch. For example, with `poolSize=10`, the system maintains 10 ready containers that can be immediately assigned to new requests |
-| `fileSystemConfig` | `FileSystemConfig` | Container file system configuration   | `LocalFileSystemConfig` | Manages container file system download method, defaults to `local file system`, can also use `oss` |
+| Parameter            | Type                 | Description            | Default                    | Notes                                                        |
+| ----------------------|----------------------| ---------------------- | -------------------------- | ------------------------------------------------------------ |
+| `defaultSandboxType` | `List<String>`       | Default sandbox type(s) (can be multiple) | `SandboxType.BASE`  | Can be a single type or a list of multiple types, enabling multiple independent sandbox warm-up pools. Valid values include `BASE`, `BROWSER`, `FILESYSTEM`, `GUI`, etc. |
+| `bearerToken` | `String`             | Authentication token for calling remote runtime sandbox | `null`                    | If set to `null`, no authentication will be performed when connecting |
+| `baseUrl` | `String`             | Server binding address for calling remote runtime sandbox | `null`                 | If set to `null`, local sandbox management will be used by default |
+| `containerDeployment` | `BaseClientConfig`   | Container runtime      | `DockerClientConfig` | Currently supports `Docker`, `K8s`, and `AgentRun`              |
+| `poolSize` | `int`                | Warm-up container pool size    | `0`       | Cached containers for faster startup. The `poolSize` parameter controls the number of pre-created containers cached in ready state. When a user requests a new sandbox, the system will first try to allocate from this warm-up pool, significantly reducing startup time compared to creating containers from scratch. For example, with `poolSize=10`, the system maintains 10 ready containers that can be immediately assigned to new requests |
+| `fileSystemConfig` | `FileSystemConfig`   | Container file system configuration   | `LocalFileSystemConfig` | Manages container file system download method, defaults to `local file system`, can also use `oss` |
 | `redisConfig` | `RedisManagerConfig` | Redis support configuration | `null` | Enable Redis support, required for distributed deployment or when number of worker processes is greater than `1`, disabled by default |
 
 #### Redis Configuration
@@ -149,47 +149,34 @@ pip install -e .
 
 ### Creating Custom Sandbox Class
 
-You can define custom sandbox types and register them with the system to meet special requirements. Simply inherit from `Sandbox` and use the `SandboxRegistry.register` decorator, then place the file in `src/agentscope_runtime/sandbox/custom` (e.g., `src/agentscope_runtime/sandbox/custom/custom_sandbox.py`):
+You can define custom sandbox types and register them with the system to meet special requirements. Simply inherit from the `Sandbox` class and use the `@RegisterSandbox` decorator, then place the file within your project folder:
 
-```python
-import os
+```java
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxManager;
+import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
-from typing import Optional
-
-from agentscope_runtime.sandbox.utils import build_image_uri
-from agentscope_runtime.sandbox.registry import SandboxRegistry
-from agentscope_runtime.sandbox.enums import SandboxType
-from agentscope_runtime.sandbox.box.sandbox import Sandbox
-
-SANDBOXTYPE = "my_custom_sandbox"
-
-
-@SandboxRegistry.register(
-    build_image_uri(f"runtime-sandbox-{SANDBOXTYPE}"),
-    sandbox_type=SANDBOXTYPE,
-    security_level="medium",
-    timeout=60,
-    description="my sandbox",
-    environment={
-        "TAVILY_API_KEY": os.getenv("TAVILY_API_KEY", ""),
-        "AMAP_MAPS_API_KEY": os.getenv("AMAP_MAPS_API_KEY", ""),
-    },
+@RegisterSandbox(
+        imageName = "YOUR-IMAGE-NAME",
+        sandboxType = "CustomSandboxType",
+        securityLevel = "medium",
+        timeout = 30,
+        description = "YOUR Sandbox"
 )
-class MyCustomSandbox(Sandbox):
-    def __init__(
-        self,
-        sandbox_id: Optional[str] = None,
-        timeout: int = 3000,
-        base_url: Optional[str] = None,
-        bearer_token: Optional[str] = None,
-    ):
-        super().__init__(
-            sandbox_id,
-            timeout,
-            base_url,
-            bearer_token,
-            SandboxType(SANDBOXTYPE),
-        )
+public class CustomSandbox extends Sandbox {
+
+    public CustomSandbox(SandboxManager managerApi, String userId, String sessionId) {
+        this(managerApi, userId, sessionId, 3000);
+    }
+
+    public CustomSandbox(
+            SandboxManager managerApi,
+            String userId,
+            String sessionId,
+            int timeout) {
+        super(managerApi, userId, sessionId, "CustomSandboxType", timeout);
+    }
+}
 ```
 
 ### Prepare Docker Image

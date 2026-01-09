@@ -17,10 +17,8 @@ package io.agentscope.runtime.sandbox.manager.registry;
 
 import io.agentscope.runtime.sandbox.box.*;
 import io.agentscope.runtime.sandbox.manager.model.container.SandboxConfig;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,8 +42,7 @@ public class SandboxAnnotationProcessor {
         
         try {
             String imageName = annotation.imageName();
-            String customType = annotation.customType();
-            SandboxType sandboxType = annotation.sandboxType();
+            String sandboxType = annotation.sandboxType();
             String securityLevel = annotation.securityLevel();
             int timeout = annotation.timeout();
             String description = annotation.description();
@@ -64,26 +61,10 @@ public class SandboxAnnotationProcessor {
                     .resourceLimits(resourceLimits)
                     .runtimeConfig(runtimeConfig)
                     .build();
-            
-            if (customType != null && !customType.isEmpty()) {
-                SandboxRegistryService.registerCustomType(
-                        customType,
-                        imageName,
-                        resourceLimits,
-                        securityLevel,
-                        timeout,
-                        description,
-                        environment,
-                        runtimeConfig
-                );
-                logger.info("Registered custom sandbox via annotation: type={}, class={}, image={}",
-                           customType, clazz.getSimpleName(), imageName);
-            } else {
-                SandboxRegistryService.register(clazz, config);
-                logger.info("Registered sandbox via annotation: type={}, class={}, image={}",
-                           sandboxType, clazz.getSimpleName(), imageName);
-            }
-            
+
+            SandboxRegistryService.register(clazz, config);
+            logger.info("Registered sandbox via annotation: type={}, class={}, image={}",
+                    sandboxType, clazz.getSimpleName(), imageName);
         } catch (Exception e) {
             logger.error("Failed to process @RegisterSandbox annotation on class {}: {}",
                          clazz.getName(), e.getMessage());
