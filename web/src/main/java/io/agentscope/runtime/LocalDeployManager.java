@@ -15,6 +15,7 @@
  */
 package io.agentscope.runtime;
 
+import io.agentscope.runtime.app.AgentApp;
 import io.agentscope.runtime.autoconfigure.DeployProperties;
 import io.agentscope.runtime.engine.DeployManager;
 import io.agentscope.runtime.engine.Runner;
@@ -23,9 +24,11 @@ import io.agentscope.runtime.protocol.ProtocolConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.annotation.ComponentScan;
@@ -33,6 +36,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.function.HandlerFunction;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.RouterFunctions;
+import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.web.servlet.function.ServerResponse;
 
 import java.util.HashMap;
 import java.util.List;
@@ -40,149 +48,172 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 public class LocalDeployManager implements DeployManager {
-    private static final Logger logger = LoggerFactory.getLogger(LocalDeployManager.class);
+	private static final Logger logger = LoggerFactory.getLogger(LocalDeployManager.class);
 
-    private ConfigurableApplicationContext applicationContext;
+	private ConfigurableApplicationContext applicationContext;
 
-    private final String endpointName;
-    private final String host;
-    private final int port;
-    private final List<Protocol> protocols;
-    private final List<ProtocolConfig> protocolConfigs;
-    private final Consumer<CorsRegistry> corsConfigurer;
+	private final String endpointName;
+	private final String host;
+	private final int port;
+	private final List<Protocol> protocols;
+	private final List<ProtocolConfig> protocolConfigs;
+	private final Consumer<CorsRegistry> corsConfigurer;
+	private final List<AgentApp.EndpointInfo> customEndpoints;
 
-    private LocalDeployManager(LocalDeployerManagerBuilder builder) {
-        this.endpointName = builder.endpointName;
-        this.host = builder.host;
-        this.port = builder.port;
-        this.protocols = builder.protocols;
-        this.protocolConfigs = builder.protocolConfigs;
-        this.corsConfigurer = builder.corsConfigurer;
-    }
 
-    @Override
-    public synchronized void deploy(Runner runner) {
-        if (this.applicationContext != null && this.applicationContext.isActive()) {
-            logger.info("Application context is already active, skipping deployment");
-            return;
-        }
+	private LocalDeployManager(LocalDeployerManagerBuilder builder) {
+		this.endpointName = builder.endpointName;
+		this.host = builder.host;
+		this.port = builder.port;
+		this.protocols = builder.protocols;
+		this.protocolConfigs = builder.protocolConfigs;
+		this.corsConfigurer = builder.corsConfigurer;
+		this.customEndpoints = builder.customEndpoints;
+	}
 
-        Map<String, Object> serverProps = new HashMap<>();
-        if (this.port > 0) {
-            serverProps.put("server.port", this.port);
-        }
-        if (this.host != null && !this.host.isBlank()) {
-            serverProps.put("server.address", this.host);
-        }
+	@Override
+	public synchronized void deploy(Runner runner) {
+		if (this.applicationContext != null && this.applicationContext.isActive()) {
+			logger.info("Application context is already active, skipping deployment");
+			return;
+		}
 
-        logger.info("Starting streaming deployment for endpoint: {}", endpointName);
+		Map<String, Object> serverProps = new HashMap<>();
+		if (this.port > 0) {
+			serverProps.put("server.port", this.port);
+		}
+		if (this.host != null && !this.host.isBlank()) {
+			serverProps.put("server.address", this.host);
+		}
 
-        this.applicationContext = new SpringApplicationBuilder()
-                .sources(LocalDeployConfig.class)
-                .web(WebApplicationType.SERVLET)
-                .properties(serverProps)
-                .initializers((GenericApplicationContext ctx) -> {
-                    // Register Runner instance as a bean
-                    ctx.registerBean(Runner.class, () -> runner);
-                    // Register DeployProperties instance as a bean
-                    ctx.registerBean(DeployProperties.class, () -> new DeployProperties(port, host, endpointName));
-                    // Scan additional packages based on protocols
-                    ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(ctx);
-                    scanner.scan("io.agentscope.runtime.lifecycle");
-                    Map<Protocol, ProtocolConfig> protocolConfigMap = null != protocolConfigs ? protocolConfigs.stream()
-                            .collect(HashMap::new, (map, config) -> map.put(config.type(), config), HashMap::putAll)
-                            : Map.of();
-                    for (Protocol protocol : protocols) {
-                        String packageName = "io.agentscope.runtime.protocol." + protocol.name().toLowerCase();
-                        scanner.scan(packageName);
-                        if (protocolConfigMap.containsKey(protocol)) {
-                            ProtocolConfig protocolConfig = protocolConfigMap.get(protocol);
-                            ctx.registerBean(protocolConfig.name(), ProtocolConfig.class, () -> protocolConfig);
-                        }
-                    }
-                    if (corsConfigurer != null) {
-                        ctx.registerBean(WebMvcConfigurer.class, () -> new WebMvcConfigurer() {
-                            @Override
-                            public void addCorsMappings(@NotNull CorsRegistry registry) {
-                                corsConfigurer.accept(registry);
-                            }
-                        });
-                    }
+		logger.info("Starting streaming deployment for endpoint: {}", endpointName);
 
-                })
-                .run();
+		this.applicationContext = new SpringApplicationBuilder()
+				.sources(LocalDeployConfig.class)
+				.web(WebApplicationType.SERVLET)
+				.properties(serverProps)
+				.initializers((GenericApplicationContext ctx) -> {
+					// Register Runner instance as a bean
+					ctx.registerBean(Runner.class, () -> runner);
+					// Register DeployProperties instance as a bean
+					ctx.registerBean(DeployProperties.class, () -> new DeployProperties(port, host, endpointName));
+					// Scan additional packages based on protocols
+					ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(ctx);
+					scanner.scan("io.agentscope.runtime.lifecycle");
+					Map<Protocol, ProtocolConfig> protocolConfigMap = null != protocolConfigs ? protocolConfigs.stream()
+							.collect(HashMap::new, (map, config) -> map.put(config.type(), config), HashMap::putAll)
+							: Map.of();
+					for (Protocol protocol : protocols) {
+						String packageName = "io.agentscope.runtime.protocol." + protocol.name().toLowerCase();
+						scanner.scan(packageName);
+						if (protocolConfigMap.containsKey(protocol)) {
+							ProtocolConfig protocolConfig = protocolConfigMap.get(protocol);
+							ctx.registerBean(protocolConfig.name(), ProtocolConfig.class, () -> protocolConfig);
+						}
+					}
+					if (corsConfigurer != null) {
+						ctx.registerBean(WebMvcConfigurer.class, () -> new WebMvcConfigurer() {
+							@Override
+							public void addCorsMappings(@NotNull CorsRegistry registry) {
+								corsConfigurer.accept(registry);
+							}
+						});
+					}
+					if (customEndpoints != null) {
+						RouterFunctions.Builder route = RouterFunctions.route();
+						for (AgentApp.EndpointInfo customEndpoint : customEndpoints) {
+							route.POST(customEndpoint.path, request -> customEndpoint.handler.apply(request));
 
-        logger.info("Streaming deployment completed for endpoint: {}", endpointName);
-    }
 
-    /**
-     * Shutdown the application and clean up resources
-     */
-    public synchronized void shutdown() {
-        if (this.applicationContext != null && this.applicationContext.isActive()) {
-            logger.info("Shutting down LocalDeployManager...");
-            this.applicationContext.close();
-            this.applicationContext = null;
-            logger.info("LocalDeployManager shutdown completed");
-        }
-    }
+						}
+						ctx.registerBean(RouterFunction.class,route.build());
+					}
 
-    /**
-     * Configuration class for local deployment of streaming services.
-     * This class enables component scanning for A2A controllers and other Spring components.
-     */
-    @Configuration
-    @EnableAutoConfiguration
-    @ComponentScan(basePackages = {
-            "io.agentscope.runtime.autoconfigure"
-    })
-    public static class LocalDeployConfig {
-    }
+				})
+				.run();
 
-    public static LocalDeployerManagerBuilder builder(){
-        return new LocalDeployerManagerBuilder();
-    }
+		logger.info("Streaming deployment completed for endpoint: {}", endpointName);
+	}
 
-    public static class LocalDeployerManagerBuilder {
-        private String endpointName;
-        private String host;
-        private int port = 8080;
-        private List<Protocol> protocols = List.of(Protocol.A2A, Protocol.ResponseAPI);
-        private List<ProtocolConfig> protocolConfigs = List.of();
-        private Consumer<CorsRegistry> corsConfigurer;
+	@Override
+	public void undeploy() {
+		shutdown();
+	}
 
-        public LocalDeployerManagerBuilder endpointName(String endpointName) {
-            this.endpointName = endpointName;
-            return this;
-        }
+	/**
+	 * Shutdown the application and clean up resources
+	 */
+	public synchronized void shutdown() {
+		if (this.applicationContext != null && this.applicationContext.isActive()) {
+			logger.info("Shutting down LocalDeployManager...");
+			this.applicationContext.close();
+			this.applicationContext = null;
+			logger.info("LocalDeployManager shutdown completed");
+		}
+	}
 
-        public LocalDeployerManagerBuilder host(String host) {
-            this.host = host;
-            return this;
-        }
+	/**
+	 * Configuration class for local deployment of streaming services.
+	 * This class enables component scanning for A2A controllers and other Spring components.
+	 */
+	@Configuration
+	@EnableAutoConfiguration
+	@ComponentScan(basePackages = {
+			"io.agentscope.runtime.autoconfigure"
+	})
+	public static class LocalDeployConfig {
+	}
 
-        public LocalDeployerManagerBuilder port(int port) {
-            this.port = port;
-            return this;
-        }
+	public static LocalDeployerManagerBuilder builder() {
+		return new LocalDeployerManagerBuilder();
+	}
 
-        public LocalDeployerManagerBuilder protocols(List<Protocol> protocols) {
-            this.protocols = protocols;
-            return this;
-        }
-        
-        public LocalDeployerManagerBuilder protocolConfigs(List<ProtocolConfig> protocolConfigs) {
-            this.protocolConfigs = protocolConfigs;
-            return this;
-        }
+	public static class LocalDeployerManagerBuilder {
+		private String endpointName;
+		private String host;
+		private int port = 8080;
+		private List<Protocol> protocols = List.of(Protocol.A2A, Protocol.ResponseAPI);
+		private List<ProtocolConfig> protocolConfigs = List.of();
+		private Consumer<CorsRegistry> corsConfigurer;
+		private List<AgentApp.EndpointInfo> customEndpoints;
 
-        public LocalDeployerManagerBuilder corsConfigurer(Consumer<CorsRegistry> corsConfigurer) {
-            this.corsConfigurer = corsConfigurer;
-            return this;
-        }
+		public LocalDeployerManagerBuilder endpointName(String endpointName) {
+			this.endpointName = endpointName;
+			return this;
+		}
 
-        public LocalDeployManager build() {
-            return new LocalDeployManager(this);
-        }
-    }
+		public LocalDeployerManagerBuilder host(String host) {
+			this.host = host;
+			return this;
+		}
+
+		public LocalDeployerManagerBuilder port(int port) {
+			this.port = port;
+			return this;
+		}
+
+		public LocalDeployerManagerBuilder protocols(List<Protocol> protocols) {
+			this.protocols = protocols;
+			return this;
+		}
+
+		public LocalDeployerManagerBuilder protocolConfigs(List<ProtocolConfig> protocolConfigs) {
+			this.protocolConfigs = protocolConfigs;
+			return this;
+		}
+
+		public LocalDeployerManagerBuilder corsConfigurer(Consumer<CorsRegistry> corsConfigurer) {
+			this.corsConfigurer = corsConfigurer;
+			return this;
+		}
+
+		public LocalDeployerManagerBuilder customEndpoints(List<AgentApp.EndpointInfo> customEndpoints) {
+			this.customEndpoints = customEndpoints;
+			return this;
+		}
+
+		public LocalDeployManager build() {
+			return new LocalDeployManager(this);
+		}
+	}
 }

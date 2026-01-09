@@ -15,6 +15,9 @@
  */
 package io.agentscope.runtime.engine;
 
+import org.springframework.context.ApplicationContext;
+
 public interface DeployManager {
     void deploy(Runner runner);
+    void undeploy();
 }

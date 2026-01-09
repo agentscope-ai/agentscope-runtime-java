@@ -23,11 +23,13 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -42,6 +44,7 @@ import io.agentscope.runtime.engine.services.memory.persistence.session.InMemory
 import io.agentscope.runtime.engine.services.memory.service.MemoryService;
 import io.agentscope.runtime.engine.services.memory.service.SessionHistoryService;
 import io.agentscope.runtime.engine.services.sandbox.SandboxService;
+import io.agentscope.runtime.lifecycle.AppLifecycleHook;
 import io.agentscope.runtime.protocol.ProtocolConfig;
 import io.agentscope.runtime.sandbox.manager.SandboxManager;
 
@@ -50,9 +53,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.function.ServerRequest;
+import org.springframework.web.servlet.function.ServerResponse;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
+
+import static io.agentscope.runtime.lifecycle.AppLifecycleHook.AFTER_RUN;
+import static io.agentscope.runtime.lifecycle.AppLifecycleHook.AFTER_STOP;
+import static io.agentscope.runtime.lifecycle.AppLifecycleHook.BEFORE_RUN;
+import static io.agentscope.runtime.lifecycle.AppLifecycleHook.BEFORE_STOP;
+import static io.agentscope.runtime.lifecycle.AppLifecycleHook.JVM_EXIT;
 
 
 /**
@@ -93,7 +104,9 @@ public class AgentApp {
 	private String responseType = "sse";
 	private Consumer<CorsRegistry> corsConfigurer;
 
-	private List<EndpointInfo> customEndpoints = new ArrayList<>();
+	private final List<EndpointInfo> customEndpoints = new ArrayList<>();
+	private final List<AppLifecycleHook> hooks = new ArrayList<>();
+	private final AtomicBoolean stopped = new AtomicBoolean(false);
 	private List<ProtocolConfig> protocolConfigs;
 	private static final String DEFAULT_ENV_FILE_PATH = ".env";
 	private static final String CLASS_SUFFIX = ".class";
@@ -450,10 +463,21 @@ public class AgentApp {
 
 		buildRunner();
 		logger.info("[AgentApp] Starting AgentApp with endpoint: {}, host: {}, port: {}", endpointPath, host, port);
+		AgentApp app = this;
+		List<AppLifecycleHook> lifecycleHooks = hooks.stream()
+				.sorted(Comparator.comparingInt(AppLifecycleHook::priority)).toList();
 
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> lifecycleHooks.stream().filter(e -> ((JVM_EXIT & e.operation()) != 0))
+				.forEach(lifecycle -> lifecycle.onJvmExit(app, deployManager))));
+		lifecycleHooks.stream()
+				.filter(e -> ((BEFORE_RUN & e.operation()) != 0))
+				.forEach(lifecycle -> lifecycle.beforeRun(app, deployManager));
 		// Deploy via DeployManager
 		deployManager.deploy(runner);
 		logger.info("[AgentApp] AgentApp started successfully on {}:{}{}", host, port, endpointPath);
+		lifecycleHooks.stream()
+				.filter(e -> ((AFTER_RUN & e.operation()) != 0))
+				.forEach(lifecycle -> lifecycle.afterRun(app, deployManager));
 	}
 
 	/**
@@ -515,7 +539,7 @@ public class AgentApp {
 	 */
 	public static class EndpointInfo {
 		public String path;
-		public Function<Map<String, Object>, Object> handler;
+		public Function<ServerRequest, ServerResponse> handler;
 		public List<String> methods;
 	}
 
@@ -612,6 +636,41 @@ public class AgentApp {
 		public void setSandboxService(SandboxService sandboxService) {
 			this.sandboxService = sandboxService;
 		}
+	}
+
+	public void stop() {
+		if (stopped.get()) {
+			return;
+		}
+		synchronized (stopped) {
+			if (stopped.get()) {
+				return;
+			}
+			if (Objects.nonNull(deployManager)) {
+				AgentApp app = this;
+				List<AppLifecycleHook> lifecycleHooks = hooks.stream()
+						.sorted(Comparator.comparingInt(AppLifecycleHook::priority)).toList();
+				lifecycleHooks.stream()
+						.filter(e -> ((BEFORE_STOP & e.operation()) != 0))
+						.forEach(lifecycle -> lifecycle.beforeStop(app, deployManager));
+				deployManager.undeploy();
+				stopped.set(true);
+				lifecycleHooks.stream()
+						.filter(e -> ((AFTER_STOP & e.operation()) != 0))
+						.forEach(lifecycle -> lifecycle.afterStop(app, deployManager));
+			}
+		}
+	}
+
+	public AgentApp hooks(AppLifecycleHook... hooks) {
+		if (Objects.nonNull(hooks)) {
+			for (AppLifecycleHook hook : hooks) {
+				if (!this.hooks.contains(hook)) {
+					this.hooks.add(hook);
+				}
+			}
+		}
+		return this;
 	}
 }
 
