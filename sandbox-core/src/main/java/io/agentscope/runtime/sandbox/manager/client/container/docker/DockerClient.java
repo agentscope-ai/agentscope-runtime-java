@@ -668,4 +668,18 @@ public class DockerClient extends BaseClient {
             return false;
         }
     }
+
+    @Override
+    public boolean containerNameExists(String containerName){
+        List<Container> containers = client.listContainersCmd()
+                .withShowAll(true)
+                .exec();
+
+        List<String> names = containers.stream()
+                .flatMap(c -> Arrays.stream(c.getNames()))
+                .map(name -> name.startsWith("/") ? name.substring(1) : name)
+                .toList();
+
+        return names.contains(containerName);
+    }
 }

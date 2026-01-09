@@ -121,6 +121,12 @@ public class SandboxService implements AutoCloseable {
         ContainerClientType containerClientType = managerConfig.getClientStarter().getContainerClientType();
         StorageManager storageManager = fileSystemConfig.createStorageManager();
 
+        String containerName;
+        String prefix = managerConfig.getContainerPrefixKey();
+        if (prefix == null || prefix.isEmpty()) {
+            prefix = "sandbox";
+        }
+
         for (Map.Entry<String, String> entry : environment.entrySet()) {
             String value = entry.getValue();
             if (value == null) {
@@ -156,6 +162,17 @@ public class SandboxService implements AutoCloseable {
         String sessionId = RandomStringGenerator.generateRandomString(22);
         String currentDir = System.getProperty("user.dir");
         String mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
+
+        if (containerClientType == ContainerClientType.DOCKER) {
+            containerName = prefix + sessionId.toLowerCase();
+            while(containerClient.containerNameExists(containerName)){
+                sessionId = RandomStringGenerator.generateRandomString(22);
+                containerName = prefix + sessionId.toLowerCase();
+            }
+        } else {
+            containerName = prefix.replace('_', '-') + sessionId.toLowerCase();
+        }
+
         if (containerClientType == ContainerClientType.AGENTRUN || containerClientType == ContainerClientType.FC) {
             mountDir = Paths.get(mountDir).toAbsolutePath().toString();
         }
@@ -224,16 +241,6 @@ public class SandboxService implements AutoCloseable {
             runtimeConfig = sandboxConfig.getRuntimeConfig();
         }
         logger.info("Runtime config: {}", runtimeConfig);
-        String containerName;
-        String prefix = managerConfig.getContainerPrefixKey();
-        if (prefix == null || prefix.isEmpty()) {
-            prefix = "sandbox";
-        }
-        if (containerClientType == ContainerClientType.DOCKER) {
-            containerName = prefix + sessionId.toLowerCase();
-        } else {
-            containerName = prefix.replace('_', '-') + sessionId.toLowerCase();
-        }
         ContainerCreateResult createResult;
         createResult = containerClient.createContainer(containerName, imageName, ports, volumeBindings, environment, runtimeConfig);
 

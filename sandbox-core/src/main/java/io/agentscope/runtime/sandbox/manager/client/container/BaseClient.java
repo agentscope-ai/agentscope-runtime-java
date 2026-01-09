@@ -121,4 +121,8 @@ public abstract class BaseClient {
         }
         return pullImage(imageName);
     }
+
+    public boolean containerNameExists(String containerName){
+        return false;
+    }
 }
