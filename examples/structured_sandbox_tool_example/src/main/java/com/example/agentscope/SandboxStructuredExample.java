@@ -24,13 +24,11 @@ import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 import java.util.List;
 
@@ -41,24 +39,20 @@ public class SandboxStructuredExample {
 
     public static void main(String[] args) throws Exception {
 
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientConfig(clientConfig)
                 .build();
 
-        SandboxService service = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService service = new SandboxService(managerConfig);
         service.start();
 
         Toolkit toolkit = new Toolkit();
         try {
-            Sandbox sandbox = service.connect("userId", "sessionId", BrowserSandbox.class);
-            toolkit.registerTool(ToolkitInit.BrowserNavigateTool(sandbox));
-            if (sandbox instanceof BrowserSandbox browserSandbox) {
-                String desktopUrl = browserSandbox.getDesktopUrl();
-                System.out.println("GUI Desktop URL: " + desktopUrl);
-            }
+            BrowserSandbox browserSandbox = new BrowserSandbox(service, "agent-user", "agent-sessopn");
+            toolkit.registerTool(ToolkitInit.BrowserNavigateTool(browserSandbox));
+            String desktopUrl = browserSandbox.getDesktopUrl();
+            System.out.println("GUI Desktop URL: " + desktopUrl);
         } catch (Exception ignored) {
         }
 
@@ -84,7 +78,7 @@ public class SandboxStructuredExample {
         runExample(agent);
 
         System.out.println("\n=== All examples completed ===");
-        service.stop();
+        service.close();
     }
 
     /**

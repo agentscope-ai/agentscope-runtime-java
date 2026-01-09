@@ -68,20 +68,34 @@ For more available service types and detailed usage, see [Session History Servic
 In the AgentScope framework, bind the session history service to the `LongTermMemory` module through Runtime's `AgentScopeLongTermMemory` adapter:
 
 ```java
-import io.agentscope.runtime.adapters.agentscope.memory.LongTermMemoryAdapter;
-import io.agentscope.runtime.engine.services.memory.persistence.memory.service.InMemoryMemoryService;
-import io.agentscope.runtime.engine.services.memory.service.MemoryService;
+import io.agentscope.core.tool.Toolkit;
+import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 public class Main {
     public static void main(String[] args) {
-        MemoryService memoryService = new InMemoryMemoryService();
-        LongTermMemoryAdapter longTermMemory = null;
-      
-        longTermMemory = new LongTermMemoryAdapter(
-                memoryService,
-                "User1",
-                "Test Session"
-        );
+        // Create and start the sandbox service using Docker as the backend
+        BaseClientStarter clientStarter = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientStarter)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to (or create) a browser-type sandbox with specified user and session IDs
+        Sandbox sandbox = new BrowserSandbox(sandboxService, "user_1", "session_1");
+
+        // Initialize a toolkit and register browser-related tools bound to this sandbox
+        Toolkit toolkit = new Toolkit();
+        toolkit.registerTool(ToolkitInit.BrowserNavigateTool(sandbox));
+        toolkit.registerTool(ToolkitInit.BrowserTakeScreenshotTool(sandbox));
+
+        // The Agent can now use these tools to perform safe, isolated browser operations
     }
 }
 ```

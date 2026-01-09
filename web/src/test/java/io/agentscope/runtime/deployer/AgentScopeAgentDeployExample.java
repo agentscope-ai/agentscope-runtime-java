@@ -21,11 +21,10 @@ import io.agentscope.runtime.app.AgentApp;
 import io.agentscope.runtime.engine.services.agent_state.InMemoryStateService;
 import io.agentscope.runtime.engine.services.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.services.memory.persistence.session.InMemorySessionHistoryService;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -60,13 +59,11 @@ public class AgentScopeAgentDeployExample {
 
 	@NotNull
 	private static SandboxService buidSandboxService() {
-		BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+		BaseClientStarter clientConfig = DockerClientStarter.builder().build();
 		ManagerConfig managerConfig = ManagerConfig.builder()
-				.containerDeployment(clientConfig)
+				.clientStarter(clientConfig)
 				.build();
-		SandboxService sandboxService = new SandboxService(
-				new SandboxManager(managerConfig)
-		);
+		SandboxService sandboxService = new SandboxService(managerConfig);
 		return sandboxService;
 	}
 

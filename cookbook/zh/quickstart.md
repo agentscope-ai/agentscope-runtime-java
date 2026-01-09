@@ -57,6 +57,7 @@ import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.schemas.AgentRequest;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -300,30 +301,32 @@ import io.agentscope.runtime.app.AgentApp;
 import io.agentscope.runtime.engine.services.agent_state.InMemoryStateService;
 import io.agentscope.runtime.engine.services.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.services.memory.persistence.session.InMemorySessionHistoryService;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 import org.jetbrains.annotations.NotNull;
 ```
 
 #### 2.2 构建 SandboxService 沙箱管理服务
 
 ```java
-private static SandboxService buidSandboxService() {
-  BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+@NotNull
+private static SandboxService buildSandboxService() {
+  BaseClientStarter clientConfig = DockerClientStarter.builder().build();
   ManagerConfig managerConfig = ManagerConfig.builder()
-      .containerDeployment(clientConfig)
+      .clientStarter(clientConfig)
       .build();
-  return new SandboxService(
-      new SandboxManager(managerConfig)
-  );
+      SandboxService sandboxService = new SandboxService(
+              managerConfig
+      );
+      sandboxService.start();
+  return sandboxService;
 }
 ```
 
-* 沙箱运行环境支持 **Docker**、**K8s **以及 **AgentRun**，未配置 `clientConfig` 默认使用**本地 Docker **作为运行环境
-* 使用`managerConfig`构建 **SandboxManager**，并由此构建 **SandboxService**
+* 沙箱运行环境支持 **Docker**、**K8s **、 **AgentRun** 以及 **FC**，未配置 `clientStarter` 默认使用**本地 Docker **作为运行环境
+* 使用`managerConfig`构建 **SandboxService**
 
 #### 2.3 构建 AgentApp
 
@@ -343,6 +346,10 @@ agentHandler.setSandboxService(buidSandboxService());
 
 ```java
 AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.cors(registry -> registry.addMapping("/**")
+        .allowedOriginPatterns("*")
+        .allowedMethods("GET", "POST", "PUT", "DELETE")
+        .allowCredentials(true));
 agentApp.run(10001);
 ```
 

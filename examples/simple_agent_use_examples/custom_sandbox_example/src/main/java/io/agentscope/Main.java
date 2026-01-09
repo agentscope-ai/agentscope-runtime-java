@@ -17,25 +17,22 @@
 package io.agentscope;
 
 import com.google.gson.Gson;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 public class Main {
     public static void main(String[] args) {
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientConfig(clientConfig)
                 .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();
 
-        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", CustomSandbox.class)) {
+        try (Sandbox sandbox = new CustomSandbox(sandboxService, "user1", "session1")) {
             Gson gson = new Gson();
             String tools = gson.toJson(sandbox.listTools(""));
             System.out.println("Available tools: ");

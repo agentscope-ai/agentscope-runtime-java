@@ -5,7 +5,7 @@ AgentScope Runtime Java 的 Sandbox 提供了一个**安全**且**隔离**的环
 ## 前提条件
 
 ```{note}
-当前的沙箱环境默认使用 Docker 进行隔离。此外，我们还支持 Kubernetes (K8s) 以及阿里云函数计算 AgentRun 作为远程服务后端。未来，我们计划在即将发布的版本中加入更多第三方托管解决方案。
+当前的沙箱环境默认使用 Docker 进行隔离。此外，我们还支持 Kubernetes (K8s) 以及阿里云函数计算 AgentRun、FC 作为远程服务后端。未来，我们计划在即将发布的版本中加入更多第三方托管解决方案。
 ```
 
 
@@ -15,18 +15,19 @@ AgentScope Runtime Java 的 Sandbox 提供了一个**安全**且**隔离**的环
 
 
 - Docker（默认）
+
+以下几种部署后端均为扩展模块，使用时需要单独引入
+
+
 - Kubernetes
 - 阿里云函数计算 AgentRun
+- 函数计算 FC
 
 ## 安装
 
 ### 安装依赖项
 
 首先，安装 AgentScope Runtime：
-
-```bash
-pip install agentscope-runtime
-```
 
 ### 准备 Docker 镜像
 
@@ -80,34 +81,30 @@ docker pull agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtim
 
 前面的部分介绍了以工具为中心的使用方法，而本节介绍以沙箱为中心的使用方法。
 
-您可以通过`sandbox` SDK创建不同类型的沙箱。通过 `SandboxService` 管理沙箱生命周期，支持会话管理和沙箱复用。
+您可以通过 `sandbox` SDK创建不同类型的沙箱。通过 `SandboxService` 管理沙箱生命周期，支持会话管理和沙箱复用。
 
 
 ```java
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
+import com.google.gson.Gson;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-
-import com.google.gson.Gson;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 public class Main {
     public static void main(String[] args) {
 //        创建并启动沙箱服务
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientStarter(clientConfig)
                 .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();
 
 //        连接沙箱（沙箱会在执行后自动删除）
-        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)){
+        try (Sandbox sandbox = new BaseSandbox(sandboxService, "userId", "sessionId")) {
             Gson gson = new Gson();
             String tools = gson.toJson(sandbox.listTools(""));
             System.out.println("Available tools: ");
@@ -178,36 +175,77 @@ public class Main {
 * **基础沙箱（Base Sandbox）**：用于在隔离环境中运行 **Python 代码** 或 **Shell 命令**。
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)){
-        System.out.println(sandbox.listTools(""));
-        if(sandbox instanceof BaseSandbox baseSandbox) {
-String pythonResult = baseSandbox.runIpythonCell("print('Hello from the sandbox!')");
-        System.out.println("Sandbox execution result: " + pythonResult);
-String shellResult = baseSandbox.runShellCommand("echo Hello, World!");
-        System.out.println("Shell command result: " + shellResult);
+import io.agentscope.runtime.sandbox.box.BaseSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+//        连接沙箱（沙箱会在执行后自动删除）
+        try (BaseSandbox baseSandbox = new BaseSandbox(sandboxService, "userId", "sessionId")) {
+            System.out.println(baseSandbox.listTools(""));
+            String pythonResult = baseSandbox.runIpythonCell("print('Hello from the sandbox!')");
+            System.out.println("Sandbox execution result: " + pythonResult);
+            String shellResult = baseSandbox.runShellCommand("echo Hello, World!");
+            System.out.println("Shell command result: " + shellResult);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-            }
+}
 ```
 
 * **GUI 沙箱 （GUI Sandbox）**： 提供**可视化桌面环境**，可执行鼠标、键盘以及屏幕相关操作。
 
   <img src="https://img.alicdn.com/imgextra/i2/O1CN01df5SaM1xKFQP4KGBW_!!6000000006424-2-tps-2958-1802.png" alt="GUI Sandbox" width="800" height="500">
 
-```json
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", GuiSandbox.class)){
-Gson gson = new Gson();
-String tools = gson.toJson(sandbox.listTools(""));
-System.out.println("Available tools: ");
-System.out.println(tools);
+```java
+import com.google.gson.Gson;
+import io.agentscope.runtime.sandbox.box.GuiSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
-if(sandbox instanceof GuiSandbox guiSandbox) {
-String desktopUrl = guiSandbox.getDesktopUrl();
-System.out.println("GUI Desktop URL: " + desktopUrl);
-String cursorPosition = guiSandbox.computerUse("get_cursor_position");
-System.out.println("Cursor Position: " + cursorPosition);
-String screenShot = guiSandbox.computerUse("get_screenshot");
-System.out.println("Screenshot (base64): " + screenShot);
-}
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+//        连接沙箱（沙箱会在执行后自动删除）
+        try (GuiSandbox guiSandbox = new GuiSandbox(sandboxService, "userId", "sessionId")) {
+            Gson gson = new Gson();
+            String tools = gson.toJson(guiSandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+            String desktopUrl = guiSandbox.getDesktopUrl();
+            System.out.println("GUI Desktop URL: " + desktopUrl);
+            String cursorPosition = guiSandbox.computerUse("get_cursor_position");
+            System.out.println("Cursor Position: " + cursorPosition);
+            String screenShot = guiSandbox.computerUse("get_screenshot");
+            System.out.println("Screenshot (base64): " + screenShot);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
 ```
 
@@ -216,19 +254,40 @@ System.out.println("Screenshot (base64): " + screenShot);
   <img src="https://img.alicdn.com/imgextra/i3/O1CN01VocM961vK85gWbJIy_!!6000000006153-2-tps-2730-1686.png" alt="GUI Sandbox" width="800" height="500">
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", FilesystemSandbox.class)){
-Gson gson = new Gson();
-String tools = gson.toJson(sandbox.listTools(""));
-    System.out.println("Available tools: ");
-    System.out.println(tools);
+import com.google.gson.Gson;
+import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
-    if(sandbox instanceof FilesystemSandbox filesystemSandbox) {
-String desktopUrl = filesystemSandbox.getDesktopUrl();
-        System.out.println("GUI Desktop URL: " + desktopUrl);
-String cursorPosition = filesystemSandbox.createDirectory("test");
-        System.out.println("Created directory 'test' at: " + cursorPosition);
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+//        连接沙箱（沙箱会在执行后自动删除）
+        try (FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxService, "userId", "sessionId")) {
+            Gson gson = new Gson();
+            String tools = gson.toJson(filesystemSandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+            String desktopUrl = filesystemSandbox.getDesktopUrl();
+            System.out.println("GUI Desktop URL: " + desktopUrl);
+            String cursorPosition = filesystemSandbox.createDirectory("test");
+            System.out.println("Created directory 'test' at: " + cursorPosition);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-            }
+}
 ```
 
 * **浏览器沙箱（Browser Sandbox）**: 基于 GUI 的沙箱，可进行浏览器操作。
@@ -236,32 +295,136 @@ String cursorPosition = filesystemSandbox.createDirectory("test");
   <img src="https://img.alicdn.com/imgextra/i4/O1CN01OIq1dD1gAJMcm0RFR_!!6000000004101-2-tps-2734-1684.png" alt="GUI Sandbox" width="800" height="500">
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BrowserSandbox.class)){
-Gson gson = new Gson();
-String tools = gson.toJson(sandbox.listTools(""));
-    System.out.println("Available tools: ");
-    System.out.println(tools);
+import com.google.gson.Gson;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
-    if(sandbox instanceof BrowserSandbox browserSandbox) {
-String desktopUrl = browserSandbox.getDesktopUrl();
-        System.out.println("GUI Desktop URL: " + desktopUrl);
-String navigateResult = browserSandbox.navigate("https://cn.bing.com");
-        System.out.println("Navigate Result: " + navigateResult);
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+//        连接沙箱（沙箱会在执行后自动删除）
+        try (BrowserSandbox browserSandbox = new BrowserSandbox(sandboxService, "userId", "sessionId")) {
+            Gson gson = new Gson();
+            String tools = gson.toJson(browserSandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+            String desktopUrl = browserSandbox.getDesktopUrl();
+            System.out.println("GUI Desktop URL: " + desktopUrl);
+            String navigateResult = browserSandbox.navigate("https://cn.bing.com");
+            System.out.println("Navigate Result: " + navigateResult);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-            }
+}
+```
+
+* **移动端沙箱（Mobile Sandbox）**: 基于 Android 模拟器的沙箱，可进行移动端操作，如点击、滑动、输入文本和截屏等。
+
+  <img src="https://img.alicdn.com/imgextra/i4/O1CN01yPnBC21vOi45fLy7V_!!6000000006163-2-tps-544-865.png" alt="Mobile Sandbox" height="500">
+
+  - **运行环境要求**
+
+    - **Linux 主机**:
+      该沙箱在 Linux 主机上运行时，需要内核加载 `binder` 和 `ashmem` 模块。如果缺失，请在主机上执行以下命令来安装和加载所需模块：
+
+    ```bash
+        # 1. 安装额外的内核模块
+        sudo apt update && sudo apt install -y linux-modules-extra-`uname -r`
+    
+        # 2. 加载模块并创建设备节点
+        sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
+        sudo modprobe ashmem_linux
+    ```
+
+    - **架构兼容性**:
+      在 ARM64/aarch64 架构（如 Apple M 系列芯片）上运行时，可能会遇到兼容性或性能问题，建议在 x86_64 架构的主机上运行。
+
+```java
+import io.agentscope.runtime.sandbox.box.MobileSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        try (MobileSandbox mobileSandbox = new MobileSandbox(sandboxService, "userId", "sessionId")) {
+            System.out.println("列举所有工具");
+            System.out.println(mobileSandbox.listTools(""));
+            
+            System.out.println("获取屏幕分辨率：");
+            System.out.println(mobileSandbox.mobileGetScreenResolution());
+            
+            System.out.println("在坐标（500，1000）处点击");
+            System.out.println(mobileSandbox.mobileTap(500,1000));
+            
+            System.out.println("输入文本：");
+            System.out.println(mobileSandbox.mobileInputText("来自 AgentScope 的问候！"));
+            
+            System.out.println("发送 Home 按键请求：");
+            System.out.println(mobileSandbox.mobileKeyEvent(3));
+            
+            System.out.println("截取屏幕：");
+            String screenshotResult = mobileSandbox.mobileGetScreenshot();
+            System.out.println(screenshotResult);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
 ```
 
 * **TrainingSandbox**：训练评估沙箱，详情请参考：[训练用沙箱](training_sandbox.md)。
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", APPWorldSandbox.class)){
-        if(sandbox instanceof APPWorldSandbox appWorldSandbox){
-String profileList = appWorldSandbox.getEnvProfile("appworld","train",null);
-        System.out.println("Profile List: " + profileList);
-    } else {
-            System.err.println("Failed to connect to TrainingSandbox.");
+import io.agentscope.runtime.sandbox.box.APPWorldSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+//        连接沙箱（沙箱会在执行后自动删除）
+        try (APPWorldSandbox appWorldSandbox = new APPWorldSandbox(sandboxService, "userId", "sessionId")) {
+            String profileList = appWorldSandbox.getEnvProfile("appworld", "train", null);
+            System.out.println("Profile List: " + profileList);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-            }
+}
 ```
 
 * **云沙箱（Cloud Sandbox）**：基于云服务的沙箱环境，无需本地 Docker 容器。`CloudSandbox` 是云沙箱的基类，提供了云沙箱的统一接口
@@ -274,13 +437,31 @@ String profileList = appWorldSandbox.getEnvProfile("appworld","train",null);
 * **AgentBay沙箱（AgentBay Sandbox）**：基于 AgentBay 云服务的沙箱实现，支持多种镜像类型（Linux、Windows、Browser、CodeSpace、Mobile等）
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", AgentBaySandbox.class)) {
-    System.out.println(sandbox.listTools());
-    if (sandbox instanceof AgentBaySandbox agentBaySandbox) {
-        String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
-        System.out.println("Sandbox execution result: " + pythonResult);
-        String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
-        System.out.println("Shell command result: " + shellResult);
+import io.agentscope.runtime.sandbox.box.AgentBaySandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .agentBayApiKey(System.getenv("AGENTBAY_API_KEY"))
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+//        连接沙箱（沙箱会在执行后自动删除）
+        try (AgentBaySandbox agentBaySandbox = new AgentBaySandbox(sandboxService, "user", "session", "linux_latest")) {
+            System.out.println(agentBaySandbox.listTools());
+            String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
+            System.out.println("Sandbox execution result: " + pythonResult);
+            String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
+            System.out.println("Shell command result: " + shellResult);
+        }
     }
 }
 ```
@@ -301,38 +482,63 @@ MCP（模型上下文协议）是一个标准化协议，使AI应用程序能够
 沙箱支持通过`add_mcp_servers`方法集成MCP服务器。添加后，您可以使用`list_tools`发现可用工具并使用`call_tool`执行它们。
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)) {
-String mcpServerConfig = """
-                   {
-            "mcpServers": {
-                "time": {
-                    "command": "uvx",
-                    "args": [
-                        "mcp-server-time",
-                        "--local-timezone=America/New_York"
-                    ]
-                }
-            }
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import io.agentscope.runtime.sandbox.box.BaseSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+import java.lang.reflect.Type;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+//        创建并启动沙箱服务
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+//        连接沙箱（沙箱会在执行后自动删除）
+        try (Sandbox sandbox = new BaseSandbox(sandboxService, "userID", "sessionID")) {
+            String mcpServerConfig = """
+                               {
+                        "mcpServers": {
+                            "time": {
+                                "command": "uvx",
+                                "args": [
+                                    "mcp-server-time",
+                                    "--local-timezone=America/New_York"
+                                ]
+                            }
+                        }
+                    }
+                    """;
+
+            Gson gson = new Gson();
+            Type mcpServerType = new TypeToken<Map<String, Object>>() {
+            }.getType();
+            Map<String, Object> serverConfigMap = gson.fromJson(mcpServerConfig, mcpServerType);
+
+//          	将MCP服务器添加到沙箱
+            sandbox.addMcpServers(serverConfigMap);
+
+//          	列出所有可用工具（现在包括MCP工具）
+            String tools = gson.toJson(sandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+//          	使用MCP服务器提供的时间工具
+            String result = sandbox.callTool("get_current_time", Map.of("timezone", "America/New_York"));
+            System.out.println("Tool call result: ");
+            System.out.println(result);
         }
-        """;
-
-Gson gson = new Gson();
-Type mcpServerType = new TypeToken<Map<String, Object>>() {
-}.getType();
-Map<String, Object> serverConfigMap = gson.fromJson(mcpServerConfig, mcpServerType);
-
-//   将MCP服务器添加到沙箱
-    sandbox.addMcpServers(serverConfigMap);
-
-//   列出所有可用工具（现在包括MCP工具）
-String tools = gson.toJson(sandbox.listTools(""));
-    System.out.println("Available tools: ");
-    System.out.println(tools);
-
-//   使用MCP服务器提供的时间工具
-String result = sandbox.callTool("get_current_time", Map.of("timezone", "America/New_York"));
-    System.out.println("Tool call result: ");
-    System.out.println(result);
+    }
 }
 ```
 
@@ -363,151 +569,35 @@ ManagerConfig managerConfig = ManagerConfig.builder()
 `SandboxService` 提供了统一的沙箱管理接口，支持通过 `session_id` 和 `user_id` 来管理不同用户会话的沙箱环境。使用 `SandboxService` 可以让您更好地控制沙箱的生命周期，并实现沙箱的复用。
 
 ```java
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 public class Main {
     public static void main(String[] args) {
 //        创建并启动沙箱服务
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientStarter(clientConfig)
                 .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();
 
         try {
 //            连接到沙箱，指定需要的沙箱类型
-            Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class);
-            if(sandbox instanceof BaseSandbox baseSandbox) {
-//                直接在沙箱实例上调用工具方法
-                String pythonResult = baseSandbox.runIpythonCell("a=1");
-                System.out.println("Sandbox execution result: " + pythonResult);
-            }
+            BaseSandbox baseSandbox = new BaseSandbox(sandboxService, "userId", "sessionId");
+//            直接在沙箱实例上调用工具方法
+            String pythonResult = baseSandbox.runIpythonCell("a=1");
+            System.out.println("Sandbox execution result: " + pythonResult);
 //            使用相同的 session_id 和 user_id 会复用同一个沙箱实例
-            sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class);
-            if(sandbox instanceof BaseSandbox baseSandbox) {
-//                变量 a 仍然存在，因为复用了同一个沙箱
-                String pythonResult = baseSandbox.runIpythonCell("print(a)");
-                System.out.println("Sandbox execution result: " + pythonResult);
-            }
+            baseSandbox = new BaseSandbox(sandboxService, "userId", "sessionId");
+            pythonResult = baseSandbox.runIpythonCell("print(a)");
+            System.out.println("Sandbox execution result: " + pythonResult);
 //            停止沙箱服务
-            sandbox.close();
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-}
-```
-
-### 使用沙箱服务添加MCP服务器
-
-```java
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-
-import java.lang.reflect.Type;
-import java.util.Map;
-
-public class Main {
-    public static void main(String[] args) {
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
-        ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
-                .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
-        sandboxService.start();
-
-        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)) {
-            String mcpServerConfig = """
-                               {
-                        "mcpServers": {
-                            "time": {
-                                "command": "uvx",
-                                "args": [
-                                    "mcp-server-time",
-                                    "--local-timezone=America/New_York"
-                                ]
-                            }
-                        }
-                    }
-                    """;
-
-            Gson gson = new Gson();
-            Type mcpServerType = new TypeToken<Map<String, Object>>() {
-            }.getType();
-            Map<String, Object> serverConfigMap = gson.fromJson(mcpServerConfig, mcpServerType);
-
-//            将MCP服务器添加到沙箱
-            sandbox.addMcpServers(serverConfigMap);
-
-//            列出所有可用工具（现在包括MCP工具）
-            String tools = gson.toJson(sandbox.listTools(""));
-            System.out.println("Available tools: ");
-            System.out.println(tools);
-
-//            使用MCP服务器提供的时间工具
-            String result = sandbox.callTool("get_current_time", Map.of("timezone", "America/New_York"));
-            System.out.println("Tool call result: ");
-            System.out.println(result);
+            baseSandbox.close();
         } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-}
-```
-
-### 使用沙箱服务连接远程沙箱
-
-```java
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-
-public class Main {
-    public static void main(String[] args) {
-//        创建并启动沙箱服务
-        ManagerConfig managerConfig = ManagerConfig.builder()
-                .baseUrl("http://remote-host:port")
-                .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
-        sandboxService.start();
-
-        try {
-//            连接到沙箱，指定需要的沙箱类型
-            Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class);
-            if(sandbox instanceof BaseSandbox baseSandbox) {
-//                直接在沙箱实例上调用工具方法
-                String pythonResult = baseSandbox.runIpythonCell("a=1");
-                System.out.println("Sandbox execution result: " + pythonResult);
-            }
-//            停止沙箱服务
-            sandbox.close();
-        }
-        catch (Exception e) {
             e.printStackTrace();
         }
     }

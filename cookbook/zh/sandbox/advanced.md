@@ -1,20 +1,18 @@
 # 工具沙箱高级用法
 
->本节介绍沙箱的高级用法。我们强烈建议在继续之前先完成上一节的基础教程[沙箱](sandbox.md)。
+> 本节介绍沙箱的高级用法。我们强烈建议在继续之前先完成上一节的基础教程[沙箱](sandbox.md)。
 
 ## 沙箱管理器配置参考
 
 #### ManagerConfig 配置
 
-| Parameter             | Type                 | Description                         | Default                 | Notes                                                        |
-| --------------------- | -------------------- | ----------------------------------- | ----------------------- | ------------------------------------------------------------ |
-| `defaultSandboxType`  | `List<SandboxType>`  | 默认沙箱类型（可多个）              | `SandboxType.BASE`      | 可以是单个类型，也可以是多个类型的列表，从而启用多个独立的沙箱预热池。合法取值包括 `BASE`、`BROWSER`、`FILESYSTEM`、`GUI` 等 |
-| `bearerToken`         | `String`             | 调用远程runtime沙箱的身份验证令牌   | `null`                  | 如果设置为 `null`，将在连接的时候不会进行身份验证            |
-| `baseUrl`             | `String`             | 调用远程runtime沙箱的服务器绑定地址 | `null`                  | 如果设置为 `null`，将默认使用本地沙箱管理                    |
-| `containerDeployment` | `BaseClientConfig`   | 容器运行时                          | `DockerClientConfig`    | 目前支持  `Docker`、`K8s` 和 `AgentRun`                      |
-| `poolSize`            | `int`                | 预热容器池大小                      | `0`                     | 缓存的容器以实现更快启动。 `poolSize`  参数控制预创建并缓存在就绪状态的容器数量。当用户请求新沙箱时，系统将首先尝试从这个预热池中分配，相比从零开始创建容器显著减少启动时间。例如，使用  `poolSize=10`，系统维护 10 个就绪容器，可以立即分配给新请求 |
-| `fileSystemConfig`    | `FileSystemConfig`   | 容器文件系统配置                    | `LocalFileSystemConfig` | 管理容器文件系统的下载方式，默认使用`本地文件系统`，也可以使用 `oss` |
-| `redisConfig`         | `RedisManagerConfig` | redis支持配置                       | `null`                  | 启用 Redis 支持，分布式部署或工作进程数大于 `1` 时必需，默认不启用 |
+| Parameter            | Type                | Description                         | Default               | Notes                                                        |
+| -------------------- | ------------------- | ----------------------------------- | --------------------- | ------------------------------------------------------------ |
+| `bearerToken`        | `String`            | 调用远程runtime沙箱的身份验证令牌   | `null`                | 如果设置为 `null`，将在连接的时候不会进行身份验证            |
+| `baseUrl`            | `String`            | 调用远程runtime沙箱的服务器绑定地址 | `null`                | 如果设置为 `null`，将默认使用本地沙箱管理                    |
+| `clientStarter`      | `BaseClientStarter` | 容器运行时                          | `DockerClientStarter` | 目前支持  `Docker`、`K8s` 、`AgentRun`和`FC`                 |
+| `sandboxMap`         | `SandboxMap`        | 容器管理                            | `InMemorySandboxMap`  | 容器的管理，默认使用本地存储，引入 `redis-extension` 可以使用 `redis` 作为管理后端 |
+| `containerPrefixKey` | `String`            | 容器名称前缀                        | `sandbox_container_`  | 创建的容器名称前缀                                           |
 
 #### Redis 配置
 
@@ -23,7 +21,7 @@
 > - **单个工作进程（`WORKERS=1`）**：Redis 是可选的。系统可以使用内存缓存来管理沙箱状态，这更简单且延迟更低。
 > - **多个工作进程（`WORKERS>1`）**：需要 Redis 来在工作进程间共享沙箱状态并确保一致性。
 
-Redis 为沙箱状态和状态管理提供缓存。如果只有一个工作进程，您可以使用内存缓存：
+Redis 为沙箱状态和状态管理提供缓存。如果只有一个工作进程，您可以使用内存缓存，您需要配置 `RedisManagerConfig` 并使用它创建一个 `RedisSandboxMap`，以下是 `RedisManagerConfig` 需要配置的参数：
 
 | Parameter               | Description      | Default                                     | Notes            |
 | ----------------------- | ---------------- | ------------------------------------------- | ---------------- |
@@ -37,9 +35,21 @@ Redis 为沙箱状态和状态管理提供缓存。如果只有一个工作进�
 
 #### FileSystemConfig 配置
 
+目前只支持在本地 Docker 下实现文件目录的挂载，支持三种挂载：
+
+* 拷贝挂载（推荐）：配置 `storageFolderPath`、`mountDir` 两个属性，在创建容器的时候，会首先将存储目录中的内容拷贝到挂载路径，并让容器挂载挂载路径，防止对原始文件造成污染，在容器关闭的时候，会将挂载路径的内容拷贝回去
+* 只读挂载：配置 `readonlyMounts`，容器会直接挂载本地文件系统
+* 可读写零拷贝挂载（谨慎使用）：配置 `nonCopyMount`，容器会直接挂载本地文件系统，并拥有对于该文件夹的读写权限
+
+在使用的时候，您需要把 `FileSystemConfig` 传递给 `Sandbox` 的 `fileSystemConfig` 参数。
+
+##### 存储后端
+
+###### 本地存储
+
 默认使用 `LocalFileSystemConfig`，本地条件下无需配置，使用 `oss` 情况下需配置
 
-##### OSS 配置
+###### OSS 存储
 
 使用[阿里云对象存储服务](https://www.aliyun.com/product/oss)进行分布式文件存储：
 
@@ -177,29 +187,24 @@ pip install -e .
 
 ```java
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
+
 @RegisterSandbox(
-        imageName = "YOUR-IMAGE-NAME",
-        sandboxType = SandboxType.CUSTOM,
+        imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest",
+        sandboxType = "custom",
         securityLevel = "medium",
         timeout = 30,
-        description = "YOUR Sandbox"
+        description = "Base Sandbox"
 )
 public class CustomSandbox extends Sandbox {
 
-    public CustomSandbox(SandboxManager managerApi, String userId, String sessionId) {
-        this(managerApi, userId, sessionId, 3000);
-    }
-
     public CustomSandbox(
-            SandboxManager managerApi,
+            SandboxService managerApi,
             String userId,
-            String sessionId,
-            int timeout) {
-        super(managerApi, userId, sessionId, SandboxType.CUSTOM, timeout);
+            String sessionId) {
+        super(managerApi, userId, sessionId, "custom");
     }
 }
 ```

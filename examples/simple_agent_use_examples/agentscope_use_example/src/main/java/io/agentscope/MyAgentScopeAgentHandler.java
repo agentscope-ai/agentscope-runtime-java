@@ -33,6 +33,7 @@ import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
 import io.agentscope.runtime.engine.schemas.AgentRequest;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -50,6 +51,7 @@ import reactor.core.publisher.Flux;
  * </ul>
  */
 public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
+    private SandboxService sandboxService;
 	private static final Logger logger = LoggerFactory.getLogger(MyAgentScopeAgentHandler.class);
 	private final String apiKey;
 
@@ -59,6 +61,14 @@ public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
 	public MyAgentScopeAgentHandler() {
 		apiKey = System.getenv("AI_DASHSCOPE_API_KEY");
 	}
+
+    public SandboxService getSandboxService() {
+        return sandboxService;
+    }
+
+    public void setSandboxService(SandboxService sandboxService) {
+        this.sandboxService = sandboxService;
+    }
 
 	@Override
 	public Flux<io.agentscope.core.agent.Event> streamQuery(AgentRequest request, Object messages) {
@@ -85,7 +95,11 @@ public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
 			if (sandboxService != null) {
 				try {
 					// Create a BaseSandbox instance for this session
-					Sandbox sandbox = sandboxService.connect(userId, sessionId, BaseSandbox.class);
+					Sandbox sandbox = new BaseSandbox(
+                            sandboxService,
+                            userId,
+                            sessionId
+                    );
 
 					// Register Python code execution tool (matching Python: execute_python_code)
 					toolkit.registerTool(ToolkitInit.RunPythonCodeTool(sandbox));

@@ -20,11 +20,10 @@ import io.agentscope.browser.agent.AgentscopeBrowserUseAgent;
 import io.agentscope.runtime.engine.services.agent_state.InMemoryStateService;
 import io.agentscope.runtime.engine.services.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.services.memory.persistence.session.InMemorySessionHistoryService;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -71,12 +70,13 @@ public class BrowserAgentApplication {
     @Bean
     public SandboxService sandboxService() {
         logger.info("Creating SandboxService bean");
-        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientConfig(clientConfig)
                 .build();
-        SandboxManager sandboxManager = new SandboxManager(managerConfig);
-        return new SandboxService(sandboxManager);
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+        return sandboxService;
     }
 
     @Bean

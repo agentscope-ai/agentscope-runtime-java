@@ -29,35 +29,32 @@ In the **AgentScope** framework, we can use **encapsulated sandbox methods** (`T
 ```java
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 public class Main {
     public static void main(String[] args) {
-        // 1. Start service (usually managed by Runner/Engine)
-        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+        // 1. Start the sandbox service
+        BaseClientStarter clientStarter = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientStarter(clientStarter)
                 .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();
 
-        // 2. Connect or create sandbox (here creating browser type)
-        Sandbox sandbox = sandboxService.connect("TestSession", "User1", BrowserSandbox.class);
+        // 2. Connect to or create a sandbox (here, a browser-type sandbox is created)
+        Sandbox sandbox = new BrowserSandbox(sandboxService, "user", "session");
 
-        // 3. Get tool methods and register in Agent's Toolkit
+        // 3. Obtain tool methods and register them into the Agent's Toolkit
         Toolkit toolkit = new Toolkit();
         toolkit.registerTool(ToolkitInit.BrowserNavigateTool(sandbox));
         toolkit.registerTool(ToolkitInit.BrowserTakeScreenshotTool(sandbox));
 
-        // After this, Agents can call these tools to perform safe operations in the sandbox
+        // From this point on, the Agent can safely invoke these tools within the sandbox
     }
 }
 ```
@@ -73,23 +70,22 @@ public class Main {
 
 ### 2. **Remote API Mode**
 
-- **Characteristics**: Connect to remote sandbox instances through sandbox management API (`SandboxManager`).
-- **Configuration**: `baseUrl="http://host:port"`, `bearerToken="..."`
+- **Features**: Connects to remote sandbox instances via the Sandbox Management API (`SandboxService`).- **Configuration**: `baseUrl="http://host:port"`, `bearerToken="..."`
 - **Advantages**: Can share environments across processes/machines, supports distributed scaling.
 - **Disadvantages**: Requires deployment and operation of remote sandbox management services.
 
 ### Supported Sandbox Types
 
-| Type Value       | Function Description                     | Common Use Cases                              |
-| ------------ | ---------------------------- | ----------------------------------------- |
-| `DUMMY`      | Empty implementation/placeholder sandbox              | Test workflows, simulate sandbox interface without executing actual operations    |
-| `BASE`       | Basic sandbox environment                 | General tool runtime environment                          |
-| `BROWSER`    | Browser sandbox                   | Web navigation, screenshots, data scraping                  |
-| `FILESYSTEM` | File system sandbox                 | Read/write/manage files in a secure isolated file system            |
-| `GUI`        | Graphical interface sandbox                 | Interact with GUI applications (click, input, screenshot)       |
-| `APPWORLD`   | Application world simulation sandbox             | Simulate cross-application interactions in virtual environments                |
-| `BFCL`       | BFCL (specific business domain execution environment) | Run business process scripts (depends on implementation)        |
-| `AGENTBAY`   | AgentBay session-based sandbox          | Persistent environment for multi-agent collaboration or complex task orchestration |
+| Type Value   | Description                     | Common Use Cases                          |
+|--------------|----------------------------------|-------------------------------------------|
+| `BASE`       | Basic sandbox environment        | General-purpose tool execution            |
+| `BROWSER`    | Browser sandbox                  | Web navigation, screenshots, data scraping|
+| `FILESYSTEM` | Filesystem sandbox               | Secure read/write operations in isolated filesystem |
+| `GUI`        | Graphical User Interface sandbox | Interacting with GUI apps (clicks, input, screenshots) |
+| `APPWORLD`   | Application World simulation sandbox | Simulating cross-application interactions in a virtual environment |
+| `BFCL`       | BFCL (Business Function Computing Layer) sandbox | Running domain-specific workflow scripts (implementation-dependent) |
+| `AGENTBAY`   | AgentBay session-aware sandbox   | Persistent environments for multi-agent collaboration or complex task orchestration |
+| `MOBILE`     | Mobile device sandbox            | Simulating mobile device operations       |
 
 ## Runtime Mode Switching Examples
 
@@ -98,10 +94,9 @@ public class Main {
 ```java
 // Local mode (default uses local Docker)
 ManagerConfig managerConfig = ManagerConfig.builder()
-        .build();
-SandboxService sandboxService = new SandboxService(
-        new SandboxManager(managerConfig)
-);
+                .build();
+SandboxService sandboxService = new SandboxService(managerConfig);
+
 sandboxService.start();
 
 Sandbox sandbox = sandboxService.connect("DevSession", "User1", BrowserSandbox.class);
@@ -112,15 +107,13 @@ Sandbox sandbox = sandboxService.connect("DevSession", "User1", BrowserSandbox.c
 ```java
 // Local mode (default uses local Docker)
 ManagerConfig managerConfig = ManagerConfig.builder()
-        .baseUrl("https://sandbox-manager.com")
-        .bearerToken("YOUR_AUTH_TOKEN")
-        .build();
-SandboxService sandboxService = new SandboxService(
-        new SandboxManager(managerConfig)
-);
+                .baseUrl("https://sandbox-manager.com")
+                .bearerToken("YOUR_AUTH_TOKEN")
+                .build();
+SandboxService sandboxService = new SandboxService(managerConfig);
 sandboxService.start();
 
-Sandbox sandbox = sandboxService.connect("ProdSession", "UserABC", BrowserSandbox.class);
+Sandbox sandbox = new BrowserSandbox(sandboxService, "ProdSession", "UserABC");
 ```
 
 ### Release Environment
@@ -128,8 +121,11 @@ Sandbox sandbox = sandboxService.connect("ProdSession", "UserABC", BrowserSandbo
 Explicitly release resources when the session ends:
 
 ```java
-// Release directly through container name
-sandboxService.getManagerApi().release("container_name");
+// Release sandbox directly by container ID
+sandboxService.release("container_id");
+
+// Or release via the sandbox instance
+sandbox.release();
 ```
 
 ## Selection Recommendations
@@ -138,7 +134,7 @@ sandboxService.getManagerApi().release("container_name");
     - Embedded mode (`baseUrl=null`)
     - Choose `BROWSER`/`BASE` types as needed
 - Production Environment / Multi-User Distributed:
-    - Remote API mode (requires deploying `SandboxManager` service)
+    - Remote API mode (requires deploying the `SandboxService` via the `web` module)
     - Consider clustering and authentication mechanisms (`bearerToken`)
 - High Security or Isolation Requirements:
     - Create independent sandboxes for different user sessions

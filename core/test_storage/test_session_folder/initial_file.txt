@@ -1,3 +1,0 @@
-This file was initially stored in the local file system
-Created at: Wed Dec 10 15:33:05 CST 2025
-Used for testing copy from local storage to container

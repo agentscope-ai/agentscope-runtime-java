@@ -99,26 +99,23 @@ public class Main {
 ```java
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 public class Main {
     public static void main(String[] args) {
-        BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+        BaseClientStarter clientStarter = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientStarter(clientStarter)
                 .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();
 
-        Sandbox sandbox = sandboxService.connect("TestSession", "User1", BrowserSandbox.class);
+        Sandbox sandbox = new BrowserSandbox(sandboxService, "user_1", "session_1");
 
         Toolkit toolkit = new Toolkit();
         toolkit.registerTool(ToolkitInit.BrowserNavigateTool(sandbox));

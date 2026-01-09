@@ -349,10 +349,9 @@ import io.agentscope.runtime.app.AgentApp;
 import io.agentscope.runtime.engine.services.agent_state.InMemoryStateService;
 import io.agentscope.runtime.engine.services.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.services.memory.persistence.session.InMemorySessionHistoryService;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -362,7 +361,7 @@ import org.jetbrains.annotations.NotNull;
  * <ul>
  *   <li>会话状态管理（内存存储）</li>
  *   <li>短期记忆（会话历史）与长期记忆（用户级记忆库）</li>
- *   <li>Python 沙箱工具支持（通过 Kubernetes 启动隔离执行环境）</li>
+ *   <li>Python 沙箱工具支持（通过 Docker 启动隔离执行环境）</li>
  *   <li>通过 HTTP 接口提供流式智能体推理服务</li>
  * </ul>
  *
@@ -401,19 +400,18 @@ public class AgentScopeDeployExample {
     }
 
     /**
-     * 构建沙箱服务实例，默认使用 Kubernetes 客户端配置。
+     * 构建沙箱服务实例，默认使用 Docker 客户端配置。
      *
      * @return 配置完成的 SandboxService 实例
      */
     @NotNull
     private static SandboxService buildSandboxService() {
-        // 使用默认 Kubernetes 配置（实际部署时可替换为真实集群配置）
-        var clientConfig = KubernetesClientConfig.builder().build();
+        var clientConfig = DockerClientStarter.builder().build();
         var managerConfig = ManagerConfig.builder()
-            .containerDeployment(clientConfig)
-            .build();
+                .clientStarter(clientConfig)
+                .build();
 
-        return new SandboxService(new SandboxManager(managerConfig));
+        return new SandboxService(managerConfig);
     }
 }
 ```

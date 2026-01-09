@@ -23,8 +23,7 @@ import io.agentscope.runtime.engine.agents.agentscope.tools.browser.*;
 import io.agentscope.runtime.engine.agents.agentscope.tools.fs.*;
 import io.agentscope.runtime.engine.agents.agentscope.tools.mcp.AsMCPTool;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
 import io.agentscope.runtime.sandbox.tools.McpConfigConverter;
 import org.slf4j.Logger;
@@ -299,26 +298,26 @@ public class ToolkitInit {
     }
 
     public static List<AgentTool> getMcpTools(String serverConfigs,
-                                              SandboxType sandboxType,
-                                              SandboxManager sandboxManager) {
-        return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
+                                              String sandboxType,
+                                              SandboxService sandboxService) {
+        return getMcpTools(serverConfigs, sandboxType, sandboxService, null, null);
     }
 
     public static List<AgentTool> getMcpTools(Map<String, Object> serverConfigs,
-                                              SandboxType sandboxType,
-                                              SandboxManager sandboxManager) {
-        return getMcpTools(serverConfigs, sandboxType, sandboxManager, null, null);
+                                              String sandboxType,
+                                              SandboxService sandboxService) {
+        return getMcpTools(serverConfigs, sandboxType, sandboxService, null, null);
     }
 
     public static List<AgentTool> getMcpTools(String serverConfigs,
-                                              SandboxType sandboxType,
-                                              SandboxManager sandboxManager,
+                                              String sandboxType,
+                                              SandboxService sandboxService,
                                               Set<String> whitelist,
                                               Set<String> blacklist) {
         McpConfigConverter converter = McpConfigConverter.builder()
                 .serverConfigs(serverConfigs)
                 .sandboxType(sandboxType)
-                .sandboxManager(sandboxManager)
+                .sandboxService(sandboxService)
                 .whitelist(whitelist)
                 .blacklist(blacklist)
                 .build();
@@ -327,14 +326,14 @@ public class ToolkitInit {
     }
 
     public static List<AgentTool> getMcpTools(Map<String, Object> serverConfigs,
-                                              SandboxType sandboxType,
-                                              SandboxManager sandboxManager,
+                                              String sandboxType,
+                                              SandboxService sandboxService,
                                               Set<String> whitelist,
                                               Set<String> blacklist) {
         McpConfigConverter converter = McpConfigConverter.builder()
                 .serverConfigs(serverConfigs)
                 .sandboxType(sandboxType)
-                .sandboxManager(sandboxManager)
+                .sandboxService(sandboxService)
                 .whitelist(whitelist)
                 .blacklist(blacklist)
                 .build();
@@ -343,23 +342,23 @@ public class ToolkitInit {
     }
 
     public static List<AgentTool> getMcpTools(String serverConfigs,
-                                              SandboxManager sandboxManager) {
-        return getMcpTools(serverConfigs, null, sandboxManager, null, null);
+                                              SandboxService sandboxService) {
+        return getMcpTools(serverConfigs, null, sandboxService, null, null);
     }
 
     public static List<AgentTool> getMcpTools(Map<String, Object> serverConfigs,
-                                              SandboxManager sandboxManager) {
-        return getMcpTools(serverConfigs, null, sandboxManager, null, null);
+                                              SandboxService sandboxService) {
+        return getMcpTools(serverConfigs, null, sandboxService, null, null);
     }
 
 //    public static List<AgentTool> getAllToolsWithMcp(String mcpServerConfigs,
-//                                                     SandboxType sandboxType,
-//                                                     SandboxManager sandboxManager) {
+//                                                     String sandboxType,
+//                                                     SandboxService sandboxService) {
 //        List<AgentTool> allTools = new ArrayList<>(getAllTools());
 //
 //        if (mcpServerConfigs != null && !mcpServerConfigs.trim().isEmpty()) {
 //            try {
-//                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
+//                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxService);
 //                allTools.addAll(mcpTools);
 //                logger.info(String.format("Added %d MCP tools to the toolkit", mcpTools.size()));
 //            } catch (Exception e) {
@@ -371,13 +370,13 @@ public class ToolkitInit {
 //    }
 
 //    public static List<AgentTool> getAllToolsWithMcp(Map<String, Object> mcpServerConfigs,
-//                                                     SandboxType sandboxType,
-//                                                     SandboxManager sandboxManager) {
+//                                                     String sandboxType,
+//                                                     SandboxService sandboxService) {
 //        List<AgentTool> allTools = new ArrayList<>(getAllTools());
 //
 //        if (mcpServerConfigs != null && !mcpServerConfigs.isEmpty()) {
 //            try {
-//                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxManager);
+//                List<AgentTool> mcpTools = getMcpTools(mcpServerConfigs, sandboxType, sandboxService);
 //                allTools.addAll(mcpTools);
 //                logger.info(String.format("Added %d MCP tools to the toolkit", mcpTools.size()));
 //            } catch (Exception e) {
@@ -389,24 +388,24 @@ public class ToolkitInit {
 //    }
 
     public static List<MCPTool> createMcpToolInstances(String serverConfigs,
-                                                       SandboxType sandboxType,
-                                                       SandboxManager sandboxManager) {
+                                                       String sandboxType,
+                                                       SandboxService sandboxService) {
         McpConfigConverter converter = McpConfigConverter.builder()
                 .serverConfigs(serverConfigs)
                 .sandboxType(sandboxType)
-                .sandboxManager(sandboxManager)
+                .sandboxService(sandboxService)
                 .build();
 
         return converter.toBuiltinTools();
     }
 
     public static List<MCPTool> createMcpToolInstances(Map<String, Object> serverConfigs,
-                                                       SandboxType sandboxType,
-                                                       SandboxManager sandboxManager) {
+                                                       String sandboxType,
+                                                       SandboxService sandboxService) {
         McpConfigConverter converter = McpConfigConverter.builder()
                 .serverConfigs(serverConfigs)
                 .sandboxType(sandboxType)
-                .sandboxManager(sandboxManager)
+                .sandboxService(sandboxService)
                 .build();
 
         return converter.toBuiltinTools();

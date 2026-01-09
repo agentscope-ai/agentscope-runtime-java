@@ -16,29 +16,23 @@
 package io.agentscope;
 
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
 
 @RegisterSandbox(
         imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest",
-        sandboxType = SandboxType.CUSTOM,
+        sandboxType = "custom",
         securityLevel = "medium",
         timeout = 30,
         description = "Base Sandbox"
 )
 public class CustomSandbox extends Sandbox {
 
-    public CustomSandbox(SandboxManager managerApi, String userId, String sessionId) {
-        this(managerApi, userId, sessionId, 3000);
-    }
-
     public CustomSandbox(
-            SandboxManager managerApi,
+            SandboxService managerApi,
             String userId,
-            String sessionId,
-            int timeout) {
-        super(managerApi, userId, sessionId, SandboxType.CUSTOM, timeout);
+            String sessionId) {
+        super(managerApi, userId, sessionId, "custom");
     }
 }

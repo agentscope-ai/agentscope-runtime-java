@@ -50,7 +50,7 @@
     <dependencies>
         <dependency>
             <groupId>io.agentscope</groupId>
-            <artifactId>agentscope-runtime-core</artifactId>
+            <artifactId>agentscope-runtime-engine</artifactId>
             <version>${project.version}</version>
         </dependency>
 

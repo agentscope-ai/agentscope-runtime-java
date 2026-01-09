@@ -351,10 +351,9 @@ import io.agentscope.runtime.app.AgentApp;
 import io.agentscope.runtime.engine.services.agent_state.InMemoryStateService;
 import io.agentscope.runtime.engine.services.memory.persistence.memory.service.InMemoryMemoryService;
 import io.agentscope.runtime.engine.services.memory.persistence.session.InMemorySessionHistoryService;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -364,7 +363,7 @@ import org.jetbrains.annotations.NotNull;
  * <ul>
  *   <li>Session state management (in-memory storage)</li>
  *   <li>Short-term memory (session history) and long-term memory (user-level memory store)</li>
- *   <li>Python sandbox tool support (isolated execution environment via Kubernetes)</li>
+ *   <li>Python sandbox tool support (isolated execution environment via Docker)</li>
  *   <li>Streaming agent inference service via HTTP interface</li>
  * </ul>
  *
@@ -403,19 +402,18 @@ public class AgentScopeDeployExample {
     }
 
     /**
-     * Build sandbox service instance, using Kubernetes client configuration by default.
+     * Build sandbox service instance, using Docker client configuration by default.
      *
      * @return Configured SandboxService instance
      */
     @NotNull
     private static SandboxService buildSandboxService() {
-        // Use default Kubernetes configuration (can be replaced with actual cluster configuration for deployment)
-        var clientConfig = KubernetesClientConfig.builder().build();
+        var clientConfig = DockerClientStarter.builder().build();
         var managerConfig = ManagerConfig.builder()
-            .containerDeployment(clientConfig)
-            .build();
+                .clientStarter(clientConfig)
+                .build();
 
-        return new SandboxService(new SandboxManager(managerConfig));
+        return new SandboxService(managerConfig);
     }
 }
 ```

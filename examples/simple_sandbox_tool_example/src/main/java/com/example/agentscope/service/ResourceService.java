@@ -16,7 +16,7 @@
 
 package com.example.agentscope.service;
 
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,6 +29,6 @@ public class ResourceService {
     @PreDestroy
     public void cleanup() {
         System.out.println("CloseOperation: Releasing resources...");
-        sandboxService.stop();
+        sandboxService.close();
     }
 }
