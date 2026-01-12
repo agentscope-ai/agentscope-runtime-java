@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>agentscope-runtime-engine</artifactId>
-    <version>1.0.1</version>
+    <version>${revision}</version>
     <packaging>jar</packaging>
     <name>AgentScope Runtime Core</name>
     <description>Java Implementation for AgentScope Runtime</description>
