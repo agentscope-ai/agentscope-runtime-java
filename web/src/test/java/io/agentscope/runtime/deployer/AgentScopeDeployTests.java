@@ -18,7 +18,6 @@ package io.agentscope.runtime.deployer;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -59,23 +58,11 @@ public class AgentScopeDeployTests {
 
 	@BeforeAll
 	static void setUp() {
-		URL resource = Thread.currentThread().getContextClassLoader().getResource(".env");
-		AgentApp app;
-		if (Objects.nonNull(resource)) {
-			String[] commandLine = new String[2];
-			commandLine[0] = "-f";
-			commandLine[1] = Objects.requireNonNull(resource).getPath();
-			app = new AgentApp(commandLine);
-		}
-		else {
-			// ci can not get the .env file, here it is injected through the system properties
-			System.setProperty("agent.app.port", "7779");
-			System.setProperty("agent.app.handler.provider.class", "io.agentscope.runtime.deployer.AgentScopeDeployWithCommandLineTests$MyAgentHandlerProvider");
-			System.setProperty("agent.app.sandbox.service.provider.class", "io.agentscope.runtime.deployer.AgentScopeDeployWithCommandLineTests$MySandboxServiceProvider");
-			System.setProperty("AI_DASHSCOPE_API_KEY", "your key");
-			app = new AgentApp(new String[0]);
-		}
-		AgentScopeDeployTests.app = app;
+		System.setProperty("agent.app.port", "7778");
+		System.setProperty("agent.app.handler.provider.class", "io.agentscope.runtime.deployer.AgentScopeDeployWithCommandLineTests$MyAgentHandlerProvider");
+		System.setProperty("agent.app.sandbox.service.provider.class", "io.agentscope.runtime.deployer.AgentScopeDeployWithCommandLineTests$MySandboxServiceProvider");
+		System.setProperty("AI_DASHSCOPE_API_KEY", "your key");
+		AgentScopeDeployTests.app = new AgentApp(new String[0]);
 		flag = new AtomicInteger(0);
 		app.hooks(new AbstractAppLifecycleHook() {
 			@Override
@@ -132,7 +119,7 @@ public class AgentScopeDeployTests {
 	void testCustomizeEndpoint() throws IOException, InterruptedException {
 		HttpClient client = HttpClient.newHttpClient();
 		HttpRequest request = HttpRequest.newBuilder()
-				.uri(URI.create("http://localhost:7779/test/get"))
+				.uri(URI.create("http://localhost:7778/test/get"))
 				.GET()
 				.build();
 		HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -145,14 +132,14 @@ public class AgentScopeDeployTests {
 	void testMiddleware() throws IOException, InterruptedException {
 		HttpClient client = HttpClient.newHttpClient();
 		HttpRequest requestWithoutToken = HttpRequest.newBuilder()
-				.uri(URI.create("http://localhost:7779/test/post"))
+				.uri(URI.create("http://localhost:7778/test/post"))
 				.POST(HttpRequest.BodyPublishers.ofString(""))
 				.build();
 		HttpResponse<String> response1 = client.send(requestWithoutToken, HttpResponse.BodyHandlers.ofString());
 		Assertions.assertEquals("Unauthorized", response1.body());
 
 		HttpRequest requestWithToken = HttpRequest.newBuilder()
-				.uri(URI.create("http://localhost:7779/test/post"))
+				.uri(URI.create("http://localhost:7778/test/post"))
 				.header("token", "token")  // 添加token请求头
 				.POST(HttpRequest.BodyPublishers.ofString(""))
 				.build();
