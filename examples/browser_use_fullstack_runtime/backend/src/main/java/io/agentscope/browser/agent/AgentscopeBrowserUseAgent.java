@@ -90,7 +90,7 @@ public class AgentscopeBrowserUseAgent extends AgentScopeAgentHandler {
         Sandbox sandbox = null;
         // Get browser WebSocket URL and VNC info
         try {
-            sandbox = this.sandboxService.connect(sessionId, userId, BrowserSandbox.class);
+            sandbox = new BrowserSandbox(sandboxService, userId, sessionId);
 
             // Connect to browser sandbox - use default user/session IDs for initialization
             ContainerModel sandboxInfo = sandbox.getInfo();

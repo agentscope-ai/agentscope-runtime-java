@@ -23,11 +23,10 @@ import java.util.Properties;
 import io.agentscope.runtime.adapters.AgentHandler;
 import io.agentscope.runtime.adapters.agentscope.MyAgentScopeAgentHandler;
 import io.agentscope.runtime.app.AgentApp;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.KubernetesClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 import org.junit.jupiter.api.Test;
 
 public class AgentScopeDeployWithCommandLineTests {
@@ -68,12 +67,11 @@ public class AgentScopeDeployWithCommandLineTests {
 	public static class MySandboxServiceProvider implements AgentApp.SandboxServiceProvider {
 		@Override
 		public SandboxService get(Properties properties) {
-			BaseClientConfig clientConfig = KubernetesClientConfig.builder().build();
+			BaseClientStarter clientConfig = DockerClientStarter.builder().build();
 			ManagerConfig managerConfig = ManagerConfig.builder()
-					.containerDeployment(clientConfig)
+					.clientStarter(clientConfig)
 					.build();
-			return new SandboxService(
-					new SandboxManager(managerConfig));
+			return new SandboxService(managerConfig);
 		}
 	}
 }

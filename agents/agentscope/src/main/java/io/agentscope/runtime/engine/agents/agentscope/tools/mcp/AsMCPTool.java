@@ -18,8 +18,7 @@ package io.agentscope.runtime.engine.agents.agentscope.tools.mcp;
 
 import io.agentscope.core.message.ToolResultBlock;
 import io.agentscope.runtime.engine.agents.agentscope.tools.AgentScopeSandboxAwareTool;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.model.container.SandboxType;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import io.agentscope.runtime.sandbox.tools.MCPTool;
 import reactor.core.publisher.Mono;
 
@@ -29,14 +28,14 @@ import java.util.Map;
 public class AsMCPTool extends AgentScopeSandboxAwareTool<MCPTool> {
     public AsMCPTool(String name, String toolType, String description,
                      Map<String, Object> schema, Map<String, Object> serverConfigs,
-                     SandboxType sandboxType, SandboxManager sandboxManager) {
+                     String sandboxType, SandboxService sandboxService) {
         super(new MCPTool(name,
                 toolType,
                 description,
                 schema,
                 serverConfigs,
                 sandboxType,
-                sandboxManager));
+                sandboxService));
     }
 
     public AsMCPTool(MCPTool mcpTool) {

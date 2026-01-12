@@ -43,11 +43,13 @@ import io.agentscope.runtime.engine.services.memory.persistence.memory.service.I
 import io.agentscope.runtime.engine.services.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.services.memory.service.MemoryService;
 import io.agentscope.runtime.engine.services.memory.service.SessionHistoryService;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.lifecycle.AppLifecycleHook;
-import io.agentscope.runtime.protocol.ProtocolConfig;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
 
+import io.agentscope.runtime.lifecycle.AppLifecycleHook;
+
+import io.agentscope.runtime.protocol.ProtocolConfig;
+
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
 import okio.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -171,7 +173,7 @@ public class AgentApp {
 			StateService stateService = component(properties, STATE_SERVICE_PROVIDER, StateServiceProvider.class, new InMemoryStateService());
 			SessionHistoryService sessionHistoryService = component(properties, SESSION_HISTORY_SERVICE_PROVIDER, SessionHistoryServiceProvider.class, new InMemorySessionHistoryService());
 			MemoryService memoryService = component(properties, MEMORY_SERVICE_PROVIDER, MemoryServiceProvider.class, new InMemoryMemoryService());
-			SandboxService sandboxService = component(properties, SANDBOX_SERVICE_PROVIDER, SandboxServiceProvider.class, new SandboxService(new SandboxManager()));
+			SandboxService sandboxService = component(properties, SANDBOX_SERVICE_PROVIDER, SandboxServiceProvider.class, new SandboxService(ManagerConfig.builder().build()));
 			ServiceComponentManager serviceComponentManager = new ServiceComponentManager();
 			serviceComponentManager.setStateService(stateService);
 			serviceComponentManager.setSessionHistoryService(sessionHistoryService);
@@ -483,7 +485,7 @@ public class AgentApp {
 	/**
 	 * Register custom endpoint.
 	 */
-	public AgentApp endpoint(String path, List<String> methods, Function<Map<String, Object>, Object> handler) {
+	public AgentApp endpoint(String path, List<String> methods, Function<ServerRequest, ServerResponse> handler) {
 		if (methods == null || methods.isEmpty()) {
 			methods = Arrays.asList("POST");
 		}

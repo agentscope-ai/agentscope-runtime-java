@@ -14,7 +14,7 @@
 
     <groupId>com.example</groupId>
     <artifactId>agentscope-examples-structured</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <name>AgentScope Spring MVC Demo</name>
     <description>AgentScope sample project using Spring MVC</description>
 
@@ -43,7 +43,7 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-agentscope</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </dependency>
     </dependencies>
 

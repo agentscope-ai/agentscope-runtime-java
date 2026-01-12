@@ -50,7 +50,7 @@ public class K8sDeployService {
     }
 
     /**
-     * Deploy to Kubernetes following SandboxManager's Kubernetes client logic
+     * Deploy to Kubernetes following SandboxService's Kubernetes client logic
      */
     public String deploy(String imageName, BuildConfig buildConfig, K8sConfig k8sConfig) throws Exception {
         ensureConnected(k8sConfig);

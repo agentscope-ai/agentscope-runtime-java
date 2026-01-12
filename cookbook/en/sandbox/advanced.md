@@ -6,39 +6,32 @@
 
 #### ManagerConfig Configuration
 
-| Parameter            | Type  | Description            | Default                    | Notes                                                        |
-| ----------------------| ------------ | ---------------------- | -------------------------- | ------------------------------------------------------------ |
-| `defaultSandboxType` | `List<SandboxType>` | Default sandbox type(s) (can be multiple) | `SandboxType.BASE`  | Can be a single type or a list of multiple types, enabling multiple independent sandbox warm-up pools. Valid values include `BASE`, `BROWSER`, `FILESYSTEM`, `GUI`, etc. |
-| `bearerToken` | `String` | Authentication token for calling remote runtime sandbox | `null`                    | If set to `null`, no authentication will be performed when connecting |
-| `baseUrl` | `String` | Server binding address for calling remote runtime sandbox | `null`                 | If set to `null`, local sandbox management will be used by default |
-| `containerDeployment` | `BaseClientConfig` | Container runtime      | `DockerClientConfig` | Currently supports `Docker`, `K8s`, and `AgentRun`              |
-| `poolSize` | `int` | Warm-up container pool size    | `0`       | Cached containers for faster startup. The `poolSize` parameter controls the number of pre-created containers cached in ready state. When a user requests a new sandbox, the system will first try to allocate from this warm-up pool, significantly reducing startup time compared to creating containers from scratch. For example, with `poolSize=10`, the system maintains 10 ready containers that can be immediately assigned to new requests |
-| `fileSystemConfig` | `FileSystemConfig` | Container file system configuration   | `LocalFileSystemConfig` | Manages container file system download method, defaults to `local file system`, can also use `oss` |
-| `redisConfig` | `RedisManagerConfig` | Redis support configuration | `null` | Enable Redis support, required for distributed deployment or when number of worker processes is greater than `1`, disabled by default |
+| Parameter            | Type  | Description                                               | Default                    | Notes                                                                                                                                             |
+| ----------------------| ------------ |-----------------------------------------------------------| -------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------|
+| `bearerToken` | `String` | Authentication token for calling remote runtime sandbox   | `null`                    | If set to `null`, no authentication will be performed when connecting                                                                             |
+| `baseUrl` | `String` | Server binding address for calling remote runtime sandbox | `null`                 | If set to `null`, local sandbox management will be used by default                                                                                |
+| `clientStarter` | `BaseClientStarter` | Container runtime                                         | `DockerClientStarter` | Currently supports `Docker`, `K8s`, `AgentRun` and `FC`                                                                                           |
+| `sandboxMap`         | `SandboxMap`        | Container Management                       | `InMemorySandboxMap`  | Container management uses local storage by default. Introducing the `redis-extension` allows using `redis` as the management backend. |
+| `containerPrefixKey` | `String`            | Container name prefix                                                    | `sandbox_container_`  | Prefix for created container names                                                                                                                                         |
+
 
 #### Redis Configuration
 
-> **When to use Redis:**
-> - **Single worker process (`WORKERS=1`)**: Redis is optional. The system can use memory cache to manage sandbox state, which is simpler and has lower latency.
-> - **Multiple worker processes (`WORKERS>1`)**: Redis is required to share sandbox state between worker processes and ensure consistency.
+Currently, mounting file directories is only supported under local Docker, with three types of mounts available:
 
-Redis provides caching for sandbox state and state management. If there is only one worker process, you can use memory cache:
+* Copy Mount (recommended): Configure the `storageFolderPath` and `mountDir` properties. When creating a container, the contents of the storage directory are first copied to the mount path, and the container mounts this mount path to prevent contamination of the original files. When the container shuts down, the contents of the mount path are copied back.
+* Read-only Mount: Configure `readonlyMounts`. The container directly mounts the local file system in read-only mode.
+* Read-write Zero-copy Mount (use with caution): Configure `nonCopyMount`. The container directly mounts the local file system and has full read-write permissions to the folder.
 
-| Parameter               | Description      | Default                                     | Notes            |
-| ----------------------- | ---------------- | ------------------------------------------- | ---------------- |
-| `redisServer`           | Redis server address | localhost                                   | Redis host       |
-| `redisPort`             | Redis port       | 6379                                        | Standard Redis port  |
-| `redisDb`               | Redis database number | `0`                                         | 0-15             |
-| `redisUser`             | Redis username     | `null`                                      | For Redis6+ ACL |
-| `redisPassword`         | Redis password       | `null`                                      | Authentication         |
-| `redisPortKey`          | Port tracking key       | `_runtime_sandbox_container_occupied_ports` | Internal use         |
-| `redisContainerPoolKey` | Container pool key         | `_runtime_sandbox_container_container_pool` | Internal use         |
+When using this feature, you need to pass a `FileSystemConfig` instance to the `fileSystemConfig` parameter of the `Sandbox`.
 
-#### FileSystemConfig Configuration
+##### Storage Backend
+
+###### Local Storage
 
 Defaults to `LocalFileSystemConfig`, no configuration needed for local conditions. Configuration is required when using `oss`.
 
-##### OSS Configuration
+###### OSS Configuration
 
 Use [Alibaba Cloud Object Storage Service](https://www.aliyun.com/product/oss) for distributed file storage:
 
@@ -115,25 +108,47 @@ To configure [FC](https://fcnext.console.aliyun.com/)-specific settings in the s
 | `FcLogProject`      | SLS log project    | `null`                | SLS log project name (optional)                                      |
 | `FcLogStore`        | SLS log store      | `null`                | SLS log store name (optional)                                        |
 
-### Importing Custom Sandbox
+### Importing Custom Sandboxes
 
-In addition to the default provided base sandbox types, you can also implement custom sandbox functionality by writing extension modules and loading them with the `--extension` parameter, such as modifying images, adding environment variables, defining timeouts, etc.
+In addition to the default built-in sandbox types, you can implement custom sandboxes by using the `@RegisterSandbox` annotation and extending the `Sandbox` class. This enables customization such as changing the container image, adding environment variables, defining timeout durations, and more. The application automatically scans all classes annotated with `@RegisterSandbox` at startup and registers them automatically. (Currently, only one custom sandbox is supported; future versions will allow multiple custom sandboxes.)
 
-#### Writing Custom Sandbox Extension (e.g., `CustomSandbox.java`)
+#### Implement a Custom Sandbox Extension (e.g., `CustomSandbox.java`)
 
-Refer to [Creating Custom Sandbox Class](#creating-custom-sandbox-class)
+Refer to [Custom Sandbox Class](###creating-a-custom-sandbox-class).
 
-> - `@RegisterSandbox` will register this class to the sandbox manager and can be recognized and used at startup.
-> - The `environment` field can inject external API Keys or other necessary configurations into the sandbox.
-> - The class inherits from `Sandbox` and can override its methods to implement more custom logic.
+> - The `@RegisterSandbox` annotation registers the class with the sandbox manager, making it recognizable and usable at startup.
+> - The `environment` field can inject external API keys or other required configurations into the sandbox.
+> - By inheriting from `Sandbox`, you can override its methods to implement additional custom logic.
 
-## Custom Sandbox Building
+#### Add Java SPI Scan Configuration
 
-While built-in sandbox types cover common use cases, you may encounter scenarios that require specialized environments or unique tool combinations. Creating custom sandboxes allows you to tailor the execution environment to specific needs. This section demonstrates how to build and register your custom sandbox type.
+AgentScope Runtime for Java provides `SandboxProvider` as the base class for sandbox discovery. You need to create a class in your project that implements `SandboxProvider` and includes your custom sandbox, as shown below:
 
-### Install from Source (Required for Custom Sandbox)
+```java
+import io.agentscope.runtime.sandbox.manager.registry.SandboxProvider;
 
-To create custom sandboxes, you need to use the Python version of [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime). Install AgentScope Runtime from source in editable mode, which allows you to modify code and see changes immediately:
+import java.util.Collection;
+import java.util.Collections;
+
+public class CustomSandboxProvider implements SandboxProvider {
+
+    @Override
+    public Collection<Class<?>> getSandboxClasses() {
+        // Register the custom CustomSandbox
+        return Collections.singletonList(CustomSandbox.class);
+    }
+}
+```
+
+Then, in the `resources` directory, create a folder named `META-INF/services`, and inside it, create a file named `io.agentscope.runtime.sandbox.manager.registry.SandboxProvider`. In this file, add the fully qualified class name of your `SandboxProvider` implementation, for example: `io.agentscope.CustomSandboxProvider`.
+
+## Building Custom Sandboxes
+
+Although the built-in sandbox types cover common use cases, you may encounter scenarios that require a specialized environment or a unique combination of tools. Creating a custom sandbox allows you to tailor the execution environment to your specific needs. This section demonstrates how to build and register your own custom sandbox type.
+
+### Install from Source (Required for Custom Sandboxes)
+
+To create a custom sandbox, you need to use the Python version of [AgentScope Runtime](https://github.com/agentscope-ai/agentscope-runtime). Install AgentScope Runtime from source in editable mode, which allows you to modify the code and immediately see the changes:
 
 ```bash
 git clone https://github.com/agentscope-ai/agentscope-runtime.git
@@ -143,53 +158,37 @@ pip install -e .
 ```
 
 > The `-e` (editable) flag is required when creating custom sandboxes because it allows you to:
-> - Modify sandbox code and see changes immediately without reinstalling
-> - Add your custom sandbox classes to the registry
-> - Iterate on development and testing of custom tools
+>
+> - Modify sandbox code and immediately see changes without reinstalling
+> - Add your custom sandbox class to the registry
+> - Iteratively develop and test custom tools
 
-### Creating Custom Sandbox Class
+### Create a Custom Sandbox Class
 
-You can define custom sandbox types and register them with the system to meet special requirements. Simply inherit from `Sandbox` and use the `SandboxRegistry.register` decorator, then place the file in `src/agentscope_runtime/sandbox/custom` (e.g., `src/agentscope_runtime/sandbox/custom/custom_sandbox.py`):
+You can define a custom sandbox type and register it with the system to meet specific requirements. Simply inherit from `Sandbox` and use the `@RegisterSandbox` annotation, then place the file in your project directory:
 
-```python
-import os
-
-from typing import Optional
-
-from agentscope_runtime.sandbox.utils import build_image_uri
-from agentscope_runtime.sandbox.registry import SandboxRegistry
-from agentscope_runtime.sandbox.enums import SandboxType
-from agentscope_runtime.sandbox.box.sandbox import Sandbox
-
-SANDBOXTYPE = "my_custom_sandbox"
+```java
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.registry.RegisterSandbox;
 
 
-@SandboxRegistry.register(
-    build_image_uri(f"runtime-sandbox-{SANDBOXTYPE}"),
-    sandbox_type=SANDBOXTYPE,
-    security_level="medium",
-    timeout=60,
-    description="my sandbox",
-    environment={
-        "TAVILY_API_KEY": os.getenv("TAVILY_API_KEY", ""),
-        "AMAP_MAPS_API_KEY": os.getenv("AMAP_MAPS_API_KEY", ""),
-    },
+@RegisterSandbox(
+        imageName = "agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/runtime-sandbox-browser:latest",
+        sandboxType = "custom",
+        securityLevel = "medium",
+        timeout = 30,
+        description = "Base Sandbox"
 )
-class MyCustomSandbox(Sandbox):
-    def __init__(
-        self,
-        sandbox_id: Optional[str] = None,
-        timeout: int = 3000,
-        base_url: Optional[str] = None,
-        bearer_token: Optional[str] = None,
-    ):
-        super().__init__(
-            sandbox_id,
-            timeout,
-            base_url,
-            bearer_token,
-            SandboxType(SANDBOXTYPE),
-        )
+public class CustomSandbox extends Sandbox {
+
+    public CustomSandbox(
+            SandboxService managerApi,
+            String userId,
+            String sessionId) {
+        super(managerApi, userId, sessionId, "custom");
+    }
+}
 ```
 
 ### Prepare Docker Image
