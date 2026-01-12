@@ -29,7 +29,7 @@
 
     <groupId>io.agentscope</groupId>
     <artifactId>browser-agent-backend</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <name>Example::Browser Use Backend</name>
     <description>Java backend for AgentScope browser use demo</description>
 
@@ -57,12 +57,12 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>spring-boot-starter-runtime-a2a</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </dependency>
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-agentscope</artifactId>
-            <version>1.0.1</version>
+            <version>1.0.2</version>
         </dependency>
 
 

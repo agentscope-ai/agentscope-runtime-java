@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v1.0.2
+
+### Refactor
+- Refactored the sandbox into a separate module: agentscope-runtime-sandbox
+- Moved extensible capabilities from the Sandbox module to an extension module to simplify core module dependencies
+
+### Added
+- Added support for configuring AgentApp parameters via environment variables or command-line arguments
+
 ## v1.0.1
 
 ### Fixed
