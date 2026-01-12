@@ -49,6 +49,12 @@
 
         <dependency>
             <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-runtime-engine</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.agentscope</groupId>
             <artifactId>agentscope-runtime-web</artifactId>
             <version>1.0.1</version>
         </dependency>

@@ -81,7 +81,7 @@ public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
 			if (sandboxService != null) {
 				try {
 					// Create a BaseSandbox instance for this session
-					Sandbox sandbox = sandboxService.connect(userId, sessionId, BaseSandbox.class);
+                    Sandbox sandbox = new BaseSandbox(sandboxService, userId, sessionId);
 
 					// Register Python code execution tool (matching Python: execute_python_code)
 					toolkit.registerTool(ToolkitInit.RunPythonCodeTool(sandbox));

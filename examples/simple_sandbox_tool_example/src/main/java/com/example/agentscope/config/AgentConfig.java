@@ -23,15 +23,12 @@ import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.model.DashScopeChatModel;
 import io.agentscope.core.tool.Toolkit;
 import io.agentscope.runtime.engine.agents.agentscope.tools.ToolkitInit;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.BrowserSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-import org.checkerframework.checker.units.qual.A;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -71,14 +68,12 @@ public class AgentConfig {
      */
     @Bean
     public SandboxService sandboxService() {
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientConfig(clientConfig)
                 .build();
 
-        SandboxService service = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService service = new SandboxService(managerConfig);
         service.start();
         return service;
     }
@@ -95,12 +90,10 @@ public class AgentConfig {
         toolkit.registerTool(weatherTool);
         toolkit.registerTool(calculatorTool);
         try {
-            Sandbox sandbox = sandboxService.connect("userId", "sessionId", BrowserSandbox.class);
-            toolkit.registerTool(ToolkitInit.BrowserNavigateTool(sandbox));
-            if (sandbox instanceof BrowserSandbox browserSandbox) {
-                String desktopUrl = browserSandbox.getDesktopUrl();
-                System.out.println("GUI Desktop URL: " + desktopUrl);
-            }
+            BrowserSandbox browserSandbox = new BrowserSandbox(sandboxService, "agent-user", "agent-session");
+            toolkit.registerTool(ToolkitInit.BrowserNavigateTool(browserSandbox));
+            String desktopUrl = browserSandbox.getDesktopUrl();
+            System.out.println("GUI Desktop URL: " + desktopUrl);
         } catch (Exception ignored) {
         }
         return toolkit;

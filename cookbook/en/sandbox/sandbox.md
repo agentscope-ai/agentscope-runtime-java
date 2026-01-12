@@ -5,16 +5,20 @@ AgentScope Runtime Java's Sandbox provides a **secure** and **isolated** environ
 ## Prerequisites
 
 ```{note}
-The current sandbox environment uses Docker for isolation by default. Additionally, we support Kubernetes (K8s) and Alibaba Cloud Function Compute AgentRun as remote service backends. In the future, we plan to add more third-party hosting solutions in upcoming releases.
-```
+The current sandbox environment uses Docker for isolation by default. In addition, we also support Kubernetes (K8s) and Alibaba Cloud Function Compute—AgentRun and FC—as remote service backends. In the future, we plan to integrate more third-party managed solutions in upcoming releases.```
 
 >For devices using **Apple Silicon** (such as M1/M2), we recommend the following options to run **x86** Docker environments for maximum compatibility:
 > * Docker Desktop: Please refer to the [Docker Desktop Installation Guide](https://docs.docker.com/desktop/setup/install/mac-install/) to enable Rosetta2, ensuring compatibility with x86_64 images.
 > * Colima: Ensure Rosetta 2 support is enabled. You can start [Colima](https://github.com/abiosoft/colima) with the following command for compatibility: `colima start --vm-type=vz --vz-rosetta --memory 8 --cpu 1`
 
 - Docker (default)
+
+The following deployment backends are all provided as extension modules and must be included separately when used.
+
+
 - Kubernetes
 - Alibaba Cloud Function Compute AgentRun
+- Function Compute (FC)
 
 ## Installation
 
@@ -81,36 +85,31 @@ The previous section introduced tool-centric usage, while this section introduce
 You can create different types of sandboxes through the `sandbox` SDK. Use `SandboxService` to manage sandbox lifecycle, supporting session management and sandbox reuse.
 
 ```java
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
+import com.google.gson.Gson;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
 import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-
-import com.google.gson.Gson;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 public class Main {
     public static void main(String[] args) {
-        // Create and start sandbox service
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientStarter(clientConfig)
                 .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();
 
-        // Connect to sandbox (sandbox will be automatically deleted after execution)
-        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)){
+        // Connect to a sandbox (the sandbox will be automatically deleted after execution)
+        try (Sandbox sandbox = new BaseSandbox(sandboxService, "userId", "sessionId")) {
             Gson gson = new Gson();
             String tools = gson.toJson(sandbox.listTools(""));
             System.out.println("Available tools: ");
             System.out.println(tools);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -174,15 +173,34 @@ As you can see, the base sandbox provides two tools: **run command** and **execu
 * **Base Sandbox**: Used to run **Python code** or **Shell commands** in an isolated environment.
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)){
-        System.out.println(sandbox.listTools(""));
-        if(sandbox instanceof BaseSandbox baseSandbox) {
-String pythonResult = baseSandbox.runIpythonCell("print('Hello from the sandbox!')");
-        System.out.println("Sandbox execution result: " + pythonResult);
-String shellResult = baseSandbox.runShellCommand("echo Hello, World!");
-        System.out.println("Shell command result: " + shellResult);
+import io.agentscope.runtime.sandbox.box.BaseSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to a sandbox (the sandbox will be automatically deleted after execution)
+        try (BaseSandbox baseSandbox = new BaseSandbox(sandboxService, "userId", "sessionId")) {
+            System.out.println(baseSandbox.listTools(""));
+            String pythonResult = baseSandbox.runIpythonCell("print('Hello from the sandbox!')");
+            System.out.println("Sandbox execution result: " + pythonResult);
+            String shellResult = baseSandbox.runShellCommand("echo Hello, World!");
+            System.out.println("Shell command result: " + shellResult);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-            }
+}
 ```
 
 * **GUI Sandbox**: Provides a **visual desktop environment** for mouse, keyboard, and screen-related operations.
@@ -190,20 +208,40 @@ String shellResult = baseSandbox.runShellCommand("echo Hello, World!");
   <img src="https://img.alicdn.com/imgextra/i2/O1CN01df5SaM1xKFQP4KGBW_!!6000000006424-2-tps-2958-1802.png" alt="GUI Sandbox" width="800" height="500">
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", GuiSandbox.class)){
-Gson gson = new Gson();
-String tools = gson.toJson(sandbox.listTools(""));
-System.out.println("Available tools: ");
-System.out.println(tools);
+import com.google.gson.Gson;
+import io.agentscope.runtime.sandbox.box.GuiSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
-if(sandbox instanceof GuiSandbox guiSandbox) {
-String desktopUrl = guiSandbox.getDesktopUrl();
-System.out.println("GUI Desktop URL: " + desktopUrl);
-String cursorPosition = guiSandbox.computerUse("get_cursor_position");
-System.out.println("Cursor Position: " + cursorPosition);
-String screenShot = guiSandbox.computerUse("get_screenshot");
-System.out.println("Screenshot (base64): " + screenShot);
-}
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to a sandbox (the sandbox will be automatically deleted after execution)
+        try (GuiSandbox guiSandbox = new GuiSandbox(sandboxService, "userId", "sessionId")) {
+            Gson gson = new Gson();
+            String tools = gson.toJson(guiSandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+            String desktopUrl = guiSandbox.getDesktopUrl();
+            System.out.println("GUI Desktop URL: " + desktopUrl);
+            String cursorPosition = guiSandbox.computerUse("get_cursor_position");
+            System.out.println("Cursor Position: " + cursorPosition);
+            String screenShot = guiSandbox.computerUse("get_screenshot");
+            System.out.println("Screenshot (base64): " + screenShot);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
 ```
 
@@ -212,19 +250,39 @@ System.out.println("Screenshot (base64): " + screenShot);
   <img src="https://img.alicdn.com/imgextra/i3/O1CN01VocM961vK85gWbJIy_!!6000000006153-2-tps-2730-1686.png" alt="GUI Sandbox" width="800" height="500">
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", FilesystemSandbox.class)){
-Gson gson = new Gson();
-String tools = gson.toJson(sandbox.listTools(""));
-    System.out.println("Available tools: ");
-    System.out.println(tools);
+import com.google.gson.Gson;
+import io.agentscope.runtime.sandbox.box.FilesystemSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
-    if(sandbox instanceof FilesystemSandbox filesystemSandbox) {
-String desktopUrl = filesystemSandbox.getDesktopUrl();
-        System.out.println("GUI Desktop URL: " + desktopUrl);
-String cursorPosition = filesystemSandbox.createDirectory("test");
-        System.out.println("Created directory 'test' at: " + cursorPosition);
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to a sandbox (the sandbox will be automatically deleted after execution)
+        try (FilesystemSandbox filesystemSandbox = new FilesystemSandbox(sandboxService, "userId", "sessionId")) {
+            Gson gson = new Gson();
+            String tools = gson.toJson(filesystemSandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+            String desktopUrl = filesystemSandbox.getDesktopUrl();
+            System.out.println("GUI Desktop URL: " + desktopUrl);
+            String result = filesystemSandbox.createDirectory("test");
+            System.out.println("Created directory 'test' at: " + result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-            }
+}
 ```
 
 * **Browser Sandbox**: A GUI-based sandbox for browser operations.
@@ -232,32 +290,134 @@ String cursorPosition = filesystemSandbox.createDirectory("test");
   <img src="https://img.alicdn.com/imgextra/i4/O1CN01OIq1dD1gAJMcm0RFR_!!6000000004101-2-tps-2734-1684.png" alt="GUI Sandbox" width="800" height="500">
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BrowserSandbox.class)){
-Gson gson = new Gson();
-String tools = gson.toJson(sandbox.listTools(""));
-    System.out.println("Available tools: ");
-    System.out.println(tools);
+import com.google.gson.Gson;
+import io.agentscope.runtime.sandbox.box.BrowserSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
-    if(sandbox instanceof BrowserSandbox browserSandbox) {
-String desktopUrl = browserSandbox.getDesktopUrl();
-        System.out.println("GUI Desktop URL: " + desktopUrl);
-String navigateResult = browserSandbox.navigate("https://cn.bing.com");
-        System.out.println("Navigate Result: " + navigateResult);
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to a sandbox (the sandbox will be automatically deleted after execution)
+        try (BrowserSandbox browserSandbox = new BrowserSandbox(sandboxService, "userId", "sessionId")) {
+            Gson gson = new Gson();
+            String tools = gson.toJson(browserSandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+            String desktopUrl = browserSandbox.getDesktopUrl();
+            System.out.println("GUI Desktop URL: " + desktopUrl);
+            String navigateResult = browserSandbox.navigate("https://cn.bing.com");
+            System.out.println("Navigate Result: " + navigateResult);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-            }
+}
+```
+
+* **Mobile Sandbox**: A sandbox based on an Android emulator, enabling mobile-specific operations such as tapping, swiping, text input, and taking screenshots.
+
+  <img src="https://img.alicdn.com/imgextra/i4/O1CN01yPnBC21vOi45fLy7V_!!6000000006163-2-tps-544-865.png" alt="Mobile Sandbox" height="500">
+
+
+- **Runtime Environment Requirements**
+
+    - **Linux Host**:  
+      When running the sandbox on a Linux host, the kernel must have the `binder` and `ashmem` modules loaded. If these modules are missing, install and load them by executing the following commands on the host:
+
+  ```bash
+      # 1. Install additional kernel modules
+      sudo apt update && sudo apt install -y linux-modules-extra-$(uname -r)
+  
+      # 2. Load kernel modules and create device nodes
+      sudo modprobe binder_linux devices="binder,hwbinder,vndbinder"
+      sudo modprobe ashmem_linux
+  ```
+
+    - **Architecture Compatibility**:  
+      When running on ARM64/aarch64 architectures (e.g., Apple M-series chips), compatibility or performance issues may occur. It is recommended to run the sandbox on an x86_64 architecture host.
+
+```java
+import io.agentscope.runtime.sandbox.box.MobileSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        try (MobileSandbox mobileSandbox = new MobileSandbox(sandboxService, "userId", "sessionId")) {
+            System.out.println("Listing all available tools:");
+            System.out.println(mobileSandbox.listTools(""));
+
+            System.out.println("Getting screen resolution:");
+            System.out.println(mobileSandbox.mobileGetScreenResolution());
+
+            System.out.println("Tapping at coordinates (500, 1000):");
+            System.out.println(mobileSandbox.mobileTap(500, 1000));
+
+            System.out.println("Inputting text:");
+            System.out.println(mobileSandbox.mobileInputText("Greetings from AgentScope!"));
+
+            System.out.println("Sending HOME key event (key code 3):");
+            System.out.println(mobileSandbox.mobileKeyEvent(3));
+
+            System.out.println("Taking a screenshot:");
+            String screenshotResult = mobileSandbox.mobileGetScreenshot();
+            System.out.println(screenshotResult);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
 ```
 
 * **TrainingSandbox**: Training and evaluation sandbox. For details, please refer to: [Training Sandbox](training_sandbox.md).
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", APPWorldSandbox.class)){
-        if(sandbox instanceof APPWorldSandbox appWorldSandbox){
-String profileList = appWorldSandbox.getEnvProfile("appworld","train",null);
-        System.out.println("Profile List: " + profileList);
-    } else {
-            System.err.println("Failed to connect to TrainingSandbox.");
+import io.agentscope.runtime.sandbox.box.APPWorldSandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to a sandbox (the sandbox will be automatically deleted after execution)
+        try (APPWorldSandbox appWorldSandbox = new APPWorldSandbox(sandboxService, "userId", "sessionId")) {
+            String profileList = appWorldSandbox.getEnvProfile("appworld", "train", null);
+            System.out.println("Profile List: " + profileList);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
-            }
+}
 ```
 
 * **Cloud Sandbox**: A cloud service-based sandbox environment that doesn't require local Docker containers. `CloudSandbox` is the base class for cloud sandboxes, providing a unified interface for cloud sandboxes.
@@ -270,13 +430,31 @@ String profileList = appWorldSandbox.getEnvProfile("appworld","train",null);
 * **AgentBay Sandbox**: A sandbox implementation based on AgentBay cloud service, supporting multiple image types (Linux, Windows, Browser, CodeSpace, Mobile, etc.)
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", AgentBaySandbox.class)) {
-    System.out.println(sandbox.listTools());
-    if (sandbox instanceof AgentBaySandbox agentBaySandbox) {
-        String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
-        System.out.println("Sandbox execution result: " + pythonResult);
-        String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
-        System.out.println("Shell command result: " + shellResult);
+import io.agentscope.runtime.sandbox.box.AgentBaySandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .agentBayApiKey(System.getenv("AGENTBAY_API_KEY"))
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to an AgentBay sandbox (automatically deleted after execution)
+        try (AgentBaySandbox agentBaySandbox = new AgentBaySandbox(sandboxService, "user", "session", "linux_latest")) {
+            System.out.println(agentBaySandbox.listTools());
+            String pythonResult = agentBaySandbox.runIpythonCell("print('Hello from the sandbox!')");
+            System.out.println("Sandbox execution result: " + pythonResult);
+            String shellResult = agentBaySandbox.runShellCommand("echo Hello, World!");
+            System.out.println("Shell command result: " + shellResult);
+        }
     }
 }
 ```
@@ -297,38 +475,64 @@ MCP (Model Context Protocol) is a standardized protocol that enables AI applicat
 Sandboxes support MCP server integration through the `add_mcp_servers` method. After adding, you can use `list_tools` to discover available tools and use `call_tool` to execute them.
 
 ```java
-try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)) {
-String mcpServerConfig = """
-                   {
-            "mcpServers": {
-                "time": {
-                    "command": "uvx",
-                    "args": [
-                        "mcp-server-time",
-                        "--local-timezone=America/New_York"
-                    ]
-                }
-            }
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import io.agentscope.runtime.sandbox.box.BaseSandbox;
+import io.agentscope.runtime.sandbox.box.Sandbox;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+
+import java.lang.reflect.Type;
+import java.util.Map;
+
+public class Main {
+    public static void main(String[] args) {
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        ManagerConfig managerConfig = ManagerConfig.builder()
+                .clientStarter(clientConfig)
+                .build();
+        SandboxService sandboxService = new SandboxService(managerConfig);
+        sandboxService.start();
+
+        // Connect to a sandbox (the sandbox will be automatically deleted after execution)
+        try (Sandbox sandbox = new BaseSandbox(sandboxService, "userID", "sessionID")) {
+            String mcpServerConfig = """
+                    {
+                        "mcpServers": {
+                            "time": {
+                                "command": "uvx",
+                                "args": [
+                                    "mcp-server-time",
+                                    "--local-timezone=America/New_York"
+                                ]
+                            }
+                        }
+                    }
+                    """;
+
+            Gson gson = new Gson();
+            Type mcpServerType = new TypeToken<Map<String, Object>>() {}.getType();
+            Map<String, Object> serverConfigMap = gson.fromJson(mcpServerConfig, mcpServerType);
+
+            // Add MCP servers to the sandbox
+            sandbox.addMcpServers(serverConfigMap);
+
+            // List all available tools (now including MCP tools)
+            String tools = gson.toJson(sandbox.listTools(""));
+            System.out.println("Available tools: ");
+            System.out.println(tools);
+
+            // Call an MCP-provided tool
+            String result = sandbox.callTool("get_current_time", Map.of("timezone", "America/New_York"));
+            System.out.println("Tool call result: ");
+            System.out.println(result);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        """;
-
-Gson gson = new Gson();
-Type mcpServerType = new TypeToken<Map<String, Object>>() {
-}.getType();
-Map<String, Object> serverConfigMap = gson.fromJson(mcpServerConfig, mcpServerType);
-
-    // Add MCP server to sandbox
-    sandbox.addMcpServers(serverConfigMap);
-
-    // List all available tools (now includes MCP tools)
-String tools = gson.toJson(sandbox.listTools(""));
-    System.out.println("Available tools: ");
-    System.out.println(tools);
-
-    // Use the time tool provided by MCP server
-String result = sandbox.callTool("get_current_time", Map.of("timezone", "America/New_York"));
-    System.out.println("Tool call result: ");
-    System.out.println(result);
+    }
 }
 ```
 
@@ -359,151 +563,37 @@ ManagerConfig managerConfig = ManagerConfig.builder()
 `SandboxService` provides a unified sandbox management interface, supporting management of sandbox environments for different user sessions through `session_id` and `user_id`. Using `SandboxService` gives you better control over sandbox lifecycle and enables sandbox reuse.
 
 ```java
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
 import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.ManagerConfig;
+import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
 
 public class Main {
     public static void main(String[] args) {
-        // Create and start sandbox service
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
+        // Create and start the sandbox service
+        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
+                .clientStarter(clientConfig)
                 .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
+        SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();
 
         try {
-            // Connect to sandbox, specify the required sandbox type
-            Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class);
-            if(sandbox instanceof BaseSandbox baseSandbox) {
-                // Call tool methods directly on sandbox instance
-                String pythonResult = baseSandbox.runIpythonCell("a=1");
-                System.out.println("Sandbox execution result: " + pythonResult);
-            }
-            // Using the same session_id and user_id will reuse the same sandbox instance
-            sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class);
-            if(sandbox instanceof BaseSandbox baseSandbox) {
-                // Variable a still exists because the same sandbox is reused
-                String pythonResult = baseSandbox.runIpythonCell("print(a)");
-                System.out.println("Sandbox execution result: " + pythonResult);
-            }
-            // Stop sandbox service
-            sandbox.close();
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-}
-```
+            // Connect to a sandbox, specifying the desired sandbox type
+            BaseSandbox baseSandbox = new BaseSandbox(sandboxService, "userId", "sessionId");
+            // Call tool methods directly on the sandbox instance
+            String pythonResult = baseSandbox.runIpythonCell("a=1");
+            System.out.println("Sandbox execution result: " + pythonResult);
 
-### Adding MCP Servers with Sandbox Service
+            // Using the same session_id and user_id reuses the same sandbox instance
+            baseSandbox = new BaseSandbox(sandboxService, "userId", "sessionId");
+            pythonResult = baseSandbox.runIpythonCell("print(a)");
+            System.out.println("Sandbox execution result: " + pythonResult);
 
-```java
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-
-import java.lang.reflect.Type;
-import java.util.Map;
-
-public class Main {
-    public static void main(String[] args) {
-        BaseClientConfig clientConfig = DockerClientConfig.builder().build();
-        ManagerConfig managerConfig = ManagerConfig.builder()
-                .containerDeployment(clientConfig)
-                .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
-        sandboxService.start();
-
-        try (Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class)) {
-            String mcpServerConfig = """
-                               {
-                        "mcpServers": {
-                            "time": {
-                                "command": "uvx",
-                                "args": [
-                                    "mcp-server-time",
-                                    "--local-timezone=America/New_York"
-                                ]
-                            }
-                        }
-                    }
-                    """;
-
-            Gson gson = new Gson();
-            Type mcpServerType = new TypeToken<Map<String, Object>>() {
-            }.getType();
-            Map<String, Object> serverConfigMap = gson.fromJson(mcpServerConfig, mcpServerType);
-
-            // Add MCP server to sandbox
-            sandbox.addMcpServers(serverConfigMap);
-
-            // List all available tools (now includes MCP tools)
-            String tools = gson.toJson(sandbox.listTools(""));
-            System.out.println("Available tools: ");
-            System.out.println(tools);
-
-            // Use the time tool provided by MCP server
-            String result = sandbox.callTool("get_current_time", Map.of("timezone", "America/New_York"));
-            System.out.println("Tool call result: ");
-            System.out.println(result);
+            // Close the sandbox explicitly
+            baseSandbox.close();
         } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-}
-```
-
-### Connecting to Remote Sandbox with Sandbox Service
-
-```java
-import io.agentscope.runtime.engine.services.sandbox.SandboxService;
-import io.agentscope.runtime.sandbox.box.BaseSandbox;
-import io.agentscope.runtime.sandbox.box.Sandbox;
-import io.agentscope.runtime.sandbox.manager.SandboxManager;
-import io.agentscope.runtime.sandbox.manager.client.config.BaseClientConfig;
-import io.agentscope.runtime.sandbox.manager.client.config.DockerClientConfig;
-import io.agentscope.runtime.sandbox.manager.model.ManagerConfig;
-
-public class Main {
-    public static void main(String[] args) {
-        // Create and start sandbox service
-        ManagerConfig managerConfig = ManagerConfig.builder()
-                .baseUrl("http://remote-host:port")
-                .build();
-        SandboxService sandboxService = new SandboxService(
-                new SandboxManager(managerConfig)
-        );
-        sandboxService.start();
-
-        try {
-            // Connect to sandbox, specify the required sandbox type
-            Sandbox sandbox = sandboxService.connect("sessionId", "userId", BaseSandbox.class);
-            if(sandbox instanceof BaseSandbox baseSandbox) {
-                // Call tool methods directly on sandbox instance
-                String pythonResult = baseSandbox.runIpythonCell("a=1");
-                System.out.println("Sandbox execution result: " + pythonResult);
-            }
-            // Stop sandbox service
-            sandbox.close();
-        }
-        catch (Exception e) {
             e.printStackTrace();
         }
     }
