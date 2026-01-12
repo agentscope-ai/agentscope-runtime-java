@@ -21,6 +21,7 @@ import io.agentscope.runtime.engine.DeployManager;
 import io.agentscope.runtime.engine.Runner;
 import io.agentscope.runtime.protocol.Protocol;
 import io.agentscope.runtime.protocol.ProtocolConfig;
+import jakarta.servlet.Filter;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,18 +29,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ApplicationContext;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.function.HandlerFunction;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
-import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import java.util.HashMap;
@@ -59,6 +59,7 @@ public class LocalDeployManager implements DeployManager {
 	private final List<ProtocolConfig> protocolConfigs;
 	private final Consumer<CorsRegistry> corsConfigurer;
 	private final List<AgentApp.EndpointInfo> customEndpoints;
+	private final List<FilterRegistrationBean<? extends Filter>> middlewares;
 
 
 	private LocalDeployManager(LocalDeployerManagerBuilder builder) {
@@ -69,6 +70,7 @@ public class LocalDeployManager implements DeployManager {
 		this.protocolConfigs = builder.protocolConfigs;
 		this.corsConfigurer = builder.corsConfigurer;
 		this.customEndpoints = builder.customEndpoints;
+		this.middlewares = builder.middlewares;
 	}
 
 	@Override
@@ -119,20 +121,51 @@ public class LocalDeployManager implements DeployManager {
 							}
 						});
 					}
-					if (customEndpoints != null) {
-						RouterFunctions.Builder route = RouterFunctions.route();
-						for (AgentApp.EndpointInfo customEndpoint : customEndpoints) {
-							route.POST(customEndpoint.path, request -> customEndpoint.handler.apply(request));
-
-
-						}
-						ctx.registerBean(RouterFunction.class,route.build());
+					if (customEndpoints != null && !customEndpoints.isEmpty()) {
+						RouterFunction<ServerResponse> routerFunction = routerFunction();
+						ctx.registerBean(routerFunction.getClass(), routerFunction);
 					}
-
+					if (middlewares != null && !middlewares.isEmpty()) {
+						for (FilterRegistrationBean<? extends Filter> bean : middlewares) {
+							ctx.registerBean(bean.getFilterName(), FilterRegistrationBean.class, () -> bean);
+						}
+					}
 				})
 				.run();
-
 		logger.info("Streaming deployment completed for endpoint: {}", endpointName);
+	}
+
+
+	protected RouterFunction<ServerResponse> routerFunction() {
+		RouterFunctions.Builder route = RouterFunctions.route();
+		for (AgentApp.EndpointInfo customEndpoint : customEndpoints) {
+			List<String> methods = customEndpoint.methods;
+			if (methods == null || methods.isEmpty()) {
+				continue;
+			}
+			if (methods.contains(HttpMethod.GET.name())) {
+				route.GET(customEndpoint.path, request -> customEndpoint.handler.apply(request));
+			}
+			if (methods.contains(HttpMethod.HEAD.name())) {
+				route.HEAD(customEndpoint.path, request -> customEndpoint.handler.apply(request));
+			}
+			if (methods.contains(HttpMethod.POST.name())) {
+				route.POST(customEndpoint.path, request -> customEndpoint.handler.apply(request));
+			}
+			if (methods.contains(HttpMethod.PUT.name())) {
+				route.PUT(customEndpoint.path, request -> customEndpoint.handler.apply(request));
+			}
+			if (methods.contains(HttpMethod.DELETE.name())) {
+				route.DELETE(customEndpoint.path, request -> customEndpoint.handler.apply(request));
+			}
+			if (methods.contains(HttpMethod.PATCH.name())) {
+				route.PATCH(customEndpoint.path, request -> customEndpoint.handler.apply(request));
+			}
+			if (methods.contains(HttpMethod.OPTIONS.name())) {
+				route.OPTIONS(customEndpoint.path, request -> customEndpoint.handler.apply(request));
+			}
+		}
+		return route.build();
 	}
 
 	@Override
@@ -176,6 +209,7 @@ public class LocalDeployManager implements DeployManager {
 		private List<ProtocolConfig> protocolConfigs = List.of();
 		private Consumer<CorsRegistry> corsConfigurer;
 		private List<AgentApp.EndpointInfo> customEndpoints;
+		private List<FilterRegistrationBean<? extends Filter>> middlewares;
 
 		public LocalDeployerManagerBuilder endpointName(String endpointName) {
 			this.endpointName = endpointName;
@@ -209,6 +243,11 @@ public class LocalDeployManager implements DeployManager {
 
 		public LocalDeployerManagerBuilder customEndpoints(List<AgentApp.EndpointInfo> customEndpoints) {
 			this.customEndpoints = customEndpoints;
+			return this;
+		}
+
+		public LocalDeployerManagerBuilder middlewares(List<FilterRegistrationBean<? extends Filter>> middlewares) {
+			this.middlewares = middlewares;
 			return this;
 		}
 

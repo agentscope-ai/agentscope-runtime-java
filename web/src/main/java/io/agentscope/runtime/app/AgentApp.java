@@ -43,17 +43,20 @@ import io.agentscope.runtime.engine.services.memory.persistence.memory.service.I
 import io.agentscope.runtime.engine.services.memory.persistence.session.InMemorySessionHistoryService;
 import io.agentscope.runtime.engine.services.memory.service.MemoryService;
 import io.agentscope.runtime.engine.services.memory.service.SessionHistoryService;
-
-import io.agentscope.runtime.lifecycle.AppLifecycleHook;
-
+import io.agentscope.runtime.hook.AppLifecycleHook;
+import io.agentscope.runtime.hook.HookContext;
 import io.agentscope.runtime.protocol.ProtocolConfig;
 
 import io.agentscope.runtime.sandbox.manager.ManagerConfig;
 import io.agentscope.runtime.sandbox.manager.SandboxService;
+import io.agentscope.runtime.sandbox.manager.client.container.BaseClientStarter;
+import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClientStarter;
+import jakarta.servlet.Filter;
 import okio.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -61,11 +64,11 @@ import org.springframework.web.servlet.function.ServerResponse;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
-import static io.agentscope.runtime.lifecycle.AppLifecycleHook.AFTER_RUN;
-import static io.agentscope.runtime.lifecycle.AppLifecycleHook.AFTER_STOP;
-import static io.agentscope.runtime.lifecycle.AppLifecycleHook.BEFORE_RUN;
-import static io.agentscope.runtime.lifecycle.AppLifecycleHook.BEFORE_STOP;
-import static io.agentscope.runtime.lifecycle.AppLifecycleHook.JVM_EXIT;
+import static io.agentscope.runtime.hook.AppLifecycleHook.AFTER_RUN;
+import static io.agentscope.runtime.hook.AppLifecycleHook.AFTER_STOP;
+import static io.agentscope.runtime.hook.AppLifecycleHook.BEFORE_RUN;
+import static io.agentscope.runtime.hook.AppLifecycleHook.BEFORE_STOP;
+import static io.agentscope.runtime.hook.AppLifecycleHook.JVM_EXIT;
 
 
 /**
@@ -97,6 +100,7 @@ public class AgentApp {
 	private AgentHandler adapter;
 	private volatile Runner runner;
 	private DeployManager deployManager;
+	private volatile HookContext hookContext;
 
 	// Configuration
 	private String endpointPath;
@@ -105,6 +109,7 @@ public class AgentApp {
 	private boolean stream = true;
 	private String responseType = "sse";
 	private Consumer<CorsRegistry> corsConfigurer;
+	private final List<FilterRegistrationBean<? extends Filter>> middlewares = new ArrayList<>();
 
 	private final List<EndpointInfo> customEndpoints = new ArrayList<>();
 	private final List<AppLifecycleHook> hooks = new ArrayList<>();
@@ -173,7 +178,8 @@ public class AgentApp {
 			StateService stateService = component(properties, STATE_SERVICE_PROVIDER, StateServiceProvider.class, new InMemoryStateService());
 			SessionHistoryService sessionHistoryService = component(properties, SESSION_HISTORY_SERVICE_PROVIDER, SessionHistoryServiceProvider.class, new InMemorySessionHistoryService());
 			MemoryService memoryService = component(properties, MEMORY_SERVICE_PROVIDER, MemoryServiceProvider.class, new InMemoryMemoryService());
-			SandboxService sandboxService = component(properties, SANDBOX_SERVICE_PROVIDER, SandboxServiceProvider.class, new SandboxService(ManagerConfig.builder().build()));
+			BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+			SandboxService sandboxService = component(properties, SANDBOX_SERVICE_PROVIDER, SandboxServiceProvider.class, new SandboxService(ManagerConfig.builder().clientStarter(clientConfig).build()));
 			ServiceComponentManager serviceComponentManager = new ServiceComponentManager();
 			serviceComponentManager.setStateService(stateService);
 			serviceComponentManager.setSessionHistoryService(sessionHistoryService);
@@ -460,32 +466,34 @@ public class AgentApp {
 					.endpointName(endpointPath)
 					.protocolConfigs(protocolConfigs)
 					.corsConfigurer(corsConfigurer)
+					.customEndpoints(customEndpoints)
+					.middlewares(middlewares)
 					.build();
 		}
 
 		buildRunner();
 		logger.info("[AgentApp] Starting AgentApp with endpoint: {}, host: {}, port: {}", endpointPath, host, port);
-		AgentApp app = this;
+		this.hookContext = new HookContext(this,deployManager);
 		List<AppLifecycleHook> lifecycleHooks = hooks.stream()
 				.sorted(Comparator.comparingInt(AppLifecycleHook::priority)).toList();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> lifecycleHooks.stream().filter(e -> ((JVM_EXIT & e.operation()) != 0))
-				.forEach(lifecycle -> lifecycle.onJvmExit(app, deployManager))));
+				.forEach(lifecycle -> lifecycle.onJvmExit(hookContext))));
 		lifecycleHooks.stream()
 				.filter(e -> ((BEFORE_RUN & e.operation()) != 0))
-				.forEach(lifecycle -> lifecycle.beforeRun(app, deployManager));
+				.forEach(lifecycle -> lifecycle.beforeRun(hookContext));
 		// Deploy via DeployManager
 		deployManager.deploy(runner);
 		logger.info("[AgentApp] AgentApp started successfully on {}:{}{}", host, port, endpointPath);
 		lifecycleHooks.stream()
 				.filter(e -> ((AFTER_RUN & e.operation()) != 0))
-				.forEach(lifecycle -> lifecycle.afterRun(app, deployManager));
+				.forEach(lifecycle -> lifecycle.afterRun(hookContext));
 	}
 
 	/**
 	 * Register custom endpoint.
 	 */
-	public AgentApp endpoint(String path, List<String> methods, Function<ServerRequest, ServerResponse> handler) {
+	public AgentApp endpoint(String path, List<String> methods, Function<ServerRequest,ServerResponse> handler) {
 		if (methods == null || methods.isEmpty()) {
 			methods = Arrays.asList("POST");
 		}
@@ -497,6 +505,22 @@ public class AgentApp {
 		customEndpoints.add(endpointInfo);
 
 		return this;
+	}
+
+	/**
+	 * Register filter.
+	 */
+	public AgentApp middleware(FilterRegistrationBean<Filter> filter) {
+		this.middlewares.add(filter);
+		return this;
+	}
+
+	public List<FilterRegistrationBean<? extends Filter>> middlewares() {
+		return middlewares;
+	}
+
+	public List<AppLifecycleHook> hooks() {
+		return hooks;
 	}
 
 	// Getters and setters
@@ -535,6 +559,8 @@ public class AgentApp {
 	public List<EndpointInfo> getCustomEndpoints() {
 		return customEndpoints;
 	}
+
+
 
 	/**
 	 * Endpoint information.
@@ -649,17 +675,16 @@ public class AgentApp {
 				return;
 			}
 			if (Objects.nonNull(deployManager)) {
-				AgentApp app = this;
 				List<AppLifecycleHook> lifecycleHooks = hooks.stream()
 						.sorted(Comparator.comparingInt(AppLifecycleHook::priority)).toList();
 				lifecycleHooks.stream()
 						.filter(e -> ((BEFORE_STOP & e.operation()) != 0))
-						.forEach(lifecycle -> lifecycle.beforeStop(app, deployManager));
+						.forEach(lifecycle -> lifecycle.beforeStop(hookContext));
 				deployManager.undeploy();
 				stopped.set(true);
 				lifecycleHooks.stream()
 						.filter(e -> ((AFTER_STOP & e.operation()) != 0))
-						.forEach(lifecycle -> lifecycle.afterStop(app, deployManager));
+						.forEach(lifecycle -> lifecycle.afterStop(hookContext));
 			}
 		}
 	}
