@@ -85,6 +85,96 @@ agentApp.run("localhost", 10001);
 
 ------
 
+
+
+
+## Custom endpoint
+
+**Feature**
+
+Allows the injection of custom endpoints when starting the 'AgentApp'.
+**Usage Example**
+
+```java
+AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.endpoint("/test/post", List.of("POST"), serverRequest -> ServerResponse.ok().body("OK"));
+agentApp.run("localhost", 10001);
+```
+
+**Notes**
+
+- The incoming lambda will act directly on Spring's 'RouterFunction', route according to the http method, the input parameter is limited to ServerRequest, and the return value is limited to ServerResponse.
+
+------
+
+## Lifecycle hooks
+
+**Feature**
+
+Allows before and after launching the 'AgentApp'; before and after destroying 'AgentApp'; Exit 'jvm' and do the corresponding processing.
+**Usage Example**
+
+```java
+AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.hooks(new AbstractAppLifecycleHook() {
+   @Override
+   public int operation() {
+      return BEFORE_RUN | AFTER_RUN | JVM_EXIT;
+   }
+
+   @Override
+   public void beforeRun(HookContext context) {
+      System.out.println("beforeRun");
+   }
+
+   @Override
+   public void afterRun(HookContext context) {
+      System.out.println("afterRun");
+   }
+});
+agentApp.run("localhost", 10001);
+```
+
+**Notes**
+
+- The incoming AbstractAppLifecycleHook implementation class will act directly on the 'AgentApp' and sort by weight (natural order by integer), and pass in the 'HookContext' (wrapping 'AgentApp', 'DeployManager') instance for processing, and the context's extraInfo is used to pass cross-method, cross-thread variables.------
+
+
+## middleware
+
+**Feature**
+
+Allows the injection of Filter in the spring context when starting 'AgentApp'.
+**Usage Example**
+
+```java
+AgentApp agentApp = new AgentApp(agentHandler);
+FilterRegistrationBean<Filter> filterRegistrationBean = new FilterRegistrationBean<>();
+		filterRegistrationBean.setFilter(new MyFilter());
+        filterRegistrationBean.setBeanName("myFilter");
+		filterRegistrationBean.setUrlPatterns(List.of("/test/get"));
+        filterRegistrationBean.setOrder(-1);
+agentApp.middleware(filterRegistrationBean);
+agentApp.run("localhost", 10001);
+
+
+public static class MyFilter implements Filter{
+
+   @Override
+   public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+      HttpServletRequest request = (HttpServletRequest) servletRequest;
+      LOG.info("Current request uri = {}",request.getRequestURI());
+      filterChain.doFilter(servletRequest,servletResponse);
+   }
+}
+```
+
+**Notes**
+
+- Based on the servlet specification, it will directly act on the spring context object associated with 'AgentApp' for authentication, request counting, etc., and webflux is not supported at this time.
+------
+
+
 ## A2A Streaming Output (SSE)
 
 **Features**

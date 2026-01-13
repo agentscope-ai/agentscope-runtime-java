@@ -83,6 +83,98 @@ agentApp.run("localhost", 10001);
 
 ------
 
+
+## 自定义服务端点
+
+**功能**
+
+允许在启动 `AgentApp` 时注入自定义端点。
+
+**用法示例**
+
+```java
+AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.endpoint("/test/post", List.of("POST"), serverRequest -> ServerResponse.ok().body("OK"));
+agentApp.run("localhost", 10001);
+```
+
+**说明**
+
+- 传入的 lambda 将直接作用于 Spring 的 `RouterFunction`，根据http method的不同进行route，入参限制为ServerRequest，返回值限制为ServerResponse。
+
+------
+
+## 生命周期钩子
+
+**功能**
+
+允许在启动 `AgentApp` 前、后；销毁`AgentApp`前、后；退出`jvm`后做对应处理。
+
+**用法示例**
+
+```java
+AgentApp agentApp = new AgentApp(agentHandler);
+agentApp.hooks(new AbstractAppLifecycleHook() {
+   @Override
+   public int operation() {
+      return BEFORE_RUN | AFTER_RUN | JVM_EXIT;
+   }
+
+   @Override
+   public void beforeRun(HookContext context) {
+      System.out.println("beforeRun");
+   }
+
+   @Override
+   public void afterRun(HookContext context) {
+      System.out.println("afterRun");
+   }
+});
+agentApp.run("localhost", 10001);
+```
+
+**说明**
+
+- 传入的 AbstractAppLifecycleHook实现类 将直接作用于 `AgentApp`并按权重（整数自然排序），并传入`HookContext`(包装`AgentApp`、`DeployManager`)实例进行处理，context的extraInfo用于传递跨方法、跨线程变量。
+------
+
+
+## 中间件
+
+**功能**
+
+允许在启动 `AgentApp` 前往spring上下文注入Filter。
+
+**用法示例**
+
+```java
+AgentApp agentApp = new AgentApp(agentHandler);
+FilterRegistrationBean<Filter> filterRegistrationBean = new FilterRegistrationBean<>();
+		filterRegistrationBean.setFilter(new MyFilter());
+        filterRegistrationBean.setBeanName("myFilter");
+		filterRegistrationBean.setUrlPatterns(List.of("/test/get"));
+        filterRegistrationBean.setOrder(-1);
+agentApp.middleware(filterRegistrationBean);
+agentApp.run("localhost", 10001);
+
+
+public static class MyFilter implements Filter{
+
+   @Override
+   public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+      HttpServletRequest request = (HttpServletRequest) servletRequest;
+      LOG.info("Current request uri = {}",request.getRequestURI());
+      filterChain.doFilter(servletRequest,servletResponse);
+   }
+}
+```
+
+**说明**
+
+- 基于servlet规范，将直接作用于 `AgentApp`关联的spring上下文对象，用于鉴权、请求计数等，目前暂不支持webflux。
+------
+
+
 ## A2A 流式输出（SSE）
 
 **功能**

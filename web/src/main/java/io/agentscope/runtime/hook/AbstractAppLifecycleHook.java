@@ -13,10 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.agentscope.runtime.engine;
 
+package io.agentscope.runtime.hook;
 
-public interface DeployManager {
-    void deploy(Runner runner);
-    void undeploy();
+public abstract class AbstractAppLifecycleHook implements AppLifecycleHook {
+
+	protected int operation;
+
+	public AbstractAppLifecycleHook(){
+		this.operation = ALL;
+	}
+
 }
