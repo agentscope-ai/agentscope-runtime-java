@@ -677,14 +677,18 @@ public class AgentApp {
 			if (Objects.nonNull(deployManager)) {
 				List<AppLifecycleHook> lifecycleHooks = hooks.stream()
 						.sorted(Comparator.comparingInt(AppLifecycleHook::priority)).toList();
-				lifecycleHooks.stream()
-						.filter(e -> ((BEFORE_STOP & e.operation()) != 0))
-						.forEach(lifecycle -> lifecycle.beforeStop(hookContext));
+				if (Objects.nonNull(hookContext)){
+					lifecycleHooks.stream()
+							.filter(e -> ((BEFORE_STOP & e.operation()) != 0))
+							.forEach(lifecycle -> lifecycle.beforeStop(hookContext));
+				}
 				deployManager.undeploy();
 				stopped.set(true);
-				lifecycleHooks.stream()
-						.filter(e -> ((AFTER_STOP & e.operation()) != 0))
-						.forEach(lifecycle -> lifecycle.afterStop(hookContext));
+				if (Objects.nonNull(hookContext)){
+					lifecycleHooks.stream()
+							.filter(e -> ((AFTER_STOP & e.operation()) != 0))
+							.forEach(lifecycle -> lifecycle.afterStop(hookContext));
+				}
 			}
 		}
 	}
