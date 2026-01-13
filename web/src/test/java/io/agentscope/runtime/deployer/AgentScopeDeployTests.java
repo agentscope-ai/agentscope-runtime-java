@@ -46,7 +46,9 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.web.servlet.function.ServerResponse;
 
 import static io.agentscope.runtime.hook.AppLifecycleHook.AFTER_RUN;
+import static io.agentscope.runtime.hook.AppLifecycleHook.AFTER_STOP;
 import static io.agentscope.runtime.hook.AppLifecycleHook.BEFORE_RUN;
+import static io.agentscope.runtime.hook.AppLifecycleHook.BEFORE_STOP;
 
 public class AgentScopeDeployTests {
 
@@ -67,7 +69,7 @@ public class AgentScopeDeployTests {
 		app.hooks(new AbstractAppLifecycleHook() {
 			@Override
 			public int operation() {
-				return BEFORE_RUN | AFTER_RUN | JVM_EXIT;
+				return ALL;
 			}
 
 			@Override
@@ -78,6 +80,16 @@ public class AgentScopeDeployTests {
 			@Override
 			public void afterRun(HookContext context) {
 				flag.set(flag.get() | AFTER_RUN);
+			}
+
+			@Override
+			public void beforeStop(HookContext context) {
+				flag.set(flag.get() | BEFORE_STOP);
+			}
+
+			@Override
+			public void afterStop(HookContext context) {
+				flag.set(flag.get() | AFTER_STOP);
 			}
 		});
 		uuid = UUID.randomUUID();
@@ -125,7 +137,6 @@ public class AgentScopeDeployTests {
 		HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 		Assertions.assertEquals(response.body(), uuid.toString());
 
-
 	}
 
 	@Test
@@ -140,13 +151,20 @@ public class AgentScopeDeployTests {
 
 		HttpRequest requestWithToken = HttpRequest.newBuilder()
 				.uri(URI.create("http://localhost:7778/test/post"))
-				.header("token", "token")  // 添加token请求头
+				.header("token", "token")  // add token to header
 				.POST(HttpRequest.BodyPublishers.ofString(""))
 				.build();
 
 		HttpResponse<String> response2 = client.send(requestWithToken, HttpResponse.BodyHandlers.ofString());
 		Assertions.assertEquals("OK", response2.body());
 
+	}
+
+	@Test
+	void testShutdown() {
+		app.stop();
+		Assertions.assertTrue((flag.get() & BEFORE_STOP) > 0);
+		Assertions.assertTrue((flag.get() & AFTER_STOP) > 0);
 	}
 
 	public static class MyAgentHandlerProvider implements AgentApp.AgentHandlerProvider {
