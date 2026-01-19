@@ -37,4 +37,6 @@ public interface SandboxMap {
     boolean containSandbox(SandboxKey sandboxKey);
 
     boolean containSandbox(String containerId);
+
+    long getTTL(String containerId);
 }

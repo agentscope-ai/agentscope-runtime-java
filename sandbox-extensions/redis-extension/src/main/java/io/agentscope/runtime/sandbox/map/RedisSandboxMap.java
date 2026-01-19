@@ -40,15 +40,27 @@ public class RedisSandboxMap implements SandboxMap {
 
     private static final String MAIN_DATA_PREFIX = "sandbox:";
 
+    private final int expirationSeconds;
+
     public RedisSandboxMap(RedisManagerConfig redisManagerConfig) {
         try {
             this.redisClient = new RedisClientWrapper(redisManagerConfig);
             String pong = this.redisClient.ping();
             logger.info("Redis connection test: {}", pong);
             this.objectMapper = new ObjectMapper();
+            this.expirationSeconds = redisManagerConfig.getExpirationSeconds();
         } catch (Exception e) {
             logger.error("Failed to initialize Redis client: {}", e.getMessage());
             throw new RuntimeException("Failed to initialize Redis", e);
+        }
+    }
+
+    private void refreshExpiration(String... keys) {
+        if (expirationSeconds > 0) {
+            long ttl = (long) expirationSeconds + 10;
+            for (String key : keys) {
+                redisClient.expire(key, ttl);
+            }
         }
     }
 
@@ -88,6 +100,8 @@ public class RedisSandboxMap implements SandboxMap {
             redisClient.set(idToKeyKey, sandboxKeyJson);
             redisClient.set(idToModelKey, containerJson);
 
+            refreshExpiration(keyToIdKey, idToKeyKey, idToModelKey);
+
             logger.info("Added container {} with key {} and id {}",
                     containerModel.getContainerName(), keyToIdKey, containerId);
         } catch (JsonProcessingException e) {
@@ -109,6 +123,9 @@ public class RedisSandboxMap implements SandboxMap {
         if (json == null || json.isEmpty()) {
             return null;
         }
+
+        refreshExpiration(keyToIdKey, getIdToKeyKey(containerId), idToModelKey);
+
         try {
             ContainerModel model = objectMapper.readValue(json, ContainerModel.class);
             logger.debug("Retrieved container {} from Redis", model.getContainerName());
@@ -127,6 +144,22 @@ public class RedisSandboxMap implements SandboxMap {
         if (json == null || json.isEmpty()) {
             return null;
         }
+
+        String idToKeyKey = getIdToKeyKey(containerId);
+        String sandboxKeyJson = redisClient.get(idToKeyKey);
+        if (sandboxKeyJson != null && !sandboxKeyJson.isEmpty()) {
+            try {
+                SandboxKey key = objectMapper.readValue(sandboxKeyJson, SandboxKey.class);
+                String keyToIdKey = getKeyToIdKey(key);
+                refreshExpiration(keyToIdKey, idToKeyKey, idToModelKey);
+            } catch (JsonProcessingException e) {
+                logger.warn("Failed to deserialize SandboxKey when refreshing expiration for containerId: {}", e.getMessage());
+                refreshExpiration(idToKeyKey, idToModelKey);
+            }
+        } else {
+            refreshExpiration(idToKeyKey, idToModelKey);
+        }
+
         try {
             ContainerModel model = objectMapper.readValue(json, ContainerModel.class);
             logger.debug("Retrieved container {} from Redis", model.getContainerName());
@@ -217,5 +250,12 @@ public class RedisSandboxMap implements SandboxMap {
 
         logger.debug("Retrieved {} sandboxes from Redis", result.size());
         return result;
+    }
+
+    @Override
+    public long getTTL(String containerId) {
+        if (containerId == null || containerId.isEmpty()) return -1;
+        String idToModelKey = getIdToModelKey(containerId);
+        return redisClient.ttl(idToModelKey);
     }
 }

@@ -46,6 +46,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class SandboxService implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(SandboxService.class);
@@ -55,6 +58,7 @@ public class SandboxService implements AutoCloseable {
     private static final String BROWSER_SESSION_ID = "123e4567-e89b-12d3-a456-426614174000";
     private final RemoteHttpClient remoteHttpClient;
     private AgentBayClient agentBayClient;
+    private ScheduledExecutorService cleanupExecutor;
 
     public SandboxService(ManagerConfig managerConfig) {
         this.managerConfig = managerConfig;
@@ -74,7 +78,34 @@ public class SandboxService implements AutoCloseable {
         if (managerConfig.getAgentBayApiKey() != null && !managerConfig.getAgentBayApiKey().isEmpty()) {
             agentBayClient = new AgentBayClient(managerConfig.getAgentBayApiKey());
         }
+        startCleanupTask();
         logger.info("SandboxService started.");
+    }
+
+    private void startCleanupTask() {
+        this.cleanupExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread thread = new Thread(r, "sandbox-cleanup-task");
+            thread.setDaemon(true);
+            return thread;
+        });
+        this.cleanupExecutor.scheduleAtFixedRate(this::cleanupExpiredSandboxes, 5, 5, TimeUnit.SECONDS);
+        logger.info("Scheduled cleanup task every 5 seconds");
+    }
+
+    private void cleanupExpiredSandboxes() {
+        try {
+            Map<String, ContainerModel> allSandboxes = sandboxMap.getAllSandboxes();
+            for (Map.Entry<String, ContainerModel> entry : allSandboxes.entrySet()) {
+                String containerId = entry.getKey();
+                long ttl = sandboxMap.getTTL(containerId);
+                if (ttl > 0 && ttl < 10) {
+                    logger.info("Sandbox {} is expiring (TTL: {}s), removing...", containerId, ttl);
+                    removeSandbox(containerId);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error during scheduled cleanup task: {}", e.getMessage());
+        }
     }
 
     public String createAgentBayContainer(AgentBaySandbox sandbox) {
@@ -460,6 +491,17 @@ public class SandboxService implements AutoCloseable {
 
     @Override
     public void close() {
+        if (cleanupExecutor != null) {
+            cleanupExecutor.shutdown();
+            try {
+                if (!cleanupExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+                    cleanupExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                cleanupExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
         cleanupAllSandboxes();
     }
 
@@ -565,5 +607,9 @@ public class SandboxService implements AutoCloseable {
 
     public AgentBayClient getAgentBayClient() {
         return agentBayClient;
+    }
+
+    public void stop(){
+        cleanupAllSandboxes();
     }
 }

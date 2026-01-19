@@ -97,4 +97,9 @@ public class InMemorySandboxMap implements SandboxMap{
         }
         return idContainerMap.containsKey(containerId);
     }
+
+    @Override
+    public long getTTL(String containerId) {
+        return -1;
+    }
 }
