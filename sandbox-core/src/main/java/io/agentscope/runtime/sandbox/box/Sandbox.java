@@ -128,7 +128,7 @@ public class Sandbox implements AutoCloseable {
         return environment;
     }
 
-    public FileSystemConfig getFileSystemStarter() {
+    public FileSystemConfig getFileSystemConfig() {
         return fileSystemConfig;
     }
 
