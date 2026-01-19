@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InMemorySandboxMap implements SandboxMap{
     private final Map<String, ContainerModel> idContainerMap = new ConcurrentHashMap<>();
     private final Map<SandboxKey, String> keyIdMap = new ConcurrentHashMap<>();
+    private final Map<String, Long> refCountMap = new ConcurrentHashMap<>();
 
     @Override
     public void addSandbox(SandboxKey sandboxKey, ContainerModel containerModel) {
@@ -101,5 +102,26 @@ public class InMemorySandboxMap implements SandboxMap{
     @Override
     public long getTTL(String containerId) {
         return -1;
+    }
+
+    @Override
+    public long incrementRefCount(String containerId) {
+        if (containerId == null || containerId.isEmpty()) return 0;
+        return refCountMap.merge(containerId, 1L, Long::sum);
+    }
+
+    @Override
+    public long decrementRefCount(String containerId) {
+        if (containerId == null || containerId.isEmpty()) return 0;
+        return refCountMap.compute(containerId, (k, v) -> {
+            if (v == null || v <= 0) return 0L;
+            return v - 1;
+        });
+    }
+
+    @Override
+    public long getRefCount(String containerId) {
+        if (containerId == null || containerId.isEmpty()) return 0;
+        return refCountMap.getOrDefault(containerId, 0L);
     }
 }

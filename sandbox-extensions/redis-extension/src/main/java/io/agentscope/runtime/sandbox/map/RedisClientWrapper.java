@@ -281,6 +281,26 @@ public class RedisClientWrapper implements AutoCloseable {
     }
     
     /**
+     * Increment the integer value of a key by one
+     *
+     * @param key the key
+     * @return the value of key after the increment
+     */
+    public Long incr(String key) {
+        return syncCommands.incr(key);
+    }
+
+    /**
+     * Decrement the integer value of a key by one
+     *
+     * @param key the key
+     * @return the value of key after the decrement
+     */
+    public Long decr(String key) {
+        return syncCommands.decr(key);
+    }
+
+    /**
      * Ping the Redis server
      * 
      * @return "PONG" if successful

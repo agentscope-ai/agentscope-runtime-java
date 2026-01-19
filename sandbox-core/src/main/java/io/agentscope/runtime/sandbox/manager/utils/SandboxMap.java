@@ -39,4 +39,10 @@ public interface SandboxMap {
     boolean containSandbox(String containerId);
 
     long getTTL(String containerId);
+    
+    long incrementRefCount(String containerId);
+
+    long decrementRefCount(String containerId);
+
+    long getRefCount(String containerId);
 }

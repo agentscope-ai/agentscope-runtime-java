@@ -37,6 +37,7 @@ public class RedisSandboxMap implements SandboxMap {
     private static final String ID_TO_MODEL_PREFIX = "id_to_model:";
     private static final String KEY_TO_ID_PREFIX = "key_to_id:";
     private static final String ID_TO_KEY_PREFIX = "id_to_key:";
+    private static final String REF_COUNT_PREFIX = "ref_count:";
 
     private static final String MAIN_DATA_PREFIX = "sandbox:";
 
@@ -74,6 +75,10 @@ public class RedisSandboxMap implements SandboxMap {
 
     private String getIdToModelKey(String containerId) {
         return MAIN_DATA_PREFIX + ID_TO_MODEL_PREFIX + containerId;
+    }
+
+    private String getRefCountKey(String containerId) {
+        return MAIN_DATA_PREFIX + REF_COUNT_PREFIX + containerId;
     }
 
     @Override
@@ -257,5 +262,42 @@ public class RedisSandboxMap implements SandboxMap {
         if (containerId == null || containerId.isEmpty()) return -1;
         String idToModelKey = getIdToModelKey(containerId);
         return redisClient.ttl(idToModelKey);
+    }
+
+    @Override
+    public long incrementRefCount(String containerId) {
+        if (containerId == null || containerId.isEmpty()) return 0;
+        String refCountKey = getRefCountKey(containerId);
+        long count = redisClient.incr(refCountKey);
+        refreshExpiration(refCountKey);
+        logger.debug("Incremented ref count for container {}: {}", containerId, count);
+        return count;
+    }
+
+    @Override
+    public long decrementRefCount(String containerId) {
+        if (containerId == null || containerId.isEmpty()) return 0;
+        String refCountKey = getRefCountKey(containerId);
+        long count = redisClient.decr(refCountKey);
+        if (count < 0) {
+            redisClient.set(refCountKey, "0");
+            count = 0;
+        }
+        refreshExpiration(refCountKey);
+        logger.debug("Decremented ref count for container {}: {}", containerId, count);
+        return count;
+    }
+
+    @Override
+    public long getRefCount(String containerId) {
+        if (containerId == null || containerId.isEmpty()) return 0;
+        String refCountKey = getRefCountKey(containerId);
+        String val = redisClient.get(refCountKey);
+        if (val == null || val.isEmpty()) return 0;
+        try {
+            return Long.parseLong(val);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }

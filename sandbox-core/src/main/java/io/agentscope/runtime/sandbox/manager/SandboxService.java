@@ -168,7 +168,11 @@ public class SandboxService implements AutoCloseable {
 
         if (sandboxMap.containSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()))) {
             if(checkSandboxStatus(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType())){
-                return sandboxMap.getSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()));
+                ContainerModel existingModel = sandboxMap.getSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()));
+                if (existingModel != null) {
+                    sandboxMap.incrementRefCount(existingModel.getContainerId());
+                }
+                return existingModel;
             }
         }
 
@@ -362,6 +366,7 @@ public class SandboxService implements AutoCloseable {
 
         containerClient.startContainer(containerId);
         sandboxMap.addSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()), containerModel);
+        sandboxMap.incrementRefCount(containerModel.getContainerId());
         sandbox.setSandboxId(containerModel.getContainerId());
         return containerModel;
     }
@@ -446,6 +451,14 @@ public class SandboxService implements AutoCloseable {
         if(containerModel == null){
             return false;
         }
+
+        sandboxMap.decrementRefCount(containerModel.getContainerId());
+        long refCount = sandboxMap.getRefCount(containerModel.getContainerId());
+        if (refCount > 0) {
+            logger.info("Sandbox {} has active references ({}), skip removing", containerModel.getContainerId(), refCount);
+            return true;
+        }
+
         if(containerModel.getContainerName().startsWith("agentbay_")) {
             logger.warn("AgentBay sandbox can only be stopped, not removed via AgentBayClient");
             return true;
@@ -478,6 +491,7 @@ public class SandboxService implements AutoCloseable {
     }
 
     public boolean release(String containerId) {
+        if (containerId == null || containerId.isEmpty()) return false;
         return stopAndRemoveSandbox(containerId);
     }
 
