@@ -119,6 +119,29 @@ public class SandboxService implements AutoCloseable {
         return createResult.getContainerId();
     }
 
+    private boolean checkSandboxStatus(String userId, String sessionId, String sandboxType){
+        String status = getSandboxStatus(userId, sessionId, sandboxType);
+        return checkStatusValid(status);
+    }
+
+    private boolean checkSandboxStatus(ContainerModel containerModel){
+        String status = getSandboxStatus(containerModel);
+        return checkStatusValid(status);
+    }
+
+    private boolean checkSandboxStatus(String sandboxId){
+        String status = getSandboxStatus(sandboxId);
+        return checkStatusValid(status);
+    }
+
+    private boolean checkStatusValid(String status){
+        return status.equalsIgnoreCase("running") ||
+                status.equalsIgnoreCase("created") ||
+                status.equalsIgnoreCase("partiallyReady") ||
+                status.equalsIgnoreCase("pending") ||
+                status.equalsIgnoreCase("starting");
+    }
+
     @RemoteWrapper
     public ContainerModel createContainer(Sandbox sandbox) throws JsonProcessingException {
         if (this.remoteHttpClient != null) {
@@ -143,9 +166,12 @@ public class SandboxService implements AutoCloseable {
         }
 
         if (sandboxMap.containSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()))) {
-            return sandboxMap.getSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()));
+            if(checkSandboxStatus(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType())){
+                return sandboxMap.getSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()));
+            }
         }
 
+        removeSandbox(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType());
         Map<String, String> environment = sandbox.getEnvironment();
         FileSystemConfig fileSystemConfig = sandbox.getFileSystemStarter();
         String sandboxType = sandbox.getSandboxType();
@@ -311,6 +337,7 @@ public class SandboxService implements AutoCloseable {
 
         containerClient.startContainer(containerId);
         sandboxMap.addSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()), containerModel);
+        sandbox.setSandboxId(containerModel.getContainerId());
         return containerModel;
     }
 
@@ -391,6 +418,9 @@ public class SandboxService implements AutoCloseable {
 
     @RemoteWrapper
     public boolean removeSandbox(ContainerModel containerModel) {
+        if(containerModel == null){
+            return false;
+        }
         if(containerModel.getContainerName().startsWith("agentbay_")) {
             logger.warn("AgentBay sandbox can only be stopped, not removed via AgentBayClient");
             return true;
@@ -461,10 +491,12 @@ public class SandboxService implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public ContainerModel getInfo(String containerId) {
+    public ContainerModel getInfo(Sandbox sandbox) throws JsonProcessingException {
         if (this.remoteHttpClient != null) {
             logger.info("Getting sandbox info in remote mode via RemoteHttpClient");
-            Map<String, Object> request = Map.of("containerId", containerId);
+            ObjectMapper mapper = new ObjectMapper();
+            String sandboxJson = mapper.writeValueAsString(sandbox);
+            Map<String, Object> request = Map.of("sandbox", sandboxJson);
             Object result = remoteHttpClient.makeRequest(
                     RequestMethod.POST,
                     "/sandbox/getInfo",
@@ -478,7 +510,7 @@ public class SandboxService implements AutoCloseable {
             }
             return null;
         }
-        return sandboxMap.getSandbox(containerId);
+        return sandboxMap.getSandbox(sandbox.getSandboxId());
     }
 
     public void cleanupAllSandboxes() {
@@ -505,9 +537,12 @@ public class SandboxService implements AutoCloseable {
         cleanupAllSandboxes();
     }
 
-    private SandboxClient establishConnection(String sandboxId) {
+    private SandboxClient establishConnection(Sandbox sandbox) {
         try {
-            ContainerModel containerInfo = getInfo(sandboxId);
+            ContainerModel containerInfo = getInfo(sandbox);
+            if(!checkSandboxStatus(sandbox.getSandboxId())){
+                createContainer(sandbox);
+            }
             if (containerInfo.getVersion().contains("sandbox-appworld") || containerInfo.getVersion().contains("sandbox-bfcl")) {
                 return new TrainingSandboxClient(containerInfo, 60);
             }
@@ -519,11 +554,13 @@ public class SandboxService implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public Map<String, Object> listTools(String sandboxId, String toolType) {
+    public Map<String, Object> listTools(Sandbox sandbox, String toolType) throws JsonProcessingException {
         if (this.remoteHttpClient != null) {
             logger.info("Listing tools in remote mode via RemoteHttpClient");
+            ObjectMapper mapper = new ObjectMapper();
+            String sandboxJson = mapper.writeValueAsString(sandbox);
             Map<String, Object> request = Map.of(
-                    "sandboxId", sandboxId,
+                    "sandbox", sandboxJson,
                     "toolType", toolType
             );
             Object result = remoteHttpClient.makeRequest(
@@ -539,7 +576,7 @@ public class SandboxService implements AutoCloseable {
             }
             return new HashMap<>();
         }
-        try (SandboxClient client = establishConnection(sandboxId)) {
+        try (SandboxClient client = establishConnection(sandbox)) {
             return client.listTools(toolType, Map.of());
         } catch (Exception e) {
             logger.error("Error listing tools: {}", e.getMessage());
@@ -548,11 +585,13 @@ public class SandboxService implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public String callTool(String sandboxId, String toolName, Map<String, Object> arguments) {
+    public String callTool(Sandbox sandbox, String toolName, Map<String, Object> arguments) throws JsonProcessingException {
         if (this.remoteHttpClient != null) {
             logger.info("Calling tool in remote mode via RemoteHttpClient");
+            ObjectMapper mapper = new ObjectMapper();
+            String sandboxJson = mapper.writeValueAsString(sandbox);
             Map<String, Object> request = Map.of(
-                    "sandboxId", sandboxId,
+                    "sandbox", sandboxJson,
                     "toolName", toolName,
                     "arguments", arguments
             );
@@ -567,7 +606,7 @@ public class SandboxService implements AutoCloseable {
             }
             return "{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"Invalid response from remote callTool\"}]}";
         }
-        try (SandboxClient client = establishConnection(sandboxId)) {
+        try (SandboxClient client = establishConnection(sandbox)) {
             return client.callTool(toolName, arguments);
         } catch (Exception e) {
             logger.error("Error calling tool {}: {}", toolName, e.getMessage());
@@ -576,11 +615,13 @@ public class SandboxService implements AutoCloseable {
     }
 
     @RemoteWrapper
-    public Map<String, Object> addMcpServers(String sandboxId, Map<String, Object> serverConfigs, boolean overwrite) {
+    public Map<String, Object> addMcpServers(Sandbox sandbox, Map<String, Object> serverConfigs, boolean overwrite) throws JsonProcessingException {
         if (this.remoteHttpClient != null) {
             logger.info("Adding MCP servers in remote mode via RemoteHttpClient");
+            ObjectMapper mapper = new ObjectMapper();
+            String sandboxJson = mapper.writeValueAsString(sandbox);
             Map<String, Object> request = Map.of(
-                    "sandboxId", sandboxId,
+                    "sandbox", sandboxJson,
                     "serverConfigs", serverConfigs,
                     "overwrite", overwrite
             );
@@ -597,7 +638,7 @@ public class SandboxService implements AutoCloseable {
             }
             return new HashMap<>();
         }
-        try (SandboxClient client = establishConnection(sandboxId)) {
+        try (SandboxClient client = establishConnection(sandbox)) {
             return client.addMcpServers(serverConfigs, overwrite);
         } catch (Exception e) {
             logger.error("Error adding MCP servers: {}", e.getMessage());
