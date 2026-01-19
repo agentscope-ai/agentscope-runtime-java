@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -285,8 +286,32 @@ public class SandboxService implements AutoCloseable {
                 }
                 File hostFile = new File(hostPath);
                 if (!hostFile.exists()) {
-                    logger.warn("NonCopy mount host path does not exist: {}, skipping", hostPath);
-                    continue;
+                    logger.warn("Host path does not exist: {}, attempting to create", hostPath);
+                    try {
+                        if (hostPath.endsWith(File.separator) || hostPath.endsWith("/") ||
+                                containerPath.endsWith("/") || containerPath.endsWith(File.separator)) {
+                            if (hostFile.mkdirs()) {
+                                logger.info("Successfully created directory: {}", hostPath);
+                            } else {
+                                logger.warn("Failed to create directory: {}", hostPath);
+                                continue;
+                            }
+                        } else {
+                            File parentDir = hostFile.getParentFile();
+                            if (parentDir != null && !parentDir.exists()) {
+                                parentDir.mkdirs();
+                            }
+                            if (hostFile.createNewFile()) {
+                                logger.info("Successfully created file: {}", hostPath);
+                            } else {
+                                logger.warn("Failed to create file: {}", hostPath);
+                                continue;
+                            }
+                        }
+                    } catch (IOException e) {
+                        logger.warn("Exception while creating path {}: {}", hostPath, e.getMessage());
+                        continue;
+                    }
                 }
                 volumeBindings.add(new VolumeBinding(hostPath, containerPath, "rw"));
                 logger.info("Added non Copy mount: {} -> {}", hostPath, containerPath);
