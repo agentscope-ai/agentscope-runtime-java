@@ -81,7 +81,7 @@ public class BrowserSandbox extends Sandbox {
      * @throws RuntimeException if sandbox is not healthy
      */
     public String getDesktopUrl() {
-        return GuiMixin.getDesktopUrl(managerApi, sandboxId, baseUrl);
+        return GuiMixin.getDesktopUrl(managerApi, this, baseUrl);
     }
 
     public String navigate(String url) {

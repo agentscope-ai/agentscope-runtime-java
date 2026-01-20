@@ -15,13 +15,16 @@
  */
 package io.agentscope.runtime.sandbox.map;
 
+import io.lettuce.core.KeyScanCursor;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
+import io.lettuce.core.ScanArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -118,17 +121,47 @@ public class RedisClientWrapper implements AutoCloseable {
     }
     
     /**
-     * Scan keys matching a pattern
+     * Scan keys matching a pattern using Redis SCAN command
      * 
      * @param pattern the pattern to match
      * @return set of matching keys
      */
     public Set<String> scan(String pattern) {
-        return Set.copyOf(syncCommands.keys(pattern));
+        Set<String> keys = new HashSet<>();
+        ScanArgs scanArgs = ScanArgs.Builder.limit(100).match(pattern);
+        KeyScanCursor<String> cursor = syncCommands.scan(scanArgs);
+        
+        while (cursor != null) {
+            keys.addAll(cursor.getKeys());
+            if (cursor.isFinished()) {
+                break;
+            }
+            cursor = syncCommands.scan(cursor, scanArgs);
+        }
+        return keys;
     }
     
-    // List operations
+    /**
+     * Set expiration on a key
+     * 
+     * @param key the key
+     * @param seconds expiration time in seconds
+     * @return true if timeout was set, false otherwise
+     */
+    public boolean expire(String key, long seconds) {
+        return syncCommands.expire(key, seconds);
+    }
     
+    /**
+     * Get the time to live for a key
+     * 
+     * @param key the key
+     * @return TTL in seconds, or -2 if key doesn't exist, -1 if no timeout
+     */
+    public Long ttl(String key) {
+        return syncCommands.ttl(key);
+    }
+
     /**
      * Push value to the right end of a list
      * 
@@ -247,6 +280,26 @@ public class RedisClientWrapper implements AutoCloseable {
         return syncCommands.scard(key);
     }
     
+    /**
+     * Increment the integer value of a key by one
+     *
+     * @param key the key
+     * @return the value of key after the increment
+     */
+    public Long incr(String key) {
+        return syncCommands.incr(key);
+    }
+
+    /**
+     * Decrement the integer value of a key by one
+     *
+     * @param key the key
+     * @return the value of key after the decrement
+     */
+    public Long decr(String key) {
+        return syncCommands.decr(key);
+    }
+
     /**
      * Ping the Redis server
      * 

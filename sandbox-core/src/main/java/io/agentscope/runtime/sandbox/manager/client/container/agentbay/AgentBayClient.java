@@ -153,7 +153,7 @@ public class AgentBayClient extends BaseClient {
 
     @Override
     public String getContainerStatus(String containerId) {
-        return "";
+        return "running";
     }
 
     @Override

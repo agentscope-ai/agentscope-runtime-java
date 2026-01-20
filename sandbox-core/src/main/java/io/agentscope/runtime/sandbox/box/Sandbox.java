@@ -104,6 +104,10 @@ public class Sandbox implements AutoCloseable {
         this.environment = new HashMap<>(environment);
     }
 
+    public void setSandboxId(String sandboxId) {
+        this.sandboxId = sandboxId;
+    }
+
     public String getSandboxId() {
         return sandboxId;
     }
@@ -124,7 +128,7 @@ public class Sandbox implements AutoCloseable {
         return environment;
     }
 
-    public FileSystemConfig getFileSystemStarter() {
+    public FileSystemConfig getFileSystemConfig() {
         return fileSystemConfig;
     }
 
@@ -149,7 +153,13 @@ public class Sandbox implements AutoCloseable {
     @JsonIgnore
     public ContainerModel getInfo() {
         initializeSandbox();
-        return managerApi.getInfo(sandboxId);
+        try {
+            return managerApi.getInfo(this);
+        }
+        catch (Exception e) {
+            logger.error("Failed to get sandbox info: {}", e.getMessage());
+            throw new RuntimeException("Failed to get sandbox info", e);
+        }
     }
 
     public Map<String, Object> listTools() {
@@ -158,12 +168,24 @@ public class Sandbox implements AutoCloseable {
 
     public Map<String, Object> listTools(String toolType) {
         initializeSandbox();
-        return managerApi.listTools(sandboxId, toolType);
+        try{
+            return managerApi.listTools(this, toolType);
+        }
+        catch (Exception e) {
+            logger.error("Failed to list tools: {}", e.getMessage());
+            throw new RuntimeException("Failed to list tools", e);
+        }
     }
 
     public String callTool(String name, Map<String, Object> arguments) {
         initializeSandbox();
-        return managerApi.callTool(sandboxId, name, arguments);
+        try{
+            return managerApi.callTool(this, name, arguments);
+        }
+        catch (Exception e) {
+            logger.error("Failed to call tool {}: {}", name, e.getMessage());
+            throw new RuntimeException("Failed to call tool " + name, e);
+        }
     }
 
     public Map<String, Object> addMcpServers(Map<String, Object> serverConfigs) {
@@ -172,7 +194,13 @@ public class Sandbox implements AutoCloseable {
 
     public Map<String, Object> addMcpServers(Map<String, Object> serverConfigs, boolean overwrite) {
         initializeSandbox();
-        return managerApi.addMcpServers(sandboxId, serverConfigs, overwrite);
+        try{
+            return managerApi.addMcpServers(this, serverConfigs, overwrite);
+        }
+        catch (Exception e) {
+            logger.error("Failed to add MCP servers: {}", e.getMessage());
+            throw new RuntimeException("Failed to add MCP servers", e);
+        }
     }
 
     @Override

@@ -51,7 +51,6 @@ import reactor.core.publisher.Flux;
  * </ul>
  */
 public class MyAgentScopeAgentHandler extends AgentScopeAgentHandler {
-    private SandboxService sandboxService;
 	private static final Logger logger = LoggerFactory.getLogger(MyAgentScopeAgentHandler.class);
 	private final String apiKey;
 
