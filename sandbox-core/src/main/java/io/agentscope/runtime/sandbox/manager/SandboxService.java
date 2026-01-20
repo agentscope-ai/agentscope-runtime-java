@@ -49,6 +49,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class SandboxService implements AutoCloseable {
@@ -60,6 +61,7 @@ public class SandboxService implements AutoCloseable {
     private final RemoteHttpClient remoteHttpClient;
     private AgentBayClient agentBayClient;
     private ScheduledExecutorService cleanupExecutor;
+    private ScheduledFuture<?> cleanupFuture;
 
     public SandboxService(ManagerConfig managerConfig) {
         this.managerConfig = managerConfig;
@@ -89,7 +91,7 @@ public class SandboxService implements AutoCloseable {
             thread.setDaemon(true);
             return thread;
         });
-        this.cleanupExecutor.scheduleAtFixedRate(this::cleanupExpiredSandboxes, 5, 5, TimeUnit.SECONDS);
+        this.cleanupFuture = this.cleanupExecutor.scheduleAtFixedRate(this::cleanupExpiredSandboxes, 5, 5, TimeUnit.SECONDS);
         logger.info("Scheduled cleanup task every 5 seconds");
     }
 
@@ -578,10 +580,10 @@ public class SandboxService implements AutoCloseable {
 
     private SandboxClient establishConnection(Sandbox sandbox) {
         try {
-            ContainerModel containerInfo = getInfo(sandbox);
             if(!checkSandboxStatus(sandbox.getSandboxId())){
                 createContainer(sandbox);
             }
+            ContainerModel containerInfo = getInfo(sandbox);
             if (containerInfo.getVersion().contains("sandbox-appworld") || containerInfo.getVersion().contains("sandbox-bfcl")) {
                 return new TrainingSandboxClient(containerInfo, 60);
             }
@@ -691,5 +693,8 @@ public class SandboxService implements AutoCloseable {
 
     public void stop(){
         cleanupAllSandboxes();
+        if (this.cleanupFuture != null) {
+            this.cleanupFuture.cancel(true);
+        }
     }
 }
