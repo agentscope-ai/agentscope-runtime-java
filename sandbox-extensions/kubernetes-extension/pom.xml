@@ -9,6 +9,41 @@
     </parent>
 
     <artifactId>kubernetes-extension</artifactId>
+    <name>AgentScope Runtime Kubernetes Sandbox Extension</name>
+    <description>Java Implementation for AgentScope Runtime</description>
+    <url>https://github.com/agentscope-ai/agentscope-runtime-java</url>
+    <organization>
+        <name>Alibaba Cloud Inc.</name>
+        <url>https://runtime.agentscope.io</url>
+    </organization>
+    <licenses>
+        <license>
+            <name>Apache 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>chickenlj</id>
+            <name>Jun Liu</name>
+            <email>ken.lj.hz@gmail.com</email>
+            <organization>Alibaba Cloud</organization>
+            <organizationUrl>https://aliyun.com</organizationUrl>
+        </developer>
+        <developer>
+            <id>xuehuitian45</id>
+            <name>Huitian Xue</name>
+            <email>13069167198@163.com</email>
+            <organization>Alibaba Cloud</organization>
+            <organizationUrl>https://aliyun.com</organizationUrl>
+        </developer>
+    </developers>
+    <scm>
+        <connection>git://github.com/agentscope-ai/agentscope-runtime-java.git</connection>
+        <developerConnection>git@github.com:agentscope-ai/agentscope-runtime-java.git</developerConnection>
+        <url>https://github.com/agentscope-ai/agentscope-runtime-java</url>
+    </scm>
 
     <properties>
         <kubernetes.client.version>25.0.0</kubernetes.client.version>
