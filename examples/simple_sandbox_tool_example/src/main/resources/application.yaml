@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: agentscope-examples-simple
+
+server:
+  port: 8080
+
+DASHSCOPE_API_KEY: "your-api-key"
