@@ -24,6 +24,7 @@ public class RedisManagerConfig {
     private final Integer redisDb;
     private final String redisUser;
     private final String redisPassword;
+    private final Integer expirationSeconds;
 
     private RedisManagerConfig(Builder builder) {
         this.redisServer = builder.redisServer;
@@ -31,6 +32,7 @@ public class RedisManagerConfig {
         this.redisDb = builder.redisDb;
         this.redisUser = builder.redisUser;
         this.redisPassword = builder.redisPassword;
+        this.expirationSeconds = builder.expirationSeconds;
     }
 
     public String getRedisServer() {
@@ -57,12 +59,17 @@ public class RedisManagerConfig {
         return new Builder();
     }
 
+    public Integer getExpirationSeconds() {
+        return expirationSeconds;
+    }
+
     public static class Builder {
         private String redisServer = "localhost";
         private Integer redisPort = 6379;
         private Integer redisDb = 0;
         private String redisUser;
         private String redisPassword;
+        private Integer expirationSeconds = -1;
 
         public Builder redisServer(String redisServer) {
             this.redisServer = redisServer;
@@ -86,6 +93,11 @@ public class RedisManagerConfig {
 
         public Builder redisPassword(String redisPassword) {
             this.redisPassword = redisPassword;
+            return this;
+        }
+
+        public Builder expirationSeconds(Integer expirationSeconds) {
+            this.expirationSeconds = expirationSeconds;
             return this;
         }
 
