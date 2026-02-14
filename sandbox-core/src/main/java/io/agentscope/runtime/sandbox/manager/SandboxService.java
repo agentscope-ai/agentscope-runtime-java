@@ -223,7 +223,7 @@ public class SandboxService implements AutoCloseable {
             logger.info("Docker image is ready: {}", imageName);
         }
 
-        String sessionId = RandomStringGenerator.generateRandomString(22);
+        String sessionId = sandbox.getSessionId();
         String currentDir = System.getProperty("user.dir");
         String mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
 
