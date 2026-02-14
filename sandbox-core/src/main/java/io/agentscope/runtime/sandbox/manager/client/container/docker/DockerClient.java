@@ -30,10 +30,20 @@ import io.agentscope.runtime.sandbox.manager.client.container.ContainerCreateRes
 import io.agentscope.runtime.sandbox.manager.model.container.PortRange;
 import io.agentscope.runtime.sandbox.manager.model.fs.VolumeBinding;
 import io.agentscope.runtime.sandbox.manager.utils.PortManager;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Stream;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DockerClient extends BaseClient {
@@ -169,6 +179,11 @@ public class DockerClient extends BaseClient {
 
     @Override
     public void removeContainer(String containerId) {
+        removeContainer(containerId, null);
+    }
+
+    @Override
+    public void removeContainer(String containerId, String volumeNameToRemove) {
         if (!isConnected()) {
             throw new IllegalStateException("Docker client is not connected");
         }
@@ -183,6 +198,67 @@ public class DockerClient extends BaseClient {
         }
 
         removeContainer(client, containerId);
+        if (volumeNameToRemove != null && !volumeNameToRemove.isEmpty()) {
+            try {
+                client.removeVolumeCmd(volumeNameToRemove).exec();
+                logger.info("Removed named volume: {}", volumeNameToRemove);
+            } catch (Exception e) {
+                logger.warn("Failed to remove volume {}: {}", volumeNameToRemove, e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public void copyToContainer(String containerId, String localPath, String containerPath) {
+        if (!isConnected()) {
+            throw new IllegalStateException("Docker client is not connected");
+        }
+        Path source = Paths.get(localPath);
+        if (!Files.isDirectory(source)) {
+            logger.warn("copyToContainer: {} is not a directory, skipping", localPath);
+            return;
+        }
+        try {
+            byte[] tarBytes = createTarFromDirectory(source);
+            if (tarBytes.length == 0) {
+                return;
+            }
+            try (ByteArrayInputStream tarInput = new ByteArrayInputStream(tarBytes)) {
+                client.copyArchiveToContainerCmd(containerId)
+                        .withTarInputStream(tarInput)
+                        .withRemotePath(containerPath)
+                        .exec();
+            }
+            logger.info("Copied {} bytes from {} to container {}:{}", tarBytes.length, localPath, containerId, containerPath);
+        } catch (IOException e) {
+            logger.error("Failed to copy to container: {}", e.getMessage());
+            throw new RuntimeException("Copy to container failed", e);
+        }
+    }
+
+    /**
+     * Create a tar archive (as bytes) from a directory. Entry names are relative to the directory.
+     */
+    private static byte[] createTarFromDirectory(Path dir) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (TarArchiveOutputStream tar = new TarArchiveOutputStream(out);
+             Stream<Path> stream = Files.walk(dir).filter(p -> !p.equals(dir))) {
+            tar.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+            for (Path entry : (Iterable<Path>) stream::iterator) {
+                Path relative = dir.relativize(entry);
+                TarArchiveEntry archiveEntry = new TarArchiveEntry(entry.toFile(), relative.toString());
+                tar.putArchiveEntry(archiveEntry);
+                if (Files.isRegularFile(entry)) {
+                    try {
+                        Files.copy(entry, tar);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                }
+                tar.closeArchiveEntry();
+            }
+        }
+        return out.toByteArray();
     }
 
     @Override

@@ -33,6 +33,13 @@ public class ManagerConfig {
 
     private final String agentBayApiKey;
 
+    /**
+     * Optional base directory for workspace bind mounts (Docker only).
+     * When set: mountDir = baseDir + "/" + sessionId (works with remote Docker daemon if baseDir exists on remote host).
+     * When not set: use Docker named volume per container (sandbox_${sessionId}), no host path required.
+     */
+    private final String baseDir;
+
     private ManagerConfig(Builder builder) {
         this.containerPrefixKey = builder.containerPrefixKey;
         this.portRange = builder.portRange;
@@ -41,6 +48,7 @@ public class ManagerConfig {
         this.baseUrl = builder.baseUrl;
         this.bearerToken = builder.bearerToken;
         this.agentBayApiKey = builder.agentBayApiKey;
+        this.baseDir = builder.baseDir;
     }
 
     public String getContainerPrefixKey() {
@@ -71,6 +79,10 @@ public class ManagerConfig {
         return agentBayApiKey;
     }
 
+    public String getBaseDir() {
+        return baseDir;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -85,6 +97,7 @@ public class ManagerConfig {
         private String bearerToken;
 
         private String agentBayApiKey;
+        private String baseDir;
 
         public Builder containerPrefixKey(String containerPrefixKey) {
             this.containerPrefixKey = containerPrefixKey;
@@ -118,6 +131,14 @@ public class ManagerConfig {
 
         public Builder agentBayApiKey(String agentBayApiKey) {
             this.agentBayApiKey = agentBayApiKey;
+            return this;
+        }
+
+        /**
+         * Base directory for workspace bind mounts (Docker only). If not set, Docker named volume is used per container.
+         */
+        public Builder baseDir(String baseDir) {
+            this.baseDir = baseDir;
             return this;
         }
 

@@ -68,6 +68,27 @@ public abstract class BaseClient {
     public abstract void removeContainer(String containerId);
 
     /**
+     * Remove container and optionally remove a named volume (e.g. workspace volume).
+     * Default implementation ignores volumeName and calls removeContainer(containerId).
+     * @param containerId container ID
+     * @param volumeNameToRemove optional volume name to remove after container removal (Docker named volume)
+     */
+    public void removeContainer(String containerId, String volumeNameToRemove) {
+        removeContainer(containerId);
+    }
+
+    /**
+     * Copy local directory contents into container path (e.g. for initial workspace when using named volume).
+     * Default no-op; only Docker client implements this.
+     * @param containerId container ID
+     * @param localPath local directory path
+     * @param containerPath path inside container (e.g. /workspace)
+     */
+    public void copyToContainer(String containerId, String localPath, String containerPath) {
+        // no-op by default
+    }
+
+    /**
      * Get container status
      * @param containerId container ID
      * @return container status

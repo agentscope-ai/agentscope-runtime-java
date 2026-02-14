@@ -44,6 +44,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -161,11 +163,17 @@ public class SandboxService implements AutoCloseable {
 
         String sessionId = RandomStringGenerator.generateRandomString(22);
         String currentDir = System.getProperty("user.dir");
-        String mountDir = currentDir + "/" + default_mount_dir + "/" + sessionId;
+        String baseDir = managerConfig.getBaseDir();
+        boolean useDockerNamedVolume = (containerClientType == ContainerClientType.DOCKER)
+                && (baseDir == null || baseDir.isEmpty());
+
+        String mountDir;
+        String workspaceVolumeName = null;
+        Path tempDirForNamedVolume = null;
 
         if (containerClientType == ContainerClientType.DOCKER) {
             containerName = prefix + sessionId.toLowerCase();
-            while(containerClient.containerNameExists(containerName)){
+            while (containerClient.containerNameExists(containerName)) {
                 sessionId = RandomStringGenerator.generateRandomString(22);
                 containerName = prefix + sessionId.toLowerCase();
             }
@@ -174,23 +182,58 @@ public class SandboxService implements AutoCloseable {
         }
 
         if (containerClientType == ContainerClientType.AGENTRUN || containerClientType == ContainerClientType.FC) {
-            mountDir = Paths.get(mountDir).toAbsolutePath().toString();
+            mountDir = Paths.get(currentDir + "/" + default_mount_dir + "/" + sessionId).toAbsolutePath().toString();
+        } else if (useDockerNamedVolume) {
+            mountDir = "sandbox_" + sessionId;
+            workspaceVolumeName = mountDir;
+        } else {
+            mountDir = (baseDir != null && !baseDir.isEmpty())
+                    ? baseDir + "/" + sessionId
+                    : currentDir + "/" + default_mount_dir + "/" + sessionId;
         }
-        File file = new File(mountDir);
-        if (!file.exists()) {
-            boolean ignored = file.mkdirs();
-        }
-        String storagePath = sandbox.getFileSystemStarter().getStorageFolderPath();
-        // Todo：Currently using global storage path if not provided, still need to wait for next movement of python version
-        if (!mountDir.isEmpty() && !storagePath.isEmpty() && containerClientType != ContainerClientType.AGENTRUN && containerClientType != ContainerClientType.FC) {
-            logger.info("Downloading from storage path: {} to mount dir: {}", storagePath, mountDir);
-            boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
-            if (downloadSuccess) {
-                logger.info("Successfully downloaded files from storage");
-            } else {
-                logger.warn("Failed to download files from storage, continuing with empty mount dir");
+
+        if (!useDockerNamedVolume) {
+            if (containerClientType == ContainerClientType.DOCKER && baseDir != null && !baseDir.isEmpty() && remoteHttpClient == null) {
+                File file = new File(mountDir);
+                if (!file.exists()) {
+                    boolean ignored = file.mkdirs();
+                }
+            } else if (containerClientType != ContainerClientType.DOCKER || (baseDir == null || baseDir.isEmpty())) {
+                File file = new File(mountDir);
+                if (!file.exists()) {
+                    boolean ignored = file.mkdirs();
+                }
             }
         }
+
+        String storagePath = sandbox.getFileSystemStarter().getStorageFolderPath();
+        if (containerClientType != ContainerClientType.AGENTRUN && containerClientType != ContainerClientType.FC
+                && !storagePath.isEmpty()) {
+            if (useDockerNamedVolume) {
+                try {
+                    tempDirForNamedVolume = Files.createTempDirectory("sandbox_upload_");
+                    String tempPath = tempDirForNamedVolume.toString();
+                    logger.info("Downloading from storage path: {} to temp dir (for named volume): {}", storagePath, tempPath);
+                    boolean downloadSuccess = storageManager.downloadFolder(storagePath, tempPath);
+                    if (downloadSuccess) {
+                        logger.info("Successfully downloaded files to temp dir for named volume copy");
+                    } else {
+                        logger.warn("Failed to download files from storage, continuing with empty workspace");
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed to create temp dir for named volume copy: {}", e.getMessage());
+                }
+            } else if (!mountDir.isEmpty()) {
+                logger.info("Downloading from storage path: {} to mount dir: {}", storagePath, mountDir);
+                boolean downloadSuccess = storageManager.downloadFolder(storagePath, mountDir);
+                if (downloadSuccess) {
+                    logger.info("Successfully downloaded files from storage");
+                } else {
+                    logger.warn("Failed to download files from storage, continuing with empty mount dir");
+                }
+            }
+        }
+
         String runtimeToken = RandomStringGenerator.generateRandomString(32);
         environment.put("SECRET_TOKEN", runtimeToken);
         List<VolumeBinding> volumeBindings = new ArrayList<>();
@@ -274,11 +317,33 @@ public class SandboxService implements AutoCloseable {
                 .runtimeToken(runtimeToken)
                 .authToken(runtimeToken)
                 .version(imageName)
+                .workspaceVolumeName(workspaceVolumeName)
                 .build();
 
         logger.info("Created Container: {}", containerModel);
 
         containerClient.startContainer(containerId);
+
+        if (tempDirForNamedVolume != null) {
+            try {
+                containerClient.copyToContainer(containerId, tempDirForNamedVolume.toString(), workdir);
+            } finally {
+                try {
+                    Files.walk(tempDirForNamedVolume)
+                            .sorted(Comparator.reverseOrder())
+                            .forEach(p -> {
+                                try {
+                                    Files.deleteIfExists(p);
+                                } catch (Exception e) {
+                                    logger.warn("Failed to delete temp file {}: {}", p, e.getMessage());
+                                }
+                            });
+                } catch (Exception e) {
+                    logger.warn("Failed to cleanup temp dir {}: {}", tempDirForNamedVolume, e.getMessage());
+                }
+            }
+        }
+
         sandboxMap.addSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()), containerModel);
         return containerModel;
     }
@@ -375,7 +440,7 @@ public class SandboxService implements AutoCloseable {
             );
             return true;
         }
-        containerClient.removeContainer(containerModel.getContainerId());
+        containerClient.removeContainer(containerModel.getContainerId(), containerModel.getWorkspaceVolumeName());
         logger.info("Container removed: {}", containerModel.getContainerId());
         sandboxMap.removeSandbox(containerModel.getContainerId());
         return true;

@@ -34,6 +34,8 @@ public class ContainerModel {
     private String runtimeToken;
     private String version;
     private String authToken;
+    /** When using Docker named volume for workspace, the volume name (for cleanup on remove). */
+    private String workspaceVolumeName;
 
     public static Builder builder() {
         return new Builder();
@@ -61,6 +63,7 @@ public class ContainerModel {
         model.setRuntimeToken((String) map.get("runtimeToken"));
         model.setVersion((String) map.get("version"));
         model.setAuthToken((String) map.get("authToken"));
+        model.setWorkspaceVolumeName((String) map.get("workspaceVolumeName"));
 
         // Handle ports array
         Object portsObj = map.get("ports");
@@ -94,6 +97,7 @@ public class ContainerModel {
         this.runtimeToken = builder.runtimeToken;
         this.version = builder.version;
         this.authToken = builder.authToken;
+        this.workspaceVolumeName = builder.workspaceVolumeName;
     }
 
     public String getSessionId() {
@@ -208,6 +212,14 @@ public class ContainerModel {
         this.authToken = authToken;
     }
 
+    public String getWorkspaceVolumeName() {
+        return workspaceVolumeName;
+    }
+
+    public void setWorkspaceVolumeName(String workspaceVolumeName) {
+        this.workspaceVolumeName = workspaceVolumeName;
+    }
+
     public String toString() {
         return "manager.ContainerModel{" + "sessionId='" + sessionId + '\'' + ", containerId='" + containerId + '\'' + ", containerName='" + containerName + '\'' + ", baseUrl='" + baseUrl + '\'' + ", browserUrl='" + browserUrl + '\'' + ", frontBrowserWS='" + frontBrowserWS + '\'' + ", clientBrowserWS='" + clientBrowserWS + '\'' + ", artifactsSIO='" + artifactsSIO + '\'' + ", ports=" + String.join(",", ports) + ", mountDir='" + mountDir + '\'' + ", storagePath='" + storagePath + '\'' + ", runtimeToken='" + runtimeToken + '\'' + ", version='" + version + '\'' + ", authToken='" + authToken + '\'' + '}';
     }
@@ -227,6 +239,7 @@ public class ContainerModel {
         private String runtimeToken;
         private String version;
         private String authToken;
+        private String workspaceVolumeName;
 
         public Builder sessionId(String sessionId) {
             this.sessionId = sessionId;
@@ -295,6 +308,11 @@ public class ContainerModel {
 
         public Builder authToken(String authToken) {
             this.authToken = authToken;
+            return this;
+        }
+
+        public Builder workspaceVolumeName(String workspaceVolumeName) {
+            this.workspaceVolumeName = workspaceVolumeName;
             return this;
         }
 
