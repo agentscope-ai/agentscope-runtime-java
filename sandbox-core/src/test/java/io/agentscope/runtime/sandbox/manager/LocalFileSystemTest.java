@@ -107,7 +107,7 @@ public class LocalFileSystemTest {
             createInitialTestFiles(testFolder.getAbsolutePath());
 
             // 2. Configure local file system storage
-            LocalFileSystemConfig localFileSystemStarter = LocalFileSystemConfig.builder()
+            LocalFileSystemConfig localFileSystemConfig = LocalFileSystemConfig.builder()
                     .storageFolderPath(localStoragePath)
                     .build();
 
@@ -128,7 +128,7 @@ public class LocalFileSystemTest {
             // Use the just created test folder
             System.out.println("Copying from local path: " + storagePath);
 
-            Sandbox sandbox = new BaseSandbox(sandboxService, "test-user", "test-session", localFileSystemStarter);
+            Sandbox sandbox = new BaseSandbox(sandboxService, "test-user", "test-session", localFileSystemConfig);
 
             // Verify container created successfully
             assertNotNull(sandbox, "Container creation should succeed");
@@ -136,7 +136,7 @@ public class LocalFileSystemTest {
 
             // 6. Verify copied files
             System.out.println("\n--- Verifying files copied from local storage ---");
-            File mountDirectory = new File(localFileSystemStarter.getMountDir());
+            File mountDirectory = new File(localFileSystemConfig.getMountDir());
             assertTrue(mountDirectory.exists(), "Mount directory should exist");
 
             System.out.println("Files in mount directory:");
@@ -144,7 +144,7 @@ public class LocalFileSystemTest {
 
             // 7. Create new files in container (for testing upload functionality)
             System.out.println("\n--- Creating new files in container ---");
-            createTestFilesInContainer(localFileSystemStarter.getMountDir());
+            createTestFilesInContainer(localFileSystemConfig.getMountDir());
 
             // 8. Display file list again
             System.out.println("\nUpdated file list:");
@@ -154,7 +154,7 @@ public class LocalFileSystemTest {
             System.out.println("\n--- Destroying container and copying data back to local storage ---");
             boolean released = sandboxService.stopAndRemoveSandbox(sandbox.getSandboxId());
             assertTrue(released, "Container should be released successfully");
-            System.out.println("Container destroyed, data copied back to local storage: " + localFileSystemStarter.getStorageFolderPath());
+            System.out.println("Container destroyed, data copied back to local storage: " + localFileSystemConfig.getStorageFolderPath());
 
             // 10. Verify data has been copied back to local storage
             System.out.println("\n--- Verifying files in local storage ---");
@@ -176,18 +176,18 @@ public class LocalFileSystemTest {
         System.out.println("\n--- Testing Local File System Config Validation ---");
 
         // Create local file system configuration
-        LocalFileSystemConfig localFileSystemStarter = LocalFileSystemConfig.builder()
+        LocalFileSystemConfig localFileSystemConfig = LocalFileSystemConfig.builder()
                 .storageFolderPath(localStoragePath)
                 .mountDir("custom_mount_dir")
                 .build();
 
         // Validate configuration
-        assertEquals(localStoragePath, localFileSystemStarter.getStorageFolderPath(), "Storage path should match");
-        assertEquals("custom_mount_dir", localFileSystemStarter.getMountDir(), "Mount directory should match");
+        assertEquals(localStoragePath, localFileSystemConfig.getStorageFolderPath(), "Storage path should match");
+        assertEquals("custom_mount_dir", localFileSystemConfig.getMountDir(), "Mount directory should match");
 
         System.out.println("Local file system configuration validated successfully");
-        System.out.println("  - Storage Path: " + localFileSystemStarter.getStorageFolderPath());
-        System.out.println("  - Mount Dir: " + localFileSystemStarter.getMountDir());
+        System.out.println("  - Storage Path: " + localFileSystemConfig.getStorageFolderPath());
+        System.out.println("  - Mount Dir: " + localFileSystemConfig.getMountDir());
     }
 
     /**

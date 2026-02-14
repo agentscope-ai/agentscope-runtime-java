@@ -35,27 +35,27 @@ public class GuiMixin {
      * SandboxService and sandboxId.
      *
      * @param managerApi The SandboxService instance
-     * @param sandboxId The sandbox ID
+     * @param sandbox The sandbox instance
      * @param baseUrl Optional base URL (can be null)
      * @return The desktop URL for VNC access
      * @throws RuntimeException if sandbox is not healthy or info cannot be retrieved
      */
-    public static String getDesktopUrl(SandboxService managerApi, String sandboxId, String baseUrl) {
+    public static String getDesktopUrl(SandboxService managerApi, Sandbox sandbox, String baseUrl) {
         // Check if sandbox is healthy by attempting to get info
         ContainerModel info;
         try {
-            info = managerApi.getInfo(sandboxId);
+            info = managerApi.getInfo(sandbox);
         } catch (Exception e) {
-            throw new RuntimeException("Sandbox " + sandboxId + " is not healthy: " + e.getMessage(), e);
+            throw new RuntimeException("Sandbox " + sandbox.getSandboxId() + " is not healthy: " + e.getMessage(), e);
         }
         
         if (info == null) {
-            throw new RuntimeException("Sandbox " + sandboxId + " is not healthy: cannot retrieve info");
+            throw new RuntimeException("Sandbox " + sandbox.getSandboxId() + " is not healthy: cannot retrieve info");
         }
         
         String runtimeToken = info.getRuntimeToken();
         if (runtimeToken == null || runtimeToken.isEmpty()) {
-            throw new RuntimeException("Sandbox " + sandboxId + " does not have a runtime token");
+            throw new RuntimeException("Sandbox " + sandbox.getSandboxId() + " does not have a runtime token");
         }
         
         String path = "/vnc/vnc_lite.html";
@@ -68,7 +68,7 @@ public class GuiMixin {
             // Use direct URL from container info
             String containerUrl = info.getBaseUrl();
             if (containerUrl == null || containerUrl.isEmpty()) {
-                throw new RuntimeException("Sandbox " + sandboxId + " does not have a base URL");
+                throw new RuntimeException("Sandbox " + sandbox.getSandboxId() + " does not have a base URL");
             }
             // Ensure URL ends with / if not present
             if (!containerUrl.endsWith("/")) {
@@ -81,7 +81,7 @@ public class GuiMixin {
         } else {
             // Use base_url with sandbox ID
             String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-            return base + "/desktop/" + sandboxId + remotePath + "?" + params;
+            return base + "/desktop/" + sandbox.getSandboxId() + remotePath + "?" + params;
         }
     }
 }
