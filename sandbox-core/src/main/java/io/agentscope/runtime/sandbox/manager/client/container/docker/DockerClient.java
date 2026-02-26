@@ -197,7 +197,11 @@ public class DockerClient extends BaseClient {
             logger.info("Released {} port(s) for container {}", ports.size(), containerId);
         }
 
-        removeContainer(client, containerId);
+        try {
+            removeContainer(client, containerId);
+        } catch (Exception e) {
+            logger.debug("Container already removed or error: {}", e.getMessage());
+        }
         if (volumeNameToRemove != null && !volumeNameToRemove.isEmpty()) {
             try {
                 client.removeVolumeCmd(volumeNameToRemove).exec();

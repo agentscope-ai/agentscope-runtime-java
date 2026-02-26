@@ -47,7 +47,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -124,22 +123,22 @@ public class SandboxService implements AutoCloseable {
         return createResult.getContainerId();
     }
 
-    private boolean checkSandboxStatus(String userId, String sessionId, String sandboxType){
+    private boolean checkSandboxStatus(String userId, String sessionId, String sandboxType) {
         String status = getSandboxStatus(userId, sessionId, sandboxType);
         return checkStatusValid(status);
     }
 
-    private boolean checkSandboxStatus(ContainerModel containerModel){
+    private boolean checkSandboxStatus(ContainerModel containerModel) {
         String status = getSandboxStatus(containerModel);
         return checkStatusValid(status);
     }
 
-    private boolean checkSandboxStatus(String sandboxId){
+    private boolean checkSandboxStatus(String sandboxId) {
         String status = getSandboxStatus(sandboxId);
         return checkStatusValid(status);
     }
 
-    private boolean checkStatusValid(String status){
+    private boolean checkStatusValid(String status) {
         return status.equalsIgnoreCase("running") ||
                 status.equalsIgnoreCase("created") ||
                 status.equalsIgnoreCase("partiallyReady") ||
@@ -171,7 +170,7 @@ public class SandboxService implements AutoCloseable {
         }
 
         if (sandboxMap.containSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()))) {
-            if(checkSandboxStatus(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType())){
+            if (checkSandboxStatus(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType())) {
                 ContainerModel existingModel = sandboxMap.getSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()));
                 if (existingModel != null) {
                     sandboxMap.incrementRefCount(existingModel.getContainerId());
@@ -335,32 +334,8 @@ public class SandboxService implements AutoCloseable {
                 }
                 File hostFile = new File(hostPath);
                 if (!hostFile.exists()) {
-                    logger.warn("Host path does not exist: {}, attempting to create", hostPath);
-                    try {
-                        if (hostPath.endsWith(File.separator) || hostPath.endsWith("/") ||
-                                containerPath.endsWith("/") || containerPath.endsWith(File.separator)) {
-                            if (hostFile.mkdirs()) {
-                                logger.info("Successfully created directory: {}", hostPath);
-                            } else {
-                                logger.warn("Failed to create directory: {}", hostPath);
-                                continue;
-                            }
-                        } else {
-                            File parentDir = hostFile.getParentFile();
-                            if (parentDir != null && !parentDir.exists()) {
-                                parentDir.mkdirs();
-                            }
-                            if (hostFile.createNewFile()) {
-                                logger.info("Successfully created file: {}", hostPath);
-                            } else {
-                                logger.warn("Failed to create file: {}", hostPath);
-                                continue;
-                            }
-                        }
-                    } catch (IOException e) {
-                        logger.warn("Exception while creating path {}: {}", hostPath, e.getMessage());
-                        continue;
-                    }
+                    logger.warn("NonCopy mount host path does not exist: {}, skipping", hostPath);
+                    continue;
                 }
                 volumeBindings.add(new VolumeBinding(hostPath, containerPath, "rw"));
                 logger.info("Added non Copy mount: {} -> {}", hostPath, containerPath);
@@ -433,8 +408,6 @@ public class SandboxService implements AutoCloseable {
         }
 
         sandboxMap.addSandbox(new SandboxKey(sandbox.getUserId(), sandbox.getSessionId(), sandbox.getSandboxType()), containerModel);
-        sandboxMap.incrementRefCount(containerModel.getContainerId());
-        sandbox.setSandboxId(containerModel.getContainerId());
         return containerModel;
     }
 
@@ -515,18 +488,16 @@ public class SandboxService implements AutoCloseable {
 
     @RemoteWrapper
     public boolean removeSandbox(ContainerModel containerModel) {
-        if(containerModel == null){
+        if (containerModel == null) {
             return false;
         }
-
         sandboxMap.decrementRefCount(containerModel.getContainerId());
         long refCount = sandboxMap.getRefCount(containerModel.getContainerId());
         if (refCount > 0) {
             logger.info("Sandbox {} has active references ({}), skip removing", containerModel.getContainerId(), refCount);
             return true;
         }
-
-        if(containerModel.getContainerName().startsWith("agentbay_")) {
+        if (containerModel.getContainerName().startsWith("agentbay_")) {
             logger.warn("AgentBay sandbox can only be stopped, not removed via AgentBayClient");
             return true;
         }
@@ -541,9 +512,9 @@ public class SandboxService implements AutoCloseable {
             );
             return true;
         }
-        containerClient.removeContainer(containerModel.getContainerId(), containerModel.getWorkspaceVolumeName());
-        logger.info("Container removed: {}", containerModel.getContainerId());
-        sandboxMap.removeSandbox(containerModel.getContainerId());
+        // Remove container only; do not delete volume. Record stays in sandboxMap until user calls release().
+        containerClient.removeContainer(containerModel.getContainerId(), null);
+        logger.info("Container removed (volume and record kept): {}", containerModel.getContainerId());
         return true;
     }
 
@@ -557,9 +528,44 @@ public class SandboxService implements AutoCloseable {
         return removeSandbox(containerId);
     }
 
+    /**
+     * Explicit release: stop container, remove container, and delete workspace volume.
+     * Use when the session is intentionally released (e.g. Sandbox.close() / release()).
+     * For process shutdown or ref-count zero cleanup, use removeSandbox instead (keeps volume).
+     */
+    @RemoteWrapper
     public boolean release(String containerId) {
-        if (containerId == null || containerId.isEmpty()) return false;
-        return stopAndRemoveSandbox(containerId);
+        if (this.remoteHttpClient != null) {
+            logger.info("Releasing sandbox (with volume) in remote mode via RemoteHttpClient");
+            Map<String, Object> request = Map.of("containerId", containerId);
+            remoteHttpClient.makeRequest(
+                    RequestMethod.POST,
+                    "/sandbox/release",
+                    request,
+                    "data"
+            );
+            return true;
+        }
+        ContainerModel containerModel = sandboxMap.getSandbox(containerId);
+        if (containerModel == null) {
+            logger.warn("Cannot release: sandbox not found for containerId {}", containerId);
+            return false;
+        }
+        if (containerModel.getContainerName() != null && containerModel.getContainerName().startsWith("agentbay_")) {
+            logger.warn("AgentBay sandbox can only be stopped, not released via AgentBayClient");
+            sandboxMap.removeSandbox(containerId);
+            return true;
+        }
+        // Container may already have been removed by close(); stop/remove best-effort, then always delete volume and remove record
+        try {
+            stopSandbox(containerModel);
+        } catch (Exception e) {
+            logger.debug("Stop sandbox (may already be stopped): {}", e.getMessage());
+        }
+        containerClient.removeContainer(containerModel.getContainerId(), containerModel.getWorkspaceVolumeName());
+        logger.info("Container and workspace volume released, record removed: {}", containerId);
+        sandboxMap.removeSandbox(containerId);
+        return true;
     }
 
     public String getSandboxStatus(String userId, String sessionId, String sandboxType) {
@@ -619,6 +625,9 @@ public class SandboxService implements AutoCloseable {
         return sandboxMap.getSandbox(sandbox.getSandboxId());
     }
 
+    /**
+     * Remove all containers (e.g. on process shutdown). Volumes are kept; use {@link #release(String)} for explicit teardown with volume deletion.
+     */
     public void cleanupAllSandboxes() {
         for (String containerId : sandboxMap.getAllSandboxes().keySet()) {
             if (!removeSandbox(containerId)) {
@@ -645,7 +654,7 @@ public class SandboxService implements AutoCloseable {
 
     private SandboxClient establishConnection(Sandbox sandbox) {
         try {
-            if(!checkSandboxStatus(sandbox.getSandboxId())){
+            if (!checkSandboxStatus(sandbox.getSandboxId())) {
                 createContainer(sandbox);
             }
             ContainerModel containerInfo = getInfo(sandbox);
@@ -756,7 +765,7 @@ public class SandboxService implements AutoCloseable {
         return agentBayClient;
     }
 
-    public void stop(){
+    public void stop() {
         cleanupAllSandboxes();
         if (this.cleanupFuture != null) {
             this.cleanupFuture.cancel(true);

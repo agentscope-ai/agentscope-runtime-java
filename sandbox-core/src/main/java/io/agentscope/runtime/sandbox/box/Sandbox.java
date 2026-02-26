@@ -212,7 +212,7 @@ public class Sandbox implements AutoCloseable {
         closed = true;
 
         try {
-            logger.info("Auto-releasing sandbox: {}", sandboxId);
+            logger.info("Closing sandbox (remove container, keep volume): {}", sandboxId);
             if (!managerApi.stopAndRemoveSandbox(sandboxId)) {
                 logger.warn("Sandbox {} failed to remove", sandboxId);
             }
@@ -222,11 +222,22 @@ public class Sandbox implements AutoCloseable {
     }
 
     /**
-     * Manually release sandbox resources
-     * Forces release of underlying container regardless of autoRelease setting
+     * Manually release sandbox resources: stop container, remove container, and delete workspace volume.
+     * Only explicit user call; close() only removes the container and keeps volume data.
      */
     public void release() {
-        close();
+        if (sandboxId == null || sandboxId.isEmpty()) {
+            return;
+        }
+        closed = true;
+        try {
+            logger.info("Releasing sandbox (container + volume): {}", sandboxId);
+            if (!managerApi.release(sandboxId)) {
+                logger.warn("Sandbox {} failed to release", sandboxId);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to release sandbox: {}", e.getMessage());
+        }
     }
 
     public boolean isClosed() {
