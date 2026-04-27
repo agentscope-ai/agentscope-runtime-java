@@ -70,9 +70,9 @@ public class BrowserAgentApplication {
     @Bean
     public SandboxService sandboxService() {
         logger.info("Creating SandboxService bean");
-        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        BaseClientStarter clientStarter = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .clientConfig(clientConfig)
+                .clientStarter(clientStarter)
                 .build();
         SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();

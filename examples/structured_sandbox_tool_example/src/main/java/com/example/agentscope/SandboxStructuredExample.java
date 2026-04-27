@@ -39,9 +39,9 @@ public class SandboxStructuredExample {
 
     public static void main(String[] args) throws Exception {
 
-        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        BaseClientStarter clientStarter = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .clientConfig(clientConfig)
+                .clientStarter(clientStarter)
                 .build();
 
         SandboxService service = new SandboxService(managerConfig);
@@ -49,8 +49,11 @@ public class SandboxStructuredExample {
 
         Toolkit toolkit = new Toolkit();
         try {
-            BrowserSandbox browserSandbox = new BrowserSandbox(service, "agent-user", "agent-sessopn");
+            BrowserSandbox browserSandbox = new BrowserSandbox(service, "agent-user", "agent-session");
             toolkit.registerTool(ToolkitInit.BrowserNavigateTool(browserSandbox));
+            // getInfo() triggers lazy initialization (container creation)
+            // getDesktopUrl() bypasses it, so we must initialize first
+            browserSandbox.getInfo();
             String desktopUrl = browserSandbox.getDesktopUrl();
             System.out.println("GUI Desktop URL: " + desktopUrl);
         } catch (Exception ignored) {

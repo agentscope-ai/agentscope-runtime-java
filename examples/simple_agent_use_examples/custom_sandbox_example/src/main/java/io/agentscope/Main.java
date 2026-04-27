@@ -25,9 +25,9 @@ import io.agentscope.runtime.sandbox.manager.client.container.docker.DockerClien
 
 public class Main {
     public static void main(String[] args) {
-        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        BaseClientStarter clientStarter = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .clientConfig(clientConfig)
+                .clientStarter(clientStarter)
                 .build();
         SandboxService sandboxService = new SandboxService(managerConfig);
         sandboxService.start();

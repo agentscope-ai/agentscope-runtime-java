@@ -68,9 +68,9 @@ public class AgentConfig {
      */
     @Bean
     public SandboxService sandboxService() {
-        BaseClientStarter clientConfig = DockerClientStarter.builder().build();
+        BaseClientStarter clientStarter = DockerClientStarter.builder().build();
         ManagerConfig managerConfig = ManagerConfig.builder()
-                .clientConfig(clientConfig)
+                .clientStarter(clientStarter)
                 .build();
 
         SandboxService service = new SandboxService(managerConfig);
@@ -92,9 +92,13 @@ public class AgentConfig {
         try {
             BrowserSandbox browserSandbox = new BrowserSandbox(sandboxService, "agent-user", "agent-session");
             toolkit.registerTool(ToolkitInit.BrowserNavigateTool(browserSandbox));
+            // getInfo() triggers lazy initialization (container creation)
+            // getDesktopUrl() bypasses it, so we must initialize first
+            browserSandbox.getInfo();
             String desktopUrl = browserSandbox.getDesktopUrl();
             System.out.println("GUI Desktop URL: " + desktopUrl);
-        } catch (Exception ignored) {
+        } catch (Exception exception) {
+            exception.printStackTrace();
         }
         return toolkit;
     }
